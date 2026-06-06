@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Runtime data
+data/*
+!data/.gitkeep
+!data/library/
+data/library/*
+!data/library/.gitkeep
+backend/data/
+work/
+outputs/
+
+# Local environment
+.env
