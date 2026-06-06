@@ -279,8 +279,8 @@ func (a *App) handleSetupAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.Username = strings.TrimSpace(body.Username)
-	if len(body.Username) < 3 || len(body.Password) < 10 {
-		badRequest(w, "username must be at least 3 characters and password at least 10 characters")
+	if body.Username == "" || body.Password == "" {
+		badRequest(w, "username and password are required")
 		return
 	}
 	hash, err := hashPassword(body.Password)
@@ -650,12 +650,12 @@ func (a *App) handleTaskPath(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) queryTasks() []map[string]any {
+	out := []map[string]any{}
 	rows, err := a.db.Query("SELECT id,gallery_id,status,title,cover_url,language,error,progress_current,progress_total,cbz_path,created_at,updated_at FROM tasks ORDER BY created_at DESC")
 	if err != nil {
-		return nil
+		return out
 	}
 	defer rows.Close()
-	var out []map[string]any
 	for rows.Next() {
 		var id, gid, cur, total int
 		var status string
@@ -808,12 +808,12 @@ type DictEntry struct {
 }
 
 func (a *App) dictionary() []DictEntry {
+	out := []DictEntry{}
 	rows, err := a.db.Query("SELECT id,source_type,source_text,translated_text,enabled FROM tag_dictionary ORDER BY source_type,source_text")
 	if err != nil {
-		return nil
+		return out
 	}
 	defer rows.Close()
-	var out []DictEntry
 	for rows.Next() {
 		var e DictEntry
 		var enabled int
@@ -942,7 +942,7 @@ type TranslationItem struct {
 }
 
 func (a *App) translationItems(gallery map[string]any) []TranslationItem {
-	var items []TranslationItem
+	items := []TranslationItem{}
 	if title := galleryTitle(gallery); title != "" {
 		items = append(items, TranslationItem{SourceType: "title", SourceText: title})
 	}
@@ -1322,7 +1322,7 @@ func normalizeListResponse(body map[string]any) map[string]any {
 	if !ok {
 		itemsRaw = asArray(body["galleries"])
 	}
-	var items []GallerySummary
+	items := []GallerySummary{}
 	for _, item := range itemsRaw {
 		if m, ok := item.(map[string]any); ok {
 			items = append(items, normalizeGallery(m))

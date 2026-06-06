@@ -46,7 +46,8 @@ export function App() {
 
   async function refreshTasks() {
     if (!token) return;
-    setTasks(await api.request<Task[]>('/api/tasks'));
+    const next = await api.request<Task[]>('/api/tasks');
+    setTasks(Array.isArray(next) ? next : []);
   }
 
   useEffect(() => {
@@ -137,7 +138,7 @@ function SetupView({ onAuth }: { onAuth: (payload: AuthPayload) => void }) {
     <AuthFrame title="首次运行" subtitle="创建管理员账户后才能访问平台。">
       <form className="stack" onSubmit={submit}>
         <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="管理员用户名" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="至少 10 位密码" />
+        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="密码" />
         {error ? <p className="error-text">{error}</p> : null}
         <button className="primary-button">创建并登录</button>
       </form>
@@ -238,7 +239,7 @@ function ImportView({ api, refresh }: { api: ApiClient; refresh: () => Promise<v
   async function search() {
     setMessage('');
     const data = await api.request<{ result: Gallery[] }>(`/api/search?q=${encodeURIComponent(query)}&sort=${sort}&page=${page}`);
-    setResults(data.result || []);
+    setResults(Array.isArray(data.result) ? data.result : []);
   }
 
   return (
@@ -435,7 +436,8 @@ function DictionaryView({ api }: { api: ApiClient }) {
   const [message, setMessage] = useState('');
 
   async function load() {
-    setEntries(await api.request<DictionaryEntry[]>('/api/dictionary'));
+    const next = await api.request<DictionaryEntry[]>('/api/dictionary');
+    setEntries(Array.isArray(next) ? next : []);
   }
   useEffect(() => { load(); }, []);
 
