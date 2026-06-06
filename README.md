@@ -11,6 +11,16 @@ docker compose up --build
 
 Open `http://localhost:5173` and log in with `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
 
+For a public host, set these values in `.env` before rebuilding:
+
+```bash
+CORS_ORIGINS=http://your-domain:5173
+VITE_ALLOWED_HOSTS=your-domain
+VITE_API_BASE_URL=http://your-domain:8000
+```
+
+If `VITE_API_BASE_URL` is blank, the frontend uses the current browser hostname and port `8000`.
+
 ## Configuration
 
 - `TRANSLATION_PROVIDER`: `none`, `deepl`, or `google`
