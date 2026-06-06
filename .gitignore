@@ -7,6 +7,10 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 
+# Go
+nhentai-archive
+*.test
+
 # Runtime data
 data/*
 !data/.gitkeep

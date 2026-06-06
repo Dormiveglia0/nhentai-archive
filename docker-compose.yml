@@ -1,28 +1,20 @@
 services:
-  backend:
-    build: ./backend
+  app:
+    build: .
+    container_name: nhentai-archive
     environment:
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
       SECRET_KEY: ${SECRET_KEY:-change-me-before-public-deploy}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://ssh.zhe10.com:5173}
-      TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-none}
-      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
-      GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-}
-      DATA_DIR: /data
-      DATABASE_PATH: /data/app.db
-      LIBRARY_DIR: /data/library
+      PUBLIC_HOST_LABEL: ${PUBLIC_HOST_LABEL:-IP:${PUBLIC_PORT:-5413}}
+      DATA_DIR: /app/data
+      DATABASE_PATH: /app/data/app.db
+      LIBRARY_DIR: /app/data/library
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-30}
+      REQUEST_INTERVAL_MS: ${REQUEST_INTERVAL_MS:-900}
+      REQUEST_RETRIES: ${REQUEST_RETRIES:-3}
+      DOWNLOAD_CONCURRENCY: ${DOWNLOAD_CONCURRENCY:-2}
+      TARGET_LANGUAGE: ${TARGET_LANGUAGE:-zh-CN}
     ports:
-      - "8000:8000"
+      - "${BIND_ADDR:-0.0.0.0}:${PUBLIC_PORT:-5413}:8080"
     volumes:
-      - ./data:/data
-
-  frontend:
-    build: ./frontend
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-localhost,127.0.0.1,ssh.zhe10.com}
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
+      - ${HOST_DATA_DIR:-./data}:/app/data
+    restart: unless-stopped

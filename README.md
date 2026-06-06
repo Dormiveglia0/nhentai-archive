@@ -1,31 +1,71 @@
-# NHentai v2 Archive Platform
+# NHentai Archive
 
-Single-admin web platform for authorized personal archive workflows. The service imports gallery IDs or search results, queues downloads, writes CBZ files with `ComicInfo.xml`, and maintains an independent tag/title dictionary plus machine-translation suggestions.
+单管理员个人归档平台。当前版本是 Go 单体服务：一个容器、一个进程，无 Nginx；Go 同时提供 `/api` 和 React 静态前端。
 
-## Run
+## 功能
+
+- 首次运行创建管理员账户，不再提供默认 `admin/admin`。
+- 支持作品 ID、批量 ID、关键词搜索导入。
+- 支持 v2 API 适配：详情、搜索、热门、相关作品、tag 解析、tagged 搜索。
+- 下载图片并生成 CBZ，写入 `ComicInfo.xml`。
+- 支持词典单条维护、`原文=译文` 批量导入。
+- 支持作品下载完成后的元数据翻译、机器翻译建议、重新写入 `ComicInfo.xml`。
+- DeepL、Google、nhentai API key 可在网页设置中填写，加密保存，不回显明文。
+
+不实现验证码、Cloudflare、登录绕过、反爬绕过、cookie 抓取或权限绕过逻辑。
+
+## 部署
+
+默认通过服务器 IP 加端口测试：
 
 ```bash
-cp .env.example .env
-docker compose up --build
+docker compose up -d --build
 ```
 
-Open `http://localhost:5173` and log in with `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+访问：
 
-For a public host, set these values in `.env` before rebuilding:
+```text
+http://服务器IP:5413
+```
+
+宿主机数据默认挂载到 `./data`，容器内路径：
+
+```text
+/app/data/app.db
+/app/data/library
+/app/data/library/.tmp
+```
+
+生产反代时建议只监听本机：
 
 ```bash
-CORS_ORIGINS=http://your-domain:5173
-VITE_ALLOWED_HOSTS=your-domain
-VITE_API_BASE_URL=http://your-domain:8000
+BIND_ADDR=127.0.0.1 PUBLIC_PORT=5413 HOST_DATA_DIR=/opt/nhentai-data docker compose up -d --build
 ```
 
-If `VITE_API_BASE_URL` is blank, the frontend uses the current browser hostname and port `8000`.
+然后在宿主机 Nginx/Caddy/其他反代中转发到 `127.0.0.1:5413`。
 
-## Configuration
+## 环境变量
 
-- `TRANSLATION_PROVIDER`: `none`, `deepl`, or `google`
-- `DEEPL_API_KEY`: required when using DeepL
-- `GOOGLE_TRANSLATE_API_KEY`: required when using Google Translate API
-- `DATA_DIR`, `DATABASE_PATH`, `LIBRARY_DIR`: storage locations inside the backend container
+- `PUBLIC_PORT`：公网或本机监听端口，默认 `5413`。
+- `BIND_ADDR`：绑定地址，默认 `0.0.0.0`；反代时可设为 `127.0.0.1`。
+- `HOST_DATA_DIR`：宿主机持久化目录，默认 `./data`。
+- `SECRET_KEY`：服务端加密密钥；修改后需要重新填写网页保存的 API key。
+- `DOWNLOAD_CONCURRENCY`：下载并发，默认 `2`。
+- `REQUEST_INTERVAL_MS`：远端 API 请求间隔，默认 `900`。
 
-The app refuses to bypass remote access controls. Use it only for works you are authorized to preserve.
+## 本地开发
+
+前端：
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+后端：
+
+```bash
+go test ./server
+STATIC_DIR=frontend/dist DATA_DIR=./data DATABASE_PATH=./data/app.db LIBRARY_DIR=./data/library go run ./server
+```
