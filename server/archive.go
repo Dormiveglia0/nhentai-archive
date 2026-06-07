@@ -15,6 +15,13 @@ import (
 	"strings"
 )
 
+const (
+	maxArchiveBytes     = 2 << 30
+	maxArchiveEntries   = 2000
+	maxCoverBytes       = 32 << 20
+	maxComicInfoBytes   = 1 << 20
+)
+
 type comicInfo struct {
 	Title       string `xml:"Title"`
 	Series      string `xml:"Series"`
@@ -44,16 +51,24 @@ func (a *App) importUploadedArchive(file io.Reader, originalName string) (Work, 
 		return Work{}, err
 	}
 	hasher := sha256.New()
-	size, copyErr := io.Copy(io.MultiWriter(out, hasher), file)
+	limited := io.LimitReader(file, maxArchiveBytes+1)
+	size, copyErr := io.Copy(io.MultiWriter(out, hasher), limited)
 	closeErr := out.Close()
 	if copyErr != nil {
+		_ = os.Remove(target)
 		return Work{}, copyErr
 	}
 	if closeErr != nil {
+		_ = os.Remove(target)
 		return Work{}, closeErr
+	}
+	if size > maxArchiveBytes {
+		_ = os.Remove(target)
+		return Work{}, errors.New("archive is too large")
 	}
 	work, err := a.importLocalArchive(target)
 	if err != nil {
+		_ = os.Remove(target)
 		return Work{}, err
 	}
 	_, _ = a.db.Exec("UPDATE work_files SET size_bytes=?,file_hash=? WHERE work_id=? AND kind='archive'", size, hex.EncodeToString(hasher.Sum(nil)), work.ID)
@@ -68,6 +83,9 @@ func (a *App) importLocalArchive(path string) (Work, error) {
 	parsed, err := parseCBZ(path)
 	if err != nil {
 		return Work{}, err
+	}
+	if existing, ok := a.workByArchiveHash(parsed.Hash); ok {
+		return existing, nil
 	}
 	title := strings.TrimSpace(parsed.Info.Title)
 	if title == "" {
@@ -129,6 +147,15 @@ func (a *App) importLocalArchive(path string) (Work, error) {
 	return work, nil
 }
 
+func (a *App) workByArchiveHash(hash string) (Work, bool) {
+	var id int
+	err := a.db.QueryRow("SELECT work_id FROM work_files WHERE file_hash=? ORDER BY id LIMIT 1", hash).Scan(&id)
+	if err != nil {
+		return Work{}, false
+	}
+	return a.work(id)
+}
+
 func insertWork(tx *sql.Tx, title string, info comicInfo, archivePath string, sizeBytes int64, pages int, language string, metadataScore int, status string) (int, error) {
 	result, err := tx.Exec(`INSERT INTO works(title,original_title,circle,author,source,source_id,pages,size_bytes,language,archive_path,metadata_score,status)
 VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, title, info.Series, info.Publisher, info.Writer, "local_cbz", "", pages, sizeBytes, language, archivePath, metadataScore, status)
@@ -144,11 +171,17 @@ func parseCBZ(path string) (parsedArchive, error) {
 	if err != nil {
 		return parsedArchive{}, err
 	}
+	if stat.Size() > maxArchiveBytes {
+		return parsedArchive{}, errors.New("archive is too large")
+	}
 	reader, err := zip.OpenReader(path)
 	if err != nil {
 		return parsedArchive{}, err
 	}
 	defer reader.Close()
+	if len(reader.File) > maxArchiveEntries {
+		return parsedArchive{}, errors.New("archive contains too many entries")
+	}
 	info := comicInfo{}
 	pages := []string{}
 	hasher := sha256.New()
@@ -185,7 +218,7 @@ func readComicInfo(entry *zip.File, info *comicInfo) error {
 		return err
 	}
 	defer rc.Close()
-	return xml.NewDecoder(io.LimitReader(rc, 1<<20)).Decode(info)
+	return xml.NewDecoder(io.LimitReader(rc, maxComicInfoBytes)).Decode(info)
 }
 
 func isImageName(name string) bool {
@@ -256,6 +289,9 @@ func (a *App) extractCover(archivePath string, workID int, entryName string) (st
 	if entry == nil {
 		return "", errors.New("cover entry missing")
 	}
+	if entry.FileInfo().Size() > maxCoverBytes {
+		return "", errors.New("cover entry is too large")
+	}
 	rc, err := entry.Open()
 	if err != nil {
 		return "", err
@@ -266,7 +302,7 @@ func (a *App) extractCover(archivePath string, workID int, entryName string) (st
 	if err != nil {
 		return "", err
 	}
-	if _, err := io.Copy(out, rc); err != nil {
+	if _, err := io.Copy(out, io.LimitReader(rc, maxCoverBytes+1)); err != nil {
 		_ = out.Close()
 		return "", err
 	}
