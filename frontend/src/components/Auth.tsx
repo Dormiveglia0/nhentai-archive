@@ -25,7 +25,7 @@ export function LoginPage({ needsSetup, onAuth }: { needsSetup: boolean; onAuth:
       }
       onAuth(await api.login(username, password));
     } catch {
-      setError(needsSetup ? '请设置至少 8 位管理员密码。' : '用户名或密码不正确。');
+      setError(needsSetup ? '管理员创建失败，请检查用户名和密码。' : '用户名或密码不正确。');
     } finally {
       setSubmitting(false);
     }
@@ -48,9 +48,9 @@ export function LoginPage({ needsSetup, onAuth }: { needsSetup: boolean; onAuth:
       >
         <div className="seal">私藏</div>
         <h2>{needsSetup ? '创建管理员' : '管理员登录'}</h2>
-        <p>{needsSetup ? '首次启动会创建本地管理员账户；旧数据不会迁移进新库。' : '公网入口必须登录后使用。浏览器标题与封面可在进入后开启隐私模式。'}</p>
-        <label><span>用户名</span><input value={username} onChange={(event) => setUsername(event.target.value)} /></label>
-        <label><span>密码</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={needsSetup ? '至少 8 位密码' : '输入管理员密码'} /></label>
+        <p>{needsSetup ? '首次启动会创建本地管理员账户。' : '公网入口必须登录后使用。浏览器标题与封面可在进入后开启隐私模式。'}</p>
+        <label><span>用户名</span><input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+        <label><span>密码</span><input autoComplete={needsSetup ? 'new-password' : 'current-password'} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={needsSetup ? '设置管理员密码' : '输入管理员密码'} /></label>
         {error ? <div className="login-error">{error}</div> : null}
         <button className="primary wide" disabled={submitting}><Lock size={16} />{submitting ? '处理中...' : needsSetup ? '创建并进入' : '进入档案馆'}</button>
       </form>
