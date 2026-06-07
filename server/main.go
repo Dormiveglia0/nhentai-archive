@@ -1220,6 +1220,8 @@ func (a *App) handleWorkPath(w http.ResponseWriter, r *http.Request) {
 		}
 	case "cover":
 		a.serveWorkCover(w, r, workID)
+	case "reader":
+		a.handleWorkReader(w, r, workID, parts[2:])
 	case "refresh-cover", "reparse":
 		if r.Method != http.MethodPost {
 			methodNotAllowed(w)
@@ -2195,6 +2197,106 @@ func (a *App) serveWorkCover(w http.ResponseWriter, r *http.Request, workID int)
 	}
 	w.Header().Set("Cache-Control", "private, max-age=3600")
 	http.ServeFile(w, r, path)
+}
+
+func (a *App) handleWorkReader(w http.ResponseWriter, r *http.Request, workID int, rest []string) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	work := a.getWork(workID)
+	if work.ID == 0 || work.LocalCBZPath == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if !a.safeDataPath(work.LocalCBZPath) || !fileExists(work.LocalCBZPath) {
+		http.NotFound(w, r)
+		return
+	}
+	pages, err := archiveImageEntries(work.LocalCBZPath)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	if len(rest) == 0 || rest[0] == "" {
+		out := make([]map[string]any, 0, len(pages))
+		for index, name := range pages {
+			out = append(out, map[string]any{
+				"index": index,
+				"name":  name,
+				"url":   fmt.Sprintf("/api/works/%d/reader/pages/%d", workID, index),
+			})
+		}
+		writeJSON(w, map[string]any{"work": work, "pages": out})
+		return
+	}
+	if len(rest) != 2 || rest[0] != "pages" {
+		http.NotFound(w, r)
+		return
+	}
+	index, err := strconv.Atoi(rest[1])
+	if err != nil || index < 0 || index >= len(pages) {
+		http.NotFound(w, r)
+		return
+	}
+	a.serveArchivePage(w, r, work.LocalCBZPath, pages[index])
+}
+
+func archiveImageEntries(path string) ([]string, error) {
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	pages := []string{}
+	for _, f := range reader.File {
+		if f.FileInfo().IsDir() || !isImageFile(f.Name) {
+			continue
+		}
+		pages = append(pages, strings.TrimLeft(f.Name, "/"))
+	}
+	sort.Strings(pages)
+	return pages, nil
+}
+
+func (a *App) serveArchivePage(w http.ResponseWriter, r *http.Request, archivePath, pageName string) {
+	reader, err := zip.OpenReader(archivePath)
+	if err != nil {
+		serverError(w, err)
+		return
+	}
+	defer reader.Close()
+	for _, f := range reader.File {
+		if strings.TrimLeft(f.Name, "/") != pageName {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			serverError(w, err)
+			return
+		}
+		defer rc.Close()
+		w.Header().Set("Cache-Control", "private, max-age=3600")
+		w.Header().Set("Content-Type", contentTypeForImage(pageName))
+		_, _ = io.Copy(w, rc)
+		return
+	}
+	http.NotFound(w, r)
+}
+
+func contentTypeForImage(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".webp":
+		return "image/webp"
+	case ".gif":
+		return "image/gif"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 func (a *App) safeDataPath(path string) bool {

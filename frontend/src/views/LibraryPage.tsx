@@ -1,7 +1,7 @@
-import { BookOpen, FileOutput, Grid2X2, List, RefreshCcw, RotateCcw, Search, Tags, Trash2 } from 'lucide-react';
+import { BookOpen, FileOutput, Grid2X2, List, RefreshCcw, Search, Tags, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Cover } from '../components/Cover';
-import { PageHeader } from '../components/Shell';
+import { PageHero, StatStrip } from '../components/Shell';
 import type { ApiClient, Work, WorkTagPreview } from '../lib/api';
 
 type Mode = 'grid' | 'table';
@@ -24,65 +24,43 @@ export function LibraryPage({
   const [mode, setMode] = useState<Mode>('grid');
   const [query, setQuery] = useState('');
   const [source, setSource] = useState('all');
-  const [status, setStatus] = useState('all');
   const [tagState, setTagState] = useState('all');
   const [sort, setSort] = useState('updated');
   const [selected, setSelected] = useState<number[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [activeWork, setActiveWork] = useState<Work | null>(null);
+  const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
-
   const selectedSet = useMemo(() => new Set(selected), [selected]);
-  const inspectedWork = useMemo(() => works.find((work) => selectedSet.has(work.id)) || works[0] || null, [selectedSet, works]);
+  const inspected = activeWork || works.find((work) => selectedSet.has(work.id)) || works[0] || null;
 
-  async function search(next: Partial<Record<'query' | 'source' | 'status' | 'tagState' | 'sort', string>> = {}) {
-    setBusy(true);
+  async function load() {
+    setBusy('load');
     setError('');
-    const payload = {
-      q: next.query ?? query,
-      source: next.source ?? source,
-      status: next.status ?? status,
-      tag_state: next.tagState ?? tagState,
-      sort: next.sort ?? sort
-    };
     try {
-      const data = await api.works(payload);
+      const data = await api.works({ q: query, source, tag_state: tagState, sort });
       setWorks(data.works || []);
       setSelected([]);
+      setActiveWork(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '库搜索失败');
+      setError(err instanceof Error ? err.message : '库加载失败');
     } finally {
-      setBusy(false);
+      setBusy('');
     }
-  }
-
-  async function resetFilters() {
-    setQuery('');
-    setSource('all');
-    setStatus('all');
-    setTagState('all');
-    setSort('updated');
-    await search({ query: '', source: 'all', status: 'all', tagState: 'all', sort: 'updated' });
   }
 
   async function bulk(action: string) {
-    if (!selected.length) {
-      setError('请选择作品');
-      return;
-    }
-    setBusy(true);
+    if (!selected.length) return;
+    setBusy(action);
     setError('');
-    setMessage('');
     try {
       const data = await api.bulkWorks(selected, action);
       setWorks(data.works || []);
       setSelected([]);
-      setMessage(`批量操作完成：更新 ${data.result.updated || 0}，失败 ${data.result.failed || 0}`);
       await refreshWorks();
     } catch (err) {
       setError(err instanceof Error ? err.message : '批量操作失败');
     } finally {
-      setBusy(false);
+      setBusy('');
     }
   }
 
@@ -90,231 +68,131 @@ export function LibraryPage({
     setSelected((previous) => previous.includes(id) ? previous.filter((item) => item !== id) : [...previous, id]);
   }
 
-  function selectAllVisible() {
-    setSelected(works.map((work) => work.id));
-  }
-
   return (
-    <section className="page library-page manga-library">
-      <PageHeader
-        title="我的库"
-        subtitle={`共 ${summary.total_works || works.length || 0} 部作品。这里按同人志归档逻辑整理 CBZ、标签和导出。`}
-        action={<button className="ghost-button" type="button" onClick={refreshWorks}><RefreshCcw size={16} />刷新</button>}
-      />
+    <section className="page library-page">
+      <PageHero title="我的库" seal="采藏" subtitle="专属的同人志档案馆，珍藏每一份热爱。" />
+      <StatStrip items={[
+        { label: '总收藏', value: summary.total_works || works.length || 0, hint: '作品', icon: <BookOpen size={21} /> },
+        { label: '已导出', value: summary.exported_works || 0, hint: 'CBZ', icon: <FileOutput size={21} /> },
+        { label: '待治理', value: summary.unconfirmed_tags || 0, hint: '标签', icon: <Tags size={21} />, tone: (summary.unconfirmed_tags || 0) ? 'amber' : 'green' },
+        { label: '当前显示', value: works.length, hint: selected.length ? `已选 ${selected.length}` : '筛选结果', icon: <Grid2X2 size={21} /> }
+      ]} />
 
-      <section className="library-filter-shelf" aria-label="库筛选">
-        <div className="filter-search manga-search-field">
-          <Search size={17} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' ? search() : undefined} placeholder="标题 / 作者 / 社团 / 画廊 ID / hash" />
-        </div>
-        <select value={source} onChange={(event) => { setSource(event.target.value); search({ source: event.target.value }); }}>
+      <section className="filter-ribbon">
+        <label className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => event.key === 'Enter' ? load() : undefined} placeholder="标题 / 作者 / 社团 / 画廊 ID / hash" /></label>
+        <select value={source} onChange={(event) => setSource(event.target.value)}>
           <option value="all">全部来源</option>
-          <option value="nhentai">nhentai 导入</option>
+          <option value="nhentai">远端导入</option>
           <option value="local">本地文件</option>
         </select>
-        <select value={status} onChange={(event) => { setStatus(event.target.value); search({ status: event.target.value }); }}>
-          <option value="all">全部状态</option>
-          <option value="ready">可编辑</option>
-          <option value="exported">有导出文件</option>
-          <option value="failed">失败</option>
-        </select>
-        <select value={tagState} onChange={(event) => { setTagState(event.target.value); search({ tagState: event.target.value }); }}>
+        <select value={tagState} onChange={(event) => setTagState(event.target.value)}>
           <option value="all">全部标签</option>
-          <option value="open">待整理标签</option>
-          <option value="confirmed">标签已确认</option>
+          <option value="open">待治理</option>
+          <option value="confirmed">已确认</option>
         </select>
-        <select value={sort} onChange={(event) => { setSort(event.target.value); search({ sort: event.target.value }); }}>
+        <select value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="updated">最近更新</option>
           <option value="created">最近加入</option>
-          <option value="title">标题 A-Z</option>
+          <option value="title">标题</option>
           <option value="pages_desc">页数最多</option>
         </select>
-        <button className="primary-button" type="button" onClick={() => search()} disabled={busy}><Search size={16} />搜索</button>
-        <button className="ghost-button" type="button" onClick={resetFilters}><RotateCcw size={16} />重置</button>
-        <div className="view-switch">
-          <button className={`icon-button ${mode === 'grid' ? 'active' : ''}`} type="button" onClick={() => setMode('grid')} title="封面墙"><Grid2X2 size={16} /></button>
-          <button className={`icon-button ${mode === 'table' ? 'active' : ''}`} type="button" onClick={() => setMode('table')} title="表格"><List size={16} /></button>
-        </div>
+        <button className="primary-button" type="button" onClick={load} disabled={busy === 'load'}><Search size={16} />筛选</button>
+        <button className="ghost-button" type="button" onClick={refreshWorks}><RefreshCcw size={16} />刷新</button>
+        <button className={`icon-button ${mode === 'grid' ? 'active' : ''}`} type="button" onClick={() => setMode('grid')} title="封面墙"><Grid2X2 size={16} /></button>
+        <button className={`icon-button ${mode === 'table' ? 'active' : ''}`} type="button" onClick={() => setMode('table')} title="表格"><List size={16} /></button>
       </section>
-
       {error ? <p className="notice error">{error}</p> : null}
-      {message ? <p className="notice success">{message}</p> : null}
 
-      <div className="library-workspace">
-        <main className="library-shelf" aria-label="漫画封面墙">
-          <div className="library-shelf-head">
-            <div>
-              <strong>{works.length ? `当前显示 ${works.length} 部` : '暂无作品'}</strong>
-              <span>内容标签只显示普通内容标签，作者/社团/分类固定在身份信息里。</span>
+      <div className="library-layout">
+        <main className="paper-panel">
+          <header className="panel-head">
+            <div><h2>私人馆藏墙</h2><p>选择作品会打开右侧 Inspector；双击封面进入治理。</p></div>
+            <div className="row-actions">
+              <button className="ghost-button" type="button" onClick={() => setSelected(works.map((work) => work.id))}>选择全部</button>
+              <button className="ghost-button" type="button" onClick={() => setSelected([])}>清空</button>
             </div>
-            <div className="shelf-actions">
-              <button type="button" onClick={selectAllVisible} disabled={!works.length}>选择当前页</button>
-              <button type="button" onClick={() => setSelected([])} disabled={!selected.length}>取消选择</button>
-            </div>
-          </div>
-
+          </header>
           {mode === 'grid' ? (
-            <div className="manga-cover-wall">
+            <div className="manga-grid">
               {works.map((work) => (
-                <MangaWorkCard
-                  api={api}
-                  key={work.id}
-                  work={work}
-                  selected={selectedSet.has(work.id)}
-                  toggle={() => toggle(work.id)}
-                  open={() => openWork(work)}
-                />
+                <article className={`work-card ${selectedSet.has(work.id) ? 'selected' : ''}`} key={work.id} onDoubleClick={() => openWork(work)}>
+                  <label className="floating-check"><input type="checkbox" checked={selectedSet.has(work.id)} onChange={() => toggle(work.id)} /><span /></label>
+                  <button type="button" className="work-cover-button" onClick={() => setActiveWork(work)}>
+                    <Cover src={work.cover_url} title={work.display_title} token={api.token} selected={selectedSet.has(work.id)} />
+                    <strong>{work.display_title}</strong>
+                    <span>{identitySummary(work.tag_preview)} · {work.page_count || '?'}P</span>
+                  </button>
+                  <TagRail tags={work.tag_preview} />
+                </article>
               ))}
-              {!works.length ? <EmptyLibrary /> : null}
+              {!works.length ? <Empty title="馆藏为空" text="先从发现页导入，或上传本地 CBZ。" /> : null}
             </div>
           ) : (
-            <div className="work-table manga-table">
-              <div className="work-table-head"><span></span><span>标题</span><span>身份信息</span><span>内容标签</span><span>状态</span><span>更新时间</span></div>
+            <div className="archive-table">
+              <div className="table-head"><span></span><span>作品</span><span>身份</span><span>页数</span><span>待治理</span><span>状态</span></div>
               {works.map((work) => (
-                <div className="work-table-row" key={work.id}>
-                  <input type="checkbox" checked={selectedSet.has(work.id)} onChange={() => toggle(work.id)} />
-                  <button type="button" onClick={() => openWork(work)}>{work.display_title}</button>
-                  <span>{identitySummary(work)}</span>
-                  <ContentTagRail tags={work.tag_preview || []} compact />
-                  <span className={`status-chip ${work.status}`}>{statusName(work.status)}</span>
-                  <span>{formatDate(work.updated_at)}</span>
-                </div>
+                <button type="button" className="table-row" key={work.id} onClick={() => setActiveWork(work)} onDoubleClick={() => openWork(work)}>
+                  <span><input type="checkbox" checked={selectedSet.has(work.id)} onChange={(event) => { event.stopPropagation(); toggle(work.id); }} /></span>
+                  <strong>{work.display_title}</strong>
+                  <span>{identitySummary(work.tag_preview)}</span>
+                  <span>{work.page_count || '?'}P</span>
+                  <span>{work.unconfirmed_tag_count || 0}</span>
+                  <span>{work.status}</span>
+                </button>
               ))}
             </div>
           )}
         </main>
 
-        <LibraryInspector api={api} work={inspectedWork} openWork={openWork} selectedCount={selected.length} />
+        <Inspector api={api} work={inspected} selectedCount={selected.length} openWork={openWork} />
       </div>
 
       {selected.length ? (
-        <div className="bulk-command-bar library-floating-bulk">
-          <strong>{selected.length} 部已选择</strong>
-          <button type="button" onClick={() => bulk('apply_dictionary')} disabled={busy}><Tags size={15} />套用词典</button>
-          <button type="button" onClick={() => bulk('export')} disabled={busy}><FileOutput size={15} />生成导出</button>
-          <button type="button" onClick={() => bulk('reparse')} disabled={busy}><RefreshCcw size={15} />重解析</button>
-          <button type="button" className="danger" onClick={() => bulk('delete')} disabled={busy}><Trash2 size={15} />删除记录</button>
-        </div>
+        <aside className="selection-bar">
+          <strong>已选择 {selected.length} 项</strong>
+          <button type="button" onClick={() => bulk('apply_dictionary')} disabled={Boolean(busy)}><Tags size={15} />应用词典</button>
+          <button type="button" onClick={() => bulk('export')} disabled={Boolean(busy)}><FileOutput size={15} />批量导出</button>
+          <button type="button" onClick={() => bulk('reparse')} disabled={Boolean(busy)}><RefreshCcw size={15} />重新解析</button>
+          <button type="button" className="danger" onClick={() => bulk('delete')} disabled={Boolean(busy)}><Trash2 size={15} />删除记录</button>
+        </aside>
       ) : null}
     </section>
   );
 }
 
-function MangaWorkCard({ api, work, selected, toggle, open }: { api: ApiClient; work: Work; selected: boolean; toggle: () => void; open: () => void }) {
-  const identity = identityFromPreview(work.tag_preview || []);
+function Inspector({ api, work, selectedCount, openWork }: { api: ApiClient; work: Work | null; selectedCount: number; openWork: (work: Work) => void }) {
+  if (!work) return <aside className="paper-panel inspector-panel"><Empty title="未选择" text="选择一本作品查看路径、标签和操作。" /></aside>;
   return (
-    <article className={`manga-work-card ${selected ? 'selected' : ''}`}>
-      <label className="select-box work-select" onClick={(event) => event.stopPropagation()}>
-        <input type="checkbox" checked={selected} onChange={toggle} />
-        <span />
-      </label>
-      <button type="button" onClick={open} className="manga-card-open">
-        <Cover src={work.cover_url} title={work.display_title} token={api.token} />
-        <strong>{work.display_title}</strong>
-        <div className="manga-card-identity">
-          <span>作者 {identity.artist}</span>
-          <span>社团 {identity.group}</span>
-          <span>分类 {identity.category}</span>
-          <span>语言 {identity.language}</span>
-        </div>
-        <ContentTagRail tags={work.tag_preview || []} />
-      </button>
-      <footer>
-        <span className={`status-chip ${work.status}`}>{statusName(work.status)}</span>
-        <span>{work.page_count || '?'} 页</span>
-      </footer>
-    </article>
-  );
-}
-
-function LibraryInspector({ api, work, openWork, selectedCount }: { api: ApiClient; work: Work | null; openWork: (work: Work) => void; selectedCount: number }) {
-  if (!work) {
-    return (
-      <aside className="library-inspector empty-inspector">
-        <BookOpen size={28} />
-        <h2>选择一本漫画</h2>
-        <p>右侧会显示身份信息、内容标签和元数据整理入口。</p>
-      </aside>
-    );
-  }
-  const identity = identityFromPreview(work.tag_preview || []);
-  return (
-    <aside className="library-inspector">
+    <aside className="paper-panel inspector-panel sticky">
       <Cover src={work.cover_url} title={work.display_title} token={api.token} />
-      <div className="inspector-title">
-        <span>{selectedCount ? `已选择 ${selectedCount} 部` : sourceName(work.source_type)}</span>
-        <h2>{work.display_title}</h2>
-      </div>
-      <div className="identity-list">
-        <Info label="作者" value={identity.artist} />
-        <Info label="社团" value={identity.group} />
-        <Info label="分类" value={identity.category} />
-        <Info label="语言" value={identity.language} />
-        <Info label="来源 ID" value={work.source_id || '本地文件'} />
-        <Info label="页数" value={String(work.page_count || '?')} />
-      </div>
-      <section className="inspector-section">
-        <h3>内容标签</h3>
-        <ContentTagRail tags={work.tag_preview || []} />
-      </section>
-      <div className="inspector-actions">
-        <button type="button" className="primary-button" onClick={() => openWork(work)}>打开详情</button>
-        <span>{work.unconfirmed_tag_count || 0} 个待整理标签</span>
-      </div>
+      <span className="muted">{selectedCount ? `已选择 ${selectedCount} 项` : sourceName(work.source_type)}</span>
+      <h2>{work.display_title}</h2>
+      <dl className="meta-list">
+        <div><dt>来源 ID</dt><dd>{work.source_id || '本地'}</dd></div>
+        <div><dt>页数</dt><dd>{work.page_count || '?'}</dd></div>
+        <div><dt>待治理</dt><dd>{work.unconfirmed_tag_count || 0}</dd></div>
+        <div><dt>导出次数</dt><dd>{work.export_count || 0}</dd></div>
+      </dl>
+      <TagRail tags={work.tag_preview} />
+      <button type="button" className="primary-button full" onClick={() => openWork(work)}>进入治理</button>
     </aside>
   );
 }
 
-function ContentTagRail({ tags, compact }: { tags: WorkTagPreview[]; compact?: boolean }) {
-  const contentTags = tags.filter((tag) => tag.value && (tag.type === 'tag' || tag.type === 'other'));
-  if (!contentTags.length) return <div className={`content-tag-rail ${compact ? 'compact' : ''}`}><span>暂无内容标签</span></div>;
-  return (
-    <div className={`content-tag-rail ${compact ? 'compact' : ''}`} aria-label="内容标签">
-      {contentTags.map((tag, index) => <span className={tag.confirmed ? 'confirmed' : ''} key={`${tag.type}-${tag.value}-${index}`}>{tag.value}</span>)}
-    </div>
-  );
+function TagRail({ tags = [] }: { tags?: WorkTagPreview[] }) {
+  const visible = tags.filter((tag) => tag.value).slice(0, 10);
+  return <div className="tag-cloud compact">{visible.map((tag, index) => <span className={tag.confirmed ? 'confirmed' : ''} key={`${tag.type}-${tag.value}-${index}`}>{tag.value}</span>)}</div>;
 }
 
-function EmptyLibrary() {
-  return (
-    <div className="empty-state import-empty">
-      <BookOpen size={28} />
-      <h2>暂无库记录</h2>
-      <p>从“搜索”导入远程作品，或上传/扫描本地 CBZ。</p>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return <div><span>{label}</span><strong>{value || '无'}</strong></div>;
-}
-
-function identityFromPreview(tags: WorkTagPreview[]) {
-  const first = (type: string) => tags.filter((tag) => tag.type === type && tag.value).map((tag) => tag.value).slice(0, 2).join('、') || '无';
-  return {
-    artist: first('artist'),
-    group: first('group'),
-    category: first('category'),
-    language: first('language')
-  };
-}
-
-function identitySummary(work: Work) {
-  const identity = identityFromPreview(work.tag_preview || []);
-  return `作者 ${identity.artist} / 社团 ${identity.group} / 分类 ${identity.category}`;
+function identitySummary(tags: WorkTagPreview[] = []) {
+  const get = (type: string) => tags.find((tag) => tag.type === type)?.value;
+  return [get('artist'), get('group'), get('language')].filter(Boolean).join(' / ') || '身份未整理';
 }
 
 function sourceName(value: string) {
-  if (value === 'nhentai') return 'nhentai';
-  if (value === 'local') return '本地文件';
-  return value || '未知来源';
+  return value === 'local' ? '本地文件' : value || '未知来源';
 }
 
-function statusName(value: string) {
-  const map: Record<string, string> = { ready: '可编辑', exported: '有导出', failed: '失败', imported: '已入库' };
-  return map[value] || value || '未知';
-}
-
-function formatDate(value: string) {
-  return value ? new Date(value).toLocaleString() : '无';
+function Empty({ title, text }: { title: string; text: string }) {
+  return <div className="empty-panel"><strong>{title}</strong><span>{text}</span></div>;
 }

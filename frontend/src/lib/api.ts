@@ -188,6 +188,9 @@ export type AppLogs = {
 
 export type WorkDetail = { work: Work; metadata: WorkMetadata; tags: WorkTag[]; exports: ExportRecord[] };
 
+export type ReaderPage = { index: number; name: string; url: string };
+export type ReaderManifest = { work: Work; pages: ReaderPage[] };
+
 export function galleryCoverSrc(gallery: Pick<Gallery, 'proxied_cover_url' | 'proxied_thumb_url' | 'cover_url' | 'thumb_url'>) {
   return gallery.proxied_cover_url || gallery.proxied_thumb_url || gallery.cover_url || gallery.thumb_url || '';
 }
@@ -278,6 +281,10 @@ export class ApiClient {
 
   work(id: number) {
     return this.request<WorkDetail>(`/api/works/${id}`);
+  }
+
+  reader(id: number) {
+    return this.request<ReaderManifest>(`/api/works/${id}/reader`);
   }
 
   saveMetadata(id: number, comicInfo: ComicInfo) {
