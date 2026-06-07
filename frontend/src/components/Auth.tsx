@@ -1,7 +1,7 @@
 import { Lock } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import archiveRoom from '../assets/archive-room.svg';
-import { ApiClient, demoLogin, type AuthPayload } from '../lib/api';
+import { ApiClient, type AuthPayload } from '../lib/api';
 import { Logo } from './ui';
 
 export function LoginPage({ needsSetup, onAuth }: { needsSetup: boolean; onAuth: (payload: AuthPayload) => void }) {
@@ -25,14 +25,6 @@ export function LoginPage({ needsSetup, onAuth }: { needsSetup: boolean; onAuth:
       }
       onAuth(await api.login(username, password));
     } catch {
-      try {
-        if (!needsSetup && password.trim() === '') {
-          onAuth(await demoLogin(username));
-          return;
-        }
-      } catch {
-        // Backend is reachable, so demo login must stay disabled.
-      }
       setError(needsSetup ? '请设置至少 8 位管理员密码。' : '用户名或密码不正确。');
     } finally {
       setSubmitting(false);
