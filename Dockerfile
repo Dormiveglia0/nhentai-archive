@@ -5,7 +5,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM golang:1.23-alpine AS backend
+FROM golang:1.23-alpine AS go-builder
 WORKDIR /src
 RUN apk add --no-cache ca-certificates
 COPY go.mod go.sum ./
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 go build -o /out/nhentai-archive ./server
 FROM alpine:3.21
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata
-COPY --from=backend /out/nhentai-archive /app/nhentai-archive
+COPY --from=go-builder /out/nhentai-archive /app/nhentai-archive
 COPY --from=frontend /src/frontend/dist /app/public
 ENV ADDR=:8080 \
     DATA_DIR=/app/data \
