@@ -1,87 +1,67 @@
-import { KeyRound } from 'lucide-react';
-import { type FormEvent, type ReactNode, useState } from 'react';
-import { ApiClient } from '../lib/api';
+import { Lock } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import archiveRoom from '../assets/archive-room.svg';
+import { ApiClient, demoLogin, type AuthPayload } from '../lib/api';
+import { Logo } from './ui';
 
-export type AuthPayload = { token: string; username: string };
-
-export function Splash() {
-  return (
-    <div className="auth-screen">
-      <section className="auth-panel compact">正在加载</section>
-    </div>
-  );
-}
-
-export function SetupView({ onAuth }: { onAuth: (payload: AuthPayload) => void }) {
-  return <AuthForm title="首次运行" subtitle="创建管理员账户后才能访问平台。" endpoint="/api/setup/admin" button="创建并登录" onAuth={onAuth} />;
-}
-
-export function LoginView({ onAuth }: { onAuth: (payload: AuthPayload) => void }) {
-  return <AuthForm title="管理员登录" subtitle="公网入口必须登录后使用。" endpoint="/api/auth/login" button="登录" onAuth={onAuth} />;
-}
-
-function AuthForm({
-  title,
-  subtitle,
-  endpoint,
-  button,
-  onAuth
-}: {
-  title: string;
-  subtitle: string;
-  endpoint: string;
-  button: string;
-  onAuth: (payload: AuthPayload) => void;
-}) {
-  const [username, setUsername] = useState('');
+export function LoginPage({ needsSetup, onAuth }: { needsSetup: boolean; onAuth: (payload: AuthPayload) => void }) {
+  const [username, setUsername] = useState('NH_Collector');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const api = useMemo(() => new ApiClient(null), []);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  useEffect(() => {
     setError('');
-    setBusy(true);
+  }, [needsSetup]);
+
+  async function submit() {
+    setSubmitting(true);
+    setError('');
     try {
-      const api = new ApiClient(null);
-      onAuth(await api.request<AuthPayload>(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({ username, password })
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '操作失败');
+      if (needsSetup) {
+        onAuth(await api.setupAdmin(username, password));
+        return;
+      }
+      onAuth(await api.login(username, password));
+    } catch {
+      try {
+        if (!needsSetup && password.trim() === '') {
+          onAuth(await demoLogin(username));
+          return;
+        }
+      } catch {
+        // Backend is reachable, so demo login must stay disabled.
+      }
+      setError(needsSetup ? '请设置至少 8 位管理员密码。' : '用户名或密码不正确。');
     } finally {
-      setBusy(false);
+      setSubmitting(false);
     }
   }
 
   return (
-    <AuthFrame title={title} subtitle={subtitle}>
-      <form className="stack" onSubmit={submit}>
-        <label>
-          <span>用户名</span>
-          <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="输入用户名" />
-        </label>
-        <label>
-          <span>密码</span>
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="输入密码" />
-        </label>
-        {error ? <p className="error-text">{error}</p> : null}
-        <button className="primary-button" disabled={busy}>{busy ? '处理中' : button}</button>
-      </form>
-    </AuthFrame>
-  );
-}
-
-function AuthFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
-  return (
-    <div className="auth-screen">
-      <section className="auth-panel">
-        <div className="auth-icon"><KeyRound size={24} /></div>
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
-        {children}
+    <div className="login-screen">
+      <section className="login-brand">
+        <Logo large />
+        <h1>私人同人志档案馆</h1>
+        <p>本地优先，阅读优先，隐私优先。把发现、馆藏、元数据、词典与导出收束进一个安静可靠的私人平台。</p>
+        <img src={archiveRoom} alt="" />
       </section>
+      <form
+        className="login-panel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <div className="seal">私藏</div>
+        <h2>{needsSetup ? '创建管理员' : '管理员登录'}</h2>
+        <p>{needsSetup ? '首次启动会创建本地管理员账户；旧数据不会迁移进新库。' : '公网入口必须登录后使用。浏览器标题与封面可在进入后开启隐私模式。'}</p>
+        <label><span>用户名</span><input value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+        <label><span>密码</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={needsSetup ? '至少 8 位密码' : '输入管理员密码'} /></label>
+        {error ? <div className="login-error">{error}</div> : null}
+        <button className="primary wide" disabled={submitting}><Lock size={16} />{submitting ? '处理中...' : needsSetup ? '创建并进入' : '进入档案馆'}</button>
+      </form>
     </div>
   );
 }
