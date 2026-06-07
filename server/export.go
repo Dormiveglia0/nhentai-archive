@@ -56,6 +56,9 @@ func (a *App) exportComicInfo(work Work) (exportComicInfo, error) {
 		}
 		values[strings.ToLower(strings.TrimSpace(field))] = strings.TrimSpace(value)
 	}
+	if err := rows.Err(); err != nil {
+		return exportComicInfo{}, err
+	}
 
 	tags := a.exportTags(work.ID)
 	pageCount := work.Pages
@@ -77,7 +80,7 @@ func (a *App) exportComicInfo(work Work) (exportComicInfo, error) {
 }
 
 func (a *App) exportTags(workID int) map[string][]string {
-	out := map[string][]string{"tag": {}, "category": {}}
+	out := map[string][]string{"tag": []string{}, "category": []string{}}
 	rows, err := a.db.Query("SELECT kind,value FROM work_tags WHERE work_id=? AND confirmed=1 ORDER BY kind,value", workID)
 	if err != nil {
 		return out
