@@ -12,6 +12,10 @@ class ApiError extends Error {
   }
 }
 
+function allowMockFallback() {
+  return import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK === 'true';
+}
+
 export class ApiClient {
   token: string | null;
 
@@ -80,7 +84,8 @@ async function requestOrMock<T>(path: string, fallback: T, options: RequestInit 
     return await response.json() as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    return fallback;
+    if (allowMockFallback()) return fallback;
+    throw error;
   }
 }
 
@@ -90,19 +95,4 @@ async function requestJSON<T>(path: string, options: RequestInit = {}): Promise<
   const response = await fetch(path, { ...options, headers });
   if (!response.ok) throw new ApiError(response.status, await response.text());
   return await response.json() as T;
-}
-
-export async function demoLogin(username: string): Promise<AuthPayload> {
-  try {
-    const response = await fetch('/api/health', { method: 'GET' });
-    const contentType = response.headers.get('Content-Type') || '';
-    if (response.ok && contentType.includes('application/json')) {
-      const payload = await response.json() as { status?: string };
-      if (payload.status === 'ok') throw new ApiError(409, 'backend is available; demo login disabled');
-    }
-    return { token: `demo-${Date.now()}`, username };
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    return { token: `demo-${Date.now()}`, username };
-  }
 }
