@@ -19,6 +19,9 @@ type App struct {
 
 func main() {
 	cfg := loadConfig()
+	if err := cfg.Validate(); err != nil {
+		log.Fatal(err)
+	}
 	for _, dir := range []string{cfg.DataDir, cfg.LibraryDir, filepath.Join(cfg.LibraryDir, "covers"), filepath.Join(cfg.LibraryDir, "exports"), filepath.Dir(cfg.DatabasePath)} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			log.Fatal(err)

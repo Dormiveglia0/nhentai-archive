@@ -3,7 +3,7 @@ services:
     build: .
     container_name: nhentai-archive
     environment:
-      SECRET_KEY: ${SECRET_KEY:-change-me-before-public-deploy}
+      SECRET_KEY: ${SECRET_KEY:-local-development-secret-please-override-32chars}
       PUBLIC_HOST_LABEL: ${PUBLIC_HOST_LABEL:-IP:${PUBLIC_PORT:-5413}}
       DATA_DIR: /app/data
       DATABASE_PATH: /app/data/app.db
