@@ -69,10 +69,6 @@ func (a *App) handleSetupAdmin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
-	if len(payload.Password) < 8 {
-		writeError(w, http.StatusBadRequest, "password must be at least 8 characters")
-		return
-	}
 	auth, err := a.createAdmin(payload.Username, payload.Password)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -82,24 +78,12 @@ func (a *App) handleSetupAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
-	}
-	if !a.adminsExist() {
-		writeError(w, http.StatusConflict, "setup required")
-		return
-	}
+	if r.Method != http.MethodPost { writeError(w, http.StatusMethodNotAllowed, "method not allowed"); return }
+	if !a.adminsExist() { writeError(w, http.StatusConflict, "setup required"); return }
 	var payload struct { Username string `json:"username"`; Password string `json:"password"` }
-	if err := decodeJSON(r, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid json")
-		return
-	}
+	if err := decodeJSON(r, &payload); err != nil { writeError(w, http.StatusBadRequest, "invalid json"); return }
 	auth, ok := a.authenticate(payload.Username, payload.Password)
-	if !ok {
-		writeError(w, http.StatusUnauthorized, "invalid username or password")
-		return
-	}
+	if !ok { writeError(w, http.StatusUnauthorized, "invalid username or password"); return }
 	writeJSON(w, http.StatusOK, auth)
 }
 
@@ -113,9 +97,7 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 		var payload struct { Settings map[string]string `json:"settings"`; Secrets map[string]string `json:"secrets"` }
 		if err := decodeJSON(r, &payload); err != nil { writeError(w, http.StatusBadRequest, "invalid json"); return }
 		if err := a.updateSettings(payload.Settings); err != nil { writeError(w, http.StatusInternalServerError, err.Error()); return }
-		for name, value := range payload.Secrets {
-			if err := a.saveSecret(name, value); err != nil { writeError(w, http.StatusBadRequest, err.Error()); return }
-		}
+		for name, value := range payload.Secrets { if err := a.saveSecret(name, value); err != nil { writeError(w, http.StatusBadRequest, err.Error()); return } }
 		writeJSON(w, http.StatusOK, a.settingsState())
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
