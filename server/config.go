@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -30,6 +32,22 @@ func loadConfig() Config {
 		SessionTTL:       time.Duration(intEnv("SESSION_TTL_HOURS", 720)) * time.Hour,
 		DefaultUserAgent: env("NHENTAI_USER_AGENT", "NH Archive/3.0 (+local-first-private-archive)"),
 	}
+}
+
+func (c Config) Validate() error {
+	if allowWeakSecret() {
+		return nil
+	}
+	secret := strings.TrimSpace(c.SecretKey)
+	if secret == "" || secret == "change-me" || strings.Contains(strings.ToLower(secret), "change-me") || len(secret) < 32 {
+		return errors.New("SECRET_KEY must be set to a strong random value of at least 32 characters; set ALLOW_WEAK_SECRET=true only for local development")
+	}
+	return nil
+}
+
+func allowWeakSecret() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv("ALLOW_WEAK_SECRET")))
+	return value == "1" || value == "true" || value == "yes"
 }
 
 func env(key, fallback string) string {
