@@ -1,0 +1,10 @@
+.DS_Store
+node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+backend/.local-data/
+backend/.pytest_cache/
+backend/app/__pycache__/
+backend/app/services/__pycache__/
+backend/tests/__pycache__/
+.venv/
