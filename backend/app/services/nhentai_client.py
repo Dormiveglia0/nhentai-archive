@@ -76,8 +76,8 @@ class NhentaiClient:
     def random(self) -> dict[str, Any]:
         return self._get("/api/v2/galleries/random")
 
-    def search(self, query: str, page: int = 1, per_page: int = 25) -> dict[str, Any]:
-        return self._get("/api/v2/search", {"q": query, "page": page, "per_page": per_page})
+    def search(self, query: str, page: int = 1, per_page: int = 25, sort: str = "date") -> dict[str, Any]:
+        return self._get("/api/v2/search", {"query": query, "page": page, "per_page": per_page, "sort": sort})
 
     def gallery(self, gallery_id: int, include: str | None = None) -> dict[str, Any]:
         params = {"include": include} if include else None
@@ -85,6 +85,15 @@ class NhentaiClient:
 
     def tag_search(self, query: str, limit: int = 20) -> dict[str, Any]:
         return self._post("/api/v2/tags/search", {"q": query, "limit": limit})
+
+    def tags_by_ids(self, ids: list[int]) -> list[dict[str, Any]]:
+        if not ids:
+            return []
+        unique_ids = list(dict.fromkeys(ids))[:100]
+        return self._get("/api/v2/tags/ids", {"ids": ",".join(str(value) for value in unique_ids)})
+
+    def user(self) -> dict[str, Any]:
+        return self._get("/api/v2/user")
 
     def download_url(self, gallery_id: int, archive_format: str = "cbz") -> dict[str, Any]:
         return self._post(f"/api/v2/galleries/{gallery_id}/download", None, {"format": archive_format})

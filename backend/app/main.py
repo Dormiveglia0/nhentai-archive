@@ -15,11 +15,19 @@ from app.services.import_service import ImportService
 from app.services.job_service import JobService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
+from app.services.settings_service import SettingsService
 
 
 class ReaderStatePatch(BaseModel):
     page_index: int
     completed: bool = False
+
+
+class SettingsPatch(BaseModel):
+    nhentai_api_key: str | None = None
+    clear_nhentai_api_key: bool = False
+    privacy: dict | None = None
+    reader: dict | None = None
 
 
 settings = load_settings()
@@ -36,6 +44,7 @@ archive = ArchiveService(db, settings)
 discover = DiscoverService(db, client)
 reader = ReaderService(db)
 imports = ImportService(settings, client, jobs, archive, discover)
+settings_service = SettingsService(db, settings, client)
 
 app = FastAPI(title="NH Archive", version="0.1.0")
 app.add_middleware(
@@ -68,8 +77,16 @@ def discover_random():
 
 
 @app.get("/api/discover/search")
-def discover_search(q: str, page: int = 1, per_page: int = 25):
-    return _remote(lambda: discover.search(q, page, per_page))
+def discover_search(
+    q: str = "",
+    page: int = 1,
+    per_page: int = 25,
+    sort: str = "date",
+    language: str = "all",
+    type: str = "all",
+    unimported_only: bool = False,
+):
+    return _remote(lambda: discover.search(q, page, per_page, sort, language, type, unimported_only))
 
 
 @app.get("/api/discover/galleries/{gallery_id}")
@@ -157,6 +174,21 @@ def retry_job(job_id: int):
         return imports.retry_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/settings")
+def get_settings():
+    return settings_service.get()
+
+
+@app.patch("/api/settings")
+def patch_settings(patch: SettingsPatch):
+    return settings_service.patch(patch.model_dump(exclude_none=True))
+
+
+@app.post("/api/settings/nhentai/verify")
+def verify_nhentai_settings():
+    return settings_service.verify_nhentai()
 
 
 def _remote(call):

@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 from app.database import Database
-from app.services.nhentai_client import NhentaiClient, map_gallery_summary
+from app.services.nhentai_client import NhentaiApiError, NhentaiClient, map_gallery_summary
 
 
 class DiscoverService:
@@ -18,7 +18,7 @@ class DiscoverService:
 
     def popular(self) -> dict[str, Any]:
         payload = self.client.popular()
-        return {"result": [self._with_import_state(item) for item in payload], "total": len(payload)}
+        return self._map_items(payload, {"total": len(payload), "num_pages": 1, "per_page": len(payload)})
 
     def random(self) -> dict[str, Any]:
         payload = self.client.random()
@@ -26,10 +26,26 @@ class DiscoverService:
             return self.gallery(int(payload["id"]))
         return payload
 
-    def search(self, query: str, page: int, per_page: int) -> dict[str, Any]:
-        if len(query.strip()) < 3:
+    def search(
+        self,
+        query: str,
+        page: int,
+        per_page: int,
+        sort: str = "date",
+        language: str = "all",
+        kind: str = "all",
+        unimported_only: bool = False,
+    ) -> dict[str, Any]:
+        remote_query = build_search_query(query, language, kind)
+        if len(remote_query.strip()) < 1:
             return {"result": [], "total": 0, "num_pages": 0, "per_page": per_page, "reason": "min_query_length"}
-        return self._map_page(self.client.search(query, page, per_page))
+        payload = self.client.search(remote_query, page, per_page, sort)
+        mapped = self._map_page(payload)
+        if unimported_only:
+            mapped["result"] = [item for item in mapped["result"] if not item.get("imported")]
+            mapped["total"] = len(mapped["result"])
+        mapped["query"] = remote_query
+        return mapped
 
     def gallery(self, gallery_id: int) -> dict[str, Any]:
         payload = self.client.gallery(gallery_id, include="related")
@@ -70,6 +86,10 @@ class DiscoverService:
             self.cache_tag(tag)
         return {"result": result}
 
+    def cache_tags(self, tags: list[dict[str, Any]]) -> None:
+        for tag in tags:
+            self.cache_tag(tag)
+
     def cache_gallery(self, payload: dict[str, Any]) -> None:
         gallery_id = int(payload["id"])
         self.db.execute(
@@ -109,17 +129,71 @@ class DiscoverService:
         )
 
     def _map_page(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "result": [self._with_import_state(item) for item in payload.get("result", [])],
-            "num_pages": payload.get("num_pages", 0),
-            "per_page": payload.get("per_page", 0),
-            "total": payload.get("total", 0),
-        }
+        return self._map_items(
+            payload.get("result", []),
+            {
+                "num_pages": payload.get("num_pages", 0),
+                "per_page": payload.get("per_page", 0),
+                "total": payload.get("total", 0),
+            },
+        )
 
-    def _with_import_state(self, item: dict[str, Any]) -> dict[str, Any]:
+    def _map_items(self, items: list[dict[str, Any]], meta: dict[str, Any]) -> dict[str, Any]:
+        tag_map = self._tags_for_items(items)
+        return {
+            "result": [self._with_import_state(item, tag_map) for item in items],
+        } | meta
+
+    def _with_import_state(self, item: dict[str, Any], tag_map: dict[int, dict[str, Any]] | None = None) -> dict[str, Any]:
         summary = map_gallery_summary(item)
         summary["thumbnail"]["url"] = self.client.media_url(summary["thumbnail"].get("path"), thumbnail=True)
         work = self.db.fetchone("SELECT id FROM works WHERE remote_gallery_id = ?", (summary["gallery_id"],))
         summary["imported"] = work is not None
         summary["work_id"] = work["id"] if work else None
+        summary["tags"] = [tag_map[tag_id] for tag_id in summary.get("tag_ids", []) if tag_map and tag_id in tag_map]
         return summary
+
+    def _tags_for_items(self, items: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+        ids: list[int] = []
+        for item in items:
+            ids.extend(int(tag_id) for tag_id in item.get("tag_ids", []) if isinstance(tag_id, int))
+        if not ids:
+            return {}
+        unique_ids = list(dict.fromkeys(ids))
+        cached_rows = self.db.fetchall(
+            f"SELECT remote_id, type, name, slug FROM remote_tags WHERE remote_id IN ({','.join('?' for _ in unique_ids)})",
+            tuple(unique_ids),
+        )
+        tag_map = {int(row["remote_id"]): {"id": row["remote_id"], "type": row["type"], "name": row["name"], "slug": row["slug"]} for row in cached_rows}
+        missing = [tag_id for tag_id in dict.fromkeys(ids) if tag_id not in tag_map][:100]
+        if missing:
+            try:
+                tags = self.client.tags_by_ids(missing)
+            except NhentaiApiError:
+                return tag_map
+            self.cache_tags(tags)
+            for tag in tags:
+                if tag.get("id") is not None:
+                    tag_map[int(tag["id"])] = {
+                        "id": tag["id"],
+                        "type": tag.get("type"),
+                        "name": tag.get("name"),
+                        "slug": tag.get("slug"),
+                    }
+        return tag_map
+
+
+def build_search_query(query: str, language: str = "all", kind: str = "all") -> str:
+    parts = [query.strip()] if query.strip() else []
+    language_map = {"japanese": "japanese", "english": "english", "chinese": "chinese"}
+    kind_map = {
+        "doujinshi": "doujinshi",
+        "manga": "manga",
+        "artist-cg": "artist cg",
+        "game-cg": "game cg",
+    }
+    if language in language_map:
+        parts.append(f"language:{language_map[language]}")
+    if kind in kind_map:
+        parts.append(f'tag:"{kind_map[kind]}"')
+    return " ".join(parts).strip()

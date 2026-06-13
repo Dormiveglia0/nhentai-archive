@@ -51,6 +51,7 @@ class ImportService:
             self.jobs.mark_running(job_id, "fetching_gallery", 1, 5)
             gallery = self.client.gallery(gallery_id, include="related")
             self.discover.cache_gallery(gallery)
+            self.discover.cache_tags(gallery.get("tags", []))
 
             self.jobs.update_progress(job_id, "running", "requesting_download_url", 2, 5)
             download = self.client.download_url(gallery_id)

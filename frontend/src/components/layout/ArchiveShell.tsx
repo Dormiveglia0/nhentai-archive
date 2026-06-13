@@ -1,4 +1,16 @@
-import { BookOpen, Download, EyeOff, Library, Search, Settings, Upload, Workflow } from "lucide-react";
+import {
+  BookOpen,
+  Download,
+  EyeOff,
+  FileArchive,
+  Library,
+  PenTool,
+  Search,
+  Settings,
+  Upload,
+  Workflow,
+  Wrench,
+} from "lucide-react";
 import { ReactNode } from "react";
 
 import { navigate } from "../../lib/navigation";
@@ -14,9 +26,14 @@ type Props = {
 };
 
 const NAV = [
-  { id: "discover", label: "发现", icon: Search },
+  { id: "workbench", label: "工作台", icon: Wrench },
   { id: "library", label: "我的库", icon: Library },
+  { id: "discover", label: "发现", icon: Search },
+  { id: "governance", label: "治理", icon: PenTool },
+  { id: "dictionary", label: "词典", icon: BookOpen },
   { id: "tasks", label: "队列", icon: Workflow },
+  { id: "export", label: "导出", icon: Download },
+  { id: "files", label: "文件", icon: FileArchive },
   { id: "settings", label: "设置", icon: Settings }
 ];
 
@@ -42,7 +59,7 @@ export function ArchiveShell({
 
         <label className="global-search">
           <Search size={18} />
-          <input placeholder="搜索 书名 / 圈子 / 作者 / 标签..." disabled />
+          <input placeholder="搜索 标题、社团、角色、标签或 Gallery ID..." disabled />
           <kbd>/</kbd>
         </label>
 
@@ -89,7 +106,20 @@ export function ArchiveShell({
               key={item.id}
               className={activePage === item.id ? "active" : ""}
               type="button"
-              onClick={() => navigate({ name: item.id as "discover" | "library" | "tasks" | "settings" })}
+              onClick={() =>
+                navigate({
+                  name: item.id as
+                    | "workbench"
+                    | "discover"
+                    | "library"
+                    | "governance"
+                    | "dictionary"
+                    | "tasks"
+                    | "export"
+                    | "files"
+                    | "settings",
+                })
+              }
             >
               <Icon size={15} />
               {item.label}

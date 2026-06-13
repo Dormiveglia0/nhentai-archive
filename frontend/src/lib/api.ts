@@ -9,6 +9,7 @@ export type GallerySummary = {
   page_count: number;
   favorites: number;
   tag_ids: number[];
+  tags?: Array<{ id: number; type?: string; name?: string; slug?: string }>;
   blacklisted: boolean;
   imported?: boolean;
   work_id?: number | null;
@@ -73,6 +74,39 @@ export type Job = {
   updated_at: string;
 };
 
+export type SettingsSummary = {
+  nhentai: {
+    base_url: string;
+    api_key_configured: boolean;
+    api_key_source: "env" | "db" | "none";
+    last_verify: null | {
+      configured: boolean;
+      ok: boolean;
+      source: string;
+      status_code: number | null;
+      message: string;
+    };
+  };
+  storage: Record<string, string>;
+  privacy: {
+    privacy_mode_default: boolean;
+    blur_covers_default: boolean;
+  };
+  reader: {
+    default_mode: "single" | "scroll";
+  };
+};
+
+export type DiscoverSearchParams = {
+  q?: string;
+  page?: number;
+  per_page?: number;
+  sort?: string;
+  language?: string;
+  type?: string;
+  unimported_only?: boolean;
+};
+
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -91,12 +125,25 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
 }
 
 export const api = {
-  latest: () => request<{ result: GallerySummary[]; total: number }>("/api/discover/latest"),
-  popular: () => request<{ result: GallerySummary[]; total: number }>("/api/discover/popular"),
-  search: (q: string) =>
-    request<{ result: GallerySummary[]; total: number; reason?: string }>(
-      `/api/discover/search?q=${encodeURIComponent(q)}`
+  latest: (page = 1, perPage = 24) =>
+    request<{ result: GallerySummary[]; total: number; num_pages?: number; per_page?: number }>(
+      `/api/discover/latest?page=${page}&per_page=${perPage}`
     ),
+  popular: () => request<{ result: GallerySummary[]; total: number }>("/api/discover/popular"),
+  random: () => request<GalleryDetail>("/api/discover/random"),
+  search: (params: DiscoverSearchParams) => {
+    const query = new URLSearchParams();
+    query.set("q", params.q ?? "");
+    query.set("page", String(params.page ?? 1));
+    query.set("per_page", String(params.per_page ?? 24));
+    query.set("sort", params.sort ?? "date");
+    query.set("language", params.language ?? "all");
+    query.set("type", params.type ?? "all");
+    query.set("unimported_only", String(Boolean(params.unimported_only)));
+    return request<{ result: GallerySummary[]; total: number; num_pages: number; per_page: number; reason?: string; query?: string }>(
+      `/api/discover/search?${query.toString()}`
+    );
+  },
   gallery: (id: number) => request<GalleryDetail>(`/api/discover/galleries/${id}`),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
@@ -111,5 +158,17 @@ export const api = {
       body: JSON.stringify({ page_index: pageIndex, completed })
     }),
   jobs: () => request<{ result: Job[] }>("/api/jobs"),
-  retryJob: (id: number) => request<Job>(`/api/jobs/${id}/retry`, { method: "POST", headers: JSON_HEADERS })
+  retryJob: (id: number) => request<Job>(`/api/jobs/${id}/retry`, { method: "POST", headers: JSON_HEADERS }),
+  settings: () => request<SettingsSummary>("/api/settings"),
+  updateSettings: (payload: Record<string, unknown>) =>
+    request<SettingsSummary>("/api/settings", {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    }),
+  verifyNhentaiSettings: () =>
+    request<{ configured: boolean; ok: boolean; source: string; status_code: number | null; message: string }>(
+      "/api/settings/nhentai/verify",
+      { method: "POST", headers: JSON_HEADERS }
+    )
 };
