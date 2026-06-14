@@ -107,7 +107,9 @@ class SettingsService:
 
     def apply_runtime_settings(self) -> None:
         api_key, _source = self._effective_api_key()
-        self.client.api_key = api_key
+        if self.client.api_key != api_key:
+            self.client.api_key = api_key
+            self.client.clear_runtime_cache()
 
     def _effective_api_key(self) -> tuple[str | None, str]:
         if self.settings.nhentai_api_key:

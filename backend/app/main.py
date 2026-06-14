@@ -66,9 +66,29 @@ def discover_latest(page: int = 1, per_page: int = 25):
     return _remote(lambda: discover.latest(page, per_page))
 
 
+@app.get("/api/discover/feed")
+def discover_feed(
+    page: int = 1,
+    per_page: int = 25,
+    q: str = "",
+    sort: str = "date",
+    language: str = "all",
+    type: str = "all",
+    tag_id: int | None = None,
+    tag_names: str = "",
+    unimported_only: bool = False,
+):
+    return _remote(lambda: discover.feed(page, per_page, q, sort, language, type, tag_id, tag_names, unimported_only))
+
+
 @app.get("/api/discover/popular")
 def discover_popular():
     return _remote(discover.popular)
+
+
+@app.get("/api/discover/tagged")
+def discover_tagged(tag_id: int, page: int = 1, per_page: int = 25, sort: str = "date", unimported_only: bool = False):
+    return _remote(lambda: discover.tagged(tag_id, page, per_page, sort, unimported_only))
 
 
 @app.get("/api/discover/random")
@@ -102,6 +122,11 @@ def import_gallery(gallery_id: int):
 @app.get("/api/discover/tags/autocomplete")
 def tag_autocomplete(q: str, limit: int = 20):
     return _remote(lambda: discover.tag_autocomplete(q, limit))
+
+
+@app.get("/api/discover/tags/cached")
+def cached_tags(limit: int = 60):
+    return discover.cached_tags(limit)
 
 
 @app.get("/api/works")

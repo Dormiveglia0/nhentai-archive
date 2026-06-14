@@ -3,6 +3,7 @@ export type Page =
   | { name: "discover" }
   | { name: "library" }
   | { name: "reader"; workId: number }
+  | { name: "readerRemote"; galleryId: number }
   | { name: "governance" }
   | { name: "dictionary" }
   | { name: "tasks" }
@@ -12,6 +13,8 @@ export type Page =
 
 export function pageFromLocation(): Page {
   const hash = window.location.hash.replace(/^#/, "");
+  const remoteReaderMatch = hash.match(/^reader\/remote\/(\d+)$/);
+  if (remoteReaderMatch) return { name: "readerRemote", galleryId: Number(remoteReaderMatch[1]) };
   const readerMatch = hash.match(/^reader\/(\d+)$/);
   if (readerMatch) return { name: "reader", workId: Number(readerMatch[1]) };
   if (hash === "workbench") return { name: "workbench" };
@@ -26,6 +29,6 @@ export function pageFromLocation(): Page {
 }
 
 export function navigate(page: Page) {
-  const hash = page.name === "reader" ? `reader/${page.workId}` : page.name;
+  const hash = page.name === "reader" ? `reader/${page.workId}` : page.name === "readerRemote" ? `reader/remote/${page.galleryId}` : page.name;
   window.location.hash = hash;
 }

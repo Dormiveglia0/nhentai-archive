@@ -4,9 +4,9 @@
 
 Implemented loop:
 
-`discover remote gallery -> create import job -> download CBZ -> index local archive -> read pages -> save progress`
+`discover remote gallery -> detail modal -> remote reader or create import job -> download CBZ -> index local archive -> local reader -> save progress`
 
-This stage also implements real NH API Key settings and rewrites the discover page against `design/搜索导入.png`. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
+This stage also implements real NH API Key settings and rewrites the discover page into a unified feed against `design/搜索导入.png`. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
 
 Read order for future AI work:
 
@@ -26,17 +26,27 @@ Root: `backend/app/`
 - `database.py`
   - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `reader_progress`, `reading_history`, `jobs`, `settings`.
 - `services/nhentai_client.py`
-  - Remote API wrapper: `latest`, `popular`, `random`, `search`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
+  - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
   - `media_url()` resolves CDN paths through `/api/v2/cdn`; frontend must not guess image URLs.
   - `normalize_remote_error()` standardizes 401/404/422/429.
+  - API quota protection:
+    - caches cacheable remote GET/selected tag-search calls by request key;
+    - uses longer TTLs for CDN/tag/detail/popular responses and short TTLs for feed/search pages;
+    - enters a local cooldown window after 429 and does not keep forwarding remote requests during cooldown;
+    - may serve stale cached data during a 429 cooldown when available.
 - `services/discover_service.py`
-  - `latest/popular/random/search/gallery/tag_autocomplete`.
+  - `latest/popular/random/feed/tagged/search/gallery/tag_autocomplete/cached_tags`.
+  - `feed()` is the unified discovery entry:
+    - no filters: current page only through `/api/v2/galleries`;
+    - language/type/query/sort: real `/api/v2/search` query;
+    - single remote tag: `/api/v2/galleries/tagged`.
   - Adds local `imported/work_id` state to remote gallery summaries.
-  - `build_search_query()` appends real remote filters such as `language:japanese` and `tag:"artist cg"`.
+  - `build_search_query()` appends confirmed remote filters such as `language:japanese`, `tag:"doujinshi"`, and `tag:"manga"`.
   - Enriches cards with real `remote_tags` via `/api/v2/tags/ids` and caches those tags.
+  - `cached_tags()` exposes real cached tags for the discover selector; it does not fabricate defaults.
 - `services/settings_service.py`
   - `get()`: safe settings summary; never returns API key text.
-  - `patch()`: saves DB key and UI preferences; immediately updates runtime `NhentaiClient.api_key`.
+  - `patch()`: saves DB key and UI preferences; immediately updates runtime `NhentaiClient.api_key` and clears runtime remote cache when the effective key changes.
   - `verify_nhentai()`: verifies current effective key through an authenticated remote request.
 - `services/import_service.py`
   - `enqueue_remote_import()`, `run_remote_import()`, `retry_job()`.
@@ -56,12 +66,16 @@ Implemented:
 
 - `GET /api/health`
 - `GET /api/discover/latest`
+- `GET /api/discover/feed?page=&per_page=&q=&sort=&language=&type=&tag_id=&tag_names=&unimported_only=`
+- `GET /api/discover/tagged?tag_id=&page=&per_page=&sort=&unimported_only=`
 - `GET /api/discover/popular`
 - `GET /api/discover/random`
 - `GET /api/discover/search?q=&page=&per_page=&sort=&language=&type=&unimported_only=`
 - `GET /api/discover/galleries/{gallery_id}`
+  - Detail payload includes `pages[]` with resolved `url` values when the remote API returns page paths. These URLs are consumed only by the remote reader route, not by the detail modal.
 - `POST /api/discover/galleries/{gallery_id}/import`
 - `GET /api/discover/tags/autocomplete`
+- `GET /api/discover/tags/cached`
 - `GET /api/works`
 - `GET /api/works/{work_id}`
 - `GET /api/works/{work_id}/cover`
@@ -93,21 +107,51 @@ Root: `frontend/src/`
   - Boundary pages for workbench, governance, dictionary, export, files, and full tasks.
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
+  - Routes include local `#reader/{work_id}` and remote `#reader/remote/{gallery_id}`.
 - `lib/api.ts`
   - Typed API wrapper for implemented backend endpoints.
+  - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
 - `components/layout/ArchiveShell.tsx`
   - Global topbar, full secondary nav, privacy/blur switches, bottom `TaskDock`.
 - `components/layout/TaskDock.tsx`
-  - Polls real `/api/jobs`; no synthetic tasks.
+  - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
 - `components/discover/DiscoverPage.tsx`
-  - Design-baseline discover page: modes, filters, grid/list, pagination, detail drawer, import action.
+  - Target design baseline is documented in `docs/superpowers/specs/2026-06-14-discover-popular-fan-design.md`.
+  - Stable structure is title area + discover controls/results.
+  - Popular is a title-side image-first sunset fan driven by scroll progress, not a permanent page section.
+  - Single feed with keyword/Gallery ID input, filters, grid/list, title-side popular fan, random/gallery/detail modal, import action.
   - Card title uses Japanese title first; author/language/tags come from real cached remote tags.
+- `components/discover/DiscoverToolbar.tsx`
+  - Feed/upload/scan tabs, keyword or Gallery ID input, remote tag selector, custom language/type/sort menus, unimported toggle, random action.
+- `components/discover/FilterMenu.tsx`
+  - Custom compact menu used instead of native select controls on discover filters.
+- `components/discover/DiscoverFeed.tsx`
+  - Result count, empty/error/notice states, dynamic current-page cards, icon pager.
+- `components/discover/DiscoverCard.tsx`
+  - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row.
+- `components/discover/TagFilterSelector.tsx`
+  - Real cached multi-select tag picker plus remote autocomplete. Dictionary display mapping is intentionally deferred to Phase 2.
+- `components/discover/TagScroller.tsx`
+  - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support.
+- `components/discover/PopularFan.tsx`
+  - Real `/api/discover/popular` title-side sunset fan UI.
+  - Initial state shows an unframed image-first cover fan integrated into the `发现 / 导入` title area.
+  - Scroll progress drives the animation: covers follow a rightward semicircle arc, rotate, clip out through the right/bottom edge on down-scroll, and reverse on up-scroll.
+  - `cardStyle()` uses trigonometric semicircle coordinates; do not replace it with linear scale/translate interpolation.
+  - Do not restore bordered/shadowed window styling, popover/floating mode, close buttons, or large metadata/action blocks inside the fan.
+- `components/discover/GalleryPreviewModal.tsx`
+  - Random, Gallery ID, and card detail modal; backdrop click/Escape close.
+  - Shows metadata, tags, related works, `阅读`, and `加入导入队列` only. It does not contain an embedded reader.
+- `components/discover/IconPager.tsx`
+  - Icon-only first/previous/input/next/last pagination.
 - `components/settings/SettingsPage.tsx`
   - NH API Key save/clear/verify, safe config summary, storage paths, UI preferences.
 - `components/library/LibraryPage.tsx`
   - Current simple real `/api/works` library; Phase 3 will enhance it.
 - `components/reader/ReaderPage.tsx`
-  - Reads indexed pages and persists progress.
+  - Discriminated source reader:
+    - local `workId`: reads indexed CBZ pages and persists progress;
+    - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 

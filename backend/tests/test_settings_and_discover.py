@@ -1,6 +1,6 @@
 from app.config import Settings
 from app.database import Database
-from app.services.discover_service import build_search_query
+from app.services.discover_service import DiscoverService, build_search_query
 from app.services.nhentai_client import NhentaiClient
 from app.services.settings_service import SettingsService
 
@@ -35,6 +35,109 @@ def test_settings_service_reports_missing_key_without_verifying_remote(tmp_path)
 
 
 def test_discover_search_query_adds_real_remote_filters():
-    query = build_search_query("snow", language="japanese", kind="artist-cg")
+    query = build_search_query("snow", language="japanese", kind="manga")
 
-    assert query == 'snow language:japanese tag:"artist cg"'
+    assert query == 'snow language:japanese tag:"manga"'
+
+
+class FakeDiscoverClient:
+    def __init__(self):
+        self.calls = []
+
+    def latest(self, page, per_page):
+        self.calls.append(("latest", page, per_page))
+        return {"result": [], "num_pages": 20000, "per_page": per_page, "total": 480000}
+
+    def search(self, query, page, per_page, sort):
+        self.calls.append(("search", query, page, per_page, sort))
+        return {"result": [], "num_pages": 10, "per_page": per_page, "total": 240}
+
+    def tagged(self, tag_id, page, per_page, sort):
+        self.calls.append(("tagged", tag_id, page, per_page, sort))
+        return {"result": [], "num_pages": 3, "per_page": per_page, "total": 60}
+
+    def media_url(self, path, thumbnail=False):
+        return f"https://cdn.example/{path}" if path else None
+
+    def tags_by_ids(self, ids):
+        return []
+
+    def gallery(self, gallery_id, include=None):
+        self.calls.append(("gallery", gallery_id, include))
+        return {
+            "id": gallery_id,
+            "media_id": "media",
+            "title": {"english": "Remote title", "japanese": "リモート"},
+            "thumbnail": {"path": "thumb.jpg"},
+            "cover": {"path": "cover.jpg"},
+            "tags": [],
+            "pages": [{"path": "001.jpg", "width": 1000, "height": 1400}],
+            "num_pages": 1,
+            "num_favorites": 0,
+            "related": [],
+        }
+
+
+def test_discover_feed_defaults_to_current_latest_page_only(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    payload = service.feed(page=7, per_page=24)
+
+    assert client.calls == [("latest", 7, 24)]
+    assert payload["num_pages"] == 20000
+    assert payload["result"] == []
+
+
+def test_discover_feed_uses_search_for_sort_without_loading_all_pages(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    service.feed(page=2, per_page=24, sort="popular")
+
+    assert client.calls == [("search", "pages:>0", 2, 24, "popular")]
+
+
+def test_discover_feed_uses_search_for_multiple_tags(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    service.feed(page=1, per_page=24, tag_id=10, tag_names="artist name,series name")
+
+    assert client.calls == [("search", 'tag:"artist name" tag:"series name"', 1, 24, "date")]
+
+
+def test_discover_tagged_passes_real_tag_parameters(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    payload = service.tagged(tag_id=123, page=4, per_page=20, sort="popular-week")
+
+    assert client.calls == [("tagged", 123, 4, 20, "popular-week")]
+    assert payload["source"] == "tagged"
+
+
+def test_discover_gallery_maps_remote_page_urls(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    payload = service.gallery(321)
+
+    assert client.calls == [("gallery", 321, "related")]
+    assert payload["pages"][0]["url"] == "https://cdn.example/001.jpg"
+    assert payload["pages"][0]["path"] == "001.jpg"

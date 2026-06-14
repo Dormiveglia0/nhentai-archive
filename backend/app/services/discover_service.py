@@ -16,9 +16,55 @@ class DiscoverService:
         payload = self.client.latest(page, per_page)
         return self._map_page(payload)
 
+    def feed(
+        self,
+        page: int,
+        per_page: int,
+        query: str = "",
+        sort: str = "date",
+        language: str = "all",
+        kind: str = "all",
+        tag_id: int | None = None,
+        tag_names: str = "",
+        unimported_only: bool = False,
+    ) -> dict[str, Any]:
+        selected_tags = [value.strip() for value in tag_names.split(",") if value.strip()]
+        can_use_tagged = tag_id and len(selected_tags) <= 1 and not query.strip() and language == "all" and kind == "all"
+        if can_use_tagged:
+            return self.tagged(tag_id, page, per_page, sort, unimported_only)
+
+        remote_query = build_search_query(query, language, kind, selected_tags)
+        if remote_query or sort != "date":
+            return self.search(query, page, per_page, sort, language, kind, unimported_only, selected_tags)
+
+        mapped = self.latest(page, per_page)
+        if unimported_only:
+            mapped["result"] = [item for item in mapped["result"] if not item.get("imported")]
+            mapped["total"] = len(mapped["result"])
+        mapped["query"] = ""
+        mapped["source"] = "latest"
+        return mapped
+
     def popular(self) -> dict[str, Any]:
         payload = self.client.popular()
         return self._map_items(payload, {"total": len(payload), "num_pages": 1, "per_page": len(payload)})
+
+    def tagged(
+        self,
+        tag_id: int,
+        page: int,
+        per_page: int,
+        sort: str = "date",
+        unimported_only: bool = False,
+    ) -> dict[str, Any]:
+        payload = self.client.tagged(tag_id, page, per_page, sort)
+        mapped = self._map_page(payload)
+        if unimported_only:
+            mapped["result"] = [item for item in mapped["result"] if not item.get("imported")]
+            mapped["total"] = len(mapped["result"])
+        mapped["query"] = f"tag_id:{tag_id}"
+        mapped["source"] = "tagged"
+        return mapped
 
     def random(self) -> dict[str, Any]:
         payload = self.client.random()
@@ -35,8 +81,11 @@ class DiscoverService:
         language: str = "all",
         kind: str = "all",
         unimported_only: bool = False,
+        tag_names: list[str] | None = None,
     ) -> dict[str, Any]:
-        remote_query = build_search_query(query, language, kind)
+        remote_query = build_search_query(query, language, kind, tag_names or [])
+        if not remote_query and sort != "date":
+            remote_query = "pages:>0"
         if len(remote_query.strip()) < 1:
             return {"result": [], "total": 0, "num_pages": 0, "per_page": per_page, "reason": "min_query_length"}
         payload = self.client.search(remote_query, page, per_page, sort)
@@ -45,6 +94,7 @@ class DiscoverService:
             mapped["result"] = [item for item in mapped["result"] if not item.get("imported")]
             mapped["total"] = len(mapped["result"])
         mapped["query"] = remote_query
+        mapped["source"] = "search"
         return mapped
 
     def gallery(self, gallery_id: int) -> dict[str, Any]:
@@ -57,6 +107,13 @@ class DiscoverService:
             cover = {**cover, "url": self.client.media_url(cover.get("path"))}
         if isinstance(thumbnail, dict):
             thumbnail = {**thumbnail, "url": self.client.media_url(thumbnail.get("path"), thumbnail=True)}
+        pages = []
+        for index, page in enumerate(payload.get("pages", []), start=1):
+            if isinstance(page, dict):
+                path = page.get("path")
+                pages.append({**page, "index": index, "url": self.client.media_url(path)})
+            elif isinstance(page, str):
+                pages.append({"index": index, "path": page, "url": self.client.media_url(page)})
         related = []
         for item in payload.get("related", []):
             summary = map_gallery_summary(item)
@@ -73,6 +130,7 @@ class DiscoverService:
             "upload_date": payload.get("upload_date"),
             "tags": payload.get("tags", []),
             "page_count": payload.get("num_pages", 0),
+            "pages": pages,
             "favorites": payload.get("num_favorites", 0),
             "related": related,
             "imported": work is not None,
@@ -85,6 +143,24 @@ class DiscoverService:
         for tag in result:
             self.cache_tag(tag)
         return {"result": result}
+
+    def cached_tags(self, limit: int = 60) -> dict[str, Any]:
+        rows = self.db.fetchall(
+            """
+            SELECT remote_id, type, name, slug
+            FROM remote_tags
+            WHERE name IS NOT NULL OR slug IS NOT NULL
+            ORDER BY cached_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        return {
+            "result": [
+                {"id": row["remote_id"], "type": row["type"], "name": row["name"], "slug": row["slug"]}
+                for row in rows
+            ]
+        }
 
     def cache_tags(self, tags: list[dict[str, Any]]) -> None:
         for tag in tags:
@@ -183,17 +259,19 @@ class DiscoverService:
         return tag_map
 
 
-def build_search_query(query: str, language: str = "all", kind: str = "all") -> str:
+def build_search_query(query: str, language: str = "all", kind: str = "all", tag_names: list[str] | None = None) -> str:
     parts = [query.strip()] if query.strip() else []
     language_map = {"japanese": "japanese", "english": "english", "chinese": "chinese"}
     kind_map = {
         "doujinshi": "doujinshi",
         "manga": "manga",
-        "artist-cg": "artist cg",
-        "game-cg": "game cg",
     }
     if language in language_map:
         parts.append(f"language:{language_map[language]}")
     if kind in kind_map:
         parts.append(f'tag:"{kind_map[kind]}"')
+    for tag in tag_names or []:
+        safe_tag = tag.replace('"', "").strip()
+        if safe_tag:
+            parts.append(f'tag:"{safe_tag}"')
     return " ".join(parts).strip()

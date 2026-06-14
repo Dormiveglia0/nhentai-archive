@@ -23,10 +23,21 @@ export type GalleryDetail = {
   thumbnail?: { path?: string; url?: string };
   tags: Array<{ id: number; type: string; name: string; slug: string }>;
   page_count: number;
+  pages?: Array<{ index?: number; path?: string; url?: string; width?: number; height?: number }>;
   favorites: number;
+  upload_date?: number | string | null;
   related: GallerySummary[];
   imported: boolean;
   work_id?: number | null;
+};
+
+export type RemoteTag = {
+  id: number;
+  type?: string;
+  name?: string;
+  slug?: string;
+  count?: number;
+  display?: string;
 };
 
 export type Work = {
@@ -104,10 +115,13 @@ export type DiscoverSearchParams = {
   sort?: string;
   language?: string;
   type?: string;
+  tag_id?: number | null;
+  tag_names?: string[];
   unimported_only?: boolean;
 };
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+const DISCOVER_CACHE = new Map<string, { expiresAt: number; value: unknown; promise?: Promise<unknown> }>();
 
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
@@ -124,13 +138,56 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
   return response.json() as Promise<T>;
 }
 
+async function cachedDiscoverRequest<T>(url: string, ttlMs = 60_000): Promise<T> {
+  const now = Date.now();
+  const cached = DISCOVER_CACHE.get(url);
+  if (cached?.promise) return cached.promise as Promise<T>;
+  if (cached && cached.expiresAt > now) return cached.value as T;
+  const promise = request<T>(url)
+    .then((value) => {
+      DISCOVER_CACHE.set(url, { expiresAt: Date.now() + ttlMs, value });
+      return value;
+    })
+    .catch((error) => {
+      DISCOVER_CACHE.delete(url);
+      throw error;
+    });
+  DISCOVER_CACHE.set(url, { expiresAt: now + ttlMs, value: cached?.value, promise });
+  return promise;
+}
+
 export const api = {
   latest: (page = 1, perPage = 24) =>
-    request<{ result: GallerySummary[]; total: number; num_pages?: number; per_page?: number }>(
+    cachedDiscoverRequest<{ result: GallerySummary[]; total: number; num_pages?: number; per_page?: number }>(
       `/api/discover/latest?page=${page}&per_page=${perPage}`
     ),
-  popular: () => request<{ result: GallerySummary[]; total: number }>("/api/discover/popular"),
+  feed: (params: DiscoverSearchParams) => {
+    const query = new URLSearchParams();
+    query.set("q", params.q ?? "");
+    query.set("page", String(params.page ?? 1));
+    query.set("per_page", String(params.per_page ?? 24));
+    query.set("sort", params.sort ?? "date");
+    query.set("language", params.language ?? "all");
+    query.set("type", params.type ?? "all");
+    if (params.tag_id) query.set("tag_id", String(params.tag_id));
+    if (params.tag_names?.length) query.set("tag_names", params.tag_names.join(","));
+    query.set("unimported_only", String(Boolean(params.unimported_only)));
+    return cachedDiscoverRequest<{
+      result: GallerySummary[];
+      total: number;
+      num_pages: number;
+      per_page: number;
+      reason?: string;
+      query?: string;
+      source?: string;
+    }>(`/api/discover/feed?${query.toString()}`);
+  },
+  popular: () => cachedDiscoverRequest<{ result: GallerySummary[]; total: number }>("/api/discover/popular", 5 * 60_000),
   random: () => request<GalleryDetail>("/api/discover/random"),
+  tagged: (tagId: number, page = 1, perPage = 24, sort = "date") =>
+    cachedDiscoverRequest<{ result: GallerySummary[]; total: number; num_pages: number; per_page: number; source?: string }>(
+      `/api/discover/tagged?tag_id=${tagId}&page=${page}&per_page=${perPage}&sort=${encodeURIComponent(sort)}`
+    ),
   search: (params: DiscoverSearchParams) => {
     const query = new URLSearchParams();
     query.set("q", params.q ?? "");
@@ -140,11 +197,14 @@ export const api = {
     query.set("language", params.language ?? "all");
     query.set("type", params.type ?? "all");
     query.set("unimported_only", String(Boolean(params.unimported_only)));
-    return request<{ result: GallerySummary[]; total: number; num_pages: number; per_page: number; reason?: string; query?: string }>(
+    return cachedDiscoverRequest<{ result: GallerySummary[]; total: number; num_pages: number; per_page: number; reason?: string; query?: string }>(
       `/api/discover/search?${query.toString()}`
     );
   },
-  gallery: (id: number) => request<GalleryDetail>(`/api/discover/galleries/${id}`),
+  gallery: (id: number) => cachedDiscoverRequest<GalleryDetail>(`/api/discover/galleries/${id}`, 10 * 60_000),
+  tagAutocomplete: (q: string, limit = 12) =>
+    cachedDiscoverRequest<{ result: RemoteTag[] }>(`/api/discover/tags/autocomplete?q=${encodeURIComponent(q)}&limit=${limit}`, 5 * 60_000),
+  cachedTags: (limit = 60) => cachedDiscoverRequest<{ result: RemoteTag[] }>(`/api/discover/tags/cached?limit=${limit}`, 5 * 60_000),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
   works: () => request<{ result: Work[] }>("/api/works"),

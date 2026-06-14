@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from copy import deepcopy
 from typing import Any
 
 
@@ -66,9 +68,17 @@ class NhentaiClient:
         self.api_key = api_key
         self.timeout = timeout
         self._cdn: dict[str, Any] | None = None
+        self._cache: dict[tuple[str, str, str, str], tuple[float, Any]] = {}
+        self._rate_limited_until = 0.0
 
     def latest(self, page: int = 1, per_page: int = 25) -> dict[str, Any]:
         return self._get("/api/v2/galleries", {"page": page, "per_page": per_page})
+
+    def tagged(self, tag_id: int, page: int = 1, per_page: int = 25, sort: str = "date") -> dict[str, Any]:
+        return self._get(
+            "/api/v2/galleries/tagged",
+            {"tag_id": tag_id, "page": page, "per_page": per_page, "sort": sort},
+        )
 
     def popular(self) -> list[dict[str, Any]]:
         return self._get("/api/v2/galleries/popular")
@@ -136,6 +146,23 @@ class NhentaiClient:
         params: dict[str, Any] | None = None,
         body: dict[str, Any] | None = None,
     ) -> Any:
+        ttl = self._cache_ttl(method, path)
+        cache_key = self._cache_key(method, path, params, body)
+        now = time.monotonic()
+        cached = self._cache.get(cache_key)
+        if ttl and cached and cached[0] > now:
+            return deepcopy(cached[1])
+        if self._rate_limited_until > now:
+            if ttl and cached:
+                return deepcopy(cached[1])
+            retry_after = max(1, int(self._rate_limited_until - now))
+            raise NhentaiApiError(
+                status_code=429,
+                code="rate_limited",
+                message=f"Remote API rate limit cooldown active. Retry after {retry_after}s.",
+                retry_after=retry_after,
+            )
+
         query = f"?{urllib.parse.urlencode(params)}" if params else ""
         data = json.dumps(body).encode("utf-8") if body is not None else None
         headers = {"Accept": "application/json", "User-Agent": self.user_agent}
@@ -152,15 +179,58 @@ class NhentaiClient:
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                return json.loads(response.read().decode("utf-8"))
+                payload = json.loads(response.read().decode("utf-8"))
+                if ttl:
+                    self._cache[cache_key] = (now + ttl, deepcopy(payload))
+                return payload
         except urllib.error.HTTPError as exc:
             body_text = exc.read().decode("utf-8", "replace")
-            raise normalize_remote_error(exc.code, body_text, _retry_after(exc)) from exc
+            error = normalize_remote_error(exc.code, body_text, _retry_after(exc))
+            if error.status_code == 429:
+                cooldown = error.retry_after or 60
+                self._rate_limited_until = max(self._rate_limited_until, time.monotonic() + cooldown)
+                if ttl and cached:
+                    return deepcopy(cached[1])
+            raise error from exc
 
     def _cdn_config(self) -> dict[str, Any]:
         if self._cdn is None:
             self._cdn = self._get("/api/v2/cdn")
         return self._cdn
+
+    def clear_runtime_cache(self) -> None:
+        self._cache.clear()
+        self._cdn = None
+        self._rate_limited_until = 0.0
+
+    def _cache_ttl(self, method: str, path: str) -> int:
+        if method == "POST" and path == "/api/v2/tags/search":
+            return 60 * 30
+        if method != "GET":
+            return 0
+        if path == "/api/v2/cdn":
+            return 60 * 60 * 24
+        if path == "/api/v2/galleries/popular":
+            return 60 * 15
+        if path.startswith("/api/v2/galleries/") and path.rsplit("/", 1)[-1].isdigit():
+            return 60 * 60
+        if path in {"/api/v2/galleries", "/api/v2/galleries/tagged", "/api/v2/search"}:
+            return 60 * 2
+        if path == "/api/v2/tags/ids":
+            return 60 * 60 * 24
+        return 0
+
+    def _cache_key(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any] | None,
+        body: dict[str, Any] | None,
+    ) -> tuple[str, str, str, str]:
+        params_key = json.dumps(params or {}, sort_keys=True, separators=(",", ":"))
+        body_key = json.dumps(body or {}, sort_keys=True, separators=(",", ":"))
+        key_source = "keyed" if self.api_key else "anonymous"
+        return method, path, params_key, f"{key_source}:{body_key}"
 
 
 def _retry_after(exc: urllib.error.HTTPError) -> int | None:

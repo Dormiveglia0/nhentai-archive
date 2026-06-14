@@ -1,6 +1,9 @@
 import pytest
+import urllib.error
+from email.message import Message
+from io import BytesIO
 
-from app.services.nhentai_client import NhentaiApiError, map_gallery_summary, normalize_remote_error
+from app.services.nhentai_client import NhentaiApiError, NhentaiClient, map_gallery_summary, normalize_remote_error
 
 
 def test_map_gallery_summary_preserves_remote_identity_and_titles():
@@ -36,3 +39,63 @@ def test_normalize_remote_error_marks_429_as_rate_limited():
     assert error.status_code == 429
     assert error.code == "rate_limited"
     assert "too many requests" in error.message
+
+
+class FakeHttpResponse:
+    def __init__(self, body: bytes):
+        self.body = BytesIO(body)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return self.body.read()
+
+
+def test_client_caches_repeated_discover_gets(monkeypatch):
+    calls = []
+
+    def fake_urlopen(request, timeout):
+        calls.append(request.full_url)
+        return FakeHttpResponse(b'{"result":[],"num_pages":1,"per_page":24,"total":0}')
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    client = NhentaiClient("https://api.example", "tests")
+
+    first = client.latest(page=1, per_page=24)
+    second = client.latest(page=1, per_page=24)
+
+    assert first == second
+    assert calls == ["https://api.example/api/v2/galleries?page=1&per_page=24"]
+
+
+def test_client_enters_rate_limit_cooldown_without_repeating_remote_call(monkeypatch):
+    calls = []
+    headers = Message()
+    headers["Retry-After"] = "90"
+
+    def fake_urlopen(request, timeout):
+        calls.append(request.full_url)
+        raise urllib.error.HTTPError(
+            request.full_url,
+            429,
+            "Too Many Requests",
+            headers,
+            BytesIO(b'{"error":"Rate limit exceeded"}'),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    client = NhentaiClient("https://api.example", "tests")
+
+    with pytest.raises(NhentaiApiError) as first:
+        client.latest(page=1, per_page=24)
+    with pytest.raises(NhentaiApiError) as second:
+        client.latest(page=2, per_page=24)
+
+    assert first.value.code == "rate_limited"
+    assert second.value.code == "rate_limited"
+    assert second.value.retry_after is not None
+    assert calls == ["https://api.example/api/v2/galleries?page=1&per_page=24"]

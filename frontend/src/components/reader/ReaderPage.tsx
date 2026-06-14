@@ -1,38 +1,60 @@
-import { ArrowLeft, BookMarked, ChevronLeft, ChevronRight, EyeOff, Maximize2, ScrollText, Star } from "lucide-react";
+import { ArrowLeft, BookMarked, ChevronLeft, ChevronRight, Download, EyeOff, Maximize2, ScrollText, Star } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { api, PageInfo, ReaderState, Work } from "../../lib/api";
+import { api, GalleryDetail, PageInfo, ReaderState, Work } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 
 type Props = {
-  workId: number;
+  source: { kind: "local"; workId: number } | { kind: "remote"; galleryId: number };
   privacyMode: boolean;
 };
 
 type Mode = "single" | "scroll";
+type ReaderPageItem = {
+  key: string;
+  pageIndex: number;
+  src: string;
+};
 
-export function ReaderPage({ workId, privacyMode }: Props) {
+export function ReaderPage({ source, privacyMode }: Props) {
   const [work, setWork] = useState<Work | null>(null);
-  const [pages, setPages] = useState<PageInfo[]>([]);
+  const [gallery, setGallery] = useState<GalleryDetail | null>(null);
+  const [localPages, setLocalPages] = useState<PageInfo[]>([]);
   const [state, setState] = useState<ReaderState | null>(null);
+  const [remotePageIndex, setRemotePageIndex] = useState(1);
   const [mode, setMode] = useState<Mode>("single");
   const [masked, setMasked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const isRemote = source.kind === "remote";
+  const sourceKey = source.kind === "local" ? `local:${source.workId}` : `remote:${source.galleryId}`;
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setError(null);
+      setNotice(null);
+      setWork(null);
+      setGallery(null);
+      setLocalPages([]);
+      setState(null);
+      setRemotePageIndex(1);
       try {
-        const [nextWork, nextPages, nextState] = await Promise.all([
-          api.work(workId),
-          api.pages(workId),
-          api.readerState(workId)
-        ]);
-        if (!cancelled) {
-          setWork(nextWork);
-          setPages(nextPages.result);
-          setState(nextState);
+        if (source.kind === "local") {
+          const [nextWork, nextPages, nextState] = await Promise.all([
+            api.work(source.workId),
+            api.pages(source.workId),
+            api.readerState(source.workId),
+          ]);
+          if (!cancelled) {
+            setWork(nextWork);
+            setLocalPages(nextPages.result);
+            setState(nextState);
+          }
+        } else {
+          const detail = await api.gallery(source.galleryId);
+          if (!cancelled) setGallery(detail);
         }
       } catch (exc) {
         if (!cancelled) setError(exc instanceof Error ? exc.message : String(exc));
@@ -42,59 +64,96 @@ export function ReaderPage({ workId, privacyMode }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [workId]);
+  }, [source, sourceKey]);
+
+  const title = isRemote
+    ? gallery?.title.japanese || gallery?.title.pretty || gallery?.title.english || `Gallery ${source.galleryId}`
+    : work?.title || "NH Archive";
 
   useEffect(() => {
-    document.title = privacyMode ? "NH Archive" : work?.title || "NH Archive";
+    document.title = privacyMode ? "NH Archive" : title;
     return () => {
       document.title = "NH Archive";
     };
-  }, [privacyMode, work?.title]);
+  }, [privacyMode, title]);
 
-  const pageIndex = state?.page_index || 1;
-  const pageCount = state?.page_count || pages.length;
+  const readerPages = useMemo<ReaderPageItem[]>(() => {
+    if (source.kind === "local") {
+      return localPages.map((page) => ({
+        key: `local-${page.id}`,
+        pageIndex: page.page_index,
+        src: `/api/works/${source.workId}/pages/${page.page_index}`,
+      }));
+    }
+    return (gallery?.pages ?? [])
+      .filter((page) => page.url)
+      .map((page, index) => ({
+        key: `remote-${page.index ?? index + 1}`,
+        pageIndex: page.index ?? index + 1,
+        src: page.url!,
+      }));
+  }, [gallery?.pages, localPages, source]);
 
-  const savePage = useCallback(
+  const pageCount = source.kind === "local" ? state?.page_count || readerPages.length : readerPages.length || gallery?.page_count || 0;
+  const pageIndex = source.kind === "local" ? state?.page_index || 1 : remotePageIndex;
+  const progressPercent = pageCount ? Math.round((pageIndex / pageCount) * 100) : 0;
+
+  const setPage = useCallback(
     async (next: number, completed = false) => {
       if (!pageCount) return;
       const bounded = Math.max(1, Math.min(next, pageCount));
+      if (source.kind === "remote") {
+        setRemotePageIndex(bounded);
+        return;
+      }
       setState((current) =>
         current
           ? {
               ...current,
               page_index: bounded,
               progress_percent: Math.round((bounded / pageCount) * 100),
-              completed: completed || bounded >= pageCount
+              completed: completed || bounded >= pageCount,
             }
           : current
       );
       try {
-        setState(await api.updateReaderState(workId, bounded, completed || bounded >= pageCount));
+        setState(await api.updateReaderState(source.workId, bounded, completed || bounded >= pageCount));
       } catch (exc) {
         setError(exc instanceof Error ? exc.message : String(exc));
       }
     },
-    [pageCount, workId]
+    [pageCount, source]
   );
 
   useEffect(() => {
     const handle = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") void savePage(pageIndex + 1);
-      if (event.key === "ArrowLeft") void savePage(pageIndex - 1);
+      if (event.key === "ArrowRight") void setPage(pageIndex + 1);
+      if (event.key === "ArrowLeft") void setPage(pageIndex - 1);
       if (event.key.toLowerCase() === "h") setMasked((value) => !value);
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [pageIndex, savePage]);
+  }, [pageIndex, setPage]);
 
   const visiblePages = useMemo(() => {
     if (mode === "scroll") {
       const start = Math.max(1, pageIndex - 2);
       const end = Math.min(pageCount, pageIndex + 4);
-      return pages.filter((page) => page.page_index >= start && page.page_index <= end);
+      return readerPages.filter((page) => page.pageIndex >= start && page.pageIndex <= end);
     }
-    return pages.filter((page) => page.page_index === pageIndex);
-  }, [mode, pageCount, pageIndex, pages]);
+    return readerPages.filter((page) => page.pageIndex === pageIndex);
+  }, [mode, pageCount, pageIndex, readerPages]);
+
+  async function importRemote() {
+    if (source.kind !== "remote") return;
+    setError(null);
+    try {
+      await api.importGallery(source.galleryId);
+      setNotice(`Gallery ${source.galleryId} 已加入真实导入队列。`);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : String(exc));
+    }
+  }
 
   if (error) {
     return (
@@ -107,26 +166,28 @@ export function ReaderPage({ workId, privacyMode }: Props) {
   return (
     <section className="reader-page">
       <aside className="reader-sidebar">
-        <button className="back-button" type="button" onClick={() => navigate({ name: "library" })}>
+        <button className="back-button" type="button" onClick={() => navigate({ name: isRemote ? "discover" : "library" })}>
           <ArrowLeft size={17} />
-          返回库
+          {isRemote ? "返回发现" : "返回库"}
         </button>
-        {work ? (
-          <div className="reader-work">
-            {work.cover_path ? <img src={`/api/works/${work.id}/cover`} alt="" /> : null}
-            <h1>{work.title}</h1>
-            <p>{pageIndex} / {pageCount} 页 · {state?.progress_percent ?? 0}%</p>
-          </div>
-        ) : null}
+        <div className="reader-work">
+          {!isRemote && work?.cover_path ? <img src={`/api/works/${work.id}/cover`} alt="" /> : null}
+          {isRemote && gallery?.thumbnail?.url ? <img src={gallery.thumbnail.url} alt="" /> : null}
+          <h1>{title}</h1>
+          <p>
+            {pageIndex} / {pageCount} 页 · {progressPercent}%
+          </p>
+          {isRemote ? <small>远端只读预览，不保存阅读进度</small> : null}
+        </div>
         <div className="chapter-list">
-          {pages.map((page) => (
+          {readerPages.map((page) => (
             <button
-              key={page.id}
-              className={page.page_index === pageIndex ? "active" : ""}
+              key={page.key}
+              className={page.pageIndex === pageIndex ? "active" : ""}
               type="button"
-              onClick={() => savePage(page.page_index)}
+              onClick={() => setPage(page.pageIndex)}
             >
-              第 {page.page_index} 页
+              第 {page.pageIndex} 页
             </button>
           ))}
         </div>
@@ -134,17 +195,17 @@ export function ReaderPage({ workId, privacyMode }: Props) {
 
       <div className="reader-main">
         <div className="reader-toolbar">
-          <button type="button" onClick={() => savePage(pageIndex - 1)}>
+          <button type="button" onClick={() => setPage(pageIndex - 1)} disabled={pageIndex <= 1}>
             <ChevronLeft size={17} />
             上一页
           </button>
           <strong>{pageIndex}</strong>
           <span>/ {pageCount}</span>
-          <button type="button" onClick={() => savePage(pageIndex + 1)}>
+          <button type="button" onClick={() => setPage(pageIndex + 1)} disabled={pageIndex >= pageCount}>
             下一页
             <ChevronRight size={17} />
           </button>
-          <progress max="100" value={state?.progress_percent ?? 0} />
+          <progress max="100" value={progressPercent} />
           <button className={mode === "single" ? "active" : ""} type="button" onClick={() => setMode("single")}>
             <Maximize2 size={17} />
             单页
@@ -157,38 +218,56 @@ export function ReaderPage({ workId, privacyMode }: Props) {
             <EyeOff size={17} />
             隐私遮罩
           </button>
+          {isRemote ? (
+            <button className="primary-action" type="button" onClick={importRemote}>
+              <Download size={17} />
+              加入队列
+            </button>
+          ) : null}
         </div>
 
+        {notice ? <div className="notice slim">{notice}</div> : null}
         <div className={masked ? "page-stage masked" : "page-stage"}>
           {visiblePages.map((page) => (
             <img
-              key={page.id}
-              src={`/api/works/${workId}/pages/${page.page_index}`}
-              alt={`Page ${page.page_index}`}
+              key={page.key}
+              src={page.src}
+              alt={`Page ${page.pageIndex}`}
               loading={mode === "scroll" ? "lazy" : "eager"}
               onLoad={() => {
-                if (mode === "scroll" && page.page_index > pageIndex) void savePage(page.page_index);
+                if (mode === "scroll" && page.pageIndex > pageIndex) void setPage(page.pageIndex);
               }}
             />
           ))}
-          {visiblePages.length === 0 ? <p>此作品没有可读取页面。</p> : null}
+          {visiblePages.length === 0 ? <p>{isRemote ? "远端详情未返回可阅读页面 URL。" : "此作品没有可读取页面。"}</p> : null}
         </div>
       </div>
 
       <aside className="reader-inspector">
         <div className="reader-tabs">
-          <button className="active" type="button">作品信息</button>
+          <button className="active" type="button">
+            作品信息
+          </button>
           <button type="button">阅读设置</button>
         </div>
         <div className="reader-info">
           <BookMarked size={18} />
-          <strong>{work?.title || "读取中"}</strong>
-          <p>当前进度 {state?.progress_percent ?? 0}%</p>
-          <button type="button" onClick={() => savePage(pageCount, true)}>
-            <Star size={17} />
-            标记已读
+          <strong>{title}</strong>
+          <p>当前进度 {progressPercent}%</p>
+          {!isRemote ? (
+            <button type="button" onClick={() => setPage(pageCount, true)}>
+              <Star size={17} />
+              标记已读
+            </button>
+          ) : (
+            <button type="button" onClick={importRemote}>
+              <Download size={17} />
+              加入导入队列
+            </button>
+          )}
+          <button type="button" disabled>
+            进入治理将在后续模块接入
           </button>
-          <button type="button" disabled>进入治理将在后续模块接入</button>
         </div>
       </aside>
     </section>

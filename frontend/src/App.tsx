@@ -34,7 +34,8 @@ export default function App() {
       ) : null}
       {page.name === "discover" ? <DiscoverPage blurCovers={blurCovers} /> : null}
       {page.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
-      {page.name === "reader" ? <ReaderPage workId={page.workId} privacyMode={privacyMode} /> : null}
+      {page.name === "reader" ? <ReaderPage source={{ kind: "local", workId: page.workId }} privacyMode={privacyMode} /> : null}
+      {page.name === "readerRemote" ? <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} /> : null}
       {page.name === "governance" ? (
         <BoundaryPage title="作品治理" description="治理中心尚未接入 GovernanceService；不会展示假冲突、假完整度或假推荐动作。" />
       ) : null}
