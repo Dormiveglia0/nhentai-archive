@@ -33,8 +33,8 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
     if (!open || cached.length || cachedLoading) return;
     setCachedLoading(true);
     api
-      .cachedTags(80)
-      .then((payload) => setCached(payload.result))
+      .dictionaryCandidates({ limit: 80 })
+      .then((payload) => setCached(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number")))
       .catch((exc) => setError(exc instanceof Error ? exc.message : String(exc)))
       .finally(() => setCachedLoading(false));
   }, [cached.length, cachedLoading, open]);
@@ -50,8 +50,8 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
     const handle = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const payload = await api.tagAutocomplete(q, 12);
-        if (latestQuery.current === q) setSuggestions(payload.result);
+        const payload = await api.dictionaryAutocomplete(q, 12);
+        if (latestQuery.current === q) setSuggestions(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number"));
       } catch (exc) {
         if (latestQuery.current === q) setError(exc instanceof Error ? exc.message : String(exc));
       } finally {
@@ -78,6 +78,10 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   }
 
   function choose(tag: RemoteTag) {
+    if (typeof tag.id !== "number") {
+      setError("该词条尚未映射远端 tag，不能用于远端筛选。");
+      return;
+    }
     const exists = selected.some((item) => item.id === tag.id);
     if (!exists) onSelect([...selected, tag]);
     setQuery("");

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app.config import load_settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
+from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
@@ -30,6 +31,24 @@ class SettingsPatch(BaseModel):
     reader: dict | None = None
 
 
+class DictionaryApplyRequest(BaseModel):
+    original_text: str
+    zh_name: str
+    tag_type: str = "tag"
+    remote_tag_id: int | None = None
+    aliases: list[str] = []
+    scope: list[str] = []
+    note: str | None = None
+    status: str = "configured"
+    confidence: int = 80
+    locked: bool = False
+    ignored: bool = False
+
+
+class DictionaryBulkImportRequest(BaseModel):
+    rows: list[dict]
+
+
 settings = load_settings()
 db = Database(settings.database_path)
 db.init_schema()
@@ -43,7 +62,8 @@ jobs = JobService(db)
 archive = ArchiveService(db, settings)
 discover = DiscoverService(db, client)
 reader = ReaderService(db)
-imports = ImportService(settings, client, jobs, archive, discover)
+dictionary = DictionaryService(db, client)
+imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 settings_service = SettingsService(db, settings, client)
 
 app = FastAPI(title="NH Archive", version="0.1.0")
@@ -127,6 +147,68 @@ def tag_autocomplete(q: str, limit: int = 20):
 @app.get("/api/discover/tags/cached")
 def cached_tags(limit: int = 60):
     return discover.cached_tags(limit)
+
+
+@app.get("/api/dictionary/candidates")
+def dictionary_candidates(q: str = "", type: str = "all", status: str = "all", limit: int = 50, offset: int = 0):
+    return dictionary.candidates(q, status, limit, offset, type)
+
+
+@app.get("/api/dictionary/summary")
+def dictionary_summary():
+    return dictionary.summary()
+
+
+@app.get("/api/dictionary/evidence")
+def dictionary_evidence(remote_tag_id: int | None = None, dictionary_id: int | None = None):
+    return dictionary.evidence(remote_tag_id, dictionary_id)
+
+
+@app.get("/api/dictionary/autocomplete")
+def dictionary_autocomplete(q: str, limit: int = 20):
+    return _remote(lambda: dictionary.autocomplete(q, limit))
+
+
+@app.post("/api/dictionary/preview-apply")
+def dictionary_preview_apply(payload: DictionaryApplyRequest):
+    try:
+        return dictionary.preview_apply(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/apply")
+def dictionary_apply(payload: DictionaryApplyRequest):
+    try:
+        return dictionary.apply(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/preview-bulk-import")
+def dictionary_preview_bulk_import(payload: DictionaryBulkImportRequest):
+    return dictionary.preview_bulk_import(payload.rows)
+
+
+@app.post("/api/dictionary/bulk-import")
+def dictionary_bulk_import(payload: DictionaryBulkImportRequest):
+    return dictionary.bulk_import(payload.rows)
+
+
+@app.post("/api/dictionary/{dictionary_id}/ignore")
+def dictionary_ignore(dictionary_id: int):
+    try:
+        return dictionary.ignore(dictionary_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/{dictionary_id}/review")
+def dictionary_review(dictionary_id: int):
+    try:
+        return dictionary.mark_review(dictionary_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/api/works")

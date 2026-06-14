@@ -62,6 +62,46 @@ CREATE TABLE IF NOT EXISTS remote_tags (
   cached_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS local_tag_dictionary (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  original_text TEXT NOT NULL,
+  normalized_key TEXT NOT NULL,
+  zh_name TEXT NOT NULL,
+  tag_type TEXT NOT NULL DEFAULT 'tag',
+  remote_tag_id INTEGER REFERENCES remote_tags(remote_id) ON DELETE SET NULL,
+  scope_json TEXT NOT NULL DEFAULT '[]',
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'configured',
+  confidence INTEGER NOT NULL DEFAULT 80,
+  locked INTEGER NOT NULL DEFAULT 0,
+  ignored INTEGER NOT NULL DEFAULT 0,
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(normalized_key, tag_type)
+);
+
+CREATE TABLE IF NOT EXISTS tag_aliases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  dictionary_id INTEGER NOT NULL REFERENCES local_tag_dictionary(id) ON DELETE CASCADE,
+  alias TEXT NOT NULL,
+  normalized_key TEXT NOT NULL UNIQUE,
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS work_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_id INTEGER NOT NULL REFERENCES works(id) ON DELETE CASCADE,
+  remote_tag_id INTEGER REFERENCES remote_tags(remote_id) ON DELETE SET NULL,
+  dictionary_id INTEGER REFERENCES local_tag_dictionary(id) ON DELETE SET NULL,
+  tag_type TEXT,
+  remote_name TEXT,
+  remote_slug TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(work_id, remote_tag_id)
+);
+
 CREATE TABLE IF NOT EXISTS reader_progress (
   work_id INTEGER PRIMARY KEY REFERENCES works(id) ON DELETE CASCADE,
   page_index INTEGER NOT NULL,
@@ -115,6 +155,116 @@ class Database:
     def init_schema(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA)
+            self._migrate_legacy_schema(conn)
+
+    def _migrate_legacy_schema(self, conn: sqlite3.Connection) -> None:
+        dictionary_columns = _table_columns(conn, "local_tag_dictionary")
+        if dictionary_columns and "zh_name" not in dictionary_columns:
+            legacy = _rename_legacy_table(conn, "local_tag_dictionary")
+            conn.execute(
+                """
+                CREATE TABLE local_tag_dictionary (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  original_text TEXT NOT NULL,
+                  normalized_key TEXT NOT NULL,
+                  zh_name TEXT NOT NULL,
+                  tag_type TEXT NOT NULL DEFAULT 'tag',
+                  remote_tag_id INTEGER REFERENCES remote_tags(remote_id) ON DELETE SET NULL,
+                  scope_json TEXT NOT NULL DEFAULT '[]',
+                  note TEXT,
+                  status TEXT NOT NULL DEFAULT 'configured',
+                  confidence INTEGER NOT NULL DEFAULT 80,
+                  locked INTEGER NOT NULL DEFAULT 0,
+                  ignored INTEGER NOT NULL DEFAULT 0,
+                  source TEXT NOT NULL DEFAULT 'legacy',
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  UNIQUE(normalized_key, tag_type)
+                )
+                """
+            )
+            conn.execute(
+                f"""
+                INSERT OR IGNORE INTO local_tag_dictionary
+                  (id, original_text, normalized_key, zh_name, tag_type, remote_tag_id, note, confidence, locked, ignored, source, created_at, updated_at)
+                SELECT
+                  id,
+                  source_text,
+                  lower(trim(source_text)),
+                  display_zh,
+                  type,
+                  remote_tag_id,
+                  note,
+                  CAST(CASE WHEN confidence <= 1 THEN confidence * 100 ELSE confidence END AS INTEGER),
+                  locked,
+                  ignored,
+                  'legacy',
+                  created_at,
+                  updated_at
+                FROM {legacy}
+                WHERE source_text IS NOT NULL AND display_zh IS NOT NULL
+                """
+            )
+
+        alias_columns = _table_columns(conn, "tag_aliases")
+        if alias_columns and "normalized_key" not in alias_columns:
+            legacy = _rename_legacy_table(conn, "tag_aliases")
+            conn.execute(
+                """
+                CREATE TABLE tag_aliases (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  dictionary_id INTEGER NOT NULL REFERENCES local_tag_dictionary(id) ON DELETE CASCADE,
+                  alias TEXT NOT NULL,
+                  normalized_key TEXT NOT NULL UNIQUE,
+                  source TEXT NOT NULL DEFAULT 'manual',
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            conn.execute(
+                f"""
+                INSERT OR IGNORE INTO tag_aliases (id, dictionary_id, alias, normalized_key, source)
+                SELECT id, dictionary_id, alias, lower(trim(COALESCE(normalized, alias))), 'legacy'
+                FROM {legacy}
+                WHERE alias IS NOT NULL
+                """
+            )
+
+        work_tag_columns = _table_columns(conn, "work_tags")
+        if work_tag_columns and "dictionary_id" not in work_tag_columns:
+            legacy = _rename_legacy_table(conn, "work_tags")
+            conn.execute(
+                """
+                CREATE TABLE work_tags (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  work_id INTEGER NOT NULL REFERENCES works(id) ON DELETE CASCADE,
+                  remote_tag_id INTEGER REFERENCES remote_tags(remote_id) ON DELETE SET NULL,
+                  dictionary_id INTEGER REFERENCES local_tag_dictionary(id) ON DELETE SET NULL,
+                  tag_type TEXT,
+                  remote_name TEXT,
+                  remote_slug TEXT,
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  UNIQUE(work_id, remote_tag_id)
+                )
+                """
+            )
+            conn.execute(
+                f"""
+                INSERT OR IGNORE INTO work_tags
+                  (work_id, remote_tag_id, dictionary_id, tag_type, remote_name, remote_slug, created_at)
+                SELECT
+                  wt.work_id,
+                  wt.remote_tag_id,
+                  d.id,
+                  wt.type,
+                  wt.source_text,
+                  wt.source_text,
+                  wt.created_at
+                FROM {legacy} wt
+                LEFT JOIN local_tag_dictionary d ON d.remote_tag_id = wt.remote_tag_id
+                WHERE wt.remote_tag_id IS NOT NULL
+                """
+            )
 
     def execute(self, sql: str, params: Iterable[Any] = ()) -> sqlite3.Cursor:
         with self.connect() as conn:
@@ -130,3 +280,23 @@ class Database:
     def fetchall(self, sql: str, params: Iterable[Any] = ()) -> list[dict[str, Any]]:
         with self.connect() as conn:
             return [dict(row) for row in conn.execute(sql, tuple(params)).fetchall()]
+
+
+def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def _rename_legacy_table(conn: sqlite3.Connection, table: str) -> str:
+    index = 1
+    legacy = f"{table}_legacy"
+    existing = _table_names(conn)
+    while legacy in existing:
+        index += 1
+        legacy = f"{table}_legacy_{index}"
+    conn.execute(f"ALTER TABLE {table} RENAME TO {legacy}")
+    return legacy
+
+
+def _table_names(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+    return {row["name"] for row in rows}

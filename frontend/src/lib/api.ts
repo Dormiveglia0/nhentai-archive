@@ -38,6 +38,98 @@ export type RemoteTag = {
   slug?: string;
   count?: number;
   display?: string;
+  source?: string;
+  dictionary_id?: number | null;
+};
+
+export type DictionaryTerm = {
+  id: number;
+  original_text: string;
+  zh_name: string;
+  tag_type: string;
+  remote_tag_id?: number | null;
+  aliases?: string[];
+  scope: string[];
+  note?: string | null;
+  status: string;
+  confidence: number;
+  locked: boolean;
+  ignored: boolean;
+  source: string;
+};
+
+export type DictionaryCandidate = RemoteTag & {
+  dictionary_id?: number | null;
+  status?: string | null;
+  configured?: boolean;
+  ignored?: boolean;
+  impact_work_count?: number;
+};
+
+export type DictionaryApplyPayload = {
+  original_text: string;
+  zh_name: string;
+  tag_type: string;
+  remote_tag_id?: number | null;
+  aliases?: string[];
+  scope?: string[];
+  note?: string | null;
+  status?: string;
+  confidence?: number;
+  locked?: boolean;
+  ignored?: boolean;
+};
+
+export type DictionaryPreview = {
+  writes: boolean;
+  dictionary: DictionaryApplyPayload & { normalized_key?: string };
+  impact: { work_count: number; work_ids: number[]; tag_count: number };
+  will_update_tags: number;
+  will_update_works: number;
+  ignored: number;
+  samples: Work[];
+  conflicts: Array<{ type: string; message: string; id?: number; dictionary_id?: number }>;
+};
+
+export type DictionaryApplyResult = {
+  dictionary: DictionaryTerm;
+  impact: DictionaryPreview["impact"];
+  conflicts: DictionaryPreview["conflicts"];
+};
+
+export type DictionaryStatusResult = {
+  dictionary: DictionaryTerm;
+};
+
+export type BulkImportRow = {
+  original_text: string;
+  zh_name: string;
+  tag_type?: string;
+  aliases?: string[] | string;
+  remote_tag_id?: number | null;
+  note?: string | null;
+};
+
+export type BulkImportPreview = {
+  writes?: boolean;
+  summary: { valid?: number; duplicate?: number; conflict?: number; invalid?: number; imported?: number };
+  rows: Array<{ index: number; status: "valid" | "duplicate" | "conflict" | "invalid"; message: string; payload: DictionaryApplyPayload }>;
+};
+
+export type DictionarySummary = {
+  unconfigured: number;
+  configured: number;
+  ignored: number;
+  review: number;
+  suggestions: number;
+};
+
+export type DictionaryEvidence = {
+  remote_tag: null | { id: number; type?: string; name?: string; slug?: string };
+  dictionary: DictionaryTerm | null;
+  related_works: Work[];
+  co_tags: Array<{ id: number; display: string; type?: string; count: number }>;
+  history: Array<{ status: string; source: string; updated_at: string; message: string }>;
 };
 
 export type Work = {
@@ -205,6 +297,50 @@ export const api = {
   tagAutocomplete: (q: string, limit = 12) =>
     cachedDiscoverRequest<{ result: RemoteTag[] }>(`/api/discover/tags/autocomplete?q=${encodeURIComponent(q)}&limit=${limit}`, 5 * 60_000),
   cachedTags: (limit = 60) => cachedDiscoverRequest<{ result: RemoteTag[] }>(`/api/discover/tags/cached?limit=${limit}`, 5 * 60_000),
+  dictionarySummary: () => request<DictionarySummary>("/api/dictionary/summary"),
+  dictionaryCandidates: (params: { q?: string; type?: string; status?: string; limit?: number; offset?: number } = {}) => {
+    const query = new URLSearchParams();
+    query.set("q", params.q ?? "");
+    query.set("type", params.type ?? "all");
+    query.set("status", params.status ?? "all");
+    query.set("limit", String(params.limit ?? 50));
+    query.set("offset", String(params.offset ?? 0));
+    return request<{ result: DictionaryCandidate[] }>(`/api/dictionary/candidates?${query.toString()}`);
+  },
+  dictionaryEvidence: (params: { remote_tag_id?: number | null; dictionary_id?: number | null }) => {
+    const query = new URLSearchParams();
+    if (params.remote_tag_id) query.set("remote_tag_id", String(params.remote_tag_id));
+    if (params.dictionary_id) query.set("dictionary_id", String(params.dictionary_id));
+    return request<DictionaryEvidence>(`/api/dictionary/evidence?${query.toString()}`);
+  },
+  dictionaryAutocomplete: (q: string, limit = 20) =>
+    cachedDiscoverRequest<{ result: RemoteTag[] }>(`/api/dictionary/autocomplete?q=${encodeURIComponent(q)}&limit=${limit}`, 5 * 60_000),
+  dictionaryPreviewApply: (payload: DictionaryApplyPayload) =>
+    request<DictionaryPreview>("/api/dictionary/preview-apply", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    }),
+  dictionaryApply: (payload: DictionaryApplyPayload) =>
+    request<DictionaryApplyResult>("/api/dictionary/apply", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    }),
+  dictionaryPreviewBulkImport: (rows: BulkImportRow[]) =>
+    request<BulkImportPreview>("/api/dictionary/preview-bulk-import", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ rows })
+    }),
+  dictionaryBulkImport: (rows: BulkImportRow[]) =>
+    request<BulkImportPreview>("/api/dictionary/bulk-import", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ rows })
+    }),
+  dictionaryIgnore: (id: number) => request<DictionaryStatusResult>(`/api/dictionary/${id}/ignore`, { method: "POST", headers: JSON_HEADERS }),
+  dictionaryReview: (id: number) => request<DictionaryStatusResult>(`/api/dictionary/${id}/review`, { method: "POST", headers: JSON_HEADERS }),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
   works: () => request<{ result: Work[] }>("/api/works"),

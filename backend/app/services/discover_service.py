@@ -147,17 +147,24 @@ class DiscoverService:
     def cached_tags(self, limit: int = 60) -> dict[str, Any]:
         rows = self.db.fetchall(
             """
-            SELECT remote_id, type, name, slug
-            FROM remote_tags
-            WHERE name IS NOT NULL OR slug IS NOT NULL
-            ORDER BY cached_at DESC
+            SELECT r.remote_id, r.type, r.name, r.slug, d.zh_name
+            FROM remote_tags r
+            LEFT JOIN local_tag_dictionary d ON d.remote_tag_id = r.remote_id AND d.ignored = 0
+            WHERE r.name IS NOT NULL OR r.slug IS NOT NULL
+            ORDER BY r.cached_at DESC
             LIMIT ?
             """,
             (limit,),
         )
         return {
             "result": [
-                {"id": row["remote_id"], "type": row["type"], "name": row["name"], "slug": row["slug"]}
+                {
+                    "id": row["remote_id"],
+                    "type": row["type"],
+                    "name": row["name"],
+                    "slug": row["slug"],
+                    "display": row["zh_name"] or row["name"] or row["slug"],
+                }
                 for row in rows
             ]
         }
@@ -237,10 +244,24 @@ class DiscoverService:
             return {}
         unique_ids = list(dict.fromkeys(ids))
         cached_rows = self.db.fetchall(
-            f"SELECT remote_id, type, name, slug FROM remote_tags WHERE remote_id IN ({','.join('?' for _ in unique_ids)})",
+            f"""
+            SELECT r.remote_id, r.type, r.name, r.slug, d.zh_name
+            FROM remote_tags r
+            LEFT JOIN local_tag_dictionary d ON d.remote_tag_id = r.remote_id AND d.ignored = 0
+            WHERE r.remote_id IN ({','.join('?' for _ in unique_ids)})
+            """,
             tuple(unique_ids),
         )
-        tag_map = {int(row["remote_id"]): {"id": row["remote_id"], "type": row["type"], "name": row["name"], "slug": row["slug"]} for row in cached_rows}
+        tag_map = {
+            int(row["remote_id"]): {
+                "id": row["remote_id"],
+                "type": row["type"],
+                "name": row["name"],
+                "slug": row["slug"],
+                "display": row["zh_name"] or row["name"] or row["slug"],
+            }
+            for row in cached_rows
+        }
         missing = [tag_id for tag_id in dict.fromkeys(ids) if tag_id not in tag_map][:100]
         if missing:
             try:

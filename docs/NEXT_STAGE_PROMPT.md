@@ -1,6 +1,6 @@
-# Next Stage Prompt: Phase 2 Dictionary Foundation
+# Next Stage Prompt: Phase 3 Library Enhancement
 
-Use this prompt after Phase 1.2 unified discover feed is accepted.
+Use this prompt only after the Phase 2 dictionary refit is accepted and remains green.
 
 ## Required Reading Order
 
@@ -8,86 +8,69 @@ Use this prompt after Phase 1.2 unified discover feed is accepted.
 2. `docs/PROJECT_MAP.md`
 3. `docs/DEVELOPMENT_RULES.md`
 4. `design/nh_archive_product_design_flow.md`
-5. `design/词典.png`
-6. `design/搜索导入.png`
-7. `design/库.png`
+5. `design/库.png`
+6. `design/词典.png`
+7. `design/搜索导入.png`
 
 ## Task
 
-Implement the complete dictionary foundation. This is not just remote tag autocomplete. Build local dictionary creation/editing, bulk import, remote tag mapping, alias support, preview/apply, and real `work_tags` links.
+Enhance “我的库” with real local data. Do not rewrite discover, popular fan, settings, or dictionary unless a library integration requires a small typed boundary change.
 
-Current discover state to preserve:
+The current dictionary foundation is implemented:
 
-- `/api/discover/feed` dynamically loads one page at a time and switches between latest/search/tagged based on real filters.
-- Discover has a real cached/remote multi-select tag selector and tag chip boundary.
-- Remote API calls are quota-protected in `NhentaiClient`: use existing client/service boundaries, do not call NH API directly, and do not add page-level polling or screenshot loops that bypass cache/cooldown.
-- `TagScroller.defaultDisplayTag()` is the current display resolver seam; Phase 2 should extend it with dictionary/alias display names rather than rewriting every card.
-- Random and Gallery ID use modal preview; Gallery ID is triggered from the single keyword input when the query is numeric.
-- Card details use the same modal pattern for metadata/actions only. Do not put a reader tab or page-turning UI inside the modal.
-- Reading routes to `ReaderPage`: local `#reader/{work_id}` persists progress, remote `#reader/remote/{gallery_id}` uses gallery `pages[].url` and does not save local progress.
-- Popular design baseline is implemented in `components/discover/PopularFan.tsx`; preserve `docs/superpowers/specs/2026-06-14-discover-popular-fan-design.md`.
-- Popular is an unframed title-side image-first five-cover sunset fan. It is visible beside the `发现 / 导入` title on first load, then scroll progress moves covers along a rightward semicircle arc until they clip out, and reverses the same arc on up-scroll. It must respect cover blur.
-- Do not restore separate latest/popular/random pages.
-- Do not implement popular as a permanent middle section, horizontal mini-list, right-side drawer, manual-only hidden popover, closeable modal, or bordered/shadowed window panel.
-- Do not add large text/action blocks over popular covers; primary inspection belongs in the existing detail modal.
-- Do not replace the semicircle path with linear translate/scale animation.
-- Discover filters use custom menus, not native select controls.
-- Discover layout should be title area + discovery controls/results, with popular embedded in the title area as the sunset fan.
+- `local_tag_dictionary`, `tag_aliases`, `work_tags`
+- `/api/dictionary/summary`, candidates, evidence, autocomplete, preview/apply, bulk import, ignore/review
+- `DictionaryService.link_work_tags()`
+- discover tag display uses dictionary `display` when mapped
+- dictionary UI is aligned to `design/词典.png` with real summary, candidate table, editor, evidence tabs, preview tray, and bulk import preview
 
 ## Hard Rules
 
-- Do not add fake works, fake tags, fake candidate rows, fake impact counts, or fake task rows.
-- Do not introduce uncached NH API request loops. Any remote dictionary/tag lookup must reuse `NhentaiClient` cache/cooldown behavior and prefer `remote_tags` cache before remote search.
-- Empty dictionary data must render an empty state or import/create prompt.
-- Bulk import must preview parsed rows before writing.
-- Apply must show affected real works/tags before writing.
-- Unimplemented machine translation and complex multi-tag AND/OR/NOT must remain disabled or clearly marked not connected.
-- Update `PROJECT_STATUS.md`, `PROJECT_MAP.md`, and this prompt after the stage.
+- Do not add fake works, fake covers, fake tags, fake reading history, fake statistics, or fake task rows.
+- Large libraries must be paginated or virtualized; never render every work on one page.
+- Empty library/search/filter states must show real empty states.
+- Reuse `work_tags` and dictionary mappings for tag filters; do not re-query NH API from library pages.
+- Do not regress dictionary UI or reintroduce fake dictionary suggestions/statistics.
+- Unimplemented governance/export/file actions stay disabled or marked not connected.
+- Keep `PROJECT_STATUS.md`, `PROJECT_MAP.md`, and this prompt updated after the stage.
 
 ## Target Backend
 
-- Add tables:
-  - `local_tag_dictionary`
-  - `tag_aliases`
-  - `work_tags`
-- Add `DictionaryService`:
-  - `autocomplete(q, limit)` from local dictionary, aliases, cached remote tags, and real remote tag search.
-  - `candidates(limit)` from real cached `remote_tags` and imported gallery tags.
-  - `preview_apply(payload)` with real affected `work_tags`/works and conflicts, no writes.
-  - `apply(payload)` writes dictionary and aliases, then updates real `work_tags`.
-  - `preview_bulk_import(rows)` parses user-provided terms and reports duplicates/conflicts.
-  - `bulk_import(rows)` writes accepted rows only.
-- Import flow must cache gallery tags and link imported works to `work_tags`.
+- Add `LibraryService`:
+  - `summary()` from real `works`, `reader_progress`, `work_files`, and `work_tags`.
+  - `search(q, page, per_page, sort, read_status, source, tag_ids)` with SQL-backed pagination.
+  - `recent_added(limit)`, `recent_read(limit)`, and `continue_reading(limit)` from real tables.
+  - `tag_filters(q, limit)` from `work_tags` joined to `remote_tags` and `local_tag_dictionary`.
+- Add APIs:
+  - `GET /api/library/summary`
+  - `GET /api/library/search`
+  - `GET /api/library/recent-added`
+  - `GET /api/library/recent-read`
+  - `GET /api/library/continue-reading`
+  - `GET /api/library/tag-filters`
+- Keep `/api/works` for compatibility, but new library UI should use `/api/library/search`.
 
 ## Target Frontend
 
-- Build `DictionaryPage` against `design/词典.png`:
-  - candidate term pool
-  - editor
-  - evidence panel
-  - apply preview tray
-  - bulk import drawer or panel
-- Add reusable `TagSelector`:
-  - Chinese input
-  - local dictionary hits
-  - alias hits
-  - remote tag hits when configured
-  - no fake candidates
-- Discover page may use mapped tag search; preserve multi-select semantics.
-- Discover page tag rendering must map English/remote tags to dictionary display names when the dictionary has a match, while preserving the original remote tag for API queries.
-- Discover page tag picker should keep its current open panel + search behavior and replace the display/source resolver with dictionary-aware results.
-- Library page may expose a basic dictionary tag filter only if backed by real `work_tags`.
-- The remote reader should keep its import queue action available, but dictionary work must not fake local progress for remote-only reading.
+- Rebuild `LibraryPage` against `design/库.png`:
+  - editorial title area
+  - real summary strip
+  - search/filter/sort toolbar
+  - paginated cover wall/list
+  - selected work inspector
+  - continue reading/recent sections only when real rows exist
+- Add tag filter selector backed by `/api/library/tag-filters`; display Chinese dictionary names when available.
+- Add pagination/per-page controls; no infinite full render.
+- Work cards keep the current NH Archive visual language: warm paper, black title, terracotta primary action, thin separators, no fake module windows.
 
 ## Verification
 
 - `PYTHONPATH=backend pytest backend/tests -q`
 - `npm run build`
-- Static scan for fake work/tag/job arrays.
-- Manual visual review against `design/词典.png`.
+- Static scan for fake work/tag/history/stat arrays.
 - Manual flow:
-  - create local dictionary term
-  - import a small dictionary list with preview
-  - map a cached remote tag
-  - preview apply
-  - apply and verify `work_tags` changes
+  - empty library shows 0 real stats
+  - imported works appear in paginated search
+  - reading progress filters work
+  - dictionary tag filter returns only works linked through real `work_tags`
+  - continue reading opens local reader and preserves progress

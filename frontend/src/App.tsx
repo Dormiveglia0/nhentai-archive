@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ArchiveShell } from "./components/layout/ArchiveShell";
+import { DictionaryPage } from "./components/dictionary/DictionaryPage";
 import { DiscoverPage } from "./components/discover/DiscoverPage";
 import { LibraryPage } from "./components/library/LibraryPage";
 import { ReaderPage } from "./components/reader/ReaderPage";
@@ -39,9 +40,7 @@ export default function App() {
       {page.name === "governance" ? (
         <BoundaryPage title="作品治理" description="治理中心尚未接入 GovernanceService；不会展示假冲突、假完整度或假推荐动作。" />
       ) : null}
-      {page.name === "dictionary" ? (
-        <BoundaryPage title="词典治理" description="词典阶段必须包含本地自定义词典、批量导入、远端 tag 映射、alias、preview/apply；当前未接入。" />
-      ) : null}
+      {page.name === "dictionary" ? <DictionaryPage /> : null}
       {page.name === "tasks" ? (
         <BoundaryPage title="任务中心" description="底部任务坞站已读取真实 /api/jobs；完整任务列表、暂停、恢复、取消后续接入。" />
       ) : null}
