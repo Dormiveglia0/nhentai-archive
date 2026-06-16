@@ -56,6 +56,7 @@ Current real slice:
   - Import flow links imported works to real gallery tags after CBZ ingestion.
   - Discover cards/tag selector render dictionary `display` names when mapped, without using Chinese names as remote API query tokens.
   - `DictionaryPage` was refit against `design/词典.png`: top summary strip, table-like candidate pool, editor with aliases/scope chips and disabled machine suggestion state, evidence tabs, expandable apply preview, and row-level bulk import preview.
+  - Dictionary UI polish pass (post Phase 3): title area uses the standard clean hero (removed the invented decorative quote/art blocks); summary strip is now big-number metric cards with semantic tone colors; candidate pool has color-coded localized type badges, red impact emphasis, and per-status color tones; three-column panes are card-styled (surface + shadow + roomier spacing). Removed the dead `dictionary-hero/quote/stats/grid/column/filter-row` CSS. No data/logic change — still real-only.
 - Implemented Phase 3 “我的库” enhancement against `design/库.png`, all data from SQLite only:
   - Added `LibraryService` (`backend/app/services/library_service.py`): `summary`, `search`, `recent_added`, `recent_read`, `continue_reading`, `tag_filters`. It only queries `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`; it never calls the NH API.
   - Added APIs: `/api/library/summary`, `/api/library/search`, `/api/library/recent-added`, `/api/library/recent-read`, `/api/library/continue-reading`, `/api/library/tag-filters`. Kept `/api/works` for compatibility.
