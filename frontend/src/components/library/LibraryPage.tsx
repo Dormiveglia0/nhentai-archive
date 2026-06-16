@@ -1,124 +1,214 @@
-import { BookOpen, Filter, Info, PenTool, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Info, Library } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { api, Work } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { api, LibrarySummary, LibraryTag, LibraryTagFilter, LibraryWork } from "../../lib/api";
+import { ContinueReadingRow } from "./ContinueReadingRow";
+import { IconPager } from "../discover/IconPager";
+import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
+import { LibraryToolbar, LibraryView } from "./LibraryToolbar";
+import { WorkCard } from "./WorkCard";
+import { WorkInspector } from "./WorkInspector";
 
 type Props = {
   blurCovers: boolean;
 };
 
-export function LibraryPage({ blurCovers }: Props) {
-  const [works, setWorks] = useState<Work[]>([]);
-  const [selected, setSelected] = useState<Work | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+const PER_PAGE = 24;
 
-  async function load() {
-    setLoading(true);
-    setError(null);
+export function LibraryPage({ blurCovers }: Props) {
+  const [summary, setSummary] = useState<LibrarySummary | null>(null);
+  const [continueReading, setContinueReading] = useState<LibraryWork[]>([]);
+  const [recentAdded, setRecentAdded] = useState<LibraryWork[]>([]);
+
+  const [works, setWorks] = useState<LibraryWork[]>([]);
+  const [total, setTotal] = useState(0);
+  const [numPages, setNumPages] = useState(1);
+  const [selected, setSelected] = useState<LibraryWork | null>(null);
+
+  const [q, setQ] = useState("");
+  const [language, setLanguage] = useState("all");
+  const [readStatus, setReadStatus] = useState("all");
+  const [source, setSource] = useState("all");
+  const [sort, setSort] = useState("recent_updated");
+  const [tags, setTags] = useState<LibraryTagFilter[]>([]);
+  const [view, setView] = useState<LibraryView>("grid");
+  const [page, setPage] = useState(1);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const token = useRef(0);
+
+  const filtersActive =
+    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || tags.length > 0;
+
+  const loadOverview = useCallback(async () => {
     try {
-      const payload = await api.works();
-      setWorks(payload.result);
-      setSelected(payload.result[0] ?? null);
+      const [summaryPayload, cont, added] = await Promise.all([
+        api.librarySummary(),
+        api.libraryContinueReading(12),
+        api.libraryRecentAdded(12),
+      ]);
+      setSummary(summaryPayload);
+      setContinueReading(cont.result);
+      setRecentAdded(added.result);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    void load();
   }, []);
 
+  useEffect(() => {
+    void loadOverview();
+  }, [loadOverview]);
+
+  useEffect(() => {
+    const current = ++token.current;
+    setLoading(true);
+    setError(null);
+    api
+      .librarySearch({
+        q,
+        page,
+        per_page: PER_PAGE,
+        sort,
+        read_status: readStatus,
+        source,
+        language,
+        tag_ids: tags.map((tag) => tag.id),
+      })
+      .then((payload) => {
+        if (token.current !== current) return;
+        setWorks(payload.result);
+        setTotal(payload.total);
+        setNumPages(payload.num_pages);
+        setSelected((prev) => {
+          if (prev && payload.result.some((work) => work.id === prev.id)) return prev;
+          return payload.result[0] ?? null;
+        });
+      })
+      .catch((exc) => {
+        if (token.current !== current) return;
+        setError(exc instanceof Error ? exc.message : String(exc));
+        setWorks([]);
+        setTotal(0);
+        setNumPages(1);
+      })
+      .finally(() => {
+        if (token.current === current) setLoading(false);
+      });
+  }, [q, page, sort, readStatus, source, language, tags]);
+
+  function resetFilters() {
+    setQ("");
+    setLanguage("all");
+    setReadStatus("all");
+    setSource("all");
+    setTags([]);
+    setPage(1);
+  }
+
+  function changeFilter(apply: () => void) {
+    apply();
+    setPage(1);
+  }
+
+  function pickTag(tag: LibraryTag) {
+    if (tags.some((item) => item.id === tag.id)) return;
+    changeFilter(() => setTags([...tags, { id: tag.id, type: tag.type, name: tag.name, slug: tag.slug, display: tag.display, count: 0 }]));
+  }
+
+  const emptyLibrary = summary?.total === 0;
+
   return (
-    <section className="page">
+    <section className="page library-page">
       <div className="hero">
         <div>
           <h1>我的库</h1>
-          <p>专属的同人志档案馆，所有条目都来自真实入库的 CBZ。</p>
-          <div className="stats">
-            <span>总收藏 {works.length}</span>
-            <span>阅读中 {works.filter((work) => (work.progress_percent ?? 0) > 0 && !work.completed).length}</span>
-            <span>已读 {works.filter((work) => Boolean(work.completed)).length}</span>
-          </div>
+          <p>专属的同人志档案馆，所有条目都来自真实入库的 CBZ 与本地索引。</p>
+          <LibrarySummaryStrip summary={summary} />
         </div>
         <div className="sketch" aria-hidden="true" />
       </div>
 
-      <div className="filter-ribbon">
-        <button type="button">
-          <Filter size={16} />
-          全部作品
-        </button>
-        <button type="button" onClick={load}>
-          <RefreshCw size={16} />
-          重新读取
-        </button>
-      </div>
+      <LibraryToolbar
+        q={q}
+        onQ={(value) => changeFilter(() => setQ(value))}
+        language={language}
+        onLanguage={(value) => changeFilter(() => setLanguage(value))}
+        readStatus={readStatus}
+        onReadStatus={(value) => changeFilter(() => setReadStatus(value))}
+        source={source}
+        onSource={(value) => changeFilter(() => setSource(value))}
+        sort={sort}
+        onSort={(value) => changeFilter(() => setSort(value))}
+        tags={tags}
+        onTags={(next) => changeFilter(() => setTags(next))}
+        view={view}
+        onView={setView}
+        summary={summary}
+        canReset={filtersActive}
+        onReset={resetFilters}
+      />
 
       {error ? <div className="notice error">{error}</div> : null}
-      {!loading && !error && works.length === 0 ? (
+
+      {emptyLibrary && !error ? (
         <div className="empty-state">
-          <Info size={24} />
+          <Library size={26} />
           <strong>库里还没有作品</strong>
-          <p>请先在发现页导入真实 CBZ，或后续接入本地扫描后读取你的 archive 目录。</p>
+          <p>先在发现页导入真实 CBZ，导入完成后即可在这里筛选、继续阅读与管理。</p>
         </div>
       ) : null}
 
-      <div className="library-layout">
-        <div className="work-grid">
-          {works.map((work) => (
-            <article className={selected?.id === work.id ? "work-card selected" : "work-card"} key={work.id}>
-              <button type="button" className="cover-button" onClick={() => setSelected(work)}>
-                {work.cover_path ? (
-                  <img className={blurCovers ? "blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
-                ) : (
-                  <span className="cover-fallback">NO COVER</span>
-                )}
-              </button>
-              <div className="card-body">
-                <h3>{work.title}</h3>
-                <p>{work.title_japanese || work.source}</p>
-                <small>{work.page_count} 页 · {work.progress_percent ?? 0}%</small>
-                <progress max="100" value={work.progress_percent ?? 0} />
-              </div>
-            </article>
-          ))}
-        </div>
+      {!emptyLibrary && !filtersActive ? (
+        <>
+          <ContinueReadingRow title="继续阅读" works={continueReading} blurCovers={blurCovers} />
+          <ContinueReadingRow title="最近添加" works={recentAdded} blurCovers={blurCovers} />
+        </>
+      ) : null}
 
-        <aside className="work-inspector">
-          {!selected ? (
-            <div className="empty-state compact">
-              <Info size={20} />
-              <strong>作品详情</strong>
-              <p>选择作品后显示阅读进度和操作。</p>
+      {!emptyLibrary ? (
+        <div className="library-layout">
+          <div className="library-results">
+            <div className="library-results-head">
+              <span>
+                {loading ? "读取中…" : `共 ${total.toLocaleString()} 部作品`}
+                {filtersActive ? " · 已筛选" : ""}
+              </span>
             </div>
-          ) : (
-            <>
-              <div className="drawer-head">
-                {selected.cover_path ? (
-                  <img className={blurCovers ? "blurred" : ""} src={`/api/works/${selected.id}/cover`} alt="" />
-                ) : null}
-                <div>
-                  <h2>{selected.title}</h2>
-                  <p>{selected.title_japanese}</p>
-                  <small>{selected.page_count} 页 · {selected.progress_percent ?? 0}%</small>
-                </div>
+
+            {!loading && works.length === 0 && !error ? (
+              <div className="empty-state compact">
+                <Info size={22} />
+                <strong>没有符合条件的作品</strong>
+                <p>调整筛选条件或点击重置查看全部馆藏。</p>
               </div>
-              <button className="primary-wide" type="button" onClick={() => navigate({ name: "reader", workId: selected.id })}>
-                <BookOpen size={17} />
-                继续阅读
-              </button>
-              <button className="secondary-wide" type="button" disabled>
-                <PenTool size={17} />
-                治理将在后续模块接入
-              </button>
-            </>
-          )}
-        </aside>
-      </div>
+            ) : (
+              <div className={view === "grid" ? "library-grid" : "library-list"}>
+                {works.map((work) => (
+                  <WorkCard
+                    key={work.id}
+                    work={work}
+                    view={view}
+                    blurCovers={blurCovers}
+                    selected={selected?.id === work.id}
+                    onSelect={() => setSelected(work)}
+                    onPickTag={pickTag}
+                  />
+                ))}
+              </div>
+            )}
+
+            <IconPager page={page} totalPages={numPages} loading={loading} onPage={setPage} />
+          </div>
+
+          <WorkInspector
+            work={selected}
+            blurCovers={blurCovers}
+            onClose={() => setSelected(null)}
+            onPickTag={pickTag}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

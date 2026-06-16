@@ -153,6 +153,66 @@ export type Work = {
   completed?: number;
 };
 
+export type LibraryTag = {
+  id: number;
+  type?: string;
+  name?: string;
+  slug?: string;
+  display: string;
+};
+
+export type LibraryWork = Work & {
+  language?: string | null;
+  media_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  last_read_at?: string | null;
+  size_bytes?: number;
+  tag_count?: number;
+  tags?: LibraryTag[];
+};
+
+export type LibrarySummary = {
+  total: number;
+  reading: number;
+  completed: number;
+  unread: number;
+  untagged: number;
+  total_pages: number;
+  total_size_bytes: number;
+  sources: { remote: number; local: number };
+  languages: Array<{ value: string; label: string; count: number }>;
+};
+
+export type LibraryTagFilter = {
+  id: number;
+  type?: string;
+  name?: string;
+  slug?: string;
+  display: string;
+  dictionary_id?: number | null;
+  count: number;
+};
+
+export type LibrarySearchParams = {
+  q?: string;
+  page?: number;
+  per_page?: number;
+  sort?: string;
+  read_status?: string;
+  source?: string;
+  language?: string;
+  tag_ids?: number[];
+};
+
+export type LibrarySearchResult = {
+  result: LibraryWork[];
+  total: number;
+  page: number;
+  per_page: number;
+  num_pages: number;
+};
+
 export type PageInfo = {
   id: number;
   work_id: number;
@@ -350,6 +410,24 @@ export const api = {
   dictionaryDelete: (id: number) => request<DictionaryDeleteResult>(`/api/dictionary/${id}`, { method: "DELETE", headers: JSON_HEADERS }),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
+  librarySummary: () => request<LibrarySummary>("/api/library/summary"),
+  librarySearch: (params: LibrarySearchParams = {}) => {
+    const query = new URLSearchParams();
+    query.set("q", params.q ?? "");
+    query.set("page", String(params.page ?? 1));
+    query.set("per_page", String(params.per_page ?? 24));
+    query.set("sort", params.sort ?? "recent_updated");
+    query.set("read_status", params.read_status ?? "all");
+    query.set("source", params.source ?? "all");
+    query.set("language", params.language ?? "all");
+    if (params.tag_ids?.length) query.set("tag_ids", params.tag_ids.join(","));
+    return request<LibrarySearchResult>(`/api/library/search?${query.toString()}`);
+  },
+  libraryRecentAdded: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-added?limit=${limit}`),
+  libraryRecentRead: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-read?limit=${limit}`),
+  libraryContinueReading: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/continue-reading?limit=${limit}`),
+  libraryTagFilters: (q = "", limit = 40) =>
+    request<{ result: LibraryTagFilter[] }>(`/api/library/tag-filters?q=${encodeURIComponent(q)}&limit=${limit}`),
   works: () => request<{ result: Work[] }>("/api/works"),
   work: (id: number) => request<Work>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),

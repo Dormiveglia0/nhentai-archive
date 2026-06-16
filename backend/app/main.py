@@ -14,6 +14,7 @@ from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
+from app.services.library_service import LibraryService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
 from app.services.settings_service import SettingsService
@@ -62,6 +63,7 @@ jobs = JobService(db)
 archive = ArchiveService(db, settings)
 discover = DiscoverService(db, client)
 reader = ReaderService(db)
+library = LibraryService(db)
 dictionary = DictionaryService(db, client)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 settings_service = SettingsService(db, settings, client)
@@ -217,6 +219,46 @@ def dictionary_delete(dictionary_id: int):
         return dictionary.delete(dictionary_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/library/summary")
+def library_summary():
+    return library.summary()
+
+
+@app.get("/api/library/search")
+def library_search(
+    q: str = "",
+    page: int = 1,
+    per_page: int = 24,
+    sort: str = "recent_updated",
+    read_status: str = "all",
+    source: str = "all",
+    language: str = "all",
+    tag_ids: str = "",
+):
+    ids = [int(value) for value in tag_ids.split(",") if value.strip().isdigit()]
+    return library.search(q, page, per_page, sort, read_status, source, language, ids)
+
+
+@app.get("/api/library/recent-added")
+def library_recent_added(limit: int = 12):
+    return library.recent_added(limit)
+
+
+@app.get("/api/library/recent-read")
+def library_recent_read(limit: int = 12):
+    return library.recent_read(limit)
+
+
+@app.get("/api/library/continue-reading")
+def library_continue_reading(limit: int = 12):
+    return library.continue_reading(limit)
+
+
+@app.get("/api/library/tag-filters")
+def library_tag_filters(q: str = "", limit: int = 40):
+    return library.tag_filters(q, limit)
 
 
 @app.get("/api/works")
