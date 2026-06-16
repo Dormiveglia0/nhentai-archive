@@ -1,4 +1,4 @@
-import { CircleX, Flame, RotateCcw, Settings, ShieldCheck } from "lucide-react";
+import { Settings } from "lucide-react";
 
 import { DictionarySummary } from "../../lib/api";
 
@@ -7,29 +7,25 @@ type Props = {
 };
 
 const ITEMS = [
-  { key: "unconfigured", label: "未配置", icon: Settings },
-  { key: "configured", label: "已配置", icon: ShieldCheck },
-  { key: "ignored", label: "已忽略", icon: CircleX },
-  { key: "review", label: "待复核", icon: RotateCcw },
-  { key: "suggestions", label: "机器建议", icon: Flame },
+  { key: "unconfigured", label: "未配置", tone: "warn", note: "待映射中文" },
+  { key: "configured", label: "已配置", tone: "done", note: "已映射" },
+  { key: "review", label: "待复核", tone: "review", note: "需人工确认" },
+  { key: "ignored", label: "已忽略", tone: "muted", note: "不参与映射" },
+  { key: "suggestions", label: "机器建议", tone: "muted", note: "未接入" },
 ] as const;
 
 export function DictionarySummaryStrip({ summary }: Props) {
   return (
     <section className="dictionary-summary-strip" aria-label="词典摘要">
-      {ITEMS.map((item) => {
-        const Icon = item.icon;
-        return (
-          <div key={item.key}>
-            <Icon size={19} />
-            <span>{item.label}</span>
-            <strong>{summary?.[item.key] ?? 0}</strong>
-            {item.key === "suggestions" ? <small>今日新增 0</small> : null}
-          </div>
-        );
-      })}
-      <button type="button" disabled title="后续治理设置接入后开放">
-        <Settings size={16} />
+      {ITEMS.map((item) => (
+        <div key={item.key} className={`dict-metric tone-${item.tone}`}>
+          <strong>{(summary?.[item.key] ?? 0).toLocaleString()}</strong>
+          <span>{item.label}</span>
+          <small>{item.note}</small>
+        </div>
+      ))}
+      <button type="button" className="dict-summary-action" disabled title="后续治理设置接入后开放">
+        <Settings size={15} />
         治理设置
       </button>
     </section>

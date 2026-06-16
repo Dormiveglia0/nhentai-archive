@@ -202,16 +202,12 @@ export function DictionaryPage() {
 
   return (
     <section className="page dictionary-page">
-      <div className="hero dictionary-hero">
+      <div className="hero">
         <div>
           <h1>词典治理</h1>
-          <p>统一术语规范，提升检索准确度与标签一致性。</p>
+          <p>统一术语规范，把英文远端 tag 映射成中文显示与检索入口。</p>
         </div>
-        <div className="dictionary-hero-art" aria-hidden="true" />
-        <div className="dictionary-quote">
-          <span>在线与本地的世界里</span>
-          <strong>我们收藏的不只是作品，也是创作者的心意与时光。</strong>
-        </div>
+        <div className="sketch" aria-hidden="true" />
       </div>
 
       <DictionarySummaryStrip summary={summary} />
