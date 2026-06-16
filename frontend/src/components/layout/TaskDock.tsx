@@ -33,6 +33,9 @@ export function TaskDock() {
     [jobs]
   );
   const failedJobs = jobs.filter((job) => job.status === "failed");
+  const shouldRender = Boolean(error) || activeJobs.length > 0 || failedJobs.length > 0;
+
+  if (!shouldRender) return null;
 
   return (
     <aside className="task-dock">
@@ -42,7 +45,6 @@ export function TaskDock() {
         <span>{jobs.length}</span>
       </div>
       {error ? <p className="dock-error">{error}</p> : null}
-      {!error && jobs.length === 0 ? <p className="dock-empty">暂无后台任务</p> : null}
       {activeJobs.map((job) => (
         <div className="dock-job" key={job.id}>
           <Loader2 size={18} className="spin" />

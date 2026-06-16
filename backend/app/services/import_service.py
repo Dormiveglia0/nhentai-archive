@@ -7,6 +7,7 @@ from typing import Any
 from app.config import Settings
 from app.services.archive_service import ArchiveService
 from app.services.discover_service import DiscoverService
+from app.services.dictionary_service import DictionaryService
 from app.services.job_service import JobService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 
@@ -19,12 +20,14 @@ class ImportService:
         jobs: JobService,
         archive: ArchiveService,
         discover: DiscoverService,
+        dictionary: DictionaryService | None = None,
     ):
         self.settings = settings
         self.client = client
         self.jobs = jobs
         self.archive = archive
         self.discover = discover
+        self.dictionary = dictionary
 
     def enqueue_remote_import(self, gallery_id: int) -> dict[str, Any]:
         existing = self.archive.db.fetchone("SELECT id FROM works WHERE remote_gallery_id = ?", (gallery_id,))
@@ -51,6 +54,7 @@ class ImportService:
             self.jobs.mark_running(job_id, "fetching_gallery", 1, 5)
             gallery = self.client.gallery(gallery_id, include="related")
             self.discover.cache_gallery(gallery)
+            self.discover.cache_tags(gallery.get("tags", []))
 
             self.jobs.update_progress(job_id, "running", "requesting_download_url", 2, 5)
             download = self.client.download_url(gallery_id)
@@ -73,6 +77,8 @@ class ImportService:
                     "pretty_title": gallery.get("title", {}).get("pretty"),
                 },
             )
+            if self.dictionary:
+                self.dictionary.link_work_tags(work_id, gallery.get("tags", []))
             tmp_path.unlink(missing_ok=True)
             self.jobs.complete(job_id, {"work_id": work_id})
         except NhentaiApiError as exc:

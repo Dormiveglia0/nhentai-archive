@@ -10,16 +10,43 @@ from pydantic import BaseModel
 from app.config import load_settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
+from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
+from app.services.settings_service import SettingsService
 
 
 class ReaderStatePatch(BaseModel):
     page_index: int
     completed: bool = False
+
+
+class SettingsPatch(BaseModel):
+    nhentai_api_key: str | None = None
+    clear_nhentai_api_key: bool = False
+    privacy: dict | None = None
+    reader: dict | None = None
+
+
+class DictionaryApplyRequest(BaseModel):
+    original_text: str
+    zh_name: str
+    tag_type: str = "tag"
+    remote_tag_id: int | None = None
+    aliases: list[str] = []
+    scope: list[str] = []
+    note: str | None = None
+    status: str = "configured"
+    confidence: int = 80
+    locked: bool = False
+    ignored: bool = False
+
+
+class DictionaryBulkImportRequest(BaseModel):
+    rows: list[dict]
 
 
 settings = load_settings()
@@ -35,7 +62,9 @@ jobs = JobService(db)
 archive = ArchiveService(db, settings)
 discover = DiscoverService(db, client)
 reader = ReaderService(db)
-imports = ImportService(settings, client, jobs, archive, discover)
+dictionary = DictionaryService(db, client)
+imports = ImportService(settings, client, jobs, archive, discover, dictionary)
+settings_service = SettingsService(db, settings, client)
 
 app = FastAPI(title="NH Archive", version="0.1.0")
 app.add_middleware(
@@ -57,9 +86,29 @@ def discover_latest(page: int = 1, per_page: int = 25):
     return _remote(lambda: discover.latest(page, per_page))
 
 
+@app.get("/api/discover/feed")
+def discover_feed(
+    page: int = 1,
+    per_page: int = 25,
+    q: str = "",
+    sort: str = "date",
+    language: str = "all",
+    type: str = "all",
+    tag_id: int | None = None,
+    tag_names: str = "",
+    unimported_only: bool = False,
+):
+    return _remote(lambda: discover.feed(page, per_page, q, sort, language, type, tag_id, tag_names, unimported_only))
+
+
 @app.get("/api/discover/popular")
 def discover_popular():
     return _remote(discover.popular)
+
+
+@app.get("/api/discover/tagged")
+def discover_tagged(tag_id: int, page: int = 1, per_page: int = 25, sort: str = "date", unimported_only: bool = False):
+    return _remote(lambda: discover.tagged(tag_id, page, per_page, sort, unimported_only))
 
 
 @app.get("/api/discover/random")
@@ -68,8 +117,16 @@ def discover_random():
 
 
 @app.get("/api/discover/search")
-def discover_search(q: str, page: int = 1, per_page: int = 25):
-    return _remote(lambda: discover.search(q, page, per_page))
+def discover_search(
+    q: str = "",
+    page: int = 1,
+    per_page: int = 25,
+    sort: str = "date",
+    language: str = "all",
+    type: str = "all",
+    unimported_only: bool = False,
+):
+    return _remote(lambda: discover.search(q, page, per_page, sort, language, type, unimported_only))
 
 
 @app.get("/api/discover/galleries/{gallery_id}")
@@ -85,6 +142,81 @@ def import_gallery(gallery_id: int):
 @app.get("/api/discover/tags/autocomplete")
 def tag_autocomplete(q: str, limit: int = 20):
     return _remote(lambda: discover.tag_autocomplete(q, limit))
+
+
+@app.get("/api/discover/tags/cached")
+def cached_tags(limit: int = 60):
+    return discover.cached_tags(limit)
+
+
+@app.get("/api/dictionary/candidates")
+def dictionary_candidates(q: str = "", type: str = "all", status: str = "all", limit: int = 50, offset: int = 0):
+    return dictionary.candidates(q, status, limit, offset, type)
+
+
+@app.get("/api/dictionary/summary")
+def dictionary_summary():
+    return dictionary.summary()
+
+
+@app.get("/api/dictionary/evidence")
+def dictionary_evidence(remote_tag_id: int | None = None, dictionary_id: int | None = None):
+    return dictionary.evidence(remote_tag_id, dictionary_id)
+
+
+@app.get("/api/dictionary/autocomplete")
+def dictionary_autocomplete(q: str, limit: int = 20):
+    return _remote(lambda: dictionary.autocomplete(q, limit))
+
+
+@app.post("/api/dictionary/preview-apply")
+def dictionary_preview_apply(payload: DictionaryApplyRequest):
+    try:
+        return dictionary.preview_apply(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/apply")
+def dictionary_apply(payload: DictionaryApplyRequest):
+    try:
+        return dictionary.apply(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/preview-bulk-import")
+def dictionary_preview_bulk_import(payload: DictionaryBulkImportRequest):
+    return dictionary.preview_bulk_import(payload.rows)
+
+
+@app.post("/api/dictionary/bulk-import")
+def dictionary_bulk_import(payload: DictionaryBulkImportRequest):
+    return dictionary.bulk_import(payload.rows)
+
+
+@app.post("/api/dictionary/{dictionary_id}/ignore")
+def dictionary_ignore(dictionary_id: int):
+    try:
+        return dictionary.ignore(dictionary_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/{dictionary_id}/review")
+def dictionary_review(dictionary_id: int):
+    try:
+        return dictionary.mark_review(dictionary_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.delete("/api/dictionary/{dictionary_id}")
+def dictionary_delete(dictionary_id: int):
+    try:
+        return dictionary.delete(dictionary_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/api/works")
@@ -157,6 +289,21 @@ def retry_job(job_id: int):
         return imports.retry_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/api/settings")
+def get_settings():
+    return settings_service.get()
+
+
+@app.patch("/api/settings")
+def patch_settings(patch: SettingsPatch):
+    return settings_service.patch(patch.model_dump(exclude_none=True))
+
+
+@app.post("/api/settings/nhentai/verify")
+def verify_nhentai_settings():
+    return settings_service.verify_nhentai()
 
 
 def _remote(call):

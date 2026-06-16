@@ -1,93 +1,114 @@
-import { Download, Grid2X2, Info, Search, Shuffle, Sparkles } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { api, GalleryDetail, GallerySummary } from "../../lib/api";
+import { api, GalleryDetail, GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
+import { DiscoverFeed } from "./DiscoverFeed";
+import { DiscoverToolbar } from "./DiscoverToolbar";
+import { DiscoverSurface, DiscoverViewMode, GalleryPreview, TagFilter } from "./discoverTypes";
+import { GalleryPreviewModal } from "./GalleryPreviewModal";
+import { PopularFan } from "./PopularFan";
 
 type Props = {
   blurCovers: boolean;
 };
 
-type Mode = "latest" | "popular" | "search" | "gallery";
+const PER_PAGE = 24;
 
 export function DiscoverPage({ blurCovers }: Props) {
-  const [mode, setMode] = useState<Mode>("latest");
+  const [surface, setSurface] = useState<DiscoverSurface>("feed");
+  const [viewMode, setViewMode] = useState<DiscoverViewMode>("grid");
   const [query, setQuery] = useState("");
-  const [galleryId, setGalleryId] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [language, setLanguage] = useState("all");
+  const [kind, setKind] = useState("all");
+  const [sort, setSort] = useState("date");
+  const [unimportedOnly, setUnimportedOnly] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<TagFilter[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [items, setItems] = useState<GallerySummary[]>([]);
-  const [selected, setSelected] = useState<GalleryDetail | null>(null);
+  const [preview, setPreview] = useState<GalleryPreview | null>(null);
+  const [popularCollapseSignal, setPopularCollapseSignal] = useState(0);
+  const [popularLoading, setPopularLoading] = useState(false);
+  const [popularItems, setPopularItems] = useState<GallerySummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const activeQuery = surface === "feed" ? submittedQuery : "";
+  const isBoundary = surface === "upload" || surface === "scan";
+  const collapsePopular = useCallback(() => setPopularCollapseSignal((value) => value + 1), []);
+
+  const loadFeed = useCallback(
+    async (nextPage: number, queryOverride?: string) => {
+      if (isBoundary) return;
+      setLoading(true);
+      setError(null);
+      setNotice(null);
+      const remoteQuery = queryOverride ?? activeQuery;
+      try {
+        const payload = await api.feed({
+          q: remoteQuery,
+          page: nextPage,
+          per_page: PER_PAGE,
+          sort,
+          language,
+          type: kind,
+          tag_id: shouldUseTagged(selectedTags, remoteQuery, language, kind) ? selectedTags[0].id : null,
+          tag_names: shouldUseTagged(selectedTags, remoteQuery, language, kind) ? [] : selectedTags.map(tagQueryValue).filter(Boolean),
+          unimported_only: unimportedOnly,
+        });
+        setItems(payload.result);
+        setTotal(payload.total);
+        setTotalPages(payload.num_pages || 1);
+        setPage(nextPage);
+        if (payload.reason === "min_query_length") {
+          setNotice("请输入关键词，或使用语言、类型、tag 组成远端查询。");
+        } else if (payload.query) {
+          setNotice(`远端查询：${payload.query}`);
+        }
+      } catch (exc) {
+        setError(exc instanceof Error ? exc.message : String(exc));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeQuery, isBoundary, kind, language, selectedTags, sort, surface, unimportedOnly]
+  );
 
   useEffect(() => {
-    if (mode === "latest") void loadLatest();
-    if (mode === "popular") void loadPopular();
-  }, [mode]);
+    void loadFeed(1);
+  }, [loadFeed]);
 
-  const heading = useMemo(() => {
-    if (mode === "popular") return "热门";
-    if (mode === "search") return "远端搜索";
-    if (mode === "gallery") return "画廊 ID";
-    return "最新";
-  }, [mode]);
+  const boundaryNotice = useMemo(() => {
+    if (surface === "upload") return "上传 CBZ 将在本地导入模块接入后开放；当前不显示假上传任务。";
+    if (surface === "scan") return "扫描目录将在文件维护模块接入后开放；当前不显示假扫描结果。";
+    return null;
+  }, [surface]);
 
-  async function loadLatest() {
-    await withLoad(async () => {
-      const payload = await api.latest();
-      setItems(payload.result);
-      setSelected(null);
-    });
-  }
-
-  async function loadPopular() {
-    await withLoad(async () => {
+  const loadPopular = useCallback(async () => {
+    setPopularLoading(true);
+    try {
       const payload = await api.popular();
-      setItems(payload.result);
-      setSelected(null);
-    });
-  }
-
-  async function submitSearch(event: FormEvent) {
-    event.preventDefault();
-    await withLoad(async () => {
-      const payload = await api.search(query);
-      setItems(payload.result);
-      setSelected(null);
-      if (payload.reason === "min_query_length") {
-        setError("远端搜索至少需要 3 个字符；短词请优先使用后续词典 selector。");
-      }
-    });
-  }
-
-  async function submitGallery(event: FormEvent) {
-    event.preventDefault();
-    const id = Number(galleryId);
-    if (!Number.isInteger(id) || id <= 0) {
-      setError("请输入有效的 Gallery ID。");
-      return;
+      setPopularItems(payload.result);
+    } catch (exc) {
+      setNotice(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setPopularLoading(false);
     }
-    await openDetail(id);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!popularItems.length && !popularLoading) void loadPopular();
+  }, [loadPopular, popularItems.length, popularLoading]);
 
   async function openDetail(id: number) {
-    await withLoad(async () => {
-      setSelected(await api.gallery(id));
-    });
-  }
-
-  async function importSelected() {
-    if (!selected) return;
-    await withLoad(async () => {
-      const job = await api.importGallery(selected.gallery_id);
-      setSelected({ ...selected, imported: Boolean(job.target.work_id), work_id: Number(job.target.work_id) || null });
-    });
-  }
-
-  async function withLoad(action: () => Promise<void>) {
+    collapsePopular();
     setLoading(true);
     setError(null);
     try {
-      await action();
+      setPreview({ kind: "detail", detail: await api.gallery(id) });
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -95,139 +116,218 @@ export function DiscoverPage({ blurCovers }: Props) {
     }
   }
 
+  async function openPreview(id: number, kindName: GalleryPreview["kind"]) {
+    collapsePopular();
+    setLoading(true);
+    setError(null);
+    try {
+      setPreview({ kind: kindName, detail: await api.gallery(id) });
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openRandom() {
+    collapsePopular();
+    setLoading(true);
+    setError(null);
+    try {
+      setPreview({ kind: "random", detail: await api.random() });
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitToolbar() {
+    if (surface !== "feed") return;
+    collapsePopular();
+    const nextQuery = query.trim();
+    if (/^\d+$/.test(nextQuery)) {
+      const id = Number(nextQuery);
+      await openPreview(id, "gallery");
+      return;
+    }
+    if (nextQuery === submittedQuery) {
+      await loadFeed(1, nextQuery);
+      return;
+    }
+    setPage(1);
+    setSubmittedQuery(nextQuery);
+  }
+
+  async function importGallery(detail: GalleryDetail | null) {
+    if (!detail) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await api.importGallery(detail.gallery_id);
+      setNotice(`Gallery ${detail.gallery_id} 已加入真实导入队列。`);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function enqueueGalleryId(galleryId: number) {
+    collapsePopular();
+    setLoading(true);
+    setError(null);
+    try {
+      await api.importGallery(galleryId);
+      setNotice(`Gallery ${galleryId} 已加入真实导入队列。`);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function readGallery(detail: GalleryDetail) {
+    if (detail.imported && detail.work_id) {
+      navigate({ name: "reader", workId: detail.work_id });
+    } else {
+      navigate({ name: "readerRemote", galleryId: detail.gallery_id });
+    }
+    setPreview(null);
+  }
+
+  function pickTag(tag: RemoteTag) {
+    collapsePopular();
+    setSelectedTags((current) => (current.some((item) => item.id === tag.id) ? current : [...current, tag]));
+    setPage(1);
+  }
+
+  function setSurfaceAndCollapse(nextSurface: DiscoverSurface) {
+    collapsePopular();
+    setSurface(nextSurface);
+  }
+
+  function setQueryAndCollapse(value: string) {
+    collapsePopular();
+    setQuery(value);
+  }
+
+  function setLanguageAndCollapse(value: string) {
+    collapsePopular();
+    setLanguage(value);
+  }
+
+  function setKindAndCollapse(value: string) {
+    collapsePopular();
+    setKind(value);
+  }
+
+  function setSortAndCollapse(value: string) {
+    collapsePopular();
+    setSort(value);
+  }
+
+  function setUnimportedAndCollapse(value: boolean) {
+    collapsePopular();
+    setUnimportedOnly(value);
+  }
+
+  function setViewModeAndCollapse(value: DiscoverViewMode) {
+    collapsePopular();
+    setViewMode(value);
+  }
+
+  function setTagsAndCollapse(tags: TagFilter[]) {
+    collapsePopular();
+    setSelectedTags(tags);
+  }
+
+  function loadPageAndCollapse(nextPage: number) {
+    collapsePopular();
+    void loadFeed(nextPage);
+  }
+
   return (
-    <section className="page">
+    <section className="page discover-page">
       <div className="hero">
         <div>
           <h1>发现 / 导入</h1>
-          <p>从远端源发现同人志，支持画廊 ID、远端搜索与真实导入队列。</p>
+          <p>从远端源发现同人志，支持画廊 ID、tag 筛选、随机预览与真实导入队列。</p>
         </div>
-        <div className="sketch" aria-hidden="true" />
+        <PopularFan
+          loading={popularLoading}
+          items={popularItems}
+          blurCovers={blurCovers}
+          collapseSignal={popularCollapseSignal}
+          onOpen={(id) => openPreview(id, "gallery")}
+          onImport={enqueueGalleryId}
+        />
       </div>
 
-      <div className="mode-tabs">
-        <button className={mode === "latest" ? "active" : ""} type="button" onClick={() => setMode("latest")}>
-          <Sparkles size={16} />
-          最新
-        </button>
-        <button className={mode === "popular" ? "active" : ""} type="button" onClick={() => setMode("popular")}>
-          <Grid2X2 size={16} />
-          热门
-        </button>
-        <button className={mode === "search" ? "active" : ""} type="button" onClick={() => setMode("search")}>
-          <Search size={16} />
-          远端搜索
-        </button>
-        <button className={mode === "gallery" ? "active" : ""} type="button" onClick={() => setMode("gallery")}>
-          <Shuffle size={16} />
-          画廊 ID
-        </button>
+      <div className="discover-workspace">
+        <DiscoverToolbar
+          surface={surface}
+          query={query}
+          language={language}
+          kind={kind}
+          sort={sort}
+          unimportedOnly={unimportedOnly}
+          viewMode={viewMode}
+          selectedTags={selectedTags}
+          onSurface={setSurfaceAndCollapse}
+          onQuery={setQueryAndCollapse}
+          onLanguage={setLanguageAndCollapse}
+          onKind={setKindAndCollapse}
+          onSort={setSortAndCollapse}
+          onUnimportedOnly={setUnimportedAndCollapse}
+          onViewMode={setViewModeAndCollapse}
+          onTags={setTagsAndCollapse}
+          onSubmit={submitToolbar}
+          onRandom={openRandom}
+        />
+        {boundaryNotice ? <div className="notice slim boundary-notice">{boundaryNotice}</div> : null}
+        <div className="discover-stage">
+          <DiscoverFeed
+            items={items}
+            total={total}
+            page={page}
+            totalPages={totalPages}
+            loading={loading}
+            error={error}
+            notice={notice}
+            viewMode={viewMode}
+            blurCovers={blurCovers}
+            onOpen={openDetail}
+            onImport={enqueueGalleryId}
+            onPickTag={pickTag}
+            onPage={loadPageAndCollapse}
+          />
+        </div>
       </div>
 
-      {mode === "search" ? (
-        <form className="search-row" onSubmit={submitSearch}>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="标题、社团、角色、标签..." />
-          <button type="submit">搜索</button>
-        </form>
-      ) : null}
-
-      {mode === "gallery" ? (
-        <form className="search-row" onSubmit={submitGallery}>
-          <input value={galleryId} onChange={(event) => setGalleryId(event.target.value)} placeholder="输入 Gallery ID" />
-          <button type="submit">打开预览</button>
-        </form>
-      ) : null}
-
-      <div className="content-grid">
-        <section className="result-panel">
-          <div className="section-title">
-            <h2>{heading}</h2>
-            {loading ? <span>读取中</span> : <span>{items.length} 项</span>}
-          </div>
-          {error ? <div className="notice error">{error}</div> : null}
-          {!loading && !error && items.length === 0 ? (
-            <div className="empty-state">
-              <Info size={22} />
-              <strong>暂无结果</strong>
-              <p>配置 API key 后可拉取远端内容；搜索结果不会使用本地样例填充。</p>
-            </div>
-          ) : null}
-          <div className="gallery-grid">
-            {items.map((item) => (
-              <article className="gallery-card" key={item.gallery_id}>
-                <button type="button" className="cover-button" onClick={() => openDetail(item.gallery_id)}>
-                  {item.thumbnail.url ? (
-                    <img className={blurCovers ? "blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
-                  ) : (
-                    <span className="cover-fallback">NO COVER</span>
-                  )}
-                </button>
-                <div className="card-body">
-                  <div className="card-meta">
-                    <span>R-18</span>
-                    <em>{item.imported ? "已入库" : "未入库"}</em>
-                  </div>
-                  <h3>{item.title}</h3>
-                  <p>{item.title_japanese || "无日文标题"}</p>
-                  <small>{item.page_count} 页 · Gallery ID {item.gallery_id}</small>
-                  <div className="card-actions">
-                    {item.imported && item.work_id ? (
-                      <button type="button" onClick={() => navigate({ name: "reader", workId: item.work_id! })}>
-                        打开本地
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => openDetail(item.gallery_id)}>
-                        预览
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <aside className="detail-drawer">
-          {!selected ? (
-            <div className="empty-state compact">
-              <Info size={20} />
-              <strong>作品详情</strong>
-              <p>选择远端结果或输入 Gallery ID 后显示真实详情。</p>
-            </div>
-          ) : (
-            <>
-              <div className="drawer-head">
-                {selected.thumbnail?.url ? (
-                  <img className={blurCovers ? "blurred" : ""} src={selected.thumbnail.url} alt="" />
-                ) : null}
-                <div>
-                  <span className="age">R-18</span>
-                  <h2>{selected.title.pretty || selected.title.english || selected.gallery_id}</h2>
-                  <p>{selected.title.japanese}</p>
-                  <small>Gallery ID {selected.gallery_id} · {selected.page_count} 页</small>
-                </div>
-              </div>
-              <div className="tag-list">
-                {selected.tags.slice(0, 14).map((tag) => (
-                  <span key={tag.id}>{tag.name}</span>
-                ))}
-              </div>
-              <div className="drawer-actions">
-                {selected.imported && selected.work_id ? (
-                  <button type="button" onClick={() => navigate({ name: "reader", workId: selected.work_id! })}>
-                    打开本地
-                  </button>
-                ) : (
-                  <button type="button" onClick={importSelected}>
-                    <Download size={17} />
-                    加入导入队列
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </aside>
-      </div>
+      <GalleryPreviewModal
+        detail={preview?.detail ?? null}
+        label={previewLabel(preview?.kind)}
+        blurCovers={blurCovers}
+        onClose={() => setPreview(null)}
+        onImport={() => importGallery(preview?.detail ?? null)}
+        onRead={readGallery}
+        onOpenRelated={openDetail}
+      />
     </section>
   );
+}
+
+function shouldUseTagged(tags: TagFilter[], query: string, language: string, kind: string) {
+  return tags.length === 1 && !query.trim() && language === "all" && kind === "all";
+}
+
+function tagQueryValue(tag: TagFilter) {
+  return tag.name || tag.slug || "";
+}
+
+function previewLabel(kind: GalleryPreview["kind"] | undefined) {
+  if (kind === "random") return "随机预览";
+  if (kind === "detail") return "作品详情";
+  return "画廊预览";
 }
