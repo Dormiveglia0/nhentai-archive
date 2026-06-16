@@ -67,6 +67,13 @@ Root: `backend/app/`
   - `ingest_cbz()`, `list_works()`, `get_work()`, `list_pages()`, `read_page()`.
 - `services/reader_service.py`
   - `get_state()`, `update_state()`.
+- `services/library_service.py`
+  - Local-only library reads; queries only `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`. Never calls NH API.
+  - `summary()`: real total/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped).
+  - `search(q, page, per_page, sort, read_status, source, language, tag_ids)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`.
+  - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
+  - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
+  - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry`.
 - `main.py`
@@ -99,6 +106,13 @@ Implemented:
 - `POST /api/dictionary/{id}/ignore`
 - `POST /api/dictionary/{id}/review`
 - `DELETE /api/dictionary/{id}`
+- `GET /api/library/summary`
+- `GET /api/library/search?q=&page=&per_page=&sort=&read_status=&source=&language=&tag_ids=`
+  - `tag_ids` is a comma-separated remote tag id list; non-numeric tokens are ignored. AND semantics.
+- `GET /api/library/recent-added?limit=`
+- `GET /api/library/recent-read?limit=`
+- `GET /api/library/continue-reading?limit=`
+- `GET /api/library/tag-filters?q=&limit=`
 - `GET /api/works`
 - `GET /api/works/{work_id}`
 - `GET /api/works/{work_id}/cover`
@@ -134,6 +148,7 @@ Root: `frontend/src/`
   - Typed API wrapper for implemented backend endpoints.
   - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
   - Dictionary API types and helpers live here: candidates, autocomplete, preview/apply, preview/import bulk rows.
+  - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
 - `vite.config.ts`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
@@ -190,7 +205,21 @@ Root: `frontend/src/`
 - `components/dictionary/BulkImportPanel.tsx`
   - Paste-based CSV/TSV/comma import with row-level preview before write.
 - `components/library/LibraryPage.tsx`
-  - Current simple real `/api/works` library; Phase 3 will enhance it.
+  - Phase 3 private-archive workbench. Orchestration only: loads `/api/library/summary` + continue-reading + recent-added once, then re-runs `/api/library/search` on any filter/sort/page change with a request token to drop stale responses. Distinguishes empty library (`summary.total === 0`) from empty filtered result. Shelves only render when no filters are active.
+- `components/library/LibrarySummaryStrip.tsx`
+  - Real summary strip: 总收藏 / 已读 / 阅读中 / 未读 / 待补标签 / 占用容量. No 待治理 fabrication (governance not built); 待补标签 = works with zero `work_tags`.
+- `components/library/LibraryToolbar.tsx`
+  - Search form (submit on Enter), language/status/source/sort `FilterMenu`s, `LibraryTagFilter`, grid/list view toggle, reset. Language options come from real summary facets.
+- `components/library/LibraryTagFilter.tsx`
+  - Multi-select tag picker backed by `/api/library/tag-filters` (local used tags only, debounced search, dictionary display names). Does not call NH API.
+- `components/library/WorkCard.tsx`
+  - Cover-first card: read-status pill/badge, source/language meta, author-or-group line, page/ID, progress bar, draggable tag row (reuses discover `TagScroller`), 继续/开始阅读. Single-click selects, double-click opens reader.
+- `components/library/WorkInspector.tsx`
+  - Right inspector: real file size/pages, source/ID, language, reading progress, tags. 继续阅读 routes to local reader; 进入治理/导出 CBZ stay disabled (未接入).
+- `components/library/ContinueReadingRow.tsx`
+  - Horizontal shelf for 继续阅读 / 最近添加; renders nothing when no real rows.
+- `components/library/libraryHelpers.ts`
+  - `formatBytes`, title/author/language/read-status derivation, and shared sort/status/source option lists.
 - `components/reader/ReaderPage.tsx`
   - Discriminated source reader:
     - local `workId`: reads indexed CBZ pages and persists progress;

@@ -2,11 +2,11 @@
 
 ## Current Version
 
-Design baseline recovery + dictionary foundation refit, Phase 2.
+Phase 3 library enhancement (我的库 private-archive workbench), built on the Phase 2 dictionary foundation.
 
 Current real slice:
 
-`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library -> local reader -> progress save`
+`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save`
 
 ## Completed
 
@@ -56,27 +56,37 @@ Current real slice:
   - Import flow links imported works to real gallery tags after CBZ ingestion.
   - Discover cards/tag selector render dictionary `display` names when mapped, without using Chinese names as remote API query tokens.
   - `DictionaryPage` was refit against `design/词典.png`: top summary strip, table-like candidate pool, editor with aliases/scope chips and disabled machine suggestion state, evidence tabs, expandable apply preview, and row-level bulk import preview.
+- Implemented Phase 3 “我的库” enhancement against `design/库.png`, all data from SQLite only:
+  - Added `LibraryService` (`backend/app/services/library_service.py`): `summary`, `search`, `recent_added`, `recent_read`, `continue_reading`, `tag_filters`. It only queries `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`; it never calls the NH API.
+  - Added APIs: `/api/library/summary`, `/api/library/search`, `/api/library/recent-added`, `/api/library/recent-read`, `/api/library/continue-reading`, `/api/library/tag-filters`. Kept `/api/works` for compatibility.
+  - `search` supports SQL-backed pagination (per_page capped at 100), keyword (title/japanese/pretty/gallery-id/joined tag text), read-state filter (unread/reading/completed), source filter (remote/local), language filter (via `work_tags` language type), multi-tag AND filter (work must carry every selected remote tag), and whitelisted sorts (recent_updated/added/read, title, pages_desc/asc).
+  - Rebuilt `LibraryPage` as orchestration plus thin components: `LibrarySummaryStrip`, `LibraryToolbar`, `LibraryTagFilter`, `WorkCard`, `WorkInspector`, `ContinueReadingRow`, `libraryHelpers`. Reuses discover `FilterMenu`, `IconPager`, and `TagScroller`.
+  - Summary strip shows only real metrics (总收藏/已读/阅读中/未读/待补标签/占用容量); “待补标签” = works with zero `work_tags`. No 待治理 metric is shown because governance is not implemented.
+  - Continue-reading and recent-added shelves render only when real rows exist and only when no filter/search is active.
+  - Tag filter selector is backed by `/api/library/tag-filters` and shows dictionary Chinese display names; selecting a tag on a card or in the inspector adds it to the filter (AND).
+  - Inspector exposes real file size/pages/source/ID/language/progress, routes 继续阅读 to the local reader, and keeps 进入治理/导出 CBZ disabled with 未接入 labels.
+  - Empty library and empty filtered result are distinct real empty states; pagination uses the icon pager so large libraries never render every work at once.
+  - Removed the orphaned legacy library CSS (`.filter-ribbon`, `.stats`, old `.work-card*`) replaced by the new `.library-*` system; retargeted the shared progress rule to `.library-card`.
 
 ## Not Implemented Yet
 
-- Enhanced library filters and pagination.
 - Governance center.
 - Export center.
 - File maintenance.
 - Job pause/resume/cancel controls.
 - Workbench aggregate dashboard.
+- Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
 
 ## Next Plan
 
-Phase 3 should enhance “我的库” using real local data and the new `work_tags` links, only after the Phase 2 dictionary refit remains green.
+Phase 4 should build the governance center (作品治理) against `design/元数据.png` and chapter 9 of the design flow, only after the Phase 3 library remains green.
 
-Required library scope:
+Required governance scope:
 
-- Add backend `LibraryService` for real summary, paginated search, sorting, reading-state filters, source filters, and dictionary tag filters.
-- Replace the current simple `/api/works` frontend list with the `design/库.png` library layout.
-- Add pagination/per-page controls so large libraries never render all works on one page.
-- Add continue-reading/recently-added/recently-read sections only from real `reader_progress`, `reading_history`, and `works`.
-- Use dictionary display names for tag filters and work tag rows where mappings exist.
+- Add backend `GovernanceService` for a real per-work aggregate: work header, files, metadata diff (current vs source vs suggestion), tag groups with confirmed/pending/conflict counts, dictionary match state, and recommended actions — all from SQLite, no fabricated completeness.
+- Add `GET /api/governance/queue`, `GET /api/works/{id}/governance`, `POST /api/works/{id}/governance/apply`, plus bulk preview/apply once single-work apply is solid.
+- Build a governance queue + work governance page (header, ComicInfo diff editor, tag governance board, dictionary apply entry) that reuses the existing dictionary apply/preview boundaries.
+- Surface a real governance-completeness signal that the library and (later) export center can read, replacing the current 待补标签 proxy if a richer state exists.
 
 ## Risks And Decisions
 
@@ -94,14 +104,19 @@ Required library scope:
 - Decision: machine suggestions remain disabled until a real suggestion source exists; the UI must not invent suggestions.
 - Decision: dictionary candidate/evidence/preview metrics are computed from SQLite tables only.
 - Decision: unimplemented modules stay boundary screens.
+- Decision: library is local-only; `LibraryService` must never call the NH API and library pages must not re-query remote tags. Tag filters reuse `work_tags` + dictionary mappings only.
+- Decision: library multi-tag filtering uses AND semantics (a work must carry every selected remote tag).
+- Decision: library summary shows only real metrics; do not fabricate a 待治理 count until `GovernanceService` exists. 待补标签 (works with zero `work_tags`) is the honest interim proxy.
+- Decision: library shelves (继续阅读/最近添加) only render with real rows and only in the unfiltered default view; filtering switches to the paginated result wall.
+- Decision: library language filter and language facets derive from `work_tags` rows of type `language` (with dictionary display), not the unused `works.language` column.
 - Risk: tag enrichment calls `/api/v2/tags/ids`; if remote rate limits, cards may show cached/empty tags rather than invented labels.
 - Risk: search query syntax follows the compact API doc and should be manually checked against live API behavior.
 
 ## Verification Record
 
-- `PYTHONPATH=backend pytest backend/tests -q`: passed, 21 tests.
-- `npm run build`: passed.
+- `PYTHONPATH=backend pytest backend/tests -q`: passed, 28 tests (5 new in `test_library_service.py` covering summary, search filters/pagination, read-status, recent/continue shelves, and dictionary-aware tag filters).
+- `npm run build`: passed (`tsc -b && vite build`).
 - `git diff --check`: passed.
-- Static scan found no restored right-side drawer, modal reader tab, fake work arrays, invalid discover type options, or fake dictionary candidate arrays. Matches were rule/documentation text, placeholders in input fields, and real `samples` preview fields.
-- Browser screenshot QA ran after Playwright became available and exposed remaining visual issues plus API quota pressure. Do not rerun remote-backed screenshot loops until NH API cooldown has cleared or a local response fixture/proxy is introduced for visual-only QA.
-- Dictionary screenshot QA attempted with a local 8002 backend and Vite proxy override, but the final Playwright screenshot command was blocked by environment usage limits. Code/build/API verification passed; visual QA should be rerun by opening `#dictionary` after restarting backend.
+- In-process API smoke (route functions called directly; `httpx`/TestClient unavailable): empty library → real zero states; after ingesting one real CBZ and linking real tags → correct summary/sources/language facet, keyword + `tag_ids="7,8"` + language search returns the work with real tags and size, malformed `tag_ids` tokens are ignored, `tag-filters` excludes language type, recent-added returns the real row.
+- Static fake-data scan over `library_service.py` and `components/library/` + `lib/api.ts`: no mock/fake/placeholder/random data; only SQL parameter placeholders and the pre-existing dictionary `samples` field matched.
+- Browser screenshot QA NOT run: no browser/Playwright/chromium is installed in this environment. The library page is local-data only (no NH API), so visual QA is safe to rerun by the user: start backend (`PYTHONPATH=backend uvicorn app.main:app --port 8001`) + `npm run dev`, import a CBZ, then open `#library`.
