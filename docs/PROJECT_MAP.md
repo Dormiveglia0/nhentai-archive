@@ -48,12 +48,12 @@ Root: `backend/app/`
 - `services/dictionary_service.py`
   - `summary()`: counts unconfigured/configured/ignored/review/suggested terms from real tables.
   - `autocomplete(q, limit)`: local dictionary, aliases, cached `remote_tags`, then real remote tag search only when no local/cache hit exists.
-  - `candidates(q, status, limit, offset, tag_type)`: real remote tag candidate pool with impact count and configured/ignored state.
+  - `candidates(q, status, limit, offset, tag_type)`: real remote tag candidate pool with impact count and configured/ignored state; also exposes local-only dictionary rows so bad imports can be selected and removed.
   - `evidence(remote_tag_id, dictionary_id)`: real related works, co-tags, remote tag info, and local status history.
   - `preview_apply(payload)`: calculates conflicts, affected real works, samples, and tag update counts without writes.
-  - `apply(payload)`: writes/updates `local_tag_dictionary`, `tag_aliases`, remote mapping, and related `work_tags`.
-  - `ignore(id)` / `mark_review(id)`: real status transitions.
-  - `preview_bulk_import(rows)` / `bulk_import(rows)`: parse user rows, report valid/duplicate/conflict/invalid rows, write only valid rows.
+  - `apply(payload)`: writes/updates `local_tag_dictionary`, `tag_aliases`, remote mapping, and related `work_tags`; if `remote_tag_id` is omitted it resolves a cached remote tag by normalized original text and type.
+  - `ignore(id)` / `mark_review(id)` / `delete(id)`: real status transitions and deletion; delete removes aliases and unlinks `work_tags.dictionary_id` without deleting remote tags or works.
+  - `preview_bulk_import(rows)` / `bulk_import(rows)`: parse user rows, report valid/duplicate/conflict/invalid rows, write only valid rows. Minimum row shape is `原文, 中文名`; type and aliases are optional.
   - `link_work_tags(work_id, tags)`: links imported works to real gallery tags and existing dictionary mappings.
 - `services/settings_service.py`
   - `get()`: safe settings summary; never returns API key text.
@@ -98,6 +98,7 @@ Implemented:
 - `POST /api/dictionary/bulk-import`
 - `POST /api/dictionary/{id}/ignore`
 - `POST /api/dictionary/{id}/review`
+- `DELETE /api/dictionary/{id}`
 - `GET /api/works`
 - `GET /api/works/{work_id}`
 - `GET /api/works/{work_id}/cover`

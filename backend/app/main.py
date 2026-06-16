@@ -211,6 +211,14 @@ def dictionary_review(dictionary_id: int):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.delete("/api/dictionary/{dictionary_id}")
+def dictionary_delete(dictionary_id: int):
+    try:
+        return dictionary.delete(dictionary_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @app.get("/api/works")
 def list_works():
     return {"result": archive.list_works()}

@@ -2558,6 +2558,11 @@ body {
   color: #fffaf2;
 }
 
+.dictionary-actions .danger {
+  border-color: rgba(190, 54, 42, 0.34);
+  color: #b42920;
+}
+
 .evidence-block dl {
   margin: 15px 0 0;
   display: grid;

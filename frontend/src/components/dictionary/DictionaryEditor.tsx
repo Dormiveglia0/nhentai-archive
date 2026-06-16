@@ -1,4 +1,4 @@
-import { Ban, RotateCcw, Save, SearchCheck } from "lucide-react";
+import { Ban, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
 
 import { DictionaryApplyPayload } from "../../lib/api";
@@ -12,6 +12,7 @@ type Props = {
   onApply: () => void;
   onIgnore: () => void;
   onReview: () => void;
+  onDelete: () => void;
 };
 
 const TYPES = [
@@ -24,7 +25,7 @@ const TYPES = [
   ["category", "分类"],
 ] as const;
 
-export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPreview, onApply, onIgnore, onReview }: Props) {
+export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPreview, onApply, onIgnore, onReview, onDelete }: Props) {
   const [aliasDraft, setAliasDraft] = useState("");
   const [scopeDraft, setScopeDraft] = useState("");
 
@@ -131,6 +132,10 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPre
         <button type="button" onClick={onReview} disabled={loading || !dictionaryId}>
           <RotateCcw size={16} />
           加入复核
+        </button>
+        <button type="button" className="danger" onClick={onDelete} disabled={loading || !dictionaryId}>
+          <Trash2 size={16} />
+          删除
         </button>
       </footer>
     </section>

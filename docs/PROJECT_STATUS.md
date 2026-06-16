@@ -50,8 +50,9 @@ Current real slice:
 - Full navigation is visible, but unimplemented modules are explicit boundary screens.
 - Implemented and refit Phase 2 dictionary foundation:
   - tables: `local_tag_dictionary`, `tag_aliases`, `work_tags`
-  - APIs: `/api/dictionary/summary`, `/api/dictionary/candidates`, `/api/dictionary/evidence`, `/api/dictionary/autocomplete`, `/api/dictionary/preview-apply`, `/api/dictionary/apply`, `/api/dictionary/preview-bulk-import`, `/api/dictionary/bulk-import`, `/api/dictionary/{id}/ignore`, `/api/dictionary/{id}/review`
-  - `DictionaryService` supports real summary, local creation/editing, alias lookup, cached remote tag candidates, remote tag search through the existing cached client, evidence lookup, apply preview, apply, status changes, bulk import preview/import, and real `work_tags` linking.
+  - APIs: `/api/dictionary/summary`, `/api/dictionary/candidates`, `/api/dictionary/evidence`, `/api/dictionary/autocomplete`, `/api/dictionary/preview-apply`, `/api/dictionary/apply`, `/api/dictionary/preview-bulk-import`, `/api/dictionary/bulk-import`, `/api/dictionary/{id}/ignore`, `/api/dictionary/{id}/review`, `DELETE /api/dictionary/{id}`
+  - `DictionaryService` supports real summary, local creation/editing, alias lookup, cached remote tag candidates, remote tag search through the existing cached client, evidence lookup, apply preview, apply, status changes, delete, bulk import preview/import, and real `work_tags` linking.
+  - Bulk import accepts the minimum row shape `原文, 中文名`; type and aliases are optional. Imported rows automatically map to cached remote tags by normalized original text and type when possible.
   - Import flow links imported works to real gallery tags after CBZ ingestion.
   - Discover cards/tag selector render dictionary `display` names when mapped, without using Chinese names as remote API query tokens.
   - `DictionaryPage` was refit against `design/词典.png`: top summary strip, table-like candidate pool, editor with aliases/scope chips and disabled machine suggestion state, evidence tabs, expandable apply preview, and row-level bulk import preview.

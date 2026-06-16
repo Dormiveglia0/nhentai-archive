@@ -74,7 +74,7 @@ export function DictionaryPage() {
   async function loadEvidence(candidate: DictionaryCandidate, nextDictionaryId = candidate.dictionary_id ?? null) {
     setEvidenceLoading(true);
     try {
-      const payload = await api.dictionaryEvidence({ remote_tag_id: candidate.id, dictionary_id: nextDictionaryId });
+      const payload = await api.dictionaryEvidence({ remote_tag_id: candidate.id ?? null, dictionary_id: nextDictionaryId });
       setEvidence(payload);
       if (payload.dictionary) {
         setDictionaryId(payload.dictionary.id);
@@ -109,7 +109,7 @@ export function DictionaryPage() {
       original_text: candidate.name || candidate.slug || String(candidate.id),
       zh_name: candidate.configured && candidate.display ? candidate.display : "",
       tag_type: candidate.type || "tag",
-      remote_tag_id: candidate.id,
+      remote_tag_id: candidate.id ?? null,
     });
     void loadEvidence(candidate);
   }
@@ -180,6 +180,26 @@ export function DictionaryPage() {
     }
   }
 
+  async function deleteTerm() {
+    if (!dictionaryId) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      await api.dictionaryDelete(dictionaryId);
+      setMessage("已删除该词条，并解除相关作品标签映射。");
+      setDictionaryId(null);
+      setSelected(null);
+      setEvidence(null);
+      setPreview(null);
+      setForm(EMPTY_FORM);
+      await refreshList();
+    } catch (exc) {
+      setMessage(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <section className="page dictionary-page">
       <div className="hero dictionary-hero">
@@ -204,7 +224,7 @@ export function DictionaryPage() {
           status={status}
           candidates={candidates}
           loading={loading}
-          selectedId={selected?.id}
+          selectedKey={candidateKey(selected)}
           offset={offset}
           limit={limit}
           onQuery={(value) => {
@@ -241,6 +261,7 @@ export function DictionaryPage() {
             onApply={apply}
             onIgnore={ignore}
             onReview={review}
+            onDelete={deleteTerm}
           />
         </div>
         <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} />
@@ -250,4 +271,9 @@ export function DictionaryPage() {
       <DictionaryApplyPreview preview={preview} form={form} onClose={() => setPreview(null)} />
     </section>
   );
+}
+
+function candidateKey(candidate: DictionaryCandidate | null) {
+  if (!candidate) return null;
+  return candidate.id ? `remote-${candidate.id}` : `dict-${candidate.dictionary_id}`;
 }

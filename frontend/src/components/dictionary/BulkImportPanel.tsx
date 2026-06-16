@@ -45,11 +45,11 @@ export function BulkImportPanel({ onImported }: Props) {
       <header className="dictionary-pane-head">
         <div>
           <h2>批量导入</h2>
-          <span>支持 CSV / TSV / 逗号文本。每行：原文、中文名、类型、别名。</span>
+          <span>支持 CSV / TSV / 逗号文本。每行至少填写：原文、中文名；类型和别名可选。</span>
         </div>
       </header>
       <div className="bulk-body">
-        <textarea value={text} onChange={(event) => setText(event.target.value)} rows={7} placeholder="snowmelt, 雪融, tag, 融雪|雪融之时" />
+        <textarea value={text} onChange={(event) => setText(event.target.value)} rows={7} placeholder={"snowmelt, 雪融\nxxx，yyy\nblue reverie, 蓝色遐想, tag, 蓝想|蓝色"} />
         <div className="bulk-side">
           <button type="button" onClick={previewRows} disabled={loading || !text.trim()}>
             <ClipboardCheck size={16} />
@@ -107,17 +107,20 @@ export function BulkImportPanel({ onImported }: Props) {
 }
 
 function parseRows(text: string): BulkImportRow[] {
+  const validTypes = new Set(["tag", "artist", "group", "character", "parody", "language", "category"]);
   return text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const separator = line.includes("\t") ? "\t" : ",";
-      const [original_text = "", zh_name = "", tag_type = "tag", aliasText = ""] = line.split(separator).map((item) => item.trim());
+      const parts = (line.includes("\t") ? line.split("\t") : line.split(/[,，]/)).map((item) => item.trim());
+      const [original_text = "", zh_name = "", third = "", ...rest] = parts;
+      const tag_type = validTypes.has(third) ? third : "tag";
+      const aliasText = validTypes.has(third) ? rest.join("|") : [third, ...rest].filter(Boolean).join("|");
       return {
         original_text,
         zh_name,
-        tag_type: tag_type || "tag",
+        tag_type,
         aliases: aliasText
           .split(/[|，、]/)
           .map((item) => item.trim())

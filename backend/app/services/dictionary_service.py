@@ -185,6 +185,15 @@ class DictionaryService:
               COUNT(DISTINCT wt.work_id) AS impact_work_count
             FROM remote_tags r
             LEFT JOIN local_tag_dictionary d ON d.remote_tag_id = r.remote_id
+              OR (
+                d.remote_tag_id IS NULL
+                AND d.ignored = 0
+                AND d.tag_type = COALESCE(r.type, d.tag_type)
+                AND (
+                  d.normalized_key = lower(COALESCE(r.name, ''))
+                  OR d.normalized_key = lower(COALESCE(r.slug, ''))
+                )
+              )
             LEFT JOIN work_tags wt ON wt.remote_tag_id = r.remote_id
             WHERE {' AND '.join(where)}
             GROUP BY r.remote_id, d.id
@@ -193,7 +202,10 @@ class DictionaryService:
         """
         params.extend([max(1, min(limit, 100)), max(0, offset)])
         rows = self.db.fetchall(sql, params)
-        return {"result": [_remote_tag_result(row, source="candidate") for row in rows]}
+        result = [_remote_tag_result(row, source="candidate") for row in rows]
+        if status in {"all", "configured", "review", "ignored"} and (not q or len(result) < limit):
+            result.extend(self._local_only_candidates(q, status, tag_type, max(0, limit - len(result))))
+        return {"result": result}
 
     def evidence(self, remote_tag_id: int | None = None, dictionary_id: int | None = None) -> dict[str, Any]:
         dictionary = None
@@ -400,6 +412,15 @@ class DictionaryService:
     def mark_review(self, dictionary_id: int) -> dict[str, Any]:
         return self._set_status(dictionary_id, "review", ignored=False)
 
+    def delete(self, dictionary_id: int) -> dict[str, Any]:
+        current = self.db.fetchone("SELECT id FROM local_tag_dictionary WHERE id = ?", (dictionary_id,))
+        if not current:
+            raise ValueError("Dictionary term not found")
+        self.db.execute("UPDATE work_tags SET dictionary_id = NULL WHERE dictionary_id = ?", (dictionary_id,))
+        self.db.execute("DELETE FROM tag_aliases WHERE dictionary_id = ?", (dictionary_id,))
+        self.db.execute("DELETE FROM local_tag_dictionary WHERE id = ?", (dictionary_id,))
+        return {"deleted": True, "dictionary_id": dictionary_id}
+
     def link_work_tags(self, work_id: int, tags: list[dict[str, Any]]) -> None:
         for tag in tags:
             remote_id = tag.get("id")
@@ -449,13 +470,15 @@ class DictionaryService:
         scope = payload.get("scope") or payload.get("scope_json") or []
         if isinstance(scope, str):
             scope = [value.strip() for value in re.split(r"[,，|/]", scope) if value.strip()]
+        tag_type = str(payload.get("tag_type") or payload.get("type") or "tag").strip() or "tag"
         remote_tag_id = payload.get("remote_tag_id")
+        resolved_remote_tag_id = int(remote_tag_id) if remote_tag_id not in (None, "") else self._resolve_remote_tag_id(original, tag_type)
         return {
             "original_text": original,
             "normalized_key": normalize_key(original),
             "zh_name": zh_name,
-            "tag_type": str(payload.get("tag_type") or payload.get("type") or "tag").strip() or "tag",
-            "remote_tag_id": int(remote_tag_id) if remote_tag_id not in (None, "") else None,
+            "tag_type": tag_type,
+            "remote_tag_id": resolved_remote_tag_id,
             "aliases": [str(value).strip() for value in aliases if str(value).strip()],
             "scope": scope,
             "note": payload.get("note"),
@@ -485,6 +508,73 @@ class DictionaryService:
                 status = "conflict"
                 message = "存在别名冲突"
         return {"index": index, "status": status, "message": message, "payload": payload}
+
+    def _resolve_remote_tag_id(self, original: str, tag_type: str) -> int | None:
+        key = normalize_key(original)
+        if not key:
+            return None
+        row = self.db.fetchone(
+            """
+            SELECT remote_id
+            FROM remote_tags
+            WHERE COALESCE(type, ?) = ?
+              AND (lower(COALESCE(name, '')) = ? OR lower(COALESCE(slug, '')) = ?)
+            ORDER BY cached_at DESC
+            LIMIT 1
+            """,
+            (tag_type, tag_type, key, key),
+        )
+        return int(row["remote_id"]) if row else None
+
+    def _local_only_candidates(self, query: str, status: str, tag_type: str, limit: int) -> list[dict[str, Any]]:
+        if limit <= 0:
+            return []
+        params: list[Any] = []
+        where = ["d.remote_tag_id IS NULL"]
+        if query:
+            where.append("(d.normalized_key LIKE ? OR lower(d.zh_name) LIKE ?)")
+            params.extend([f"%{query}%", f"%{query}%"])
+        if status == "configured":
+            where.append("d.ignored = 0 AND d.status = 'configured'")
+        elif status == "ignored":
+            where.append("(d.ignored = 1 OR d.status = 'ignored')")
+        elif status == "review":
+            where.append("d.ignored = 0 AND d.status = 'review'")
+        if tag_type != "all":
+            where.append("d.tag_type = ?")
+            params.append(tag_type)
+        params.append(limit)
+        rows = self.db.fetchall(
+            f"""
+            SELECT d.id AS dictionary_id, d.original_text, d.zh_name, d.tag_type, d.status, d.ignored
+            FROM local_tag_dictionary d
+            WHERE {' AND '.join(where)}
+              AND NOT EXISTS (
+                SELECT 1 FROM remote_tags r
+                WHERE COALESCE(r.type, d.tag_type) = d.tag_type
+                  AND (lower(COALESCE(r.name, '')) = d.normalized_key OR lower(COALESCE(r.slug, '')) = d.normalized_key)
+              )
+            ORDER BY d.updated_at DESC, d.id DESC
+            LIMIT ?
+            """,
+            params,
+        )
+        return [
+            {
+                "source": "local_dictionary",
+                "id": None,
+                "type": row["tag_type"],
+                "name": row["original_text"],
+                "slug": None,
+                "display": row["zh_name"],
+                "dictionary_id": row["dictionary_id"],
+                "status": row["status"],
+                "configured": True,
+                "ignored": bool(row["ignored"]),
+                "impact_work_count": 0,
+            }
+            for row in rows
+        ]
 
     def _set_status(self, dictionary_id: int, status: str, ignored: bool) -> dict[str, Any]:
         current = self.db.fetchone("SELECT id FROM local_tag_dictionary WHERE id = ?", (dictionary_id,))

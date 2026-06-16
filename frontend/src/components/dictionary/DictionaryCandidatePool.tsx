@@ -8,7 +8,7 @@ type Props = {
   status: string;
   candidates: DictionaryCandidate[];
   loading: boolean;
-  selectedId?: number | null;
+  selectedKey?: string | null;
   offset: number;
   limit: number;
   onQuery: (value: string) => void;
@@ -44,7 +44,7 @@ export function DictionaryCandidatePool({
   status,
   candidates,
   loading,
-  selectedId,
+  selectedKey,
   offset,
   limit,
   onQuery,
@@ -102,13 +102,15 @@ export function DictionaryCandidatePool({
           <span>状态</span>
         </div>
         {candidates.map((candidate) => {
-          const label = candidate.name || candidate.slug || String(candidate.id);
+          const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
           const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";
+          const rowKey = candidate.id ? `remote-${candidate.id}` : `dict-${candidate.dictionary_id}`;
+          const active = selectedKey === rowKey;
           return (
             <button
-              key={candidate.id}
+              key={rowKey}
               type="button"
-              className={selectedId === candidate.id ? "candidate-row active" : "candidate-row"}
+              className={active ? "candidate-row active" : "candidate-row"}
               onClick={() => onSelect(candidate)}
               role="row"
             >

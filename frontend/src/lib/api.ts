@@ -58,7 +58,8 @@ export type DictionaryTerm = {
   source: string;
 };
 
-export type DictionaryCandidate = RemoteTag & {
+export type DictionaryCandidate = Omit<RemoteTag, "id"> & {
+  id?: number | null;
   dictionary_id?: number | null;
   status?: string | null;
   configured?: boolean;
@@ -99,6 +100,11 @@ export type DictionaryApplyResult = {
 
 export type DictionaryStatusResult = {
   dictionary: DictionaryTerm;
+};
+
+export type DictionaryDeleteResult = {
+  deleted: boolean;
+  dictionary_id: number;
 };
 
 export type BulkImportRow = {
@@ -341,6 +347,7 @@ export const api = {
     }),
   dictionaryIgnore: (id: number) => request<DictionaryStatusResult>(`/api/dictionary/${id}/ignore`, { method: "POST", headers: JSON_HEADERS }),
   dictionaryReview: (id: number) => request<DictionaryStatusResult>(`/api/dictionary/${id}/review`, { method: "POST", headers: JSON_HEADERS }),
+  dictionaryDelete: (id: number) => request<DictionaryDeleteResult>(`/api/dictionary/${id}`, { method: "DELETE", headers: JSON_HEADERS }),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
   works: () => request<{ result: Work[] }>("/api/works"),

@@ -138,6 +138,43 @@ def test_dictionary_bulk_import_previews_conflicts_and_imports_valid_rows(tmp_pa
     assert db.fetchone("SELECT id FROM local_tag_dictionary WHERE zh_name = ?", ("蓝色遐想",)) is not None
 
 
+def test_bulk_import_two_columns_maps_cached_remote_candidate(tmp_path):
+    db, _client, service = make_service(tmp_path)
+    insert_remote_tag(db, remote_id=303, name="xxx")
+
+    preview = service.preview_bulk_import([{"original_text": "xxx", "zh_name": "yyy"}])
+    imported = service.bulk_import([{"original_text": "xxx", "zh_name": "yyy"}])
+    candidate = service.candidates(query="xxx", limit=10)["result"][0]
+
+    assert preview["summary"] == {"valid": 1, "duplicate": 0, "conflict": 0, "invalid": 0}
+    assert imported["summary"]["imported"] == 1
+    assert candidate["id"] == 303
+    assert candidate["display"] == "yyy"
+    assert candidate["configured"] is True
+
+
+def test_dictionary_delete_removes_bad_local_import_and_unlinks_work_tags(tmp_path):
+    db, _client, service = make_service(tmp_path)
+    insert_remote_tag(db, remote_id=303, name="xxx")
+    db.execute(
+        """
+        INSERT INTO works (id, remote, remote_gallery_id, title, source, page_count)
+        VALUES (5, 'nhentai', 55, 'Remote Work', 'remote', 10)
+        """
+    )
+    insert_work_tag(db, work_id=5, remote_tag_id=303, name="xxx")
+    applied = service.apply({"original_text": "xxx", "zh_name": "yyy"})
+
+    deleted = service.delete(applied["dictionary"]["id"])
+    candidate = service.candidates(query="xxx", limit=10)["result"][0]
+    link = db.fetchone("SELECT dictionary_id FROM work_tags WHERE work_id = 5 AND remote_tag_id = 303")
+
+    assert deleted["deleted"] is True
+    assert candidate["display"] == "xxx"
+    assert candidate["configured"] is False
+    assert link["dictionary_id"] is None
+
+
 def test_dictionary_links_imported_work_to_real_gallery_tags(tmp_path):
     db, _client, service = make_service(tmp_path)
     insert_remote_tag(db)
