@@ -38,6 +38,21 @@ const STATUSES = [
   ["ignored", "已忽略"],
 ] as const;
 
+const TYPE_LABELS: Record<string, string> = {
+  tag: "标签",
+  artist: "作者",
+  group: "社团",
+  character: "角色",
+  parody: "原作",
+  language: "语言",
+  category: "分类",
+};
+
+function typeLabel(type?: string | null) {
+  if (!type) return "标签";
+  return TYPE_LABELS[type] ?? type;
+}
+
 export function DictionaryCandidatePool({
   query,
   typeFilter,
@@ -114,14 +129,14 @@ export function DictionaryCandidatePool({
               onClick={() => onSelect(candidate)}
               role="row"
             >
-              <span>
-                <i>{candidate.type || "tag"}</i>
-                <strong>{label}</strong>
+              <span className="candidate-term">
+                <i className={`type-badge type-${candidate.type || "tag"}`}>{typeLabel(candidate.type)}</i>
+                <strong title={label}>{label}</strong>
               </span>
-              <span>{display}</span>
-              <span>{candidate.impact_work_count ?? 0}</span>
+              <span className={display === "未配置" ? "candidate-display muted" : "candidate-display"}>{display}</span>
+              <span className="candidate-impact">{candidate.impact_work_count ?? 0}</span>
               <span>
-                <em className={candidate.configured ? "done" : "pending"}>
+                <em className={statusTone(candidate)}>
                   {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
                 </em>
               </span>
@@ -156,4 +171,11 @@ function statusLabel(status?: string | null) {
   if (status === "ignored") return "已忽略";
   if (status === "suggested") return "机器建议";
   return "已配置";
+}
+
+function statusTone(candidate: DictionaryCandidate) {
+  if (candidate.ignored) return "muted";
+  if (candidate.status === "review") return "review";
+  if (candidate.configured) return "done";
+  return "pending";
 }
