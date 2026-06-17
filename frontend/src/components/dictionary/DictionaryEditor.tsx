@@ -105,8 +105,7 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
 
         <div className="machine-suggestion wide">
           <span>机器建议</span>
-          <strong>未接入真实建议服务</strong>
-          <p>当前不会生成假建议；后续接入真实建议来源后才启用。</p>
+          <em>未接入真实建议服务（接入真实来源后启用）</em>
         </div>
       </div>
 
