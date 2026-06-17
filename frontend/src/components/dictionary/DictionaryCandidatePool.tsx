@@ -119,8 +119,9 @@ export function DictionaryCandidatePool({
               <span className={display === "未配置" ? "candidate-display muted" : "candidate-display"}>{display}</span>
               <span className="candidate-impact">{candidate.impact_work_count ?? 0}</span>
               <span className="candidate-status">
-                <i className={`status-dot ${statusTone(candidate)}`} aria-hidden="true" />
-                <em>{candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}</em>
+                <em className={statusTone(candidate)}>
+                  {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
+                </em>
               </span>
             </button>
           );
