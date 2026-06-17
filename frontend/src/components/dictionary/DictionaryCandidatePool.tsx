@@ -1,4 +1,4 @@
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search, Upload } from "lucide-react";
 
 import { DictionaryCandidate } from "../../lib/api";
 import { FilterMenu } from "../discover/FilterMenu";
@@ -16,6 +16,7 @@ type Props = {
   onTypeFilter: (value: string) => void;
   onStatus: (value: string) => void;
   onRefresh: () => void;
+  onBulkImport: () => void;
   onSelect: (candidate: DictionaryCandidate) => void;
   onPage: (offset: number) => void;
   onLimit: (limit: number) => void;
@@ -67,6 +68,7 @@ export function DictionaryCandidatePool({
   onTypeFilter,
   onStatus,
   onRefresh,
+  onBulkImport,
   onSelect,
   onPage,
   onLimit,
@@ -78,9 +80,15 @@ export function DictionaryCandidatePool({
           <h2>候选术语池</h2>
           <span>{loading ? "读取真实缓存..." : `${candidates.length} 项`}</span>
         </div>
-        <button type="button" onClick={onRefresh} aria-label="刷新候选">
-          <RefreshCw size={15} />
-        </button>
+        <div className="pane-head-actions">
+          <button type="button" className="head-action" onClick={onBulkImport}>
+            <Upload size={14} />
+            批量导入
+          </button>
+          <button type="button" className="icon-btn" onClick={onRefresh} aria-label="刷新候选">
+            <RefreshCw size={15} />
+          </button>
+        </div>
       </header>
 
       <div className="candidate-filters">

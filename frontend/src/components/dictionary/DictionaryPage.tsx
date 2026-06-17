@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -9,7 +10,6 @@ import {
   DictionarySummary,
 } from "../../lib/api";
 import { BulkImportPanel } from "./BulkImportPanel";
-import { DictionaryApplyPreview } from "./DictionaryApplyPreview";
 import { DictionaryCandidatePool } from "./DictionaryCandidatePool";
 import { DictionaryEditor } from "./DictionaryEditor";
 import { DictionaryEvidencePanel } from "./DictionaryEvidencePanel";
@@ -43,6 +43,16 @@ export function DictionaryPage() {
   const [loading, setLoading] = useState(false);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  useEffect(() => {
+    if (!bulkOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setBulkOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [bulkOpen]);
 
   const loadSummary = useCallback(async () => {
     setSummary(await api.dictionarySummary());
@@ -235,6 +245,7 @@ export function DictionaryPage() {
             setStatus(value);
           }}
           onRefresh={refreshList}
+          onBulkImport={() => setBulkOpen(true)}
           onSelect={selectCandidate}
           onPage={setOffset}
           onLimit={(value) => {
@@ -254,11 +265,20 @@ export function DictionaryPage() {
           onReview={review}
           onDelete={deleteTerm}
         />
-        <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} />
       </div>
 
-      <BulkImportPanel onImported={refreshList} />
-      <DictionaryApplyPreview preview={preview} form={form} onClose={() => setPreview(null)} />
+      <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} preview={preview} form={form} />
+
+      {bulkOpen ? (
+        <div className="preview-backdrop" role="dialog" aria-modal="true" onMouseDown={() => setBulkOpen(false)}>
+          <div className="dictionary-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <button className="modal-close" type="button" onClick={() => setBulkOpen(false)} aria-label="关闭批量导入">
+              <X size={18} />
+            </button>
+            <BulkImportPanel onImported={refreshList} />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
