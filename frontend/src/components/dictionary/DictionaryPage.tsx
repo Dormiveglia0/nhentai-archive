@@ -1,4 +1,3 @@
-import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -243,23 +242,18 @@ export function DictionaryPage() {
             setLimit(value);
           }}
         />
-        <div className="dictionary-editor-stack">
-          <button type="button" className="new-term-button" onClick={newLocalTerm}>
-            <Plus size={16} />
-            新建本地词条
-          </button>
-          <DictionaryEditor
-            value={form}
-            dictionaryId={dictionaryId}
-            loading={loading}
-            onChange={setForm}
-            onPreview={previewApply}
-            onApply={apply}
-            onIgnore={ignore}
-            onReview={review}
-            onDelete={deleteTerm}
-          />
-        </div>
+        <DictionaryEditor
+          value={form}
+          dictionaryId={dictionaryId}
+          loading={loading}
+          onChange={setForm}
+          onNew={newLocalTerm}
+          onPreview={previewApply}
+          onApply={apply}
+          onIgnore={ignore}
+          onReview={review}
+          onDelete={deleteTerm}
+        />
         <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} />
       </div>
 
