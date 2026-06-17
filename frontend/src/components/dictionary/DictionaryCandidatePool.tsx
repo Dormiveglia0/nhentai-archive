@@ -1,6 +1,7 @@
 import { RefreshCw, Search } from "lucide-react";
 
 import { DictionaryCandidate } from "../../lib/api";
+import { FilterMenu } from "../discover/FilterMenu";
 
 type Props = {
   query: string;
@@ -20,23 +21,23 @@ type Props = {
   onLimit: (limit: number) => void;
 };
 
-const TYPES = [
-  ["all", "全部"],
-  ["tag", "标签"],
-  ["artist", "作者"],
-  ["group", "社团"],
-  ["character", "角色"],
-  ["parody", "原作"],
-  ["language", "语言"],
-] as const;
+const TYPE_OPTIONS = [
+  { value: "all", label: "全部类型" },
+  { value: "tag", label: "标签" },
+  { value: "artist", label: "作者" },
+  { value: "group", label: "社团" },
+  { value: "character", label: "角色" },
+  { value: "parody", label: "原作" },
+  { value: "language", label: "语言" },
+];
 
-const STATUSES = [
-  ["all", "全部"],
-  ["unconfigured", "未配置"],
-  ["configured", "已配置"],
-  ["review", "待复核"],
-  ["ignored", "已忽略"],
-] as const;
+const STATUS_OPTIONS = [
+  { value: "all", label: "全部状态" },
+  { value: "unconfigured", label: "未配置" },
+  { value: "configured", label: "已配置" },
+  { value: "review", label: "待复核" },
+  { value: "ignored", label: "已忽略" },
+];
 
 const TYPE_LABELS: Record<string, string> = {
   tag: "标签",
@@ -87,26 +88,8 @@ export function DictionaryCandidatePool({
           <Search size={15} />
           <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="搜索原文或中文词条" />
         </label>
-        <label>
-          <span>类型</span>
-          <select value={typeFilter} onChange={(event) => onTypeFilter(event.target.value)}>
-            {TYPES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>状态</span>
-          <select value={status} onChange={(event) => onStatus(event.target.value)}>
-            {STATUSES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterMenu value={typeFilter} options={TYPE_OPTIONS} onChange={onTypeFilter} />
+        <FilterMenu value={status} options={STATUS_OPTIONS} onChange={onStatus} />
       </div>
 
       <div className="candidate-table" role="table" aria-label="候选术语">
