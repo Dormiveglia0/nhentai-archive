@@ -2695,15 +2695,9 @@ body {
 
 .dictionary-workspace {
   display: grid;
-  grid-template-columns: minmax(380px, 0.82fr) minmax(440px, 1.18fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.dictionary-detail {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.06fr) minmax(300px, 0.94fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .dictionary-pane,
@@ -2828,8 +2822,8 @@ body {
   display: grid;
   align-content: start;
   flex: 1 1 auto;
-  min-height: 0;
-  max-height: 600px;
+  min-height: 220px;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   border-top: 1px solid var(--line);

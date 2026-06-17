@@ -242,21 +242,19 @@ export function DictionaryPage() {
             setLimit(value);
           }}
         />
-        <div className="dictionary-detail">
-          <DictionaryEditor
-            value={form}
-            dictionaryId={dictionaryId}
-            loading={loading}
-            onChange={setForm}
-            onNew={newLocalTerm}
-            onPreview={previewApply}
-            onApply={apply}
-            onIgnore={ignore}
-            onReview={review}
-            onDelete={deleteTerm}
-          />
-          <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} />
-        </div>
+        <DictionaryEditor
+          value={form}
+          dictionaryId={dictionaryId}
+          loading={loading}
+          onChange={setForm}
+          onNew={newLocalTerm}
+          onPreview={previewApply}
+          onApply={apply}
+          onIgnore={ignore}
+          onReview={review}
+          onDelete={deleteTerm}
+        />
+        <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} />
       </div>
 
       <BulkImportPanel onImported={refreshList} />
