@@ -1,4 +1,5 @@
 import { LibraryWork } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
 import { workTitle } from "./libraryHelpers";
 
@@ -17,29 +18,30 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
         <h2>{title}</h2>
         <span>{works.length}</span>
       </div>
-      <div className="library-shelf-track">
+      <Stagger className="library-shelf-track">
         {works.map((work) => (
-          <button
-            key={work.id}
-            type="button"
-            className="shelf-item"
-            onClick={() => navigate({ name: "reader", workId: work.id })}
-          >
-            <div className="shelf-cover">
-              {work.cover_path ? (
-                <img className={blurCovers ? "blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
-              ) : (
-                <span className="cover-fallback">NO COVER</span>
-              )}
-              {(work.progress_percent ?? 0) > 0 ? (
-                <span className="shelf-progress" style={{ width: `${work.progress_percent}%` }} />
-              ) : null}
-            </div>
-            <strong title={workTitle(work)}>{workTitle(work)}</strong>
-            <small>{work.completed ? "已读" : `${work.progress_percent ?? 0}%`}</small>
-          </button>
+          <StaggerItem key={work.id} className="shelf-cell">
+            <button
+              type="button"
+              className="shelf-item"
+              onClick={() => navigate({ name: "reader", workId: work.id })}
+            >
+              <div className="shelf-cover">
+                {work.cover_path ? (
+                  <img className={blurCovers ? "blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
+                ) : (
+                  <span className="cover-fallback">NO COVER</span>
+                )}
+                {(work.progress_percent ?? 0) > 0 ? (
+                  <span className="shelf-progress" style={{ width: `${work.progress_percent}%` }} />
+                ) : null}
+              </div>
+              <strong title={workTitle(work)}>{workTitle(work)}</strong>
+              <small>{work.completed ? "已读" : `${work.progress_percent ?? 0}%`}</small>
+            </button>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
     </section>
   );
 }
