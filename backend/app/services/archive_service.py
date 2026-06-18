@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import mimetypes
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -12,6 +13,10 @@ from app.database import Database
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+# Characters that are illegal in filenames on common filesystems, plus control chars.
+_ILLEGAL_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+_MAX_NAME_LENGTH = 120
 
 
 class ArchiveService:
@@ -62,7 +67,7 @@ class ArchiveService:
             )
             work_id = int(cursor.fetchone()["id"])
 
-        stored_path = self._store_archive(work_id, cbz_path)
+        stored_path = self._store_archive(work_id, cbz_path, title, remote_gallery_id)
         page_members = self._image_members(stored_path)
         cover_path = self._extract_cover(work_id, stored_path, page_members[0]) if page_members else None
         digest = self._sha256(stored_path)
@@ -137,10 +142,37 @@ class ArchiveService:
         with zipfile.ZipFile(archive_file["path"]) as archive:
             return archive.read(page["archive_member"]), page["media_type"]
 
-    def _store_archive(self, work_id: int, cbz_path: Path) -> Path:
-        destination = self.settings.library_dir / f"{work_id}.cbz"
+    def _store_archive(
+        self,
+        work_id: int,
+        cbz_path: Path,
+        title: str,
+        remote_gallery_id: int | None,
+    ) -> Path:
+        # Name the stored archive after the work itself, not a bare sequence number.
+        # A trailing gallery/work id keeps the name unique across same-titled works
+        # (the common "Title [123456].cbz" convention).
+        stem = _safe_filename(title) or f"work-{work_id}"
+        marker = remote_gallery_id if remote_gallery_id else work_id
+        destination = self.settings.library_dir / f"{stem} [{marker}].cbz"
+
+        # A previous ingest of this work may have stored the archive under a different
+        # name (e.g. the title changed). Remember it so we can drop the stale copy.
+        previous = self.db.fetchone(
+            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'",
+            (work_id,),
+        )
+
+        cbz_path = Path(cbz_path)
         if cbz_path.resolve() != destination.resolve():
             shutil.copy2(cbz_path, destination)
+
+        if previous:
+            stale = Path(previous["path"])
+            inside_library = stale.parent.resolve() == self.settings.library_dir.resolve()
+            if inside_library and stale.resolve() != destination.resolve() and stale.exists():
+                stale.unlink(missing_ok=True)
+
         return destination
 
     def _image_members(self, cbz_path: Path) -> list[str]:
@@ -165,6 +197,14 @@ class ArchiveService:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
                 digest.update(chunk)
         return digest.hexdigest()
+
+
+def _safe_filename(name: str | None, max_length: int = _MAX_NAME_LENGTH) -> str:
+    cleaned = _ILLEGAL_FILENAME_CHARS.sub("", name or "")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip().strip(".")
+    if len(cleaned) > max_length:
+        cleaned = cleaned[:max_length].rstrip()
+    return cleaned
 
 
 def _natural_key(value: str) -> list[int | str]:

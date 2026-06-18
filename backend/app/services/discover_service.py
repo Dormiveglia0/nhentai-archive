@@ -107,6 +107,8 @@ class DiscoverService:
             cover = {**cover, "url": self.client.media_url(cover.get("path"))}
         if isinstance(thumbnail, dict):
             thumbnail = {**thumbnail, "url": self.client.media_url(thumbnail.get("path"), thumbnail=True)}
+        tags = payload.get("tags", [])
+        self.cache_tags(tags)
         pages = []
         for index, page in enumerate(payload.get("pages", []), start=1):
             if isinstance(page, dict):
@@ -114,11 +116,12 @@ class DiscoverService:
                 pages.append({**page, "index": index, "url": self.client.media_url(path)})
             elif isinstance(page, str):
                 pages.append({"index": index, "path": page, "url": self.client.media_url(page)})
-        related = []
-        for item in payload.get("related", []):
-            summary = map_gallery_summary(item)
-            summary["thumbnail"]["url"] = self.client.media_url(summary["thumbnail"].get("path"), thumbnail=True)
-            related.append(summary)
+        # Related items only carry tag_ids; resolve them to full tags (and import
+        # state) via the same path the feed uses so related cards can show content
+        # tags just like the discover cards.
+        related_items = payload.get("related", [])
+        related_tag_map = self._tags_for_items(related_items)
+        related = [self._with_import_state(item, related_tag_map) for item in related_items]
         return {
             "remote": "nhentai",
             "gallery_id": payload["id"],
@@ -128,7 +131,7 @@ class DiscoverService:
             "thumbnail": thumbnail,
             "scanlator": payload.get("scanlator"),
             "upload_date": payload.get("upload_date"),
-            "tags": payload.get("tags", []),
+            "tags": self._with_dictionary_display(tags),
             "page_count": payload.get("num_pages", 0),
             "pages": pages,
             "favorites": payload.get("num_favorites", 0),
@@ -276,8 +279,32 @@ class DiscoverService:
                         "type": tag.get("type"),
                         "name": tag.get("name"),
                         "slug": tag.get("slug"),
-                    }
+            }
         return tag_map
+
+    def _with_dictionary_display(self, tags: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        ids = [int(tag["id"]) for tag in tags if isinstance(tag.get("id"), int)]
+        if not ids:
+            return tags
+        rows = self.db.fetchall(
+            f"""
+            SELECT r.remote_id, d.zh_name
+            FROM remote_tags r
+            LEFT JOIN local_tag_dictionary d ON d.remote_tag_id = r.remote_id AND d.ignored = 0
+            WHERE r.remote_id IN ({','.join('?' for _ in ids)})
+            """,
+            tuple(dict.fromkeys(ids)),
+        )
+        display_by_id = {int(row["remote_id"]): row["zh_name"] for row in rows if row.get("zh_name")}
+        return [
+            {
+                **tag,
+                "display": display_by_id.get(int(tag["id"]), tag.get("name") or tag.get("slug") or str(tag["id"])),
+            }
+            if isinstance(tag.get("id"), int)
+            else tag
+            for tag in tags
+        ]
 
 
 def build_search_query(query: str, language: str = "all", kind: str = "all", tag_names: list[str] | None = None) -> str:

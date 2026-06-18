@@ -15,6 +15,7 @@ from app.services.discover_service import DiscoverService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
 from app.services.library_service import LibraryService
+from app.services.governance_service import GovernanceService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
 from app.services.settings_service import SettingsService
@@ -50,6 +51,17 @@ class DictionaryBulkImportRequest(BaseModel):
     rows: list[dict]
 
 
+class GovernanceMetadataPatch(BaseModel):
+    field: str
+    value: str | None = None
+    source: str = "manual"
+
+
+class GovernanceApplyRequest(BaseModel):
+    metadata: list[GovernanceMetadataPatch] = []
+    dictionary_apply: list[DictionaryApplyRequest] = []
+
+
 settings = load_settings()
 db = Database(settings.database_path)
 db.init_schema()
@@ -65,6 +77,7 @@ discover = DiscoverService(db, client)
 reader = ReaderService(db)
 library = LibraryService(db)
 dictionary = DictionaryService(db, client)
+governance = GovernanceService(db, dictionary)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 settings_service = SettingsService(db, settings, client)
 
@@ -259,6 +272,27 @@ def library_continue_reading(limit: int = 12):
 @app.get("/api/library/tag-filters")
 def library_tag_filters(q: str = "", limit: int = 40):
     return library.tag_filters(q, limit)
+
+
+@app.get("/api/governance/queue")
+def governance_queue():
+    return governance.queue()
+
+
+@app.get("/api/works/{work_id}/governance")
+def work_governance(work_id: int):
+    try:
+        return governance.work_governance(work_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/works/{work_id}/governance/apply")
+def apply_work_governance(work_id: int, payload: GovernanceApplyRequest):
+    try:
+        return governance.apply(work_id, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/api/works")

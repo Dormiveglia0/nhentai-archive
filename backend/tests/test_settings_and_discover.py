@@ -70,7 +70,7 @@ class FakeDiscoverClient:
             "title": {"english": "Remote title", "japanese": "リモート"},
             "thumbnail": {"path": "thumb.jpg"},
             "cover": {"path": "cover.jpg"},
-            "tags": [],
+            "tags": [{"id": 77, "type": "tag", "name": "schoolgirl", "slug": "schoolgirl"}],
             "pages": [{"path": "001.jpg", "width": 1000, "height": 1400}],
             "num_pages": 1,
             "num_favorites": 0,
@@ -141,3 +141,29 @@ def test_discover_gallery_maps_remote_page_urls(tmp_path):
     assert client.calls == [("gallery", 321, "related")]
     assert payload["pages"][0]["url"] == "https://cdn.example/001.jpg"
     assert payload["pages"][0]["path"] == "001.jpg"
+
+
+def test_discover_gallery_tags_use_dictionary_display_without_losing_remote_query_fields(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    db.execute(
+        """
+        INSERT INTO remote_tags (remote_id, type, name, slug, payload_json)
+        VALUES (77, 'tag', 'schoolgirl', 'schoolgirl', '{}')
+        """
+    )
+    db.execute(
+        """
+        INSERT INTO local_tag_dictionary (original_text, normalized_key, zh_name, tag_type, remote_tag_id)
+        VALUES ('schoolgirl', 'schoolgirl', '女学生', 'tag', 77)
+        """
+    )
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    payload = service.gallery(321)
+
+    assert payload["tags"][0]["display"] == "女学生"
+    assert payload["tags"][0]["name"] == "schoolgirl"
+    assert payload["tags"][0]["slug"] == "schoolgirl"

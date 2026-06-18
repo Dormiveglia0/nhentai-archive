@@ -60,3 +60,28 @@ def test_reader_service_upserts_progress_and_history(tmp_path):
     assert state["progress_percent"] == 100
     assert state["completed"] is True
     assert reader.get_state(work_id)["page_index"] == 2
+
+def test_archive_stores_cbz_named_after_work_not_sequence(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    cbz_path = tmp_path / "book.cbz"
+    make_tiny_cbz(cbz_path)
+
+    service = ArchiveService(db, settings)
+    work_id = service.ingest_cbz(
+        cbz_path,
+        source="remote",
+        title='My: Work*Title?',
+        remote_gallery_id=177013,
+        metadata={"remote": "nhentai"},
+    )
+
+    stored = db.fetchone(
+        "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'",
+        (work_id,),
+    )
+    name = Path(stored["path"]).name
+    # Named after the (sanitized) work title with a gallery-id marker, never a bare number.
+    assert name == "My WorkTitle [177013].cbz"
+    assert name != f"{work_id}.cbz"

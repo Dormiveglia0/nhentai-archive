@@ -89,9 +89,9 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
         <BookOpen size={17} />
         {(work.progress_percent ?? 0) > 0 && !work.completed ? "继续阅读" : "开始阅读"}
       </button>
-      <button className="secondary-wide" type="button" disabled title="治理中心未接入">
+      <button className="secondary-wide" type="button" onClick={() => navigate({ name: "governance", workId: work.id })}>
         <PenTool size={16} />
-        进入治理（未接入）
+        进入治理
       </button>
       <button className="secondary-wide" type="button" disabled title="导出中心未接入">
         <Download size={16} />

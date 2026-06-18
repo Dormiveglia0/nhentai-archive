@@ -9,7 +9,7 @@ export type GallerySummary = {
   page_count: number;
   favorites: number;
   tag_ids: number[];
-  tags?: Array<{ id: number; type?: string; name?: string; slug?: string }>;
+  tags?: Array<{ id: number; type?: string; name?: string; slug?: string; display?: string }>;
   blacklisted: boolean;
   imported?: boolean;
   work_id?: number | null;
@@ -21,7 +21,7 @@ export type GalleryDetail = {
   title: { english?: string; japanese?: string; pretty?: string };
   cover?: { path?: string; url?: string };
   thumbnail?: { path?: string; url?: string };
-  tags: Array<{ id: number; type: string; name: string; slug: string }>;
+  tags: Array<{ id: number; type: string; name: string; slug: string; display?: string }>;
   page_count: number;
   pages?: Array<{ index?: number; path?: string; url?: string; width?: number; height?: number }>;
   favorites: number;
@@ -211,6 +211,95 @@ export type LibrarySearchResult = {
   page: number;
   per_page: number;
   num_pages: number;
+};
+
+export type GovernanceReason = {
+  code: string;
+  label: string;
+  severity: "warning" | "danger" | string;
+};
+
+export type GovernanceQueueItem = {
+  work: LibraryWork;
+  reasons: GovernanceReason[];
+  completeness_percent: number;
+  updated_at?: string | null;
+};
+
+export type GovernanceQueue = {
+  result: GovernanceQueueItem[];
+  summary: {
+    total: number;
+    missing_metadata: number;
+    untagged: number;
+    dictionary_review: number;
+    dictionary_conflict: number;
+    missing_comicinfo: number;
+    missing_cover: number;
+  };
+};
+
+export type MetadataFieldDiff = {
+  field: string;
+  label: string;
+  current_value?: string | null;
+  source_value?: string | null;
+  source: "comicinfo" | "json" | "remote" | "unknown" | string;
+  working_value?: string | null;
+  working_source: "manual" | "remote" | "comicinfo" | "current" | string;
+  dirty: boolean;
+  differs_from_source: boolean;
+  updated_at?: string | null;
+};
+
+export type GovernanceFile = {
+  id: number;
+  kind: string;
+  path: string;
+  size_bytes: number;
+  sha256?: string | null;
+  created_at?: string | null;
+  exists: boolean;
+};
+
+export type GovernanceTag = {
+  id: number;
+  remote_tag_id?: number | null;
+  dictionary_id?: number | null;
+  type: string;
+  name?: string | null;
+  slug?: string | null;
+  display: string;
+  dictionary_status?: string | null;
+  state: "confirmed" | "pending" | "conflict" | string;
+};
+
+export type GovernanceTagGroup = {
+  key: string;
+  label: string;
+  tags: GovernanceTag[];
+};
+
+export type GovernanceAggregate = {
+  work: LibraryWork;
+  files: GovernanceFile[];
+  metadata: { fields: MetadataFieldDiff[] };
+  tags: { groups: GovernanceTagGroup[]; summary: { confirmed: number; pending: number; conflicts: number } };
+  dictionary: { matched: number; pending: number; conflicts: number };
+  exports: unknown[];
+  recommended_actions: Array<{ code: string; label: string }>;
+  completeness_percent: number;
+};
+
+export type GovernanceApplyPayload = {
+  metadata: Array<{ field: string; value: string | null; source: "manual" | "remote" | "comicinfo" | "current" }>;
+  dictionary_apply?: DictionaryApplyPayload[];
+};
+
+export type GovernanceApplyResult = {
+  saved: number;
+  dictionary: DictionaryApplyResult[];
+  governance: GovernanceAggregate;
 };
 
 export type PageInfo = {
@@ -428,6 +517,14 @@ export const api = {
   libraryContinueReading: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/continue-reading?limit=${limit}`),
   libraryTagFilters: (q = "", limit = 40) =>
     request<{ result: LibraryTagFilter[] }>(`/api/library/tag-filters?q=${encodeURIComponent(q)}&limit=${limit}`),
+  governanceQueue: () => request<GovernanceQueue>("/api/governance/queue"),
+  workGovernance: (id: number) => request<GovernanceAggregate>(`/api/works/${id}/governance`),
+  applyWorkGovernance: (id: number, payload: GovernanceApplyPayload) =>
+    request<GovernanceApplyResult>(`/api/works/${id}/governance/apply`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload)
+    }),
   works: () => request<{ result: Work[] }>("/api/works"),
   work: (id: number) => request<Work>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),

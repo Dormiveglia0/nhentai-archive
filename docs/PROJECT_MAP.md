@@ -4,7 +4,7 @@
 
 Implemented loop:
 
-`discover remote gallery -> dictionary display/mapping -> detail modal -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress`
+`discover remote gallery -> dictionary display/mapping -> detail modal -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress -> governance metadata/tag review`
 
 This stage also implements real NH API Key settings and rewrites the discover page into a unified feed against `design/搜索导入.png`. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
 
@@ -24,7 +24,7 @@ Root: `backend/app/`
   - `Settings`: resolves local data paths, `NHENTAI_API_KEY`, base URL, user agent, timeout.
   - Environment API key has priority over DB-stored API key.
 - `database.py`
-  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `reader_progress`, `reading_history`, `jobs`, `settings`.
+  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `reader_progress`, `reading_history`, `jobs`, `settings`.
 - `services/nhentai_client.py`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
   - `media_url()` resolves CDN paths through `/api/v2/cdn`; frontend must not guess image URLs.
@@ -74,6 +74,12 @@ Root: `backend/app/`
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
   - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
   - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
+- `services/governance_service.py`
+  - Local-only governance reads/writes; never calls the NH API.
+  - `queue()`: real queue items and reason counts from `works`, `work_files`, `work_tags`, `local_tag_dictionary`, source CBZ ComicInfo presence, and cover file existence.
+  - `work_governance(work_id)`: aggregate with work header, files, metadata field diffs, tag groups, dictionary summary, recommended actions, and completeness.
+  - Reads source metadata from real stored CBZ members (`ComicInfo.xml` and the first JSON metadata file when present) plus cached `remote_galleries.payload_json`.
+  - `apply(work_id, payload)`: persists final metadata decisions into `work_metadata`; optional dictionary apply delegates to `DictionaryService.apply()`. It does not mutate source CBZ files.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry`.
 - `main.py`
@@ -113,6 +119,9 @@ Implemented:
 - `GET /api/library/recent-read?limit=`
 - `GET /api/library/continue-reading?limit=`
 - `GET /api/library/tag-filters?q=&limit=`
+- `GET /api/governance/queue`
+- `GET /api/works/{work_id}/governance`
+- `POST /api/works/{work_id}/governance/apply`
 - `GET /api/works`
 - `GET /api/works/{work_id}`
 - `GET /api/works/{work_id}/cover`
@@ -129,7 +138,7 @@ Implemented:
 
 Reserved, not implemented:
 
-- Governance: `/api/governance/*`, `/api/works/{id}/governance`
+- Governance bulk preview/apply.
 - Export center: `/api/exports/*`
 - File maintenance: `/api/files/*`
 - Job controls: pause/resume/cancel
@@ -140,10 +149,10 @@ Root: `frontend/src/`
 
 - `App.tsx`
   - Hash route composition.
-  - Boundary pages for workbench, governance, dictionary, export, files, and full tasks.
+  - Boundary pages for workbench, export, files, and full tasks.
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
-  - Routes include local `#reader/{work_id}` and remote `#reader/remote/{gallery_id}`.
+  - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
 - `lib/motion/`
   - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。后续页面动画一律从此取用,禁止写魔法数。
 - `components/effects/`
@@ -155,6 +164,7 @@ Root: `frontend/src/`
   - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
   - Dictionary API types and helpers live here: candidates, autocomplete, preview/apply, preview/import bulk rows.
   - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
+  - Governance API types/helpers: queue, aggregate, metadata field diff, tag groups, and apply payload/result. Governance calls are local-only and not run through the discover session cache.
 - `vite.config.ts`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
@@ -213,7 +223,7 @@ Root: `frontend/src/`
 - `components/library/LibraryPage.tsx`
   - Phase 3 private-archive workbench. Orchestration only: loads `/api/library/summary` + continue-reading + recent-added once, then re-runs `/api/library/search` on any filter/sort/page change with a request token to drop stale responses. Distinguishes empty library (`summary.total === 0`) from empty filtered result. Shelves only render when no filters are active.
 - `components/library/LibrarySummaryStrip.tsx`
-  - Real summary strip: 总收藏 / 已读 / 阅读中 / 未读 / 待补标签 / 占用容量. No 待治理 fabrication (governance not built); 待补标签 = works with zero `work_tags`.
+  - Real summary strip: 总收藏 / 已读 / 阅读中 / 未读 / 待补标签 / 占用容量. No broad 待治理 fabrication; 待补标签 = works with zero `work_tags`, while detailed governance state lives in the governance page.
 - `components/library/LibraryToolbar.tsx`
   - Search form (submit on Enter), language/status/source/sort `FilterMenu`s, `LibraryTagFilter`, grid/list view toggle, reset. Language options come from real summary facets.
 - `components/library/LibraryTagFilter.tsx`
@@ -230,6 +240,12 @@ Root: `frontend/src/`
   - Discriminated source reader:
     - local `workId`: reads indexed CBZ pages and persists progress;
     - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
+  - Local reader exposes a real `进入治理` route to `#governance/{work_id}`.
+- `components/governance/GovernancePage.tsx`
+  - Phase 4 single-work governance center against `design/元数据.png`.
+  - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance`.
+  - Renders queue reason counts, work header, metadata diff editor with adopt-source/revert/save, tag governance groups, dictionary coverage summary, and right-side recommended actions.
+  - Empty library/empty queue is an honest empty state; no sample works, fake conflicts, or fake recommendations.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 
