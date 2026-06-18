@@ -1,6 +1,7 @@
 import { BookOpen, Download, Info, PenTool, X } from "lucide-react";
 
 import { LibraryTag, LibraryWork } from "../../lib/api";
+import { FadeIn } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
 import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
 
@@ -15,11 +16,13 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
   if (!work) {
     return (
       <aside className="work-inspector">
-        <div className="empty-state compact">
-          <Info size={20} />
-          <strong>作品详情</strong>
-          <p>选择封面后显示文件信息、标签与阅读进度。</p>
-        </div>
+        <FadeIn key="empty" y={8}>
+          <div className="empty-state compact">
+            <Info size={20} />
+            <strong>作品详情</strong>
+            <p>选择封面后显示文件信息、标签与阅读进度。</p>
+          </div>
+        </FadeIn>
       </aside>
     );
   }
@@ -29,6 +32,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
 
   return (
     <aside className="work-inspector">
+      <FadeIn key={work.id} y={8}>
       <div className="inspector-head">
         <span className={`status-pill ${status.tone}`}>{status.label}</span>
         <button type="button" className="inspector-close" onClick={onClose} aria-label="关闭详情">
@@ -93,6 +97,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
         <Download size={16} />
         导出 CBZ（未接入）
       </button>
+      </FadeIn>
     </aside>
   );
 }

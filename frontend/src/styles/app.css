@@ -936,6 +936,13 @@ kbd {
   object-fit: contain;
 }
 
+/* FadeIn 包裹层:撑满列宽并居中页面图片 */
+.reader-page-cell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .discover-workspace {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -1139,6 +1146,11 @@ kbd {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+}
+
+/* Stagger 包裹层透传:撑满等高行,使卡片在 grid 视图保持等高 */
+.discover-card-cell {
+  display: flex;
 }
 
 .discover-card {
@@ -2622,6 +2634,11 @@ body {
 
 .dict-summary-action {
   align-self: center;
+  margin-left: 0;
+}
+
+.dict-summary-action-cell {
+  align-self: center;
   margin-left: 20px;
 }
 
@@ -2674,7 +2691,10 @@ body {
   border-radius: 12px;
   background: var(--surface-solid);
   box-shadow: 0 28px 72px rgba(24, 20, 17, 0.28);
-  animation: modal-rise 0.2s ease;
+}
+
+.dictionary-modal-motion {
+  max-width: calc(100vw - 64px);
 }
 
 .dictionary-modal .bulk-panel {
@@ -2826,6 +2846,36 @@ body {
   border-bottom: 1px solid var(--line);
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
+}
+
+.candidate-row-list {
+  display: grid;
+}
+
+.candidate-row-motion,
+.dictionary-editor-motion,
+.settings-rail-motion,
+.settings-main-motion,
+.settings-summary-motion,
+.settings-card-motion {
+  min-width: 0;
+}
+
+.candidate-row-motion {
+  display: block;
+  width: 100%;
+}
+
+.evidence-work-cell {
+  min-width: 0;
+}
+
+.evidence-work-cell article {
+  height: 100%;
+}
+
+.settings-card-motion {
+  display: block;
 }
 
 .candidate-table::-webkit-scrollbar {
@@ -3321,7 +3371,8 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .dict-summary-action {
+  .dict-summary-action,
+  .dict-summary-action-cell {
     grid-column: span 3;
   }
 }
@@ -3331,7 +3382,8 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dict-summary-action {
+  .dict-summary-action,
+  .dict-summary-action-cell {
     grid-column: span 2;
   }
 
@@ -3900,6 +3952,16 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
+}
+
+/* Stagger 包裹层:grid 等高行保护 */
+.library-card-cell {
+  display: flex;
+}
+
+/* Stagger 包裹层:横向书架轨道防压缩 */
+.shelf-cell {
+  flex: 0 0 auto;
 }
 
 /* Work card */

@@ -1,6 +1,7 @@
 import { Info } from "lucide-react";
 
 import { GallerySummary } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
 import { DiscoverViewMode, TagFilter } from "./discoverTypes";
 import { DiscoverCard } from "./DiscoverCard";
 import { IconPager } from "./IconPager";
@@ -50,19 +51,23 @@ export function DiscoverFeed({
           <p>这里不会填充样例作品；调整筛选或配置 NH API Key 后重试。</p>
         </div>
       ) : null}
-      <div className={viewMode === "grid" ? "discover-card-grid" : "discover-card-list"}>
+      <Stagger
+        key={`${viewMode}:${page}:${items.length}:${items[0]?.gallery_id ?? "none"}`}
+        className={viewMode === "grid" ? "discover-card-grid" : "discover-card-list"}
+      >
         {items.map((item) => (
-          <DiscoverCard
-            key={item.gallery_id}
-            item={item}
-            blurCovers={blurCovers}
-            viewMode={viewMode}
-            onOpen={() => onOpen(item.gallery_id)}
-            onImport={() => onImport(item.gallery_id)}
-            onPickTag={onPickTag}
-          />
+          <StaggerItem key={item.gallery_id} className="discover-card-cell">
+            <DiscoverCard
+              item={item}
+              blurCovers={blurCovers}
+              viewMode={viewMode}
+              onOpen={() => onOpen(item.gallery_id)}
+              onImport={() => onImport(item.gallery_id)}
+              onPickTag={onPickTag}
+            />
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
       <IconPager page={page} totalPages={totalPages} loading={loading} onPage={onPage} />
     </section>
   );

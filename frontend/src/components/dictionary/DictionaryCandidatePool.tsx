@@ -1,6 +1,7 @@
 import { RefreshCw, Search, Upload } from "lucide-react";
 
 import { DictionaryCandidate } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
 import { FilterMenu } from "../discover/FilterMenu";
 
 type Props = {
@@ -73,6 +74,10 @@ export function DictionaryCandidatePool({
   onPage,
   onLimit,
 }: Props) {
+  const firstKey = candidates[0] ? candidateRowKey(candidates[0]) : "none";
+  const lastKey = candidates[candidates.length - 1] ? candidateRowKey(candidates[candidates.length - 1]) : "none";
+  const resultKey = `${query}:${typeFilter}:${status}:${offset}:${limit}:${candidates.length}:${firstKey}:${lastKey}`;
+
   return (
     <section className="dictionary-pane candidate-pool">
       <header className="dictionary-pane-head">
@@ -107,33 +112,36 @@ export function DictionaryCandidatePool({
           <span>影响</span>
           <span>状态</span>
         </div>
-        {candidates.map((candidate) => {
-          const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
-          const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";
-          const rowKey = candidate.id ? `remote-${candidate.id}` : `dict-${candidate.dictionary_id}`;
-          const active = selectedKey === rowKey;
-          return (
-            <button
-              key={rowKey}
-              type="button"
-              className={active ? "candidate-row active" : "candidate-row"}
-              onClick={() => onSelect(candidate)}
-              role="row"
-            >
-              <span className="candidate-term">
-                <i className={`type-badge type-${candidate.type || "tag"}`}>{typeLabel(candidate.type)}</i>
-                <strong title={label}>{label}</strong>
-              </span>
-              <span className={display === "未配置" ? "candidate-display muted" : "candidate-display"}>{display}</span>
-              <span className="candidate-impact">{candidate.impact_work_count ?? 0}</span>
-              <span className="candidate-status">
-                <em className={statusTone(candidate)}>
-                  {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
-                </em>
-              </span>
-            </button>
-          );
-        })}
+        <Stagger key={resultKey} className="candidate-row-list">
+          {candidates.map((candidate) => {
+            const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
+            const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";
+            const rowKey = candidateRowKey(candidate);
+            const active = selectedKey === rowKey;
+            return (
+              <StaggerItem key={rowKey} className="candidate-row-motion">
+                <button
+                  type="button"
+                  className={active ? "candidate-row active" : "candidate-row"}
+                  onClick={() => onSelect(candidate)}
+                  role="row"
+                >
+                  <span className="candidate-term">
+                    <i className={`type-badge type-${candidate.type || "tag"}`}>{typeLabel(candidate.type)}</i>
+                    <strong title={label}>{label}</strong>
+                  </span>
+                  <span className={display === "未配置" ? "candidate-display muted" : "candidate-display"}>{display}</span>
+                  <span className="candidate-impact">{candidate.impact_work_count ?? 0}</span>
+                  <span className="candidate-status">
+                    <em className={statusTone(candidate)}>
+                      {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
+                    </em>
+                  </span>
+                </button>
+              </StaggerItem>
+            );
+          })}
+        </Stagger>
         {!loading && candidates.length === 0 ? (
           <div className="dictionary-empty">暂无真实候选。先在发现页缓存远端 tag，或使用批量导入创建本地词典。</div>
         ) : null}
@@ -155,6 +163,10 @@ export function DictionaryCandidatePool({
       </footer>
     </section>
   );
+}
+
+function candidateRowKey(candidate: DictionaryCandidate) {
+  return candidate.id ? `remote-${candidate.id}` : `dict-${candidate.dictionary_id}`;
 }
 
 function statusLabel(status?: string | null) {

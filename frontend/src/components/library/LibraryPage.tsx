@@ -2,6 +2,7 @@ import { Info, Library } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api, LibrarySummary, LibraryTag, LibraryTagFilter, LibraryWork } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
 import { ContinueReadingRow } from "./ContinueReadingRow";
 import { IconPager } from "../discover/IconPager";
 import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
@@ -183,19 +184,23 @@ export function LibraryPage({ blurCovers }: Props) {
                 <p>调整筛选条件或点击重置查看全部馆藏。</p>
               </div>
             ) : (
-              <div className={view === "grid" ? "library-grid" : "library-list"}>
+              <Stagger
+                key={`${view}:${page}:${works.length}:${works[0]?.id ?? "none"}`}
+                className={view === "grid" ? "library-grid" : "library-list"}
+              >
                 {works.map((work) => (
-                  <WorkCard
-                    key={work.id}
-                    work={work}
-                    view={view}
-                    blurCovers={blurCovers}
-                    selected={selected?.id === work.id}
-                    onSelect={() => setSelected(work)}
-                    onPickTag={pickTag}
-                  />
+                  <StaggerItem key={work.id} className="library-card-cell">
+                    <WorkCard
+                      work={work}
+                      view={view}
+                      blurCovers={blurCovers}
+                      selected={selected?.id === work.id}
+                      onSelect={() => setSelected(work)}
+                      onPickTag={pickTag}
+                    />
+                  </StaggerItem>
                 ))}
-              </div>
+              </Stagger>
             )}
 
             <IconPager page={page} totalPages={numPages} loading={loading} onPage={setPage} />

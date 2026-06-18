@@ -1,6 +1,7 @@
 import { Settings } from "lucide-react";
 
 import { DictionarySummary } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
 
 type Props = {
   summary: DictionarySummary | null;
@@ -16,17 +17,21 @@ const ITEMS = [
 
 export function DictionarySummaryStrip({ summary }: Props) {
   return (
-    <section className="dictionary-summary-strip" aria-label="词典摘要">
-      {ITEMS.map((item) => (
-        <div key={item.key} className={`dict-metric tone-${item.tone}`}>
-          <strong>{(summary?.[item.key] ?? 0).toLocaleString()}</strong>
-          <span>{item.label}</span>
-        </div>
-      ))}
-      <button type="button" className="dict-summary-action" disabled title="后续治理设置接入后开放">
-        <Settings size={15} />
-        治理设置
-      </button>
+    <section aria-label="词典摘要">
+      <Stagger className="dictionary-summary-strip">
+        {ITEMS.map((item) => (
+          <StaggerItem key={item.key} className={`dict-metric tone-${item.tone}`}>
+            <strong>{(summary?.[item.key] ?? 0).toLocaleString()}</strong>
+            <span>{item.label}</span>
+          </StaggerItem>
+        ))}
+        <StaggerItem className="dict-summary-action-cell">
+          <button type="button" className="dict-summary-action" disabled title="后续治理设置接入后开放">
+            <Settings size={15} />
+            治理设置
+          </button>
+        </StaggerItem>
+      </Stagger>
     </section>
   );
 }

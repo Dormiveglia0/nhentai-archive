@@ -2,6 +2,7 @@ import { ArrowLeft, BookMarked, ChevronLeft, ChevronRight, Download, EyeOff, Max
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api, GalleryDetail, PageInfo, ReaderState, Work } from "../../lib/api";
+import { FadeIn } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
 
 type Props = {
@@ -166,6 +167,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
   return (
     <section className="reader-page">
       <aside className="reader-sidebar">
+        <FadeIn key={sourceKey} x={-12}>
         <button className="back-button" type="button" onClick={() => navigate({ name: isRemote ? "discover" : "library" })}>
           <ArrowLeft size={17} />
           {isRemote ? "返回发现" : "返回库"}
@@ -191,9 +193,11 @@ export function ReaderPage({ source, privacyMode }: Props) {
             </button>
           ))}
         </div>
+        </FadeIn>
       </aside>
 
       <div className="reader-main">
+        <FadeIn key={sourceKey} y={8}>
         <div className="reader-toolbar">
           <button type="button" onClick={() => setPage(pageIndex - 1)} disabled={pageIndex <= 1}>
             <ChevronLeft size={17} />
@@ -229,21 +233,24 @@ export function ReaderPage({ source, privacyMode }: Props) {
         {notice ? <div className="notice slim">{notice}</div> : null}
         <div className={masked ? "page-stage masked" : "page-stage"}>
           {visiblePages.map((page) => (
-            <img
-              key={page.key}
-              src={page.src}
-              alt={`Page ${page.pageIndex}`}
-              loading={mode === "scroll" ? "lazy" : "eager"}
-              onLoad={() => {
-                if (mode === "scroll" && page.pageIndex > pageIndex) void setPage(page.pageIndex);
-              }}
-            />
+            <FadeIn key={page.key} className="reader-page-cell" y={10}>
+              <img
+                src={page.src}
+                alt={`Page ${page.pageIndex}`}
+                loading={mode === "scroll" ? "lazy" : "eager"}
+                onLoad={() => {
+                  if (mode === "scroll" && page.pageIndex > pageIndex) void setPage(page.pageIndex);
+                }}
+              />
+            </FadeIn>
           ))}
           {visiblePages.length === 0 ? <p>{isRemote ? "远端详情未返回可阅读页面 URL。" : "此作品没有可读取页面。"}</p> : null}
         </div>
+        </FadeIn>
       </div>
 
       <aside className="reader-inspector">
+        <FadeIn key={sourceKey} x={12}>
         <div className="reader-tabs">
           <button className="active" type="button">
             作品信息
@@ -269,6 +276,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
             进入治理将在后续模块接入
           </button>
         </div>
+        </FadeIn>
       </aside>
     </section>
   );
