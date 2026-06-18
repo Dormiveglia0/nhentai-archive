@@ -1,0 +1,26 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+/* 故意省略 tailwindcss/preflight.css —— 不引入全局 reset,保护现有 app.css */
+
+/* shadcn/magicui 效果组件岛依赖 border-box,scoped 到 .fx-scope,不污染全站 */
+.fx-scope,
+.fx-scope * {
+  box-sizing: border-box;
+}
+
+/* 把现有 app.css 设计 token 映射进 Tailwind theme,使工具类也能用品牌色 */
+@theme {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-green: var(--green);
+  --color-warn: var(--warn);
+}
