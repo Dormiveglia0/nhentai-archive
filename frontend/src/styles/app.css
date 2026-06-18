@@ -3907,6 +3907,16 @@ body {
   gap: 10px;
 }
 
+/* Stagger 包裹层:grid 等高行保护 */
+.library-card-cell {
+  display: flex;
+}
+
+/* Stagger 包裹层:横向书架轨道防压缩 */
+.shelf-cell {
+  flex: 0 0 auto;
+}
+
 /* Work card */
 .library-card {
   border: 1px solid rgba(222, 210, 194, 0.96);
