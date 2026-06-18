@@ -10,6 +10,8 @@ Current real slice:
 
 ## Completed
 
+- 阶段 2 library:全面动画——主卡片墙逐项进场(结果集 `key` 重播)、「继续阅读/最近添加」两条书架行逐项进场、`WorkInspector` 选中切换淡入(按 work.id keyed)。新增 `.library-card-cell`(grid 等高保护)、`.shelf-cell`(横向轨道防压缩)透传类;保留全部现有视觉/hover/横向滚动。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage2-library-animation*`。
+- motion 打包瘦身:全局改用 `LazyMotion`+`m`+`domAnimation`(strict),JS 由 gzip 115→101 kB;Provider 在 `lib/motion/MotionProvider.tsx`,后续若需 layout/drag 改 `domMax`。
 - 阶段 1 discover 卡片墙:接入逐项进场动画(淡入+轻微上移),翻页/筛选/切视图(grid↔list)时按结果集 `key` 重播;完整保留卡片现有 hover 与等高行,新增 `.discover-card-cell` 透传类保护等高。仅改 `DiscoverFeed.tsx` + 一条 CSS。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage1-discover-cardwall-animation*`。
 - 阶段 0 动画基础设施:接入 motion + Tailwind v4(方案 A:关 Preflight、不加前缀、token 映射,现有 `app.css` 零影响),建立 `lib/motion/` 动画原语层与 `components/effects/` 效果接入规范;magicui/react-bits 仅作效果素材,改造进现有设计语言后落地。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage0-animation-foundation*`。后续 discover/library/reader/dictionary/settings 各页面动画改造为独立阶段。
 - Restored code baseline to `5a85959` and removed the previous incomplete dictionary/settings/library UI stack.
