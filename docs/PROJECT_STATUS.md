@@ -10,6 +10,7 @@ Current real slice:
 
 ## Completed
 
+- 阶段 0 动画基础设施:接入 motion + Tailwind v4(方案 A:关 Preflight、不加前缀、token 映射,现有 `app.css` 零影响),建立 `lib/motion/` 动画原语层与 `components/effects/` 效果接入规范;magicui/react-bits 仅作效果素材,改造进现有设计语言后落地。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage0-animation-foundation*`。后续 discover/library/reader/dictionary/settings 各页面动画改造为独立阶段。
 - Restored code baseline to `5a85959` and removed the previous incomplete dictionary/settings/library UI stack.
 - Kept project/product documentation as the development memory layer.
 - Added real settings APIs:

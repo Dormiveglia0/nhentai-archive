@@ -144,6 +144,12 @@ Root: `frontend/src/`
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
   - Routes include local `#reader/{work_id}` and remote `#reader/remote/{gallery_id}`.
+- `lib/motion/`
+  - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。后续页面动画一律从此取用,禁止写魔法数。
+- `components/effects/`
+  - 从 magicui/react-bits 引入并改造后的效果组件落地处。`README.md` 为硬性接入规范(库只作效果来源、token 改造、`.fx-scope` 隔离、reduced-motion 降级)。当前含 `StaggerDemo`、`ShineBorder` 两个验证示例。
+- `styles/tailwind-entry.css`
+  - Tailwind v4 入口(方案 A:省略 Preflight、不加前缀、按层导入),`@theme` 将 `app.css` 设计 token 映射为 `--color-*`。在 `main.tsx` 中先于 `app.css` 引入。
 - `lib/api.ts`
   - Typed API wrapper for implemented backend endpoints.
   - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
