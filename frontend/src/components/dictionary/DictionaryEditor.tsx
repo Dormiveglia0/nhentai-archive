@@ -1,4 +1,4 @@
-import { Ban, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
+import { Ban, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
 
 import { DictionaryApplyPayload } from "../../lib/api";
@@ -8,6 +8,7 @@ type Props = {
   dictionaryId?: number | null;
   loading: boolean;
   onChange: (value: DictionaryApplyPayload) => void;
+  onNew: () => void;
   onPreview: () => void;
   onApply: () => void;
   onIgnore: () => void;
@@ -25,7 +26,7 @@ const TYPES = [
   ["category", "分类"],
 ] as const;
 
-export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPreview, onApply, onIgnore, onReview, onDelete }: Props) {
+export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew, onPreview, onApply, onIgnore, onReview, onDelete }: Props) {
   const [aliasDraft, setAliasDraft] = useState("");
   const [scopeDraft, setScopeDraft] = useState("");
 
@@ -52,11 +53,14 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPre
           <h2>术语编辑器</h2>
           <span>{value.remote_tag_id ? `远端 tag #${value.remote_tag_id}` : "本地自定义词条"}</span>
         </div>
-        <em>{value.zh_name ? "编辑中" : "待处理"}</em>
+        <button type="button" className="head-action" onClick={onNew}>
+          <Plus size={15} />
+          新建本地词条
+        </button>
       </header>
 
       <div className="dictionary-form">
-        <label>
+        <label className="wide">
           <span>原文 *</span>
           <input value={value.original_text} onChange={(event) => update({ original_text: event.target.value })} />
         </label>
@@ -73,16 +77,6 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPre
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          <span>置信度</span>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={value.confidence ?? 80}
-            onChange={(event) => update({ confidence: Number(event.target.value) })}
-          />
         </label>
 
         <ChipEditor
@@ -111,8 +105,7 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onPre
 
         <div className="machine-suggestion wide">
           <span>机器建议</span>
-          <strong>未接入真实建议服务</strong>
-          <p>当前不会生成假建议；后续接入真实建议来源后才启用。</p>
+          <em>未接入真实建议服务（接入真实来源后启用）</em>
         </div>
       </div>
 

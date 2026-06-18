@@ -1,6 +1,7 @@
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search, Upload } from "lucide-react";
 
 import { DictionaryCandidate } from "../../lib/api";
+import { FilterMenu } from "../discover/FilterMenu";
 
 type Props = {
   query: string;
@@ -15,28 +16,44 @@ type Props = {
   onTypeFilter: (value: string) => void;
   onStatus: (value: string) => void;
   onRefresh: () => void;
+  onBulkImport: () => void;
   onSelect: (candidate: DictionaryCandidate) => void;
   onPage: (offset: number) => void;
   onLimit: (limit: number) => void;
 };
 
-const TYPES = [
-  ["all", "全部"],
-  ["tag", "标签"],
-  ["artist", "作者"],
-  ["group", "社团"],
-  ["character", "角色"],
-  ["parody", "原作"],
-  ["language", "语言"],
-] as const;
+const TYPE_OPTIONS = [
+  { value: "all", label: "全部类型" },
+  { value: "tag", label: "标签" },
+  { value: "artist", label: "作者" },
+  { value: "group", label: "社团" },
+  { value: "character", label: "角色" },
+  { value: "parody", label: "原作" },
+  { value: "language", label: "语言" },
+];
 
-const STATUSES = [
-  ["all", "全部"],
-  ["unconfigured", "未配置"],
-  ["configured", "已配置"],
-  ["review", "待复核"],
-  ["ignored", "已忽略"],
-] as const;
+const STATUS_OPTIONS = [
+  { value: "all", label: "全部状态" },
+  { value: "unconfigured", label: "未配置" },
+  { value: "configured", label: "已配置" },
+  { value: "review", label: "待复核" },
+  { value: "ignored", label: "已忽略" },
+];
+
+const TYPE_LABELS: Record<string, string> = {
+  tag: "标签",
+  artist: "作者",
+  group: "社团",
+  character: "角色",
+  parody: "原作",
+  language: "语言",
+  category: "分类",
+};
+
+function typeLabel(type?: string | null) {
+  if (!type) return "标签";
+  return TYPE_LABELS[type] ?? type;
+}
 
 export function DictionaryCandidatePool({
   query,
@@ -51,6 +68,7 @@ export function DictionaryCandidatePool({
   onTypeFilter,
   onStatus,
   onRefresh,
+  onBulkImport,
   onSelect,
   onPage,
   onLimit,
@@ -62,9 +80,15 @@ export function DictionaryCandidatePool({
           <h2>候选术语池</h2>
           <span>{loading ? "读取真实缓存..." : `${candidates.length} 项`}</span>
         </div>
-        <button type="button" onClick={onRefresh} aria-label="刷新候选">
-          <RefreshCw size={15} />
-        </button>
+        <div className="pane-head-actions">
+          <button type="button" className="head-action" onClick={onBulkImport}>
+            <Upload size={14} />
+            批量导入
+          </button>
+          <button type="button" className="icon-btn" onClick={onRefresh} aria-label="刷新候选">
+            <RefreshCw size={15} />
+          </button>
+        </div>
       </header>
 
       <div className="candidate-filters">
@@ -72,26 +96,8 @@ export function DictionaryCandidatePool({
           <Search size={15} />
           <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="搜索原文或中文词条" />
         </label>
-        <label>
-          <span>类型</span>
-          <select value={typeFilter} onChange={(event) => onTypeFilter(event.target.value)}>
-            {TYPES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>状态</span>
-          <select value={status} onChange={(event) => onStatus(event.target.value)}>
-            {STATUSES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterMenu value={typeFilter} options={TYPE_OPTIONS} onChange={onTypeFilter} />
+        <FilterMenu value={status} options={STATUS_OPTIONS} onChange={onStatus} />
       </div>
 
       <div className="candidate-table" role="table" aria-label="候选术语">
@@ -114,14 +120,14 @@ export function DictionaryCandidatePool({
               onClick={() => onSelect(candidate)}
               role="row"
             >
-              <span>
-                <i>{candidate.type || "tag"}</i>
-                <strong>{label}</strong>
+              <span className="candidate-term">
+                <i className={`type-badge type-${candidate.type || "tag"}`}>{typeLabel(candidate.type)}</i>
+                <strong title={label}>{label}</strong>
               </span>
-              <span>{display}</span>
-              <span>{candidate.impact_work_count ?? 0}</span>
-              <span>
-                <em className={candidate.configured ? "done" : "pending"}>
+              <span className={display === "未配置" ? "candidate-display muted" : "candidate-display"}>{display}</span>
+              <span className="candidate-impact">{candidate.impact_work_count ?? 0}</span>
+              <span className="candidate-status">
+                <em className={statusTone(candidate)}>
                   {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
                 </em>
               </span>
@@ -156,4 +162,11 @@ function statusLabel(status?: string | null) {
   if (status === "ignored") return "已忽略";
   if (status === "suggested") return "机器建议";
   return "已配置";
+}
+
+function statusTone(candidate: DictionaryCandidate) {
+  if (candidate.ignored) return "muted";
+  if (candidate.status === "review") return "review";
+  if (candidate.configured) return "done";
+  return "pending";
 }
