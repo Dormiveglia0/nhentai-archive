@@ -7,7 +7,7 @@
 1. 本文件
 2. `docs/PROJECT_STATUS.md`(`## Completed` 顶部即动画各阶段状态)
 3. `docs/superpowers/specs/2026-06-18-stage0-animation-foundation-design.md`(地基设计)
-4. `docs/superpowers/specs/2026-06-18-stage{1,2,3}-*-design.md`(已完成阶段的设计,作为模式参考)
+4. `docs/superpowers/specs/2026-06-18-stage{1,2,3,4}-*-design.md`(已完成阶段的设计,作为模式参考)
 5. `frontend/src/lib/motion/`(动画原语层,你会一直用它)
 6. `frontend/src/components/effects/README.md`(效果素材接入硬规范)
 
@@ -53,13 +53,18 @@
 | 1 discover | 卡片墙逐项进场(结果变化重播) | `DiscoverFeed.tsx` 容器换 `Stagger` + `.discover-card-cell` |
 | 2 library | 主墙 + 两条书架行 + 详情面板 | `LibraryPage.tsx`(主墙 Stagger)、`ContinueReadingRow.tsx`(书架 Stagger + `.shelf-cell`)、`WorkInspector.tsx`(`FadeIn` keyed by work.id)、`.library-card-cell` |
 | 3 reader | 翻页轻柔淡入 + 滚动页淡入 + 三栏进场 | `ReaderPage.tsx`(逐页 `FadeIn key=page.key` + 三栏内层 `FadeIn key=sourceKey`)、`.reader-page-cell` |
+| 4 dictionary/settings | 词典剩余面板 + 设置页进场 | `DictionarySummaryStrip`/`DictionaryCandidatePool`/`DictionaryEditor`/`DictionaryEvidencePanel`/`DictionaryPage`/`SettingsPage` 接入原语,新增 `.candidate-row-motion`/`.settings-card-motion` 等透传类 |
 
-## 5. 剩余阶段 4:dictionary / settings(你的任务)
+## 5. 已完成阶段 4:dictionary / settings
 
-1. **先勘查**:`frontend/src/components/dictionary/` 与 `frontend/src/components/settings/`,列出可动画面(候选列表/词条网格/预览面板/设置分区等),看清各自的 `app.css` 布局(grid/flex/scroll)。
-2. **套用第 3 节模式**:列表/网格 → `Stagger` + 结果变化 `key`;面板切换 → `FadeIn` keyed;按需补透传类。词典若有"预览/应用"结果区,适合结果变化重播。
-3. **设计方向问人**:范围(只列表 vs 含面板切换)、过渡风格,若有歧义先问,再落 spec/plan/实现。
-4. **注意**:词典模块涉及真实数据写入(apply/preview),**只加视觉动画,绝不改其数据逻辑**;遵守 AGENTS.md「不得加 mock 作品/假任务/随机统计/硬编码 tag 候选」。
+阶段 4 已完成 handoff 指定的剩余范围:
+
+1. 词典摘要逐项进场;候选行按 `query/type/status/offset/limit/首尾候选` 结果 key 重播;候选表仍是内部滚动容器,未使用 `Reveal`。
+2. 词典编辑器按词条 key 淡入切换;应用预览空态/内容态淡入,关联作品逐项进场;批量导入 modal 接入 `Presence`,保留 Escape/backdrop close。
+3. 设置页三栏错峰进场;中间设置卡片逐项进场;message/error notice keyed 淡入。
+4. 数据逻辑/API 未改;仅新增 motion 原语 import 和极小 CSS 透传类。
+
+后续动画线不再有硬性阶段。若继续 polish,优先选择真实高频交互的小范围反馈(例如任务坞状态变化、未实现边界页过渡),仍必须先写 spec/plan,并遵守第 1-3 节约束。
 
 ## 6. 环境事实
 

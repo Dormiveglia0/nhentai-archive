@@ -9,6 +9,7 @@ import {
   DictionaryPreview,
   DictionarySummary,
 } from "../../lib/api";
+import { FadeIn, Presence } from "../../lib/motion";
 import { BulkImportPanel } from "./BulkImportPanel";
 import { DictionaryCandidatePool } from "./DictionaryCandidatePool";
 import { DictionaryEditor } from "./DictionaryEditor";
@@ -269,16 +270,20 @@ export function DictionaryPage() {
 
       <DictionaryEvidencePanel evidence={evidence} loading={evidenceLoading} preview={preview} form={form} />
 
-      {bulkOpen ? (
-        <div className="preview-backdrop" role="dialog" aria-modal="true" onMouseDown={() => setBulkOpen(false)}>
-          <div className="dictionary-modal" onMouseDown={(event) => event.stopPropagation()}>
-            <button className="modal-close" type="button" onClick={() => setBulkOpen(false)} aria-label="关闭批量导入">
-              <X size={18} />
-            </button>
-            <BulkImportPanel onImported={refreshList} />
+      <Presence>
+        {bulkOpen ? (
+          <div className="preview-backdrop" role="dialog" aria-modal="true" onMouseDown={() => setBulkOpen(false)}>
+            <FadeIn key="bulk-modal" className="dictionary-modal-motion" y={12}>
+              <div className="dictionary-modal" onMouseDown={(event) => event.stopPropagation()}>
+                <button className="modal-close" type="button" onClick={() => setBulkOpen(false)} aria-label="关闭批量导入">
+                  <X size={18} />
+                </button>
+                <BulkImportPanel onImported={refreshList} />
+              </div>
+            </FadeIn>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </Presence>
     </section>
   );
 }

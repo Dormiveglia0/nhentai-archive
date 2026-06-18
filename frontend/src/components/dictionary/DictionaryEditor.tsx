@@ -2,6 +2,7 @@ import { Ban, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
 
 import { DictionaryApplyPayload } from "../../lib/api";
+import { FadeIn } from "../../lib/motion";
 
 type Props = {
   value: DictionaryApplyPayload;
@@ -29,6 +30,7 @@ const TYPES = [
 export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew, onPreview, onApply, onIgnore, onReview, onDelete }: Props) {
   const [aliasDraft, setAliasDraft] = useState("");
   const [scopeDraft, setScopeDraft] = useState("");
+  const editorKey = String(dictionaryId ?? value.remote_tag_id ?? "new");
 
   function update(next: Partial<DictionaryApplyPayload>) {
     onChange({ ...value, ...next });
@@ -59,78 +61,80 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
         </button>
       </header>
 
-      <div className="dictionary-form">
-        <label className="wide">
-          <span>原文 *</span>
-          <input value={value.original_text} onChange={(event) => update({ original_text: event.target.value })} />
-        </label>
-        <label>
-          <span>中文名 *</span>
-          <input value={value.zh_name} onChange={(event) => update({ zh_name: event.target.value })} />
-        </label>
-        <label>
-          <span>类型 *</span>
-          <select value={value.tag_type} onChange={(event) => update({ tag_type: event.target.value })}>
-            {TYPES.map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <FadeIn key={editorKey} className="dictionary-editor-motion" y={8}>
+        <div className="dictionary-form">
+          <label className="wide">
+            <span>原文 *</span>
+            <input value={value.original_text} onChange={(event) => update({ original_text: event.target.value })} />
+          </label>
+          <label>
+            <span>中文名 *</span>
+            <input value={value.zh_name} onChange={(event) => update({ zh_name: event.target.value })} />
+          </label>
+          <label>
+            <span>类型 *</span>
+            <select value={value.tag_type} onChange={(event) => update({ tag_type: event.target.value })}>
+              {TYPES.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <ChipEditor
-          label="别名"
-          placeholder="输入别名后回车"
-          chips={value.aliases ?? []}
-          draft={aliasDraft}
-          onDraft={setAliasDraft}
-          onAdd={() => addChip("aliases", aliasDraft, () => setAliasDraft(""))}
-          onRemove={(item) => removeChip("aliases", item)}
-        />
-        <ChipEditor
-          label="适用范围"
-          placeholder="标题、系列名、作品名"
-          chips={value.scope ?? []}
-          draft={scopeDraft}
-          onDraft={setScopeDraft}
-          onAdd={() => addChip("scope", scopeDraft, () => setScopeDraft(""))}
-          onRemove={(item) => removeChip("scope", item)}
-        />
+          <ChipEditor
+            label="别名"
+            placeholder="输入别名后回车"
+            chips={value.aliases ?? []}
+            draft={aliasDraft}
+            onDraft={setAliasDraft}
+            onAdd={() => addChip("aliases", aliasDraft, () => setAliasDraft(""))}
+            onRemove={(item) => removeChip("aliases", item)}
+          />
+          <ChipEditor
+            label="适用范围"
+            placeholder="标题、系列名、作品名"
+            chips={value.scope ?? []}
+            draft={scopeDraft}
+            onDraft={setScopeDraft}
+            onAdd={() => addChip("scope", scopeDraft, () => setScopeDraft(""))}
+            onRemove={(item) => removeChip("scope", item)}
+          />
 
-        <label className="wide">
-          <span>备注</span>
-          <textarea value={value.note ?? ""} onChange={(event) => update({ note: event.target.value })} rows={5} />
-        </label>
+          <label className="wide">
+            <span>备注</span>
+            <textarea value={value.note ?? ""} onChange={(event) => update({ note: event.target.value })} rows={5} />
+          </label>
 
-        <div className="machine-suggestion wide">
-          <span>机器建议</span>
-          <em>未接入真实建议服务（接入真实来源后启用）</em>
+          <div className="machine-suggestion wide">
+            <span>机器建议</span>
+            <em>未接入真实建议服务（接入真实来源后启用）</em>
+          </div>
         </div>
-      </div>
 
-      <footer className="dictionary-actions">
-        <button type="button" onClick={onPreview} disabled={loading || !value.original_text || !value.zh_name}>
-          <SearchCheck size={16} />
-          预览影响
-        </button>
-        <button type="button" className="primary" onClick={onApply} disabled={loading || !value.original_text || !value.zh_name}>
-          <Save size={16} />
-          {dictionaryId ? "保存修改" : "写入词典"}
-        </button>
-        <button type="button" onClick={onIgnore} disabled={loading || !dictionaryId}>
-          <Ban size={16} />
-          忽略
-        </button>
-        <button type="button" onClick={onReview} disabled={loading || !dictionaryId}>
-          <RotateCcw size={16} />
-          加入复核
-        </button>
-        <button type="button" className="danger" onClick={onDelete} disabled={loading || !dictionaryId}>
-          <Trash2 size={16} />
-          删除
-        </button>
-      </footer>
+        <footer className="dictionary-actions">
+          <button type="button" onClick={onPreview} disabled={loading || !value.original_text || !value.zh_name}>
+            <SearchCheck size={16} />
+            预览影响
+          </button>
+          <button type="button" className="primary" onClick={onApply} disabled={loading || !value.original_text || !value.zh_name}>
+            <Save size={16} />
+            {dictionaryId ? "保存修改" : "写入词典"}
+          </button>
+          <button type="button" onClick={onIgnore} disabled={loading || !dictionaryId}>
+            <Ban size={16} />
+            忽略
+          </button>
+          <button type="button" onClick={onReview} disabled={loading || !dictionaryId}>
+            <RotateCcw size={16} />
+            加入复核
+          </button>
+          <button type="button" className="danger" onClick={onDelete} disabled={loading || !dictionaryId}>
+            <Trash2 size={16} />
+            删除
+          </button>
+        </footer>
+      </FadeIn>
     </section>
   );
 }
