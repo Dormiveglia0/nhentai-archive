@@ -2,14 +2,16 @@
 
 ## Current Version
 
-Phase 3 library enhancement (我的库 private-archive workbench), built on the Phase 2 dictionary foundation.
+Phase 4 governance center (作品治理 single-work loop), built on the Phase 3 library and Phase 2 dictionary foundations.
 
 Current real slice:
 
-`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save`
+`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save -> per-work governance queue/metadata save`
 
 ## Completed
 
+- 作品详情页 · 氛围横幅重构(`GalleryDetailPage`):解决了「不同封面比例 + 不同标签数量导致两列高度参差、翻书布局抖动」的根因。hero 改为一整块固定高度横幅(同图模糊奶油色洗白底 + 恒定尺寸封面卡槽,封面按高度约束不裁剪、不留白);标签移出 hero 改为整宽面板、每组独占一行(内容标签横向铺宽不顶高,少标签组无留白);相关作品改为居中固定宽卡片并展示词典中文内容标签。后端 `discover_service.gallery()` 的相关作品改走 feed 富化路径(`_tags_for_items` + `_with_import_state`)以解析 `tag_ids → tags(含 display)`+入库状态;`GallerySummary.tags` 类型补 `display?`。设计见 `docs/superpowers/specs/2026-06-19-gallery-detail-atmosphere-band-design.md`。
+- Phase 4 governance center: implemented the first real single-work governance loop. Added `work_metadata` for field-level final metadata decisions, `GovernanceService` for local-only queue/aggregate/apply, and APIs `GET /api/governance/queue`, `GET /api/works/{id}/governance`, `POST /api/works/{id}/governance/apply`. Governance queue reasons are computed from real SQLite/archive state: missing metadata, untagged works, dictionary review/conflict tags, missing ComicInfo, and missing cover. Aggregate reads `works`, `work_files`, `work_tags`, `remote_galleries.payload_json`, `local_tag_dictionary`, and real CBZ `ComicInfo.xml` / JSON members. Frontend now supports `#governance` and `#governance/{workId}`, with queue, work header, metadata diff editor, tag governance board, right quality/actions column, and real navigation from library/reader. No bulk governance, machine translation, export generation, or CBZ write-back in this phase. Design/plan docs: `docs/superpowers/specs/2026-06-18-phase4-governance-center-design.md` and `docs/superpowers/plans/2026-06-18-phase4-governance-center.md`.
 - 阶段 4 dictionary/settings:完成动画视觉线剩余范围。词典摘要逐项进场、候选行按筛选/翻页结果集 `key` 重播、编辑器按词条 key 淡入切换、应用预览空态/内容态淡入且关联作品逐项进场、批量导入 modal 接入 `Presence`。设置页三栏错峰进场,设置卡片逐项进场,保存/错误 notice keyed 淡入。仅用 `lib/motion` 原语,不改 API/数据逻辑;新增 `.candidate-row-motion`、`.settings-card-motion` 等极小透传类。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage4-dictionary-settings-animation*`。
 - 阶段 3 reader:单页翻页新页轻柔淡入(FadeIn keyed by page)、连续滚动模式页面进入窗口时淡入、打开/切换作品时三栏(章节侧栏/阅读区/详情栏)进场(keyed by sourceKey)。统一用 FadeIn 挂载淡入(规避内部滚动容器的 whileInView 与图片尺寸不一的重叠风险);新增 `.reader-page-cell` 撑满列宽居中。保留方向键/章节跳转/滚动自动翻页/隐私遮罩等全部交互。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage3-reader-animation*`。
 - 阶段 2 library:全面动画——主卡片墙逐项进场(结果集 `key` 重播)、「继续阅读/最近添加」两条书架行逐项进场、`WorkInspector` 选中切换淡入(按 work.id keyed)。新增 `.library-card-cell`(grid 等高保护)、`.shelf-cell`(横向轨道防压缩)透传类;保留全部现有视觉/hover/横向滚动。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage2-library-animation*`。
@@ -73,7 +75,7 @@ Current real slice:
   - Added APIs: `/api/library/summary`, `/api/library/search`, `/api/library/recent-added`, `/api/library/recent-read`, `/api/library/continue-reading`, `/api/library/tag-filters`. Kept `/api/works` for compatibility.
   - `search` supports SQL-backed pagination (per_page capped at 100), keyword (title/japanese/pretty/gallery-id/joined tag text), read-state filter (unread/reading/completed), source filter (remote/local), language filter (via `work_tags` language type), multi-tag AND filter (work must carry every selected remote tag), and whitelisted sorts (recent_updated/added/read, title, pages_desc/asc).
   - Rebuilt `LibraryPage` as orchestration plus thin components: `LibrarySummaryStrip`, `LibraryToolbar`, `LibraryTagFilter`, `WorkCard`, `WorkInspector`, `ContinueReadingRow`, `libraryHelpers`. Reuses discover `FilterMenu`, `IconPager`, and `TagScroller`.
-  - Summary strip shows only real metrics (总收藏/已读/阅读中/未读/待补标签/占用容量); “待补标签” = works with zero `work_tags`. No 待治理 metric is shown because governance is not implemented.
+  - Summary strip shows only real metrics (总收藏/已读/阅读中/未读/待补标签/占用容量); “待补标签” = works with zero `work_tags`. Phase 4 later adds a dedicated governance page, while the library summary still avoids fabricating aggregate 待治理 counts.
   - Continue-reading and recent-added shelves render only when real rows exist and only when no filter/search is active.
   - Tag filter selector is backed by `/api/library/tag-filters` and shows dictionary Chinese display names; selecting a tag on a card or in the inspector adds it to the filter (AND).
   - Inspector exposes real file size/pages/source/ID/language/progress, routes 继续阅读 to the local reader, and keeps 进入治理/导出 CBZ disabled with 未接入 labels.
@@ -82,23 +84,16 @@ Current real slice:
 
 ## Not Implemented Yet
 
-- Governance center.
 - Export center.
 - File maintenance.
 - Job pause/resume/cancel controls.
 - Workbench aggregate dashboard.
 - Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
+- Governance bulk preview/apply, machine translation suggestions, and CBZ ComicInfo write-back.
 
 ## Next Plan
 
-Phase 4 should build the governance center (作品治理) against `design/元数据.png` and chapter 9 of the design flow, only after the Phase 3 library remains green.
-
-Required governance scope:
-
-- Add backend `GovernanceService` for a real per-work aggregate: work header, files, metadata diff (current vs source vs suggestion), tag groups with confirmed/pending/conflict counts, dictionary match state, and recommended actions — all from SQLite, no fabricated completeness.
-- Add `GET /api/governance/queue`, `GET /api/works/{id}/governance`, `POST /api/works/{id}/governance/apply`, plus bulk preview/apply once single-work apply is solid.
-- Build a governance queue + work governance page (header, ComicInfo diff editor, tag governance board, dictionary apply entry) that reuses the existing dictionary apply/preview boundaries.
-- Surface a real governance-completeness signal that the library and (later) export center can read, replacing the current 待补标签 proxy if a richer state exists.
+Phase 5 should build the export center against `design/导出中心.png` and chapter 13 of the design flow, using Phase 4 governance metadata as the source of final metadata decisions. Export preview/generation must remain real-only and must not mutate original source CBZ files.
 
 ## Risks And Decisions
 
@@ -118,9 +113,13 @@ Required governance scope:
 - Decision: unimplemented modules stay boundary screens.
 - Decision: library is local-only; `LibraryService` must never call the NH API and library pages must not re-query remote tags. Tag filters reuse `work_tags` + dictionary mappings only.
 - Decision: library multi-tag filtering uses AND semantics (a work must carry every selected remote tag).
-- Decision: library summary shows only real metrics; do not fabricate a 待治理 count until `GovernanceService` exists. 待补标签 (works with zero `work_tags`) is the honest interim proxy.
+- Decision: library summary shows only real metrics and still does not fabricate a broad 待治理 count. 待补标签 (works with zero `work_tags`) remains the honest library-level proxy; richer governance detail lives in `GovernanceService`.
 - Decision: library shelves (继续阅读/最近添加) only render with real rows and only in the unfiltered default view; filtering switches to the paginated result wall.
 - Decision: library language filter and language facets derive from `work_tags` rows of type `language` (with dictionary display), not the unused `works.language` column.
+- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only; export/write-back belongs to Phase 5.
+- Decision: governance queue and completeness use real local state only. Missing values are shown as missing/unknown; no fake diffs, fake conflicts, or fake recommended actions.
+- Decision: 全站页面内显示的 tag 一律走词典转换名(`display`,即 `zh_name → name → slug`),英文 `name`/`slug` 仅作无词典项时兜底;英文原文只用于后端 NH API 请求等操作,不直接显示给用户。
+- Decision: 作品详情 hero 的封面按**固定高度**约束(放进恒定尺寸卡槽),绝不按长宽比框死,也不裁剪;空余由同图模糊底填充。标签等数量不定的内容**不得**与封面同列并排,须移到独立整宽区域,避免两列高度互相参差、翻书布局抖动。
 - Risk: tag enrichment calls `/api/v2/tags/ids`; if remote rate limits, cards may show cached/empty tags rather than invented labels.
 - Risk: search query syntax follows the compact API doc and should be manually checked against live API behavior.
 
@@ -132,3 +131,4 @@ Required governance scope:
 - In-process API smoke (route functions called directly; `httpx`/TestClient unavailable): empty library → real zero states; after ingesting one real CBZ and linking real tags → correct summary/sources/language facet, keyword + `tag_ids="7,8"` + language search returns the work with real tags and size, malformed `tag_ids` tokens are ignored, `tag-filters` excludes language type, recent-added returns the real row.
 - Static fake-data scan over `library_service.py` and `components/library/` + `lib/api.ts`: no mock/fake/placeholder/random data; only SQL parameter placeholders and the pre-existing dictionary `samples` field matched.
 - Browser screenshot QA NOT run: no browser/Playwright/chromium is installed in this environment. The library page is local-data only (no NH API), so visual QA is safe to rerun by the user: start backend (`PYTHONPATH=backend uvicorn app.main:app --port 8001`) + `npm run dev`, import a CBZ, then open `#library`.
+- 详情页氛围横幅重构后复测:`PYTHONPATH=backend python3 -m pytest backend/tests -q` 35 passed;`cd frontend && npm run build` 通过;`git diff --check` 干净。后端 related 富化为数据路径改动,需用户重启后端 + 硬刷新后在 `#gallery/{id}` 验收(封面/标签/相关卡)。

@@ -1,15 +1,10 @@
-import { GalleryDetail, GallerySummary, RemoteTag } from "../../lib/api";
+import { GallerySummary, RemoteTag } from "../../lib/api";
 
 export type DiscoverViewMode = "grid" | "list";
 export type DiscoverSurface = "feed" | "upload" | "scan";
 
 export type TagFilter = RemoteTag & {
   display?: string;
-};
-
-export type GalleryPreview = {
-  kind: "random" | "gallery" | "detail";
-  detail: GalleryDetail;
 };
 
 export type DiscoverPagePayload = {

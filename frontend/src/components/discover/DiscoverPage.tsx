@@ -1,34 +1,43 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api, GalleryDetail, GallerySummary, RemoteTag } from "../../lib/api";
+import { api, GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 import { DiscoverFeed } from "./DiscoverFeed";
 import { DiscoverToolbar } from "./DiscoverToolbar";
-import { DiscoverSurface, DiscoverViewMode, GalleryPreview, TagFilter } from "./discoverTypes";
-import { GalleryPreviewModal } from "./GalleryPreviewModal";
+import { DiscoverSurface, DiscoverViewMode, TagFilter } from "./discoverTypes";
+import {
+  canReplaceDiscoverHash,
+  discoverFilterKey,
+  DISCOVER_STATE_KEY,
+  nextDiscoverFeedLoad,
+  PersistedDiscoverState,
+  readDiscoverStateFrom,
+  serializeDiscoverHash,
+} from "./discoverState";
 import { PopularFan } from "./PopularFan";
 
 type Props = {
   blurCovers: boolean;
+  initialTag?: RemoteTag;
 };
 
 const PER_PAGE = 24;
 
-export function DiscoverPage({ blurCovers }: Props) {
-  const [surface, setSurface] = useState<DiscoverSurface>("feed");
-  const [viewMode, setViewMode] = useState<DiscoverViewMode>("grid");
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
-  const [language, setLanguage] = useState("all");
-  const [kind, setKind] = useState("all");
-  const [sort, setSort] = useState("date");
-  const [unimportedOnly, setUnimportedOnly] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<TagFilter[]>([]);
-  const [page, setPage] = useState(1);
+export function DiscoverPage({ blurCovers, initialTag }: Props) {
+  const restored = useMemo(() => readDiscoverState(), []);
+  const [surface, setSurface] = useState<DiscoverSurface>(restored.surface);
+  const [viewMode, setViewMode] = useState<DiscoverViewMode>(restored.viewMode);
+  const [query, setQuery] = useState(restored.query);
+  const [submittedQuery, setSubmittedQuery] = useState(restored.submittedQuery);
+  const [language, setLanguage] = useState(restored.language);
+  const [kind, setKind] = useState(restored.kind);
+  const [sort, setSort] = useState(restored.sort);
+  const [unimportedOnly, setUnimportedOnly] = useState(restored.unimportedOnly);
+  const [selectedTags, setSelectedTags] = useState<TagFilter[]>(() => (initialTag ? [initialTag] : restored.selectedTags));
+  const [page, setPage] = useState(restored.page);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [items, setItems] = useState<GallerySummary[]>([]);
-  const [preview, setPreview] = useState<GalleryPreview | null>(null);
   const [popularCollapseSignal, setPopularCollapseSignal] = useState(0);
   const [popularLoading, setPopularLoading] = useState(false);
   const [popularItems, setPopularItems] = useState<GallerySummary[]>([]);
@@ -39,6 +48,23 @@ export function DiscoverPage({ blurCovers }: Props) {
   const activeQuery = surface === "feed" ? submittedQuery : "";
   const isBoundary = surface === "upload" || surface === "scan";
   const collapsePopular = useCallback(() => setPopularCollapseSignal((value) => value + 1), []);
+  const initialTagKey = initialTag?.id ?? null;
+  const initialPageRef = useRef(restored.page);
+  const lastFilterKeyRef = useRef<string | null>(null);
+  const restoreScrollRef = useRef(restored.scrollY);
+  const initialTagSeenRef = useRef(initialTagKey);
+  const filterKey = useMemo(
+    () => discoverFilterKey({
+      activeQuery,
+      kind,
+      language,
+      selectedTags,
+      sort,
+      surface,
+      unimportedOnly,
+    }),
+    [activeQuery, kind, language, selectedTags, sort, surface, unimportedOnly]
+  );
 
   const loadFeed = useCallback(
     async (nextPage: number, queryOverride?: string) => {
@@ -63,7 +89,10 @@ export function DiscoverPage({ blurCovers }: Props) {
         setTotal(payload.total);
         setTotalPages(payload.num_pages || 1);
         setPage(nextPage);
-        if (payload.reason === "min_query_length") {
+        if (selectedTags.length) {
+          const label = selectedTags.map(displayTag).join(" / ");
+          setNotice(`已按词典标签「${label}」筛选；远端查询使用原始 tag 标识。`);
+        } else if (payload.reason === "min_query_length") {
           setNotice("请输入关键词，或使用语言、类型、tag 组成远端查询。");
         } else if (payload.query) {
           setNotice(`远端查询：${payload.query}`);
@@ -78,8 +107,90 @@ export function DiscoverPage({ blurCovers }: Props) {
   );
 
   useEffect(() => {
-    void loadFeed(1);
-  }, [loadFeed]);
+    const next = nextDiscoverFeedLoad(lastFilterKeyRef.current, filterKey, initialPageRef.current);
+    lastFilterKeyRef.current = filterKey;
+    if (!next.isInitialLoad) {
+      setPage(1);
+      restoreScrollRef.current = 0;
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+    void loadFeed(next.page);
+  }, [filterKey]);
+
+  useEffect(() => {
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
+
+  useEffect(() => {
+    persistDiscoverState(currentDiscoverState({
+      surface,
+      viewMode,
+      query,
+      submittedQuery,
+      language,
+      kind,
+      sort,
+      unimportedOnly,
+      selectedTags,
+      page,
+    }), true);
+  }, [kind, language, page, query, selectedTags, sort, submittedQuery, surface, unimportedOnly, viewMode]);
+
+  useEffect(() => {
+    // Throttle the scroll-position persist: writing (JSON.stringify + sessionStorage)
+    // on every scroll event blocks the main thread and makes the page stutter.
+    // At most one write per 250ms keeps the restore point fresh without the jank.
+    let timer = 0;
+    const persistScroll = () => {
+      timer = 0;
+      persistDiscoverState({
+        surface,
+        viewMode,
+        query,
+        submittedQuery,
+        language,
+        kind,
+        sort,
+        unimportedOnly,
+        selectedTags,
+        page,
+        scrollY: window.scrollY,
+      }, false);
+    };
+    const handleScroll = () => {
+      if (timer) return;
+      timer = window.setTimeout(persistScroll, 250);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [kind, language, page, query, selectedTags, sort, submittedQuery, surface, unimportedOnly, viewMode]);
+
+  useEffect(() => {
+    if (loading || !items.length || !restoreScrollRef.current) return;
+    const y = restoreScrollRef.current;
+    restoreScrollRef.current = 0;
+    const timers = [0, 120, 320].map((delay) => window.setTimeout(() => window.scrollTo({ top: y, behavior: "auto" }), delay));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [items.length, loading]);
+
+  useEffect(() => {
+    if (!initialTagKey || !initialTag) return;
+    if (initialTagSeenRef.current === initialTagKey) return;
+    initialTagSeenRef.current = initialTagKey;
+    setSurface("feed");
+    setQuery("");
+    setSubmittedQuery("");
+    setSelectedTags([initialTag]);
+    setPage(1);
+    collapsePopular();
+  }, [collapsePopular, initialTag, initialTagKey]);
 
   const boundaryNotice = useMemo(() => {
     if (surface === "upload") return "上传 CBZ 将在本地导入模块接入后开放；当前不显示假上传任务。";
@@ -103,30 +214,26 @@ export function DiscoverPage({ blurCovers }: Props) {
     if (!popularItems.length && !popularLoading) void loadPopular();
   }, [loadPopular, popularItems.length, popularLoading]);
 
-  async function openDetail(id: number) {
+  function openDetail(id: number) {
     collapsePopular();
-    setLoading(true);
-    setError(null);
-    try {
-      setPreview({ kind: "detail", detail: await api.gallery(id) });
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function openPreview(id: number, kindName: GalleryPreview["kind"]) {
-    collapsePopular();
-    setLoading(true);
-    setError(null);
-    try {
-      setPreview({ kind: kindName, detail: await api.gallery(id) });
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setLoading(false);
-    }
+    const state = {
+      surface,
+      viewMode,
+      query,
+      submittedQuery,
+      language,
+      kind,
+      sort,
+      unimportedOnly,
+      selectedTags,
+      page,
+      scrollY: window.scrollY,
+    };
+    persistDiscoverState(state, true);
+    // Build the return target from the serialized state so it always carries the
+    // current page; reading window.location.hash can momentarily miss the page
+    // param (e.g. right after a tag jump) and send the user back to page 1.
+    navigate({ name: "gallery", galleryId: id, returnTo: serializeDiscoverHash(state).replace(/^#/, "") });
   }
 
   async function openRandom() {
@@ -134,7 +241,8 @@ export function DiscoverPage({ blurCovers }: Props) {
     setLoading(true);
     setError(null);
     try {
-      setPreview({ kind: "random", detail: await api.random() });
+      const detail = await api.random();
+      navigate({ name: "gallery", galleryId: detail.gallery_id });
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -147,8 +255,7 @@ export function DiscoverPage({ blurCovers }: Props) {
     collapsePopular();
     const nextQuery = query.trim();
     if (/^\d+$/.test(nextQuery)) {
-      const id = Number(nextQuery);
-      await openPreview(id, "gallery");
+      navigate({ name: "gallery", galleryId: Number(nextQuery) });
       return;
     }
     if (nextQuery === submittedQuery) {
@@ -157,20 +264,6 @@ export function DiscoverPage({ blurCovers }: Props) {
     }
     setPage(1);
     setSubmittedQuery(nextQuery);
-  }
-
-  async function importGallery(detail: GalleryDetail | null) {
-    if (!detail) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await api.importGallery(detail.gallery_id);
-      setNotice(`Gallery ${detail.gallery_id} 已加入真实导入队列。`);
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setLoading(false);
-    }
   }
 
   async function enqueueGalleryId(galleryId: number) {
@@ -185,15 +278,6 @@ export function DiscoverPage({ blurCovers }: Props) {
     } finally {
       setLoading(false);
     }
-  }
-
-  function readGallery(detail: GalleryDetail) {
-    if (detail.imported && detail.work_id) {
-      navigate({ name: "reader", workId: detail.work_id });
-    } else {
-      navigate({ name: "readerRemote", galleryId: detail.gallery_id });
-    }
-    setPreview(null);
   }
 
   function pickTag(tag: RemoteTag) {
@@ -244,7 +328,27 @@ export function DiscoverPage({ blurCovers }: Props) {
 
   function loadPageAndCollapse(nextPage: number) {
     collapsePopular();
-    void loadFeed(nextPage);
+    const boundedPage = Math.max(1, nextPage);
+    // Do NOT bump `page` here: loadFeed sets it together with the new items once
+    // the fetch resolves. Setting it early changes the feed's animation key while
+    // the old items are still mounted, which replays the entrance animation on the
+    // previous page and then again on the new page (the "old then sudden refresh"
+    // flicker). Persisting boundedPage still updates the URL immediately.
+    persistDiscoverState({
+      surface,
+      viewMode,
+      query,
+      submittedQuery,
+      language,
+      kind,
+      sort,
+      unimportedOnly,
+      selectedTags,
+      page: boundedPage,
+      scrollY: 0,
+    }, true);
+    window.scrollTo({ top: 0, behavior: "auto" });
+    void loadFeed(boundedPage);
   }
 
   return (
@@ -259,7 +363,7 @@ export function DiscoverPage({ blurCovers }: Props) {
           items={popularItems}
           blurCovers={blurCovers}
           collapseSignal={popularCollapseSignal}
-          onOpen={(id) => openPreview(id, "gallery")}
+          onOpen={openDetail}
           onImport={enqueueGalleryId}
         />
       </div>
@@ -304,16 +408,6 @@ export function DiscoverPage({ blurCovers }: Props) {
           />
         </div>
       </div>
-
-      <GalleryPreviewModal
-        detail={preview?.detail ?? null}
-        label={previewLabel(preview?.kind)}
-        blurCovers={blurCovers}
-        onClose={() => setPreview(null)}
-        onImport={() => importGallery(preview?.detail ?? null)}
-        onRead={readGallery}
-        onOpenRelated={openDetail}
-      />
     </section>
   );
 }
@@ -326,8 +420,32 @@ function tagQueryValue(tag: TagFilter) {
   return tag.name || tag.slug || "";
 }
 
-function previewLabel(kind: GalleryPreview["kind"] | undefined) {
-  if (kind === "random") return "随机预览";
-  if (kind === "detail") return "作品详情";
-  return "画廊预览";
+function displayTag(tag: TagFilter) {
+  return tag.display || tag.name || tag.slug || String(tag.id);
+}
+
+function readDiscoverState(): PersistedDiscoverState {
+  try {
+    return readDiscoverStateFrom(window.location.hash, window.sessionStorage.getItem(DISCOVER_STATE_KEY));
+  } catch {
+    return readDiscoverStateFrom(window.location.hash, null);
+  }
+}
+
+function persistDiscoverState(state: PersistedDiscoverState, syncUrl: boolean) {
+  try {
+    window.sessionStorage.setItem(DISCOVER_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // Session storage is a convenience for navigation restore; ignore unavailable storage.
+  }
+  if (syncUrl && canReplaceDiscoverHash(window.location.hash)) {
+    const nextHash = serializeDiscoverHash(state);
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, "", nextHash);
+    }
+  }
+}
+
+function currentDiscoverState(state: Omit<PersistedDiscoverState, "scrollY">): PersistedDiscoverState {
+  return { ...state, scrollY: window.scrollY };
 }

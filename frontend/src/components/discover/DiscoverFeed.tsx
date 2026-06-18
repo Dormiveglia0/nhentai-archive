@@ -53,7 +53,7 @@ export function DiscoverFeed({
       ) : null}
       <Stagger
         key={`${viewMode}:${page}:${items.length}:${items[0]?.gallery_id ?? "none"}`}
-        className={viewMode === "grid" ? "discover-card-grid" : "discover-card-list"}
+        className={`${viewMode === "grid" ? "discover-card-grid" : "discover-card-list"}${loading && items.length ? " is-loading" : ""}`}
       >
         {items.map((item) => (
           <StaggerItem key={item.gallery_id} className="discover-card-cell">

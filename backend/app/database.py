@@ -102,6 +102,17 @@ CREATE TABLE IF NOT EXISTS work_tags (
   UNIQUE(work_id, remote_tag_id)
 );
 
+CREATE TABLE IF NOT EXISTS work_metadata (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_id INTEGER NOT NULL REFERENCES works(id) ON DELETE CASCADE,
+  field TEXT NOT NULL,
+  value TEXT,
+  source TEXT NOT NULL DEFAULT 'manual',
+  source_value TEXT,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(work_id, field)
+);
+
 CREATE TABLE IF NOT EXISTS reader_progress (
   work_id INTEGER PRIMARY KEY REFERENCES works(id) ON DELETE CASCADE,
   page_index INTEGER NOT NULL,

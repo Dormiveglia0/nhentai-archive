@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { DictionaryPage } from "./components/dictionary/DictionaryPage";
 import { DiscoverPage } from "./components/discover/DiscoverPage";
+import { GalleryDetailPage } from "./components/discover/GalleryDetailPage";
+import { GovernancePage } from "./components/governance/GovernancePage";
 import { LibraryPage } from "./components/library/LibraryPage";
 import { ReaderPage } from "./components/reader/ReaderPage";
 import { SettingsPage } from "./components/settings/SettingsPage";
@@ -33,13 +35,12 @@ export default function App() {
           description="工作台聚合馆藏、任务、治理与文件健康状态；当前阶段未接入真实聚合数据。"
         />
       ) : null}
-      {page.name === "discover" ? <DiscoverPage blurCovers={blurCovers} /> : null}
+      {page.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={page.tag} /> : null}
+      {page.name === "gallery" ? <GalleryDetailPage galleryId={page.galleryId} returnTo={page.returnTo} blurCovers={blurCovers} /> : null}
       {page.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
       {page.name === "reader" ? <ReaderPage source={{ kind: "local", workId: page.workId }} privacyMode={privacyMode} /> : null}
       {page.name === "readerRemote" ? <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} /> : null}
-      {page.name === "governance" ? (
-        <BoundaryPage title="作品治理" description="治理中心尚未接入 GovernanceService；不会展示假冲突、假完整度或假推荐动作。" />
-      ) : null}
+      {page.name === "governance" ? <GovernancePage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
       {page.name === "dictionary" ? <DictionaryPage /> : null}
       {page.name === "tasks" ? (
         <BoundaryPage title="任务中心" description="底部任务坞站已读取真实 /api/jobs；完整任务列表、暂停、恢复、取消后续接入。" />

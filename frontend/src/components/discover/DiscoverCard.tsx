@@ -18,6 +18,9 @@ export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onP
   const tags = item.tags ?? [];
   const author = tagName(tags, "artist") || tagName(tags, "group") || "作者未缓存";
   const language = tagName(tags, "language") || "语言未缓存";
+  // The card already surfaces author/language/category elsewhere; the tag row should only
+  // carry real content tags, not meta types like category (doujinshi) or parody (original).
+  const contentTags = tags.filter((tag) => tag.type === "tag" || tag.type === "character");
   const title = item.title_japanese || item.pretty_title || item.title || `Gallery ${item.gallery_id}`;
 
   return (
@@ -40,7 +43,7 @@ export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onP
         <small>
           {item.page_count} 页 · ID {item.gallery_id}
         </small>
-        <TagScroller tags={tags} onPickTag={(tag) => onPickTag(tag)} />
+        <TagScroller tags={contentTags} onPickTag={(tag) => onPickTag(tag)} />
         <div className="card-actions">
           {item.imported && item.work_id ? (
             <button type="button" onClick={() => navigate({ name: "reader", workId: item.work_id! })}>

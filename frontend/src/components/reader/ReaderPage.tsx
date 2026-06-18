@@ -272,9 +272,11 @@ export function ReaderPage({ source, privacyMode }: Props) {
               加入导入队列
             </button>
           )}
-          <button type="button" disabled>
-            进入治理将在后续模块接入
-          </button>
+          {!isRemote && work ? (
+            <button type="button" onClick={() => navigate({ name: "governance", workId: work.id })}>
+              进入治理
+            </button>
+          ) : null}
         </div>
         </FadeIn>
       </aside>

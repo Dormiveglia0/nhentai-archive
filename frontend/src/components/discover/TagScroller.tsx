@@ -1,4 +1,4 @@
-import { PointerEvent, useRef, useState } from "react";
+import { MouseEvent as ReactMouseEvent, PointerEvent, useRef, useState } from "react";
 
 import { RemoteTag } from "../../lib/api";
 
@@ -41,7 +41,9 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag }:
     setIsDragging(false);
   }
 
-  function pick(tag: RemoteTag) {
+  function pick(event: ReactMouseEvent, tag: RemoteTag) {
+    // Tags live inside a clickable card body; never let a tag click bubble up to open the work.
+    event.stopPropagation();
     if (dragged.current) return;
     onPickTag?.(tag);
   }
@@ -54,13 +56,14 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag }:
       onPointerMove={onPointerMove}
       onPointerUp={stopDrag}
       onPointerCancel={stopDrag}
+      onClick={(event) => event.stopPropagation()}
       aria-label="远端标签"
     >
       {tags.length === 0 ? (
         <span>标签未缓存</span>
       ) : (
         tags.slice(0, 22).map((tag) => (
-          <button key={tag.id} type="button" onClick={() => pick(tag)}>
+          <button key={tag.id} type="button" onClick={(event) => pick(event, tag)}>
             {displayTag(tag)}
           </button>
         ))
