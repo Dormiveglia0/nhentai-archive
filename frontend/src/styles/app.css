@@ -936,6 +936,13 @@ kbd {
   object-fit: contain;
 }
 
+/* FadeIn 包裹层:撑满列宽并居中页面图片 */
+.reader-page-cell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
 .discover-workspace {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
