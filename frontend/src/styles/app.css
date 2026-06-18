@@ -1141,6 +1141,11 @@ kbd {
   gap: 12px;
 }
 
+/* Stagger 包裹层透传:撑满等高行,使卡片在 grid 视图保持等高 */
+.discover-card-cell {
+  display: flex;
+}
+
 .discover-card {
   width: 224px;
   border: 1px solid rgba(222, 210, 194, 0.96);
