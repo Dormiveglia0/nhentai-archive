@@ -35,7 +35,6 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
         </FadeIn>
       ) : (
         <FadeIn key={contextKey} y={8}>
-          <>
             <div className="preview-metrics">
               <Metric label="将更新标签" value={preview?.will_update_tags ?? 0} />
               <Metric label="将影响作品" value={preview?.will_update_works ?? 0} />
@@ -126,7 +125,6 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
                 <em className="preview-works-empty">暂无真实关联作品。</em>
               )}
             </section>
-          </>
         </FadeIn>
       )}
     </section>

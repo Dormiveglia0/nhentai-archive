@@ -1,4 +1,4 @@
-import { m, AnimatePresence, type Variants } from "motion/react";
+import { m, AnimatePresence, type HTMLMotionProps, type Variants } from "motion/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { duration, ease, stagger } from "./tokens";
 import { usePrefersReducedMotion } from "./useReducedMotion";
@@ -20,6 +20,40 @@ export function FadeIn({
       initial={{ opacity: 0, x: reduce ? 0 : x, y: reduce ? 0 : y }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       transition={{ duration: duration.base, ease: ease.standard, delay }}
+    >
+      {children}
+    </m.div>
+  );
+}
+
+type FadeInOutProps = Omit<
+  HTMLMotionProps<"div">,
+  "initial" | "animate" | "exit" | "transition"
+> & { x?: number; y?: number; delay?: number };
+
+/**
+ * 进出场淡入淡出(可选位移)。必须作为 <Presence> 的直接子节点并带 key,
+ * 才能在卸载时播放退场。透传其余 div 属性(onMouseDown / role / aria 等),
+ * 适用于弹窗 backdrop 与卡片。reduced-motion 下退化为纯淡入淡出。
+ */
+export function FadeInOut({
+  children,
+  className,
+  x = 0,
+  y = 0,
+  delay = 0,
+  ...rest
+}: FadeInOutProps) {
+  const reduce = usePrefersReducedMotion();
+  const offset = { x: reduce ? 0 : x, y: reduce ? 0 : y };
+  return (
+    <m.div
+      className={className}
+      initial={{ opacity: 0, ...offset }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      exit={{ opacity: 0, ...offset }}
+      transition={{ duration: duration.base, ease: ease.standard, delay }}
+      {...rest}
     >
       {children}
     </m.div>
