@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, type Variants } from "motion/react";
+import { m, AnimatePresence, type Variants } from "motion/react";
 import type { PropsWithChildren, ReactNode } from "react";
 import { duration, ease, stagger } from "./tokens";
 import { usePrefersReducedMotion } from "./useReducedMotion";
@@ -15,14 +15,14 @@ export function FadeIn({
 }: DivMotionProps & { x?: number; y?: number }) {
   const reduce = usePrefersReducedMotion();
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, x: reduce ? 0 : x, y: reduce ? 0 : y }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       transition={{ duration: duration.base, ease: ease.standard, delay }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -34,14 +34,14 @@ const staggerParent: Variants = {
 /** 列表/网格容器,子项用 <StaggerItem> 逐项进场。 */
 export function Stagger({ children, className }: DivMotionProps) {
   return (
-    <motion.div
+    <m.div
       className={className}
       variants={staggerParent}
       initial="hidden"
       animate="show"
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -57,9 +57,9 @@ export function StaggerItem({ children, className }: DivMotionProps) {
     },
   };
   return (
-    <motion.div className={className} variants={item}>
+    <m.div className={className} variants={item}>
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -71,7 +71,7 @@ export function Reveal({
 }: DivMotionProps & { y?: number }) {
   const reduce = usePrefersReducedMotion();
   return (
-    <motion.div
+    <m.div
       className={className}
       initial={{ opacity: 0, y: reduce ? 0 : y }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -79,7 +79,7 @@ export function Reveal({
       transition={{ duration: duration.base, ease: ease.standard }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
