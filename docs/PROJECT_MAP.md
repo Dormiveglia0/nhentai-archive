@@ -87,6 +87,12 @@ Root: `backend/app/`
   - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, output name, ComicInfo fields, resolved export options, members to keep/write, blockers, and warnings. `options.output_name` is sanitized and forced to `.cbz`; `write_comicinfo` / `keep_json` / `compress` control the preview. No server output path is involved.
   - `build_cbz(work_id, options)`: packages a single work into CBZ **bytes** in memory, honoring `write_comicinfo`, `keep_json`, and `compress`, and returns `(filename, bytes)`; raises `ValueError` when the work has blockers. The original archive is never touched.
   - `build_bundle(items, options)`: packages multiple works into one `.zip` of CBZs (bytes) for a single download, applying shared export options, deduping member names, skipping blocked items, and raising when none can be exported.
+- `services/file_service.py`
+  - Local-only file inventory + deletion over the managed data dir; never calls the NH API.
+  - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
+  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
+  - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
+  - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry`.
 - `main.py`
@@ -135,6 +141,10 @@ Implemented:
 - `POST /api/works/{work_id}/export-preview`
 - `GET /api/works/{work_id}/export/download` (streams a single CBZ as a download)
 - `POST /api/exports/download` (streams a `.zip` bundle of selected CBZs as a download)
+- `GET /api/files/overview`
+- `GET /api/files/inventory?category=&q=&status=&page=&per_page=`
+- `POST /api/files/preview-delete`
+- `POST /api/files/delete`
 - `GET /api/works`
 - `GET /api/works/{work_id}`
 - `GET /api/works/{work_id}/cover`
@@ -153,7 +163,6 @@ Reserved, not implemented:
 
 - Governance bulk preview/apply.
 - Long-running batch export jobs and failed-export retry through the full task center.
-- File maintenance: `/api/files/*`
 - Job controls: pause/resume/cancel
 
 ## Frontend Map
@@ -269,6 +278,12 @@ Root: `frontend/src/`
   - `ExportInspector.tsx` — focused-work detail: output rename, ComicInfo preview, blockers/warnings, selected cover strip, option switches (`ComicInfo` / `保留JSON` / `压缩`), refresh, selected download, and current-work download.
   - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
+- `components/files/` — file maintenance module:
+  - `FilesPage.tsx` — thin container: overview strip + toolbar + multi-select list + inspector.
+  - `useFilesState.ts` — overview/inventory fetch, category/q/status filters with request token, selected Set, focus, delete preview + confirm orchestration.
+  - `FileOverviewStrip.tsx` / `FileToolbar.tsx` / `FileList.tsx` / `FileInspector.tsx` — metrics, filters, selectable rows, focused-detail + delete preview/confirm.
+  - `fileHelpers.tsx` — `formatBytes`, `statusLabel`, `targetKey`, `entryToTarget`.
+  - `App.tsx` renders `FilesPage` for `#files` (replaced the boundary screen).
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 
