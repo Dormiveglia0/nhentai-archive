@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { DictionaryPage } from "./components/dictionary/DictionaryPage";
 import { DiscoverPage } from "./components/discover/DiscoverPage";
+import { ExportPage } from "./components/export/ExportPage";
 import { GalleryDetailPage } from "./components/discover/GalleryDetailPage";
 import { GovernancePage } from "./components/governance/GovernancePage";
 import { LibraryPage } from "./components/library/LibraryPage";
@@ -45,9 +46,7 @@ export default function App() {
       {page.name === "tasks" ? (
         <BoundaryPage title="任务中心" description="底部任务坞站已读取真实 /api/jobs；完整任务列表、暂停、恢复、取消后续接入。" />
       ) : null}
-      {page.name === "export" ? (
-        <BoundaryPage title="导出中心" description="导出 preview 与 CBZ 生成未实现；不会渲染假导出记录或假文件名。" />
-      ) : null}
+      {page.name === "export" ? <ExportPage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
       {page.name === "files" ? (
         <BoundaryPage title="文件管理" description="文件健康检查、重复检测、清理预览尚未实现；不会展示假容量和假问题数。" />
       ) : null}

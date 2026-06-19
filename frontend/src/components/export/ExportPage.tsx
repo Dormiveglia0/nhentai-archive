@@ -1,7 +1,6 @@
 import { Download } from "lucide-react";
 
 import { FadeIn } from "../../lib/motion";
-import { ExportHistory } from "./ExportHistory";
 import { ExportPresetBar } from "./ExportPresetBar";
 import { ExportPreviewPanel } from "./ExportPreviewPanel";
 import { ExportQueueTable } from "./ExportQueueTable";
@@ -22,11 +21,8 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
       {vm.summary || vm.queue ? (
         <ExportSummary
           queue={vm.queue ?? { result: [], summary: { total: 0, ready: 0, blocked: 0, warnings: 0 } }}
-          summary={vm.summary}
           selectedCount={vm.selectedIds.size}
           exportableCount={vm.exportableItems.length}
-          presetCount={vm.settings?.export.presets.length ?? 0}
-          activePresetName={activePresetName}
         />
       ) : null}
 
@@ -55,16 +51,16 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
               <div>
                 <strong>{vm.selectedIds.size} 项已选</strong>
                 <span>
-                  {vm.exportableItems.length} 项可导出 · {activePresetName}
+                  {vm.exportableItems.length} 项可下载 · {activePresetName}
                 </span>
               </div>
               <button
                 type="button"
-                disabled={vm.generating || vm.exportableItems.length === 0 || vm.selectedIds.size === 0}
-                onClick={vm.generateSelected}
+                disabled={vm.downloading || vm.exportableItems.length === 0 || vm.selectedIds.size === 0}
+                onClick={vm.downloadSelected}
               >
                 <Download size={16} />
-                {vm.generating ? "导出中" : "开始导出"}
+                {vm.downloading ? "下载中" : "下载选中"}
               </button>
             </div>
 
@@ -89,19 +85,12 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
                 <ExportPresetBar
                   settings={vm.settings}
                   activePreset={vm.activePreset}
-                  outputDir={vm.summary?.output_dir}
-                  outputDirDraft={vm.outputDirDraft}
-                  savingOutputDir={vm.savingOutputDir}
-                  openDirAfter={vm.openDirAfter}
                   selectedCount={vm.selectedIds.size}
                   exportableCount={vm.exportableItems.length}
-                  generating={vm.generating}
+                  downloading={vm.downloading}
                   onPresetChange={vm.changePreset}
                   onSavePreset={vm.saveNewPreset}
-                  onOutputDirChange={vm.setOutputDirDraft}
-                  onSaveOutputDir={vm.saveOutputDir}
-                  onToggleOpenDir={vm.setOpenDirAfter}
-                  onGenerate={vm.generateSelected}
+                  onDownload={vm.downloadSelected}
                 />
               </div>
               <ExportPreviewPanel
@@ -109,14 +98,13 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
                 selectedSize={vm.selectedSize}
                 preview={vm.preview}
                 loading={vm.previewLoading}
-                generating={vm.generating}
+                downloading={vm.downloading}
                 blurCovers={blurCovers}
-                onGenerate={vm.generateSelected}
+                onDownload={vm.downloadSelected}
+                onDownloadOne={vm.downloadOne}
                 onRefresh={vm.refreshPreview}
               />
             </div>
-
-            <ExportHistory records={vm.history} blurCovers={blurCovers} />
           </>
         )
       ) : null}

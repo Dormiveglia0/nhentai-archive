@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,7 @@ from app.database import Database
 from app.services.archive_service import ArchiveService
 from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
+from app.services.export_service import ExportService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
 from app.services.library_service import LibraryService
@@ -29,6 +31,8 @@ class ReaderStatePatch(BaseModel):
 class SettingsPatch(BaseModel):
     nhentai_api_key: str | None = None
     clear_nhentai_api_key: bool = False
+    storage: dict | None = None
+    export: dict | None = None
     privacy: dict | None = None
     reader: dict | None = None
 
@@ -62,6 +66,15 @@ class GovernanceApplyRequest(BaseModel):
     dictionary_apply: list[DictionaryApplyRequest] = []
 
 
+class ExportItemRequest(BaseModel):
+    work_id: int | None = None
+    output_name: str | None = None
+
+
+class ExportBatchRequest(BaseModel):
+    items: list[ExportItemRequest] = []
+
+
 settings = load_settings()
 db = Database(settings.database_path)
 db.init_schema()
@@ -78,6 +91,7 @@ reader = ReaderService(db)
 library = LibraryService(db)
 dictionary = DictionaryService(db, client)
 governance = GovernanceService(db, dictionary)
+exports = ExportService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 settings_service = SettingsService(db, settings, client)
 
@@ -293,6 +307,59 @@ def apply_work_governance(work_id: int, payload: GovernanceApplyRequest):
         return governance.apply(work_id, payload.model_dump())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.get("/api/exports/queue")
+def export_queue():
+    return exports.queue()
+
+
+@app.get("/api/exports/summary")
+def export_summary():
+    return exports.summary()
+
+
+@app.get("/api/works/{work_id}/export-preview")
+def export_preview(work_id: int):
+    try:
+        return exports.preview(work_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/works/{work_id}/export-preview")
+def export_preview_with_options(work_id: int, payload: ExportItemRequest):
+    try:
+        return exports.preview(work_id, payload.model_dump(exclude_none=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+def _download_response(filename: str, data: bytes, media_type: str) -> Response:
+    ascii_name = filename.encode("ascii", "ignore").decode("ascii") or "download"
+    disposition = f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+    return Response(content=data, media_type=media_type, headers={"Content-Disposition": disposition})
+
+
+@app.get("/api/works/{work_id}/export/download")
+def export_download(work_id: int, output_name: str | None = None):
+    try:
+        filename, data = exports.build_cbz(
+            work_id, {"output_name": output_name} if output_name else None
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _download_response(filename, data, "application/vnd.comicbook+zip")
+
+
+@app.post("/api/exports/download")
+def export_download_bundle(payload: ExportBatchRequest):
+    items = [item.model_dump(exclude_none=True) for item in payload.items if item.work_id]
+    try:
+        filename, data = exports.build_bundle(items)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _download_response(filename, data, "application/zip")
 
 
 @app.get("/api/works")

@@ -32,6 +32,55 @@ def test_settings_service_reports_missing_key_without_verifying_remote(tmp_path)
     assert result["configured"] is False
     assert result["ok"] is False
     assert result["message"] == "NH API Key 未配置"
+    assert service.get()["nhentai"]["last_verify"]["message"] == "NH API Key 未配置"
+
+
+def test_settings_service_persists_export_directory(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = NhentaiClient(settings.nhentai_base_url, settings.user_agent, None, settings.request_timeout)
+    service = SettingsService(db, settings, client)
+    export_dir = tmp_path / "custom-exports"
+
+    payload = service.patch({"storage": {"export_dir": str(export_dir)}})
+
+    assert payload["storage"]["export_dir"] == str(export_dir)
+    assert export_dir.exists()
+
+
+def test_settings_service_persists_export_presets(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = NhentaiClient(settings.nhentai_base_url, settings.user_agent, None, settings.request_timeout)
+    service = SettingsService(db, settings, client)
+
+    initial = service.get()
+    assert initial["export"]["active_preset_id"] == "default-v2"
+    assert initial["export"]["presets"][0]["name"] == "默认预设 v2"
+
+    payload = service.patch(
+        {
+            "export": {
+                "active_preset_id": "archive-light",
+                "presets": [
+                    {
+                        "id": "archive-light",
+                        "name": "轻量导出 v1",
+                        "naming_rule": "{title}",
+                        "comicinfo_rule": "完整写入",
+                        "meta_rule": "保留原文件",
+                        "compression": "ZIP - 最佳压缩",
+                    }
+                ],
+            }
+        }
+    )
+
+    assert payload["export"]["active_preset_id"] == "archive-light"
+    assert payload["export"]["presets"][0]["name"] == "轻量导出 v1"
+    assert service.get()["export"]["presets"][0]["naming_rule"] == "{title}"
 
 
 def test_discover_search_query_adds_real_remote_filters():

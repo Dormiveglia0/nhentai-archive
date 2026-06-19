@@ -1,45 +1,29 @@
 import { Download } from "lucide-react";
-import { useState } from "react";
 
 import type { ExportPreset, SettingsSummary } from "../../lib/api";
-import { compactPath } from "./exportHelpers";
 
 type ExportPresetBarProps = {
   settings: SettingsSummary | null;
   activePreset: ExportPreset | null;
-  outputDir?: string;
-  outputDirDraft: string;
-  savingOutputDir: boolean;
-  openDirAfter: boolean;
   selectedCount: number;
   exportableCount: number;
-  generating: boolean;
+  downloading: boolean;
   onPresetChange: (presetId: string) => void;
   onSavePreset: () => void;
-  onOutputDirChange: (value: string) => void;
-  onSaveOutputDir: () => void;
-  onToggleOpenDir: (value: boolean) => void;
-  onGenerate: () => void;
+  onDownload: () => void;
 };
 
 export function ExportPresetBar({
   settings,
   activePreset,
-  outputDir,
-  outputDirDraft,
-  savingOutputDir,
-  openDirAfter,
   selectedCount,
   exportableCount,
-  generating,
+  downloading,
   onPresetChange,
   onSavePreset,
-  onOutputDirChange,
-  onSaveOutputDir,
-  onToggleOpenDir,
-  onGenerate,
+  onDownload,
 }: ExportPresetBarProps) {
-  const [editingDir, setEditingDir] = useState(false);
+  const downloadLabel = exportableCount > 1 ? `下载选中 (${exportableCount})` : "下载选中";
   return (
     <section className="export-panel export-preset-panel">
       <div className="export-panel-head compact">
@@ -68,46 +52,10 @@ export function ExportPresetBar({
         <PresetFact label="ComicInfo 写入规则" value={activePreset?.comicinfo_rule ?? "-"} />
         <PresetFact label="meta.json 保留规则" value={activePreset?.meta_rule ?? "-"} />
         <PresetFact label="压缩方式" value={activePreset?.compression ?? "-"} />
-        <div className={`export-dir-editor ${editingDir ? "editing" : ""}`}>
-          <span>输出目录</span>
-          {editingDir ? (
-            <label>
-              <input
-                value={outputDirDraft}
-                onChange={(event) => onOutputDirChange(event.target.value)}
-                aria-label="输出目录"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  onSaveOutputDir();
-                  setEditingDir(false);
-                }}
-                disabled={savingOutputDir || !outputDirDraft.trim() || outputDirDraft === outputDir}
-              >
-                {savingOutputDir ? "保存中" : "保存"}
-              </button>
-            </label>
-          ) : (
-            <label>
-              <strong title={outputDir}>{compactPath(outputDir ?? "-")}</strong>
-              <button type="button" onClick={() => setEditingDir(true)}>
-                更改
-              </button>
-            </label>
-          )}
-        </div>
       </div>
 
       <div className="export-preset-bottom">
-        <label className="export-openafter">
-          <input
-            type="checkbox"
-            checked={openDirAfter}
-            onChange={(event) => onToggleOpenDir(event.target.checked)}
-          />
-          导出完成后打开输出目录
-        </label>
+        <p className="export-preset-hint">多选时会打包为一个 .zip 下载到你的设备，原始 CBZ 不受影响。</p>
         <div className="export-preset-buttons">
           <button type="button" className="export-secondary-action" onClick={onSavePreset} disabled={!activePreset}>
             保存为新预设
@@ -115,11 +63,11 @@ export function ExportPresetBar({
           <button
             type="button"
             className="export-generate"
-            disabled={generating || exportableCount === 0 || selectedCount === 0}
-            onClick={onGenerate}
+            disabled={downloading || exportableCount === 0 || selectedCount === 0}
+            onClick={onDownload}
           >
             <Download size={17} />
-            {generating ? "正在导出..." : "开始导出"}
+            {downloading ? "正在下载..." : downloadLabel}
           </button>
         </div>
       </div>

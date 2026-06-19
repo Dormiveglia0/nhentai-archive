@@ -11,9 +11,10 @@ type ExportPreviewPanelProps = {
   selectedSize: number;
   preview: ExportPreview | null;
   loading: boolean;
-  generating: boolean;
+  downloading: boolean;
   blurCovers: boolean;
-  onGenerate: () => void;
+  onDownload: () => void;
+  onDownloadOne: (id: number) => void;
   onRefresh: () => void;
 };
 
@@ -22,12 +23,14 @@ export function ExportPreviewPanel({
   selectedSize,
   preview,
   loading,
-  generating,
+  downloading,
   blurCovers,
-  onGenerate,
+  onDownload,
+  onDownloadOne,
   onRefresh,
 }: ExportPreviewPanelProps) {
   const keepsMeta = preview?.will_keep.includes("meta.json") ?? false;
+  const previewBlocked = (preview?.blockers.length ?? 0) > 0;
   const signature = selectedItems.map((item) => item.work.id).join("-");
   return (
     <aside className="export-panel export-preview-panel">
@@ -63,11 +66,11 @@ export function ExportPreviewPanel({
       <div className="export-will-write">
         <h3>将生成的新文件</h3>
         <div className="export-rule-grid">
-          <RuleCard title="将生成新 CBZ" caption="不会覆盖原文件" ok />
+          <RuleCard title="将生成新 CBZ" caption="下载到你的设备" ok />
           <RuleCard title="将写入 ComicInfo.xml" caption="补充与修正元数据" ok />
           <RuleCard
             title={keepsMeta ? "默认保留 meta.json" : "未检测到 meta.json"}
-            caption={keepsMeta ? "不覆盖原 meta.json" : "源文件中无 meta.json"}
+            caption={keepsMeta ? "保留原 meta.json" : "源文件中无 meta.json"}
             ok={keepsMeta}
           />
           <RuleCard title="不会修改原始 CBZ" caption="原文件保持不变" ok />
@@ -78,16 +81,28 @@ export function ExportPreviewPanel({
 
       {!loading && preview ? (
         <FadeIn key={`detail-${preview.work.id}`} y={8} className="export-preview-content">
+          <div className="export-focus-head">
+            <div>
+              <strong>{workTitle(preview.work)}</strong>
+              <small>{preview.output_name}</small>
+            </div>
+            <button
+              type="button"
+              className="export-secondary-action"
+              disabled={downloading || previewBlocked}
+              onClick={() => onDownloadOne(preview.work.id)}
+            >
+              <Download size={15} />
+              下载此项
+            </button>
+          </div>
+
           <details className="export-path-details">
             <summary>路径明细</summary>
             <dl className="export-preview-facts">
               <div>
                 <dt>输出文件</dt>
                 <dd>{preview.output_name}</dd>
-              </div>
-              <div>
-                <dt>输出路径</dt>
-                <dd>{preview.output_path}</dd>
               </div>
               <div>
                 <dt>源文件</dt>
@@ -129,11 +144,11 @@ export function ExportPreviewPanel({
       <button
         type="button"
         className="export-generate"
-        disabled={generating || selectedItems.length === 0}
-        onClick={onGenerate}
+        disabled={downloading || selectedItems.length === 0}
+        onClick={onDownload}
       >
         <Download size={17} />
-        {generating ? "正在导出..." : "开始导出"}
+        {downloading ? "正在下载..." : "下载选中"}
       </button>
     </aside>
   );

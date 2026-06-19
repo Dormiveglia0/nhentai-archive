@@ -6,7 +6,6 @@ import type {
   ExportPreview,
   ExportQueue,
   ExportQueueItem,
-  ExportRecord,
   ExportSummaryStats,
   SettingsSummary,
 } from "../../lib/api";
@@ -17,17 +16,13 @@ export type ExportViewModel = {
   notice: string | null;
   queue: ExportQueue | null;
   summary: ExportSummaryStats | null;
-  history: ExportRecord[];
   settings: SettingsSummary | null;
   selectedIds: Set<number>;
   focusId: number | null;
   outputNames: Record<number, string>;
   preview: ExportPreview | null;
   previewLoading: boolean;
-  generating: boolean;
-  savingOutputDir: boolean;
-  outputDirDraft: string;
-  openDirAfter: boolean;
+  downloading: boolean;
   items: ExportQueueItem[];
   selectedItems: ExportQueueItem[];
   exportableItems: ExportQueueItem[];
@@ -39,19 +34,16 @@ export type ExportViewModel = {
   removeSelected: () => void;
   clearSelected: () => void;
   renameOutput: (id: number, value: string) => void;
-  setOutputDirDraft: (value: string) => void;
-  setOpenDirAfter: (value: boolean) => void;
-  saveOutputDir: () => Promise<void>;
   changePreset: (presetId: string) => Promise<void>;
   saveNewPreset: () => Promise<void>;
-  generateSelected: () => Promise<void>;
+  downloadSelected: () => Promise<void>;
+  downloadOne: (id: number) => Promise<void>;
   refreshPreview: () => Promise<void>;
 };
 
 export function useExportState(initialWorkId?: number): ExportViewModel {
   const [queue, setQueue] = useState<ExportQueue | null>(null);
   const [summary, setSummary] = useState<ExportSummaryStats | null>(null);
-  const [history, setHistory] = useState<ExportRecord[]>([]);
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
     new Set(initialWorkId ? [initialWorkId] : [])
@@ -61,10 +53,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   const [preview, setPreview] = useState<ExportPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [savingOutputDir, setSavingOutputDir] = useState(false);
-  const [outputDirDraft, setOutputDirDraft] = useState("");
-  const [openDirAfter, setOpenDirAfter] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -93,17 +82,14 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     setLoading(true);
     setError(null);
     try {
-      const [queuePayload, summaryPayload, historyPayload, settingsPayload] = await Promise.all([
+      const [queuePayload, summaryPayload, settingsPayload] = await Promise.all([
         api.exportQueue(),
         api.exportSummary(),
-        api.exportHistory(),
         api.settings(),
       ]);
       setQueue(queuePayload);
       setSummary(summaryPayload);
-      setHistory(historyPayload.result);
       setSettings(settingsPayload);
-      setOutputDirDraft(summaryPayload.output_dir);
       setOutputNames((current) => {
         const next: Record<number, string> = {};
         for (const item of queuePayload.result) {
@@ -198,45 +184,53 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     setOutputNames((current) => ({ ...current, [id]: value }));
   }, []);
 
-  const generateSelected = useCallback(async () => {
-    const targets = items
-      .filter((item) => selectedIds.has(item.work.id) && item.blockers.length === 0);
-    if (targets.length === 0) return;
-    setGenerating(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const result = await api.exportBatch(
-        targets.map((item) => ({
-          work_id: item.work.id,
-          output_name: outputNames[item.work.id] || item.output_name,
-        }))
-      );
-      const failed = result.summary.failed ? `，${result.summary.failed} 项失败` : "";
-      setNotice(`已导出 ${result.summary.generated} 项${failed}`);
-      await load(focusId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setGenerating(false);
-    }
-  }, [focusId, items, load, outputNames, selectedIds]);
+  const downloadOne = useCallback(
+    async (id: number) => {
+      const item = items.find((entry) => entry.work.id === id);
+      if (!item || item.blockers.length > 0) return;
+      setDownloading(true);
+      setError(null);
+      setNotice(null);
+      try {
+        const filename = await api.downloadExport(id, { output_name: outputNames[id] || item.output_name });
+        setNotice(`已开始下载：${filename}`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setDownloading(false);
+      }
+    },
+    [items, outputNames]
+  );
 
-  const saveOutputDir = useCallback(async () => {
-    if (!outputDirDraft.trim()) return;
-    setSavingOutputDir(true);
+  const downloadSelected = useCallback(async () => {
+    const targets = items.filter((item) => selectedIds.has(item.work.id) && item.blockers.length === 0);
+    if (targets.length === 0) return;
+    setDownloading(true);
     setError(null);
     setNotice(null);
     try {
-      await api.updateSettings({ storage: { export_dir: outputDirDraft.trim() } });
-      setNotice("输出目录已更新");
-      await load(focusId);
+      if (targets.length === 1) {
+        const only = targets[0];
+        const filename = await api.downloadExport(only.work.id, {
+          output_name: outputNames[only.work.id] || only.output_name,
+        });
+        setNotice(`已开始下载：${filename}`);
+      } else {
+        const filename = await api.downloadExportBundle(
+          targets.map((item) => ({
+            work_id: item.work.id,
+            output_name: outputNames[item.work.id] || item.output_name,
+          }))
+        );
+        setNotice(`已开始下载 ${targets.length} 项打包文件：${filename}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setSavingOutputDir(false);
+      setDownloading(false);
     }
-  }, [focusId, load, outputDirDraft]);
+  }, [items, outputNames, selectedIds]);
 
   const changePreset = useCallback(
     async (presetId: string) => {
@@ -292,17 +286,13 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     notice,
     queue,
     summary,
-    history,
     settings,
     selectedIds,
     focusId,
     outputNames,
     preview,
     previewLoading,
-    generating,
-    savingOutputDir,
-    outputDirDraft,
-    openDirAfter,
+    downloading,
     items,
     selectedItems,
     exportableItems,
@@ -314,12 +304,10 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     removeSelected,
     clearSelected,
     renameOutput,
-    setOutputDirDraft,
-    setOpenDirAfter,
-    saveOutputDir,
     changePreset,
     saveNewPreset,
-    generateSelected,
+    downloadSelected,
+    downloadOne,
     refreshPreview,
   };
 }

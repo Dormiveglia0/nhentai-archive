@@ -4830,10 +4830,6 @@ body {
   color: var(--warn);
 }
 
-.export-metric:last-child .export-metric-body strong {
-  font-size: 18px;
-}
-
 .export-metric-body small {
   margin-top: 3px;
   color: var(--muted);
@@ -5449,19 +5445,18 @@ body {
 
 .export-preset-grid {
   display: grid;
-  grid-template-columns: 0.9fr 1.05fr 1.05fr 0.85fr 1.45fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.export-preset-fact,
-.export-dir-editor {
+.export-preset-fact {
   min-width: 0;
   padding: 10px 14px;
   border-right: 1px solid var(--line);
 }
 
-.export-dir-editor {
+.export-preset-fact:last-child {
   border-right: 0;
 }
 
@@ -5483,54 +5478,6 @@ body {
   font-size: 13px;
 }
 
-.export-dir-editor > span {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.export-dir-editor label {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 58px;
-  gap: 8px;
-  align-items: center;
-  margin-top: 4px;
-}
-
-.export-dir-editor strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  align-self: center;
-  font-size: 13px;
-}
-
-.export-dir-editor input {
-  width: 100%;
-  min-width: 0;
-  height: 32px;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  color: var(--ink);
-  font-size: 13px;
-  outline: 0;
-}
-
-.export-dir-editor input:focus {
-  border-bottom-color: var(--accent);
-}
-
-.export-dir-editor button {
-  height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface-solid);
-  color: var(--ink);
-  font-size: 12px;
-}
-
 .export-preset-bottom {
   display: flex;
   align-items: center;
@@ -5539,17 +5486,10 @@ body {
   padding-top: 12px;
 }
 
-.export-openafter {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.export-preset-hint {
   min-width: 0;
   color: var(--muted);
   font-size: 13px;
-}
-
-.export-openafter input {
-  accent-color: var(--accent);
 }
 
 .export-preset-buttons {
@@ -5557,47 +5497,28 @@ body {
   gap: 10px;
 }
 
-/* ── 最近导出记录 ───────────────────────────────────────── */
-.export-history-panel {
-  margin-bottom: 16px;
-}
-
-.export-history-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.export-history-card {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 11px;
+.export-focus-head {
+  display: flex;
   align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-solid);
-  padding: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
-.export-history-card .export-cover {
-  width: 58px;
-}
-
-.export-history-card > div {
+.export-focus-head > div {
   min-width: 0;
 }
 
-.export-history-card strong,
-.export-history-card small {
+.export-focus-head strong,
+.export-focus-head small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.export-history-card small {
-  margin: 4px 0 7px;
+.export-focus-head small {
+  margin-top: 3px;
   color: var(--muted);
   font-size: 12px;
 }
@@ -5619,10 +5540,6 @@ body {
 
   .export-rule-grid {
     grid-template-columns: 1fr;
-  }
-
-  .export-history-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

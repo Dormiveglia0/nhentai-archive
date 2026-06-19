@@ -1,33 +1,23 @@
-import { AlertTriangle, CheckSquare, FileArchive, FolderOpen, Layers } from "lucide-react";
+import { AlertTriangle, CheckSquare, FileArchive, Layers, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { ExportQueue, ExportSummaryStats } from "../../lib/api";
+import type { ExportQueue } from "../../lib/api";
 import exportHeroSketch from "../../assets/export-hero-sketch.png";
-import { compactPath } from "./exportHelpers";
 
 type ExportSummaryProps = {
   queue: ExportQueue;
-  summary: ExportSummaryStats | null;
   selectedCount: number;
   exportableCount: number;
-  presetCount: number;
-  activePresetName: string;
 };
 
-export function ExportSummary({
-  queue,
-  summary,
-  selectedCount,
-  exportableCount,
-  presetCount,
-  activePresetName,
-}: ExportSummaryProps) {
+export function ExportSummary({ queue, selectedCount, exportableCount }: ExportSummaryProps) {
+  const { total, ready, warnings, blocked } = queue.summary;
   return (
     <>
       <header className="export-hero">
         <div className="export-hero-head">
           <h1>导出中心</h1>
-          <p>批量导出你的作品为 CBZ 格式，或按预设规则打包与整理。</p>
+          <p>挑选作品，写入整理后的 ComicInfo，打包为 CBZ 下载到你的设备。</p>
         </div>
         <div className="export-hero-note" aria-hidden="true">
           <img className="export-hero-sketch" src={exportHeroSketch} alt="" />
@@ -37,17 +27,11 @@ export function ExportSummary({
       </header>
 
       <section className="export-summary">
-        <Metric icon={<FileArchive size={20} />} label="导出记录" value={summary?.generated ?? 0} caption="查看历史记录" />
-        <Metric icon={<Layers size={20} />} label="导出预设" value={presetCount} caption={activePresetName} />
-        <Metric icon={<CheckSquare size={20} />} label="批量导出" value={selectedCount} caption={`${exportableCount} 项可处理`} tone="green" />
-        <Metric icon={<AlertTriangle size={20} />} label="失败重试" value={queue.summary.blocked} caption="需修复阻塞项" tone="warn" />
-        <Metric
-          icon={<FolderOpen size={20} />}
-          label="输出目录"
-          text={summary?.output_dir ? compactPath(summary.output_dir) : "-"}
-          title={summary?.output_dir}
-          caption={`可用 ${summary?.available ?? 0} 个文件`}
-        />
+        <Metric icon={<FileArchive size={20} />} label="待导出作品" value={total} caption="队列中的全部作品" />
+        <Metric icon={<CheckSquare size={20} />} label="就绪可下载" value={ready} caption="可直接打包下载" tone="green" />
+        <Metric icon={<Layers size={20} />} label="已选择" value={selectedCount} caption={`${exportableCount} 项可下载`} />
+        <Metric icon={<AlertTriangle size={20} />} label="含警告" value={warnings} caption="导出仍可进行" />
+        <Metric icon={<XCircle size={20} />} label="阻塞" value={blocked} caption="需修复源文件" tone="warn" />
       </section>
     </>
   );
@@ -57,16 +41,12 @@ function Metric({
   icon,
   label,
   value,
-  text,
-  title,
   caption,
   tone = "",
 }: {
   icon: ReactNode;
   label: string;
-  value?: number;
-  text?: string;
-  title?: string;
+  value: number;
   caption: string;
   tone?: string;
 }) {
@@ -74,7 +54,7 @@ function Metric({
     <div className={`export-metric ${tone}`}>
       <span className="export-metric-icon">{icon}</span>
       <div className="export-metric-body">
-        <strong title={title ?? text}>{text ?? value}</strong>
+        <strong>{value}</strong>
         <small>{label}</small>
         <em>{caption}</em>
       </div>

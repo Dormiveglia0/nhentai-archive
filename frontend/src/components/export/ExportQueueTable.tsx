@@ -64,7 +64,7 @@ export function ExportQueueTable({
           <h2>
             待导出列表 <small>已选择 {selectedCount} 项</small>
           </h2>
-          <p>输出名称可在导出前重命名，所有文件都会生成到当前输出目录。</p>
+          <p>输出名称可在导出前重命名，导出会打包并下载到你的设备。</p>
         </div>
         <div className="export-panel-actions">
           <button type="button" onClick={onSelectReady}>
@@ -73,7 +73,7 @@ export function ExportQueueTable({
           </button>
           <button type="button" onClick={onRemoveSelected} disabled={selectedCount === 0}>
             <Trash2 size={15} />
-            移除选中
+            移除当前
           </button>
           <button type="button" onClick={onClear} disabled={selectedCount === 0}>
             <XCircle size={15} />

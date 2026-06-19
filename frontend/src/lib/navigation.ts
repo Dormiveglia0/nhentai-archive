@@ -8,9 +8,9 @@ export type Page =
   | { name: "readerRemote"; galleryId: number }
   | { name: "gallery"; galleryId: number; returnTo?: string }
   | { name: "governance"; workId?: number }
+  | { name: "export"; workId?: number }
   | { name: "dictionary" }
   | { name: "tasks" }
-  | { name: "export" }
   | { name: "files" }
   | { name: "settings" };
 
@@ -26,6 +26,8 @@ export function pageFromLocation(): Page {
   if (galleryMatch) return { name: "gallery", galleryId: Number(galleryMatch[1]), returnTo: query.get("return_to") || undefined };
   const governanceMatch = hash.match(/^governance\/(\d+)$/);
   if (governanceMatch) return { name: "governance", workId: Number(governanceMatch[1]) };
+  const exportMatch = hash.match(/^export\/(\d+)$/);
+  if (exportMatch) return { name: "export", workId: Number(exportMatch[1]) };
   if (route === "workbench") return { name: "workbench" };
   if (route === "library") return { name: "library" };
   if (route === "governance") return { name: "governance" };
@@ -63,6 +65,8 @@ export function navigate(page: Page) {
           ? `gallery/${page.galleryId}${page.returnTo ? `?return_to=${encodeURIComponent(page.returnTo)}` : ""}`
           : page.name === "governance" && page.workId
             ? `governance/${page.workId}`
+            : page.name === "export" && page.workId
+              ? `export/${page.workId}`
             : page.name === "discover" && page.tag
               ? `discover?${tagQuery(page.tag)}`
             : page.name;

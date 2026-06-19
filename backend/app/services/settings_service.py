@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from app.config import Settings
 from app.database import Database
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
+
+
+DEFAULT_EXPORT_PRESET = {
+    "id": "default-v2",
+    "name": "默认预设 v2",
+    "naming_rule": "{title} ({circle})",
+    "comicinfo_rule": "完整写入（覆盖缺失项）",
+    "meta_rule": "保留原文件（不覆盖）",
+    "compression": "ZIP - 最佳压缩",
+}
 
 
 class SettingsService:
@@ -20,6 +31,7 @@ class SettingsService:
         privacy_default = self._get("ui.privacy_mode_default", "true") == "true"
         blur_default = self._get("ui.blur_covers_default", "true") == "true"
         reader_mode = self._get("reader.default_mode", "single")
+        export_dir = self._storage_path("storage.export_dir", self.settings.export_dir)
         return {
             "nhentai": {
                 "base_url": self.settings.nhentai_base_url,
@@ -32,7 +44,7 @@ class SettingsService:
                 "library_dir": str(self.settings.library_dir),
                 "covers_dir": str(self.settings.covers_dir),
                 "page_cache_dir": str(self.settings.page_cache_dir),
-                "export_dir": str(self.settings.export_dir),
+                "export_dir": str(export_dir),
             },
             "privacy": {
                 "privacy_mode_default": privacy_default,
@@ -41,6 +53,7 @@ class SettingsService:
             "reader": {
                 "default_mode": reader_mode,
             },
+            "export": self._export_settings(),
         }
 
     def patch(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -59,6 +72,24 @@ class SettingsService:
         reader = payload.get("reader") or {}
         if reader.get("default_mode") in {"single", "scroll"}:
             self._set("reader.default_mode", reader["default_mode"])
+
+        storage = payload.get("storage") or {}
+        export_dir = storage.get("export_dir")
+        if isinstance(export_dir, str) and export_dir.strip():
+            path = Path(export_dir.strip()).expanduser()
+            path.mkdir(parents=True, exist_ok=True)
+            self._set("storage.export_dir", str(path))
+
+        export = payload.get("export") or {}
+        if export:
+            presets = export.get("presets")
+            active_preset_id = export.get("active_preset_id")
+            if isinstance(presets, list):
+                cleaned = [preset for preset in presets if isinstance(preset, dict) and preset.get("id") and preset.get("name")]
+                if cleaned:
+                    self._set("export.presets", json.dumps(cleaned, ensure_ascii=False))
+            if isinstance(active_preset_id, str) and active_preset_id.strip():
+                self._set("export.active_preset_id", active_preset_id.strip())
 
         self.apply_runtime_settings()
         return self.get()
@@ -132,6 +163,38 @@ class SettingsService:
             return parsed if isinstance(parsed, dict) else None
         except json.JSONDecodeError:
             return None
+
+    def _get_json_list(self, key: str) -> list[dict[str, Any]] | None:
+        value = self._get(key)
+        if not value:
+            return None
+        try:
+            parsed = json.loads(value)
+            return [item for item in parsed if isinstance(item, dict)] if isinstance(parsed, list) else None
+        except json.JSONDecodeError:
+            return None
+
+    def _storage_path(self, key: str, fallback: Any) -> Any:
+        value = self._get(key)
+        return Path(value).expanduser() if value else fallback
+
+    def _export_settings(self) -> dict[str, Any]:
+        presets = self._get_json_list("export.presets") or [dict(DEFAULT_EXPORT_PRESET)]
+        presets = [
+            {
+                **DEFAULT_EXPORT_PRESET,
+                **preset,
+                "id": str(preset["id"]),
+                "name": str(preset["name"]),
+            }
+            for preset in presets
+            if preset.get("id") and preset.get("name")
+        ] or [dict(DEFAULT_EXPORT_PRESET)]
+        preset_ids = {str(preset.get("id")) for preset in presets}
+        active = self._get("export.active_preset_id", DEFAULT_EXPORT_PRESET["id"])
+        if active not in preset_ids:
+            active = str(presets[0]["id"])
+        return {"active_preset_id": active, "presets": presets}
 
     def _set(self, key: str, value: str) -> None:
         self.db.execute(

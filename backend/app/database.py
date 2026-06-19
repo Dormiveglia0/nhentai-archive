@@ -297,6 +297,19 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     return {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
 
 
+def _add_column_if_missing(
+    conn: sqlite3.Connection,
+    table: str,
+    columns: set[str],
+    column: str,
+    definition: str,
+) -> None:
+    if column in columns:
+        return
+    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    columns.add(column)
+
+
 def _rename_legacy_table(conn: sqlite3.Connection, table: str) -> str:
     index = 1
     legacy = f"{table}_legacy"

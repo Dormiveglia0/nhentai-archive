@@ -4,7 +4,7 @@
 
 Implemented loop:
 
-`discover remote gallery -> dictionary display/mapping -> detail modal -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress -> governance metadata/tag review -> export preview/rename/batch generate new CBZ`
+`discover remote gallery -> dictionary display/mapping -> detail modal -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress -> governance metadata/tag review -> export preview/rename/download CBZ (single or .zip bundle) to the user`
 
 This stage also implements real NH API Key settings and rewrites the discover page into a unified feed against `design/搜索导入.png`. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
 
@@ -24,8 +24,8 @@ Root: `backend/app/`
   - `Settings`: resolves local data paths, `NHENTAI_API_KEY`, base URL, user agent, timeout.
   - Environment API key has priority over DB-stored API key.
 - `database.py`
-  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `reader_progress`, `reading_history`, `jobs`, `settings`, `export_records`.
-  - Legacy migrations include dictionary/work tag shape upgrades and incremental `export_records` column backfill for existing local databases created before export hash/size fields were added.
+  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `reader_progress`, `reading_history`, `jobs`, `settings`. (Export is a stream-to-browser download and keeps no records; the legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
+  - Legacy migrations include dictionary/work tag shape upgrades.
 - `services/nhentai_client.py`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
   - `media_url()` resolves CDN paths through `/api/v2/cdn`; frontend must not guess image URLs.
@@ -82,12 +82,11 @@ Root: `backend/app/`
   - Reads source metadata from real stored CBZ members (`ComicInfo.xml` and the first JSON metadata file when present) plus cached `remote_galleries.payload_json`.
   - `apply(work_id, payload)`: persists final metadata decisions into `work_metadata`; optional dictionary apply delegates to `DictionaryService.apply()`. It does not mutate source CBZ files.
 - `services/export_service.py`
-  - Local-only export preview/generation; never calls the NH API and never mutates source CBZ files.
-  - `queue()` / `summary()`: real export readiness from `works`, `work_files`, source file existence, and preview blockers/warnings; summary also returns the configured export directory and separates completed export-record count from output files that still exist on disk.
-  - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, target output path/name, ComicInfo fields, members to keep, blockers, warnings, and latest export record. `options.output_name` is sanitized, forced to `.cbz`, and resolved under the configured export directory.
-  - `generate(work_id, options)`: creates a new CBZ under the configured export directory, optionally with a custom output name, copies original source members except old `ComicInfo.xml`, writes generated `ComicInfo.xml`, records real output size/hash/source hash in `export_records`, and returns the record plus refreshed preview. Output is written to a temporary file and atomically moved into place only after the ZIP is complete, so failed generation does not leave a partial export record or target CBZ.
-  - `generate_many(items)`: synchronous selected-work batch export; each item may carry `work_id` and custom `output_name`, and the result reports generated records plus per-work errors.
-  - `history(limit)`: real generated export records joined to work titles/covers; no synthetic export rows.
+  - Local-only export preview/packaging for **browser download**; never calls the NH API, never mutates source CBZ files, and never writes a second copy to the server. No export records are kept.
+  - `queue()` / `summary()`: real export readiness from `works`, `work_files`, source file existence, and preview blockers/warnings. `summary()` returns only the queue counts (`total`/`ready`/`blocked`/`warnings`).
+  - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, output name, ComicInfo fields, members to keep, blockers, and warnings. `options.output_name` is sanitized and forced to `.cbz`. No server output path is involved.
+  - `build_cbz(work_id, options)`: packages a single work into CBZ **bytes** in memory (copies original members except old `ComicInfo.xml`, writes generated `ComicInfo.xml`) and returns `(filename, bytes)`; raises `ValueError` when the work has blockers. The original archive is never touched.
+  - `build_bundle(items)`: packages multiple works into one `.zip` of CBZs (bytes) for a single download, deduping member names; blocked items are skipped, and it raises when none can be exported.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry`.
 - `main.py`
@@ -132,11 +131,10 @@ Implemented:
 - `POST /api/works/{work_id}/governance/apply`
 - `GET /api/exports/queue`
 - `GET /api/exports/summary`
-- `GET /api/exports`
-- `POST /api/exports`
 - `GET /api/works/{work_id}/export-preview`
 - `POST /api/works/{work_id}/export-preview`
-- `POST /api/works/{work_id}/export`
+- `GET /api/works/{work_id}/export/download` (streams a single CBZ as a download)
+- `POST /api/exports/download` (streams a `.zip` bundle of selected CBZs as a download)
 - `GET /api/works`
 - `GET /api/works/{work_id}`
 - `GET /api/works/{work_id}/cover`
@@ -180,7 +178,7 @@ Root: `frontend/src/`
   - Dictionary API types and helpers live here: candidates, autocomplete, preview/apply, preview/import bulk rows.
   - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
   - Governance API types/helpers: queue, aggregate, metadata field diff, tag groups, and apply payload/result. Governance calls are local-only and not run through the discover session cache.
-  - Export API types/helpers: queue, preview, generate, history, and persisted preset settings. Export calls are local-only and not run through the discover session cache.
+  - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), and persisted preset settings. Export calls are local-only and not run through the discover session cache.
 - `vite.config.ts`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
@@ -263,18 +261,15 @@ Root: `frontend/src/`
   - Renders queue reason counts, work header, metadata diff editor with adopt-source/revert/save, tag governance groups, dictionary coverage summary, and right-side recommended actions.
   - Empty library/empty queue is an honest empty state; no sample works, fake conflicts, or fake recommendations.
   - Bottom action bar includes a real `#export/{work_id}` route for exporting the selected work after governance decisions are saved.
-- `components/export/` — Phase 5 export center, refactored from a single 812-line file into multiple focused modules:
-  - `ExportPage.tsx` — thin compositional container; loads queue/summary/history, manages page-level routing and refresh.
-  - `useExportState.ts` — all state and data-fetching logic; single selection `Set` + separate `focusId` for preview detail (collapsed from the old dual-selection model).
-  - `ExportSummary.tsx` — five-metric strip (ready/blocked/warning counts, output directory).
-  - `ExportQueueTable.tsx` — selectable pending-export table with inline output-name rename, source-file state badges, blockers/warnings, and header action buttons (select-ready/remove-selected/clear).
-  - `ExportPresetBar.tsx` — persisted preset selector, preset/rule display panel, and save-new preset action.
-  - `ExportPreviewPanel.tsx` — selected-work preview: output path, ComicInfo fields, keep/write/not-modify rules, blockers/warnings, batch generate action.
-  - `ExportHistory.tsx` — real generated export records joined to work titles/covers.
-  - `exportHelpers.tsx` — shared render utilities: `Cover` (cover image with fallback), `compactPath` (truncate long paths), `presetSummaryLines` (preset description lines).
-  - Visual layout rewritten to match `design/导出中心.png`; `.export-*` CSS block in `styles/app.css` was fully replaced. Live visual verification against the reference is still pending (requires real imported CBZ data in the running app).
-  - `POST /api/exports` creates new CBZ files for the selected rows and refreshes queue/history/preview. Rows with preview blockers are skipped by the batch request.
-  - Output directory editing is wired through `PATCH /api/settings`; preset persistence and task-center retry are not represented as working controls yet.
+- `components/export/` — export center (browser-download model), split into focused modules:
+  - `ExportPage.tsx` — thin compositional container; loads queue/summary, manages page-level routing and refresh.
+  - `useExportState.ts` — all state and data-fetching logic; single selection `Set` + separate `focusId` for preview detail. `downloadSelected()` downloads one CBZ (single selection) or a `.zip` bundle (multi), and `downloadOne(id)` downloads the focused work.
+  - `ExportSummary.tsx` — five-metric strip (total / ready / selected / warnings / blocked counts).
+  - `ExportQueueTable.tsx` — selectable pending-export table with inline output-name rename, source-file state badges, blockers/warnings, and header action buttons (select-ready / remove-current / clear).
+  - `ExportPresetBar.tsx` — persisted preset selector, preset/rule display panel, save-new preset action, and the primary download button.
+  - `ExportPreviewPanel.tsx` — selected-work preview: output name, ComicInfo fields, keep/write/not-modify rules, blockers/warnings, a per-item "下载此项" button, and the bottom download action.
+  - `exportHelpers.tsx` — shared render utilities: `Cover` (cover image with fallback), `compactPath`, `presetSummaryLines`.
+  - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 
@@ -287,7 +282,7 @@ Default: `backend/.local-data/`
 - `covers/{work_id}.{ext}`: extracted cover.
 - `pages/`: reserved page cache.
 - `tmp/`: download workspace.
-- `exports/`: reserved export directory.
+- `exports/`: legacy export directory (still created by config/settings, but no longer written to — export now streams downloads to the browser).
 
 ## Verification
 
