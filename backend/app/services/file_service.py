@@ -74,23 +74,22 @@ class FileMaintenanceService:
                 referenced_covers.add(str(cover_abs))
             cover_exists = bool(cover_abs and cover_abs.is_file())
             cover_size = cover_abs.stat().st_size if cover_exists else 0
-            has_cover_path = cover_abs is not None
 
             flags: list[str] = []
             if not src_exists:
                 flags.append("missing_source")
-            if has_cover_path and not cover_exists:
+            if not cover_exists:
                 flags.append("missing_cover")
             if src_exists and db_size and db_size != src_size:
                 flags.append("size_mismatch")
-            status = "missing_source" if not src_exists else ("missing_cover" if (has_cover_path and not cover_exists) else "ok")
+            status = "missing_source" if not src_exists else ("missing_cover" if not cover_exists else "ok")
 
             entries.append(
                 {
                     "kind": "work",
                     "id": f"work-{work_id}",
                     "work_id": work_id,
-                    "title": w.get("title") or w.get("title_japanese") or f"work-{work_id}",
+                    "title": w.get("pretty_title") or w.get("title") or w.get("title_japanese") or f"work-{work_id}",
                     "source_path": str(src_abs) if src_abs else None,
                     "cover_path": str(cover_abs) if cover_abs else None,
                     "size_bytes": src_size + cover_size,
