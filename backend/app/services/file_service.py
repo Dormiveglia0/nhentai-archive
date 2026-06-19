@@ -176,3 +176,79 @@ class FileMaintenanceService:
         page = max(1, int(page or 1))
         start = (page - 1) * per_page
         return {"result": entries[start : start + per_page], "total": total, "page": page, "per_page": per_page}
+
+    # --- preview_delete cascade analysis (read-only) ----------------------
+    def _work_files(self, work_id: int) -> list[Path]:
+        paths: list[Path] = []
+        for row in self.db.fetchall("SELECT path FROM work_files WHERE work_id=?", (work_id,)):
+            ap = self._abs(row["path"])
+            if ap is not None:
+                paths.append(ap)
+        cover = self.db.fetchone("SELECT cover_path FROM works WHERE id=?", (work_id,))
+        cover_abs = self._abs(cover["cover_path"]) if cover else None
+        if cover_abs is not None:
+            paths.append(cover_abs)
+        # de-dupe preserving order
+        seen: set[str] = set()
+        unique: list[Path] = []
+        for p in paths:
+            if str(p) not in seen:
+                seen.add(str(p))
+                unique.append(p)
+        return unique
+
+    def _preview_work(self, work_id: int) -> dict[str, Any]:
+        row = self.db.fetchone("SELECT * FROM works WHERE id=?", (work_id,))
+        if not row:
+            return {"kind": "work", "work_id": work_id, "exists": False, "files": [],
+                    "work_tags": 0, "has_progress": False, "has_governance": False,
+                    "reclaim_bytes": 0, "warnings": ["already_gone"], "status": "already_gone"}
+        files = self._work_files(work_id)
+        existing = [p for p in files if p.is_file()]
+        reclaim = sum(p.stat().st_size for p in existing)
+        work_tags = self.db.fetchone("SELECT COUNT(*) AS n FROM work_tags WHERE work_id=?", (work_id,))["n"]
+        has_progress = self.db.fetchone("SELECT 1 FROM reader_progress WHERE work_id=?", (work_id,)) is not None
+        has_governance = self.db.fetchone("SELECT 1 FROM work_metadata WHERE work_id=?", (work_id,)) is not None
+        warnings: list[str] = []
+        if has_progress:
+            warnings.append("has_progress")
+        if has_governance:
+            warnings.append("has_governance")
+        return {
+            "kind": "work",
+            "work_id": work_id,
+            "title": row.get("pretty_title") or row.get("title_japanese") or row.get("title") or f"work-{work_id}",
+            "exists": True,
+            "files": [str(p) for p in existing],
+            "work_tags": int(work_tags),
+            "has_progress": has_progress,
+            "has_governance": has_governance,
+            "reclaim_bytes": reclaim,
+            "warnings": warnings,
+            "status": "ready",
+        }
+
+    def _preview_loose(self, kind: str, path_str: str) -> dict[str, Any]:
+        ap = self._abs(path_str)
+        if not self._within_managed(ap):
+            return {"kind": kind, "path": path_str, "exists": False, "reclaim_bytes": 0,
+                    "warnings": ["forbidden_path"], "status": "forbidden"}
+        exists = bool(ap and ap.is_file())
+        if not exists:
+            return {"kind": kind, "path": str(ap), "exists": False, "reclaim_bytes": 0,
+                    "warnings": ["already_gone"], "status": "already_gone"}
+        return {"kind": kind, "path": str(ap), "exists": True, "reclaim_bytes": ap.stat().st_size,
+                "warnings": [], "status": "ready"}
+
+    def preview_delete(self, targets: list[dict[str, Any]]) -> dict[str, Any]:
+        items: list[dict[str, Any]] = []
+        for target in targets or []:
+            kind = target.get("kind")
+            if kind == "work":
+                items.append(self._preview_work(int(target.get("work_id") or 0)))
+            elif kind in ("orphan", "stale"):
+                items.append(self._preview_loose(kind, target.get("path") or ""))
+        files_to_delete = sum(len(i.get("files", [])) if i["kind"] == "work" else (1 if i.get("exists") else 0) for i in items)
+        works_to_remove = sum(1 for i in items if i["kind"] == "work" and i.get("exists"))
+        reclaim_bytes = sum(i["reclaim_bytes"] for i in items)
+        return {"items": items, "files_to_delete": files_to_delete, "works_to_remove": works_to_remove, "reclaim_bytes": reclaim_bytes}

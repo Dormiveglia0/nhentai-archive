@@ -134,3 +134,66 @@ def test_inventory_filters_by_query_and_status(tmp_path):
     assert len(hit["result"]) == 1
     assert hit["result"][0]["title"] == "Sunset Road"
     assert files.inventory(status="ok")["total"] == 2
+
+
+def test_preview_delete_work_expands_cascade_without_touching_disk(tmp_path):
+    _settings, db, archive, files = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    db.execute(
+        "INSERT INTO remote_tags (remote_id, type, name, slug, payload_json) VALUES (5, 'tag', 't', 't', '{}') "
+        "ON CONFLICT(remote_id) DO NOTHING"
+    )
+    db.execute(
+        "INSERT INTO work_tags (work_id, remote_tag_id, tag_type, remote_name) VALUES (?, 5, 'tag', 't')",
+        (work_id,),
+    )
+    db.execute(
+        "INSERT INTO work_metadata (work_id, field, value, source) VALUES (?, 'title', 'X', 'manual')",
+        (work_id,),
+    )
+    db.execute(
+        "INSERT INTO reader_progress (work_id, page_index, page_count, progress_percent) VALUES (?, 1, 2, 50)",
+        (work_id,),
+    )
+    source = db.fetchone("SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (work_id,))
+
+    preview = files.preview_delete([{"kind": "work", "work_id": work_id}])
+
+    item = preview["items"][0]
+    assert item["work_tags"] == 1
+    assert item["has_progress"] is True
+    assert item["has_governance"] is True
+    assert "has_progress" in item["warnings"]
+    assert "has_governance" in item["warnings"]
+    assert preview["works_to_remove"] == 1
+    assert preview["files_to_delete"] >= 2  # source + cover
+    assert preview["reclaim_bytes"] > 0
+    # nothing deleted by preview
+    assert Path(source["path"]).exists()
+    assert db.fetchone("SELECT 1 FROM works WHERE id=?", (work_id,)) is not None
+
+
+def test_preview_delete_orphan_reports_reclaim_bytes(tmp_path):
+    settings, _db, _archive, files = _setup(tmp_path)
+    orphan = settings.library_dir / "loose.cbz"
+    orphan.write_bytes(b"xyz")
+
+    preview = files.preview_delete([{"kind": "orphan", "path": str(orphan)}])
+
+    assert preview["items"][0]["exists"] is True
+    assert preview["reclaim_bytes"] == 3
+    assert orphan.exists()
+
+
+def test_preview_delete_flags_already_gone_and_forbidden(tmp_path):
+    _settings, _db, _archive, files = _setup(tmp_path)
+    outside = tmp_path / "outside.cbz"
+    outside.write_bytes(b"nope")
+
+    preview = files.preview_delete(
+        [{"kind": "work", "work_id": 999}, {"kind": "stale", "path": str(outside)}]
+    )
+
+    assert "already_gone" in preview["items"][0]["warnings"]
+    assert "forbidden_path" in preview["items"][1]["warnings"]
+    assert preview["reclaim_bytes"] == 0
