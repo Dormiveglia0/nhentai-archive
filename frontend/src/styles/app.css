@@ -4843,7 +4843,7 @@ body {
 .export-metric-body em {
   max-width: 100%;
   margin-top: 3px;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 65%, var(--paper));
   font-size: 11px;
   font-style: normal;
   overflow: hidden;
@@ -5645,6 +5645,56 @@ body {
 
   .governance-header-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .export-mobile-dock {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-solid);
+    padding: 10px 14px;
+  }
+
+  .export-mobile-dock > div {
+    min-width: 0;
+  }
+
+  .export-mobile-dock strong {
+    display: block;
+    font-size: 13px;
+  }
+
+  .export-mobile-dock span {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .export-mobile-dock button {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    padding: 0 16px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .export-mobile-dock button:disabled {
+    opacity: 0.5;
   }
 }
 
