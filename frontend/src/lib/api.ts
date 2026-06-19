@@ -358,6 +358,80 @@ export type ExportQueue = {
 
 export type ExportSummaryStats = ExportQueue["summary"];
 
+export type FileEntry = {
+  kind: "work" | "orphan" | "stale";
+  id: string;
+  status: "ok" | "missing_source" | "missing_cover" | "orphan" | "stale";
+  flags: string[];
+  size_bytes: number;
+  // work entries
+  work_id?: number;
+  title?: string;
+  source_path?: string | null;
+  cover_path?: string | null;
+  page_count?: number;
+  source?: string | null;
+  remote_gallery_id?: number | null;
+  // loose entries
+  path?: string;
+  name?: string;
+  dir?: string;
+};
+
+export type FileOverview = {
+  work_count: number;
+  source_bytes: number;
+  cover_ok: number;
+  missing_source: number;
+  missing_cover: number;
+  orphan_count: number;
+  orphan_bytes: number;
+  stale_count: number;
+  stale_bytes: number;
+  reclaimable_bytes: number;
+};
+
+export type FileInventory = { result: FileEntry[]; total: number; page: number; per_page: number };
+
+export type FileDeleteTarget = { kind: "work" | "orphan" | "stale"; work_id?: number; path?: string };
+
+export type FileDeletePreviewItem = {
+  kind: string;
+  work_id?: number;
+  title?: string;
+  path?: string;
+  exists: boolean;
+  files?: string[];
+  work_tags?: number;
+  has_progress?: boolean;
+  has_governance?: boolean;
+  reclaim_bytes: number;
+  warnings: string[];
+  status: string;
+};
+
+export type FileDeletePreview = {
+  items: FileDeletePreviewItem[];
+  files_to_delete: number;
+  works_to_remove: number;
+  reclaim_bytes: number;
+};
+
+export type FileDeleteResult = {
+  deleted_files: number;
+  removed_works: number;
+  reclaimed_bytes: number;
+  errors: { target: FileDeleteTarget; code: string; message: string }[];
+};
+
+export type FileInventoryParams = {
+  category?: string;
+  q?: string;
+  status?: string;
+  page?: number;
+  per_page?: number;
+};
+
 export type ExportRequestOptions = {
   output_name?: string;
   write_comicinfo?: boolean;
@@ -670,6 +744,28 @@ export const api = {
       { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items, ...options }) },
       "导出合集.zip"
     ),
+  filesOverview: () => request<FileOverview>("/api/files/overview"),
+  filesInventory: (params: FileInventoryParams = {}) => {
+    const query = new URLSearchParams();
+    query.set("category", params.category ?? "all");
+    if (params.q) query.set("q", params.q);
+    if (params.status) query.set("status", params.status);
+    query.set("page", String(params.page ?? 1));
+    query.set("per_page", String(params.per_page ?? 50));
+    return request<FileInventory>(`/api/files/inventory?${query.toString()}`);
+  },
+  previewFileDelete: (targets: FileDeleteTarget[]) =>
+    request<FileDeletePreview>("/api/files/preview-delete", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ targets }),
+    }),
+  deleteFiles: (targets: FileDeleteTarget[]) =>
+    request<FileDeleteResult>("/api/files/delete", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ targets }),
+    }),
   works: () => request<{ result: Work[] }>("/api/works"),
   work: (id: number) => request<Work>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
