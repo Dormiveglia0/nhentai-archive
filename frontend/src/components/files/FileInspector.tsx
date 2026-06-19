@@ -9,6 +9,7 @@ type Props = {
   onPreview: () => void;
   onConfirm: () => void;
   onClear: () => void;
+  actionNotice?: string | null;
 };
 
 const WARNING_LABELS: Record<string, string> = {
@@ -18,7 +19,7 @@ const WARNING_LABELS: Record<string, string> = {
   forbidden_path: "路径不在受管目录内",
 };
 
-export function FileInspector({ focus, selectedCount, preview, busy, onPreview, onConfirm, onClear }: Props) {
+export function FileInspector({ focus, selectedCount, preview, busy, onPreview, onConfirm, onClear, actionNotice }: Props) {
   const hasHealthyWork = preview?.items.some((i) => i.kind === "work" && i.exists) ?? false;
   return (
     <aside className="files-inspector">
@@ -45,6 +46,7 @@ export function FileInspector({ focus, selectedCount, preview, busy, onPreview, 
       )}
 
       <div className="files-actions">
+        {actionNotice ? <p className="files-notice">{actionNotice}</p> : null}
         <button type="button" onClick={onPreview} disabled={busy || selectedCount === 0}>
           预览删除（{selectedCount}）
         </button>

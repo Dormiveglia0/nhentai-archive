@@ -49,6 +49,7 @@ export function FilesPage() {
           onPreview={state.requestPreview}
           onConfirm={state.confirmDelete}
           onClear={state.clearSelection}
+          actionNotice={state.actionNotice}
         />
       </div>
     </section>

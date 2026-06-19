@@ -22,6 +22,7 @@ export function useFilesState() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [preview, setPreview] = useState<FileDeletePreview | null>(null);
   const [busy, setBusy] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const requestToken = useRef(0);
 
   const loadOverview = useCallback(() => {
@@ -68,6 +69,8 @@ export function useFilesState() {
       return next;
     });
     setFocusId(id);
+    setPreview(null);
+    setActionNotice(null);
   }, []);
 
   const clearSelection = useCallback(() => {
@@ -89,6 +92,7 @@ export function useFilesState() {
       setPreview(null);
       return null;
     }
+    setActionNotice(null);
     setBusy(true);
     try {
       const result = await api.previewFileDelete(targets);
@@ -107,10 +111,20 @@ export function useFilesState() {
     if (targets.length === 0) return;
     setBusy(true);
     try {
-      await api.deleteFiles(targets);
+      const result = await api.deleteFiles(targets);
+      if (result.errors.length > 0) {
+        setActionNotice(
+          `部分目标删除失败（${result.errors.length}）：` +
+            result.errors.map((e) => e.message).join("；"),
+        );
+      } else {
+        setActionNotice(`已删除 ${result.deleted_files} 个文件` +
+          (result.removed_works > 0 ? `，移除 ${result.removed_works} 个作品` : ""));
+      }
       clearSelection();
       reload();
     } catch (e) {
+      setActionNotice(null);
       setError(String(e));
     } finally {
       setBusy(false);
@@ -126,16 +140,22 @@ export function useFilesState() {
     setCategory: (c: string) => {
       setCategory(c);
       setPage(1);
+      setPreview(null);
+      setActionNotice(null);
     },
     query,
     setQuery: (q: string) => {
       setQuery(q);
       setPage(1);
+      setPreview(null);
+      setActionNotice(null);
     },
     statusFilter,
     setStatusFilter: (s: string) => {
       setStatusFilter(s);
       setPage(1);
+      setPreview(null);
+      setActionNotice(null);
     },
     page,
     setPage,
@@ -149,5 +169,6 @@ export function useFilesState() {
     confirmDelete,
     busy,
     reload,
+    actionNotice,
   };
 }

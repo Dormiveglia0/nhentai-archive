@@ -6290,6 +6290,7 @@ button.gallery-tag:hover {
 .files-danger { color: #fff !important; background: var(--danger, #b3402f) !important; border-color: var(--danger, #b3402f) !important; }
 .files-empty, .files-error { padding: 1.5rem 0.5rem; opacity: 0.6; }
 .files-error { color: var(--danger, #b3402f); }
+.files-notice { font-size: 0.8rem; margin: 0.5rem 0 0; color: var(--ink, #2c2622); }
 @media (max-width: 860px) {
   .files-body { grid-template-columns: 1fr; }
   .files-inspector { border-left: none; border-top: 1px solid var(--hairline, rgba(0,0,0,0.1)); padding-left: 0; padding-top: 1rem; }
