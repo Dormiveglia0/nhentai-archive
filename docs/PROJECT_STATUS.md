@@ -96,7 +96,7 @@ Current real slice:
 
 ## Next Plan
 
-Next work should continue Phase 5 polish or move into Phase 6 file maintenance. The remaining export work is task-center orchestration only if long-running export/retry/history becomes necessary, persisted option presets if desired, and deeper visual refinement against `design/导出中心.png`; the core preview/rename/options/browser-download loop is now real.
+Phase 6 file maintenance now ships the full file inventory + preview/cascade-delete loop. Remaining follow-ups: a pagination control for very large libraries (the inventory API already paginates; the UI currently shows the first page), deeper visual refinement against `design/文件管理.png`, and optional polish noted in the plan's ledger. Beyond Phase 6, open work is task-center orchestration for long-running export/retry/history, the workbench aggregate dashboard, and job pause/resume/cancel controls.
 
 ## Risks And Decisions
 
