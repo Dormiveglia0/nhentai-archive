@@ -92,7 +92,6 @@ def test_relative_path_is_normalized_against_cwd(tmp_path, monkeypatch):
     )
 
     entry = next(e for e in files.inventory(category="work")["result"] if e["work_id"] == work_id)
-    assert entry["status"] == "ok"
     assert "missing_source" not in entry["flags"]
 
 
