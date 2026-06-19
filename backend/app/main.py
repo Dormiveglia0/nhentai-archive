@@ -14,6 +14,7 @@ from app.services.archive_service import ArchiveService
 from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.export_service import ExportService
+from app.services.file_service import FileMaintenanceService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
 from app.services.library_service import LibraryService
@@ -81,6 +82,16 @@ class ExportBatchRequest(BaseModel):
     compress: bool = True
 
 
+class FileTargetRequest(BaseModel):
+    kind: str
+    work_id: int | None = None
+    path: str | None = None
+
+
+class FileDeleteRequest(BaseModel):
+    targets: list[FileTargetRequest] = []
+
+
 settings = load_settings()
 db = Database(settings.database_path)
 db.init_schema()
@@ -98,6 +109,7 @@ library = LibraryService(db)
 dictionary = DictionaryService(db, client)
 governance = GovernanceService(db, dictionary)
 exports = ExportService(db, settings)
+files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 settings_service = SettingsService(db, settings, client)
 
@@ -381,6 +393,32 @@ def export_download_bundle(payload: ExportBatchRequest):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _download_response(filename, data, "application/zip")
+
+
+@app.get("/api/files/overview")
+def files_overview():
+    return files_service.overview()
+
+
+@app.get("/api/files/inventory")
+def files_inventory(
+    category: str = "all",
+    q: str | None = None,
+    status: str | None = None,
+    page: int = 1,
+    per_page: int = 50,
+):
+    return files_service.inventory(category=category, q=q, status=status, page=page, per_page=per_page)
+
+
+@app.post("/api/files/preview-delete")
+def files_preview_delete(payload: FileDeleteRequest):
+    return files_service.preview_delete([t.model_dump(exclude_none=True) for t in payload.targets])
+
+
+@app.post("/api/files/delete")
+def files_delete(payload: FileDeleteRequest):
+    return files_service.delete([t.model_dump(exclude_none=True) for t in payload.targets])
 
 
 @app.get("/api/works")
