@@ -84,9 +84,9 @@ Root: `backend/app/`
 - `services/export_service.py`
   - Local-only export preview/packaging for **browser download**; never calls the NH API, never mutates source CBZ files, and never writes a second copy to the server. No export records are kept.
   - `queue()` / `summary()`: real export readiness from `works`, `work_files`, source file existence, and preview blockers/warnings. `summary()` returns only the queue counts (`total`/`ready`/`blocked`/`warnings`).
-  - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, output name, ComicInfo fields, members to keep, blockers, and warnings. `options.output_name` is sanitized and forced to `.cbz`. No server output path is involved.
-  - `build_cbz(work_id, options)`: packages a single work into CBZ **bytes** in memory (copies original members except old `ComicInfo.xml`, writes generated `ComicInfo.xml`) and returns `(filename, bytes)`; raises `ValueError` when the work has blockers. The original archive is never touched.
-  - `build_bundle(items)`: packages multiple works into one `.zip` of CBZs (bytes) for a single download, deduping member names; blocked items are skipped, and it raises when none can be exported.
+  - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, output name, ComicInfo fields, resolved export options, members to keep/write, blockers, and warnings. `options.output_name` is sanitized and forced to `.cbz`; `write_comicinfo` / `keep_json` / `compress` control the preview. No server output path is involved.
+  - `build_cbz(work_id, options)`: packages a single work into CBZ **bytes** in memory, honoring `write_comicinfo`, `keep_json`, and `compress`, and returns `(filename, bytes)`; raises `ValueError` when the work has blockers. The original archive is never touched.
+  - `build_bundle(items, options)`: packages multiple works into one `.zip` of CBZs (bytes) for a single download, applying shared export options, deduping member names, skipping blocked items, and raising when none can be exported.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry`.
 - `main.py`
@@ -262,13 +262,12 @@ Root: `frontend/src/`
   - Empty library/empty queue is an honest empty state; no sample works, fake conflicts, or fake recommendations.
   - Bottom action bar includes a real `#export/{work_id}` route for exporting the selected work after governance decisions are saved.
 - `components/export/` — export center (browser-download model), split into focused modules:
-  - `ExportPage.tsx` — thin compositional container; loads queue/summary, manages page-level routing and refresh.
-  - `useExportState.ts` — all state and data-fetching logic; single selection `Set` + separate `focusId` for preview detail. `downloadSelected()` downloads one CBZ (single selection) or a `.zip` bundle (multi), and `downloadOne(id)` downloads the focused work.
-  - `ExportSummary.tsx` — five-metric strip (total / ready / selected / warnings / blocked counts).
-  - `ExportQueueTable.tsx` — selectable pending-export table with inline output-name rename, source-file state badges, blockers/warnings, and header action buttons (select-ready / remove-current / clear).
-  - `ExportPresetBar.tsx` — persisted preset selector, preset/rule display panel, save-new preset action, and the primary download button.
-  - `ExportPreviewPanel.tsx` — selected-work preview: output name, ComicInfo fields, keep/write/not-modify rules, blockers/warnings, a per-item "下载此项" button, and the bottom download action.
-  - `exportHelpers.tsx` — shared render utilities: `Cover` (cover image with fallback), `compactPath`, `presetSummaryLines`.
+  - `ExportPage.tsx` — thin compositional container for toolbar, work list, and inspector.
+  - `useExportState.ts` — all state and data-fetching logic; single selected `Set`, separate `focusId`, search/status filters, output-name overrides, export option switches, and download orchestration. `downloadSelected()` downloads one CBZ (single target) or a `.zip` bundle (multi), and `downloadOne(id)` downloads the focused work.
+  - `ExportToolbar.tsx` — page title, search, status chips, select-ready, and clear actions.
+  - `ExportWorkList.tsx` — compact selectable work list with cover, title, remote ID/source, selected state, focus state, and ready/warning/blocked status.
+  - `ExportInspector.tsx` — focused-work detail: output rename, ComicInfo preview, blockers/warnings, selected cover strip, option switches (`ComicInfo` / `保留JSON` / `压缩`), refresh, selected download, and current-work download.
+  - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.

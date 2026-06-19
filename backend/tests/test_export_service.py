@@ -125,6 +125,34 @@ def test_build_cbz_returns_packaged_bytes_with_comicinfo_and_preserves_original(
     assert source_path.read_bytes() == before_bytes
 
 
+def test_build_cbz_options_can_drop_comicinfo_and_json_and_compression(tmp_path):
+    _settings, db, archive, exports = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+
+    _filename, data = exports.build_cbz(
+        work_id, {"write_comicinfo": False, "keep_json": False, "compress": False}
+    )
+
+    with zipfile.ZipFile(io.BytesIO(data)) as archive_file:
+        names = set(archive_file.namelist())
+        infos = archive_file.infolist()
+    assert "ComicInfo.xml" not in names
+    assert not any(name.endswith(".json") for name in names)
+    assert {"001.png", "002.png"}.issubset(names)
+    assert all(info.compress_type == zipfile.ZIP_STORED for info in infos)
+
+
+def test_preview_reflects_options(tmp_path):
+    _settings, db, archive, exports = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+
+    preview = exports.preview(work_id, {"write_comicinfo": False, "keep_json": False})
+
+    assert preview["will_write"] == []
+    assert preview["will_keep"] == []
+    assert preview["options"] == {"write_comicinfo": False, "keep_json": False, "compress": True}
+
+
 def test_build_cbz_sanitizes_custom_output_name(tmp_path):
     _settings, db, archive, exports = _setup(tmp_path)
     work_id = _import_work(db, archive, tmp_path)

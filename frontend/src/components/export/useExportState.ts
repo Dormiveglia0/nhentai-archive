@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api } from "../../lib/api";
 import type {
+  ExportOptions,
   ExportPreset,
   ExportPreview,
   ExportQueue,
@@ -9,6 +10,8 @@ import type {
   ExportSummaryStats,
   SettingsSummary,
 } from "../../lib/api";
+import { workTitle } from "../library/libraryHelpers";
+import { itemStatus } from "./exportHelpers";
 
 export type ExportViewModel = {
   loading: boolean;
@@ -23,22 +26,28 @@ export type ExportViewModel = {
   preview: ExportPreview | null;
   previewLoading: boolean;
   downloading: boolean;
+  exportOptions: ExportOptions;
   items: ExportQueueItem[];
   selectedItems: ExportQueueItem[];
   exportableItems: ExportQueueItem[];
   activePreset: ExportPreset | null;
   selectedSize: number;
+  query: string;
+  statusFilter: "all" | "ready" | "warning" | "blocked";
+  visibleItems: ExportQueueItem[];
   toggleSelected: (id: number) => void;
   focusItem: (id: number) => void;
   selectReady: () => void;
   removeSelected: () => void;
   clearSelected: () => void;
   renameOutput: (id: number, value: string) => void;
-  changePreset: (presetId: string) => Promise<void>;
-  saveNewPreset: () => Promise<void>;
+  setExportOption: (key: keyof ExportOptions, value: boolean) => void;
   downloadSelected: () => Promise<void>;
   downloadOne: (id: number) => Promise<void>;
   refreshPreview: () => Promise<void>;
+  pickItem: (id: number) => void;
+  setQuery: (query: string) => void;
+  setStatusFilter: (filter: "all" | "ready" | "warning" | "blocked") => void;
 };
 
 export function useExportState(initialWorkId?: number): ExportViewModel {
@@ -54,8 +63,15 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+    write_comicinfo: true,
+    keep_json: true,
+    compress: true,
+  });
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [query, setQuery] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "warning" | "blocked">("all");
 
   const items = useMemo(() => queue?.result ?? [], [queue]);
   const selectedItems = useMemo(
@@ -77,6 +93,27 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
       settings.export.presets[0]
     );
   }, [settings]);
+
+  const visibleItems = useMemo(() => {
+    let filtered = items;
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((item) => itemStatus(item) === statusFilter);
+    }
+
+    // Filter by query (match workTitle or remote_gallery_id)
+    if (query.trim()) {
+      const lowerQuery = query.toLowerCase();
+      filtered = filtered.filter((item) => {
+        const title = workTitle(item.work).toLowerCase();
+        const id = item.work.remote_gallery_id?.toString() ?? "";
+        return title.includes(lowerQuery) || id.includes(lowerQuery);
+      });
+    }
+
+    return filtered;
+  }, [items, statusFilter, query]);
 
   const load = useCallback(async (nextFocusId: number | null) => {
     setLoading(true);
@@ -132,27 +169,31 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     let alive = true;
     setPreviewLoading(true);
     api
-      .exportPreview(focusId, { output_name: outputNames[focusId] })
+      .exportPreview(focusId, { output_name: outputNames[focusId], ...exportOptions })
       .then((payload) => alive && setPreview(payload))
       .catch((err: Error) => alive && setError(err.message))
       .finally(() => alive && setPreviewLoading(false));
     return () => {
       alive = false;
     };
-  }, [focusId, outputNames[focusId ?? -1]]);
+  }, [focusId, outputNames[focusId ?? -1], exportOptions]);
 
   const refreshPreview = useCallback(async () => {
     if (!focusId) return;
     setPreviewLoading(true);
     setError(null);
     try {
-      setPreview(await api.exportPreview(focusId, { output_name: outputNames[focusId] }));
+      setPreview(await api.exportPreview(focusId, { output_name: outputNames[focusId], ...exportOptions }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setPreviewLoading(false);
     }
-  }, [focusId, outputNames]);
+  }, [focusId, outputNames, exportOptions]);
+
+  const setExportOption = useCallback((key: keyof ExportOptions, value: boolean) => {
+    setExportOptions((current) => ({ ...current, [key]: value }));
+  }, []);
 
   const toggleSelected = useCallback((id: number) => {
     setSelectedIds((current) => {
@@ -192,7 +233,10 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
       setError(null);
       setNotice(null);
       try {
-        const filename = await api.downloadExport(id, { output_name: outputNames[id] || item.output_name });
+        const filename = await api.downloadExport(id, {
+          output_name: outputNames[id] || item.output_name,
+          ...exportOptions,
+        });
         setNotice(`已开始下载：${filename}`);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -200,7 +244,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
         setDownloading(false);
       }
     },
-    [items, outputNames]
+    [items, outputNames, exportOptions]
   );
 
   const downloadSelected = useCallback(async () => {
@@ -214,6 +258,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
         const only = targets[0];
         const filename = await api.downloadExport(only.work.id, {
           output_name: outputNames[only.work.id] || only.output_name,
+          ...exportOptions,
         });
         setNotice(`已开始下载：${filename}`);
       } else {
@@ -221,7 +266,8 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
           targets.map((item) => ({
             work_id: item.work.id,
             output_name: outputNames[item.work.id] || item.output_name,
-          }))
+          })),
+          exportOptions
         );
         setNotice(`已开始下载 ${targets.length} 项打包文件：${filename}`);
       }
@@ -230,55 +276,31 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     } finally {
       setDownloading(false);
     }
-  }, [items, outputNames, selectedIds]);
+  }, [items, outputNames, selectedIds, exportOptions]);
 
-  const changePreset = useCallback(
-    async (presetId: string) => {
-      if (!settings || presetId === settings.export.active_preset_id) return;
-      const optimistic = {
-        ...settings,
-        export: { ...settings.export, active_preset_id: presetId },
-      };
-      setSettings(optimistic);
-      setError(null);
-      setNotice(null);
-      try {
-        const payload = await api.updateSettings({
-          export: { active_preset_id: presetId, presets: settings.export.presets },
-        });
-        setSettings(payload);
-        setNotice("导出预设已切换");
-      } catch (err) {
-        setSettings(settings);
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    },
-    [settings]
-  );
+  const pickItem = useCallback((id: number) => {
+    const item = items.find((entry) => entry.work.id === id);
+    if (!item) return;
 
-  const saveNewPreset = useCallback(async () => {
-    if (!settings || !activePreset) return;
-    setError(null);
-    setNotice(null);
-    const nextIndex = settings.export.presets.length + 1;
-    const nextPreset: ExportPreset = {
-      ...activePreset,
-      id: `custom-${Date.now()}`,
-      name: `自定义预设 ${nextIndex}`,
-    };
-    try {
-      const payload = await api.updateSettings({
-        export: {
-          active_preset_id: nextPreset.id,
-          presets: [...settings.export.presets, nextPreset],
-        },
-      });
-      setSettings(payload);
-      setNotice(`已保存预设：${nextPreset.name}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    // Set as focus always
+    setFocusId(id);
+
+    // If blocked, only set focus, don't add to selection
+    if (item.blockers.length > 0) {
+      return;
     }
-  }, [activePreset, settings]);
+
+    // Toggle selection for non-blocked items
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, [items]);
 
   return {
     loading,
@@ -293,21 +315,27 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     preview,
     previewLoading,
     downloading,
+    exportOptions,
     items,
     selectedItems,
     exportableItems,
     activePreset,
     selectedSize,
+    query,
+    statusFilter,
+    visibleItems,
     toggleSelected,
     focusItem,
     selectReady,
     removeSelected,
     clearSelected,
     renameOutput,
-    changePreset,
-    saveNewPreset,
+    setExportOption,
     downloadSelected,
     downloadOne,
     refreshPreview,
+    pickItem,
+    setQuery,
+    setStatusFilter,
   };
 }

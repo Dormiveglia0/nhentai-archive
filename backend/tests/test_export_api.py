@@ -28,7 +28,7 @@ class FakeExports:
         name = (options or {}).get("output_name") or f"work-{work_id}.cbz"
         return name, b"FAKECBZBYTES"
 
-    def build_bundle(self, items):
+    def build_bundle(self, items, options=None):
         if not items:
             raise ValueError("没有可导出的作品（所选项均存在阻塞）。")
         buffer = io.BytesIO()

@@ -69,10 +69,16 @@ class GovernanceApplyRequest(BaseModel):
 class ExportItemRequest(BaseModel):
     work_id: int | None = None
     output_name: str | None = None
+    write_comicinfo: bool | None = None
+    keep_json: bool | None = None
+    compress: bool | None = None
 
 
 class ExportBatchRequest(BaseModel):
     items: list[ExportItemRequest] = []
+    write_comicinfo: bool = True
+    keep_json: bool = True
+    compress: bool = True
 
 
 settings = load_settings()
@@ -342,11 +348,21 @@ def _download_response(filename: str, data: bytes, media_type: str) -> Response:
 
 
 @app.get("/api/works/{work_id}/export/download")
-def export_download(work_id: int, output_name: str | None = None):
+def export_download(
+    work_id: int,
+    output_name: str | None = None,
+    write_comicinfo: bool = True,
+    keep_json: bool = True,
+    compress: bool = True,
+):
+    options = {
+        "output_name": output_name,
+        "write_comicinfo": write_comicinfo,
+        "keep_json": keep_json,
+        "compress": compress,
+    }
     try:
-        filename, data = exports.build_cbz(
-            work_id, {"output_name": output_name} if output_name else None
-        )
+        filename, data = exports.build_cbz(work_id, options)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _download_response(filename, data, "application/vnd.comicbook+zip")
@@ -355,8 +371,13 @@ def export_download(work_id: int, output_name: str | None = None):
 @app.post("/api/exports/download")
 def export_download_bundle(payload: ExportBatchRequest):
     items = [item.model_dump(exclude_none=True) for item in payload.items if item.work_id]
+    options = {
+        "write_comicinfo": payload.write_comicinfo,
+        "keep_json": payload.keep_json,
+        "compress": payload.compress,
+    }
     try:
-        filename, data = exports.build_bundle(items)
+        filename, data = exports.build_bundle(items, options)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _download_response(filename, data, "application/zip")

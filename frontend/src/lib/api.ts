@@ -319,11 +319,18 @@ export type ExportSourceFile = {
   exists: boolean;
 };
 
+export type ExportOptions = {
+  write_comicinfo: boolean;
+  keep_json: boolean;
+  compress: boolean;
+};
+
 export type ExportPreview = {
   work: LibraryWork;
   source_file: ExportSourceFile;
   output_name: string;
   comic_info: Record<string, string>;
+  options: ExportOptions;
   will_write: string[];
   will_keep: string[];
   will_not_modify: string[];
@@ -353,10 +360,14 @@ export type ExportSummaryStats = ExportQueue["summary"];
 
 export type ExportRequestOptions = {
   output_name?: string;
+  write_comicinfo?: boolean;
+  keep_json?: boolean;
+  compress?: boolean;
 };
 
-export type ExportBatchItem = ExportRequestOptions & {
+export type ExportBatchItem = {
   work_id: number;
+  output_name?: string;
 };
 
 export type PageInfo = {
@@ -645,13 +656,18 @@ export const api = {
         })
       : request<ExportPreview>(`/api/works/${id}/export-preview`),
   downloadExport: (id: number, options?: ExportRequestOptions) => {
-    const query = options?.output_name ? `?output_name=${encodeURIComponent(options.output_name)}` : "";
-    return downloadFile(`/api/works/${id}/export/download${query}`, {}, `work-${id}.cbz`);
+    const query = new URLSearchParams();
+    if (options?.output_name) query.set("output_name", options.output_name);
+    if (options?.write_comicinfo !== undefined) query.set("write_comicinfo", String(options.write_comicinfo));
+    if (options?.keep_json !== undefined) query.set("keep_json", String(options.keep_json));
+    if (options?.compress !== undefined) query.set("compress", String(options.compress));
+    const qs = query.toString();
+    return downloadFile(`/api/works/${id}/export/download${qs ? `?${qs}` : ""}`, {}, `work-${id}.cbz`);
   },
-  downloadExportBundle: (items: ExportBatchItem[]) =>
+  downloadExportBundle: (items: ExportBatchItem[], options?: Omit<ExportRequestOptions, "output_name">) =>
     downloadFile(
       "/api/exports/download",
-      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items }) },
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items, ...options }) },
       "导出合集.zip"
     ),
   works: () => request<{ result: Work[] }>("/api/works"),

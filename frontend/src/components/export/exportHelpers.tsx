@@ -1,4 +1,18 @@
-import type { ExportPreset } from "../../lib/api";
+import type { ExportPreset, ExportQueueItem } from "../../lib/api";
+
+export type ExportItemStatus = "ready" | "warning" | "blocked";
+
+export function itemStatus(item: ExportQueueItem): ExportItemStatus {
+  if (item.blockers.length > 0) return "blocked";
+  if (item.warnings.length > 0) return "warning";
+  return "ready";
+}
+
+export const STATUS_LABEL: Record<ExportItemStatus, string> = {
+  ready: "就绪",
+  warning: "⚠ 警告",
+  blocked: "阻塞",
+};
 
 export function compactPath(path: string): string {
   const normalized = path.replace(/\\/g, "/");

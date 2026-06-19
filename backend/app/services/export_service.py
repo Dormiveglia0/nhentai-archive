@@ -76,23 +76,38 @@ class ExportService:
             )
         return {"result": items, "summary": summary}
 
-    def preview(self, work_id: int, options: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _resolve_options(self, options: dict[str, Any] | None) -> dict[str, Any]:
         options = options or {}
+        return {
+            "output_name": options.get("output_name"),
+            "write_comicinfo": bool(options.get("write_comicinfo", True)),
+            "keep_json": bool(options.get("keep_json", True)),
+            "compress": bool(options.get("compress", True)),
+        }
+
+    def preview(self, work_id: int, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        opts = self._resolve_options(options)
         aggregate = self.governance.work_governance(work_id)
         work = aggregate["work"]
         source_file = self._source_file(work_id)
-        output_name = self._requested_output_name(work, options)
+        output_name = self._requested_output_name(work, opts)
         comic_info = self._comic_info(aggregate)
-        will_keep = self._kept_members(source_file["path"]) if source_file["exists"] else []
+        json_members = self._kept_members(source_file["path"]) if source_file["exists"] else []
+        will_keep = json_members if opts["keep_json"] else []
         blockers = self._blockers(source_file)
-        warnings = self._warnings(comic_info, aggregate)
+        warnings = self._warnings(comic_info, aggregate) if opts["write_comicinfo"] else []
 
         return {
             "work": work,
             "source_file": source_file,
             "output_name": output_name,
             "comic_info": comic_info,
-            "will_write": ["ComicInfo.xml"],
+            "options": {
+                "write_comicinfo": opts["write_comicinfo"],
+                "keep_json": opts["keep_json"],
+                "compress": opts["compress"],
+            },
+            "will_write": ["ComicInfo.xml"] if opts["write_comicinfo"] else [],
             "will_keep": will_keep,
             "will_not_modify": [source_file["path"]] if source_file.get("path") else [],
             "blockers": blockers,
@@ -100,17 +115,22 @@ class ExportService:
         }
 
     def build_cbz(self, work_id: int, options: dict[str, Any] | None = None) -> tuple[str, bytes]:
-        """Package a single work into CBZ bytes (source + freshly written ComicInfo.xml)."""
+        """Package a single work into CBZ bytes honoring the export options."""
+        opts = self._resolve_options(options)
         preview = self.preview(work_id, options)
         if preview["blockers"]:
             raise ValueError("; ".join(blocker["message"] for blocker in preview["blockers"]))
 
         source_path = Path(preview["source_file"]["path"])
-        comic_info_xml = self._comicinfo_xml(preview["comic_info"])
-        return preview["output_name"], self._package_bytes(source_path, comic_info_xml)
+        comic_info_xml = self._comicinfo_xml(preview["comic_info"]) if opts["write_comicinfo"] else None
+        data = self._package_bytes(source_path, comic_info_xml, opts["keep_json"], opts["compress"])
+        return preview["output_name"], data
 
-    def build_bundle(self, items: list[dict[str, Any]]) -> tuple[str, bytes]:
+    def build_bundle(
+        self, items: list[dict[str, Any]], options: dict[str, Any] | None = None
+    ) -> tuple[str, bytes]:
         """Package multiple works into one .zip of CBZs for a single download."""
+        shared = self._resolve_options(options)
         buffer = io.BytesIO()
         used_names: set[str] = set()
         packaged = 0
@@ -119,9 +139,9 @@ class ExportService:
                 work_id = int(item.get("work_id") or 0)
                 if not work_id:
                     continue
-                opts = {"output_name": item["output_name"]} if item.get("output_name") else None
+                item_opts = {**shared, "output_name": item.get("output_name")}
                 try:
-                    name, data = self.build_cbz(work_id, opts)
+                    name, data = self.build_cbz(work_id, item_opts)
                 except ValueError:
                     continue
                 bundle.writestr(self._unique_member_name(name, used_names), data)
@@ -130,18 +150,25 @@ class ExportService:
             raise ValueError("没有可导出的作品（所选项均存在阻塞）。")
         return f"导出合集 ({packaged}).zip", buffer.getvalue()
 
-    def _package_bytes(self, source_path: Path, comic_info_xml: str) -> bytes:
+    def _package_bytes(
+        self, source_path: Path, comic_info_xml: str | None, keep_json: bool = True, compress: bool = True
+    ) -> bytes:
+        compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
         buffer = io.BytesIO()
         with zipfile.ZipFile(source_path) as source, zipfile.ZipFile(
-            buffer, "w", compression=zipfile.ZIP_DEFLATED
+            buffer, "w", compression=compression
         ) as target:
             for info in source.infolist():
                 if info.is_dir():
                     continue
-                if Path(info.filename).name.lower() == "comicinfo.xml":
+                name = Path(info.filename).name.lower()
+                if name == "comicinfo.xml":
                     continue
-                target.writestr(info, source.read(info.filename))
-            target.writestr("ComicInfo.xml", comic_info_xml)
+                if not keep_json and name.endswith(".json"):
+                    continue
+                target.writestr(info.filename, source.read(info.filename))
+            if comic_info_xml is not None:
+                target.writestr("ComicInfo.xml", comic_info_xml)
         return buffer.getvalue()
 
     def _unique_member_name(self, name: str, used: set[str]) -> str:

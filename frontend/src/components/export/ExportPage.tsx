@@ -1,10 +1,7 @@
-import { Download } from "lucide-react";
-
 import { FadeIn } from "../../lib/motion";
-import { ExportPresetBar } from "./ExportPresetBar";
-import { ExportPreviewPanel } from "./ExportPreviewPanel";
-import { ExportQueueTable } from "./ExportQueueTable";
-import { ExportSummary } from "./ExportSummary";
+import { ExportInspector } from "./ExportInspector";
+import { ExportToolbar } from "./ExportToolbar";
+import { ExportWorkList } from "./ExportWorkList";
 import { useExportState } from "./useExportState";
 
 type Props = {
@@ -14,18 +11,10 @@ type Props = {
 
 export function ExportPage({ initialWorkId, blurCovers }: Props) {
   const vm = useExportState(initialWorkId);
-  const activePresetName = vm.activePreset?.name ?? "-";
+  const focusItem = vm.focusId ? vm.items.find((item) => item.work.id === vm.focusId) ?? null : null;
 
   return (
     <section className="page export-page">
-      {vm.summary || vm.queue ? (
-        <ExportSummary
-          queue={vm.queue ?? { result: [], summary: { total: 0, ready: 0, blocked: 0, warnings: 0 } }}
-          selectedCount={vm.selectedIds.size}
-          exportableCount={vm.exportableItems.length}
-        />
-      ) : null}
-
       {vm.error ? (
         <FadeIn key={vm.error} className="notice error" y={6}>
           {vm.error}
@@ -47,62 +36,45 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
           </div>
         ) : (
           <>
-            <div className="export-mobile-dock">
-              <div>
-                <strong>{vm.selectedIds.size} 项已选</strong>
-                <span>
-                  {vm.exportableItems.length} 项可下载 · {activePresetName}
-                </span>
-              </div>
-              <button
-                type="button"
-                disabled={vm.downloading || vm.exportableItems.length === 0 || vm.selectedIds.size === 0}
-                onClick={vm.downloadSelected}
-              >
-                <Download size={16} />
-                {vm.downloading ? "下载中" : "下载选中"}
-              </button>
-            </div>
+            <ExportToolbar
+              query={vm.query}
+              statusFilter={vm.statusFilter}
+              onQueryChange={vm.setQuery}
+              onStatusFilterChange={vm.setStatusFilter}
+              onSelectReady={vm.selectReady}
+              onClear={vm.clearSelected}
+            />
 
             <div className="export-workspace">
-              <div className="export-left-stack">
-                <ExportQueueTable
-                  items={vm.items}
+              {vm.visibleItems.length === 0 ? (
+                <div className="page-panel boundary-panel export-empty-list">
+                  <strong>没有匹配的作品</strong>
+                  <p>{vm.query ? "尝试调整搜索词或筛选条件。" : "调整筛选条件后重新查看。"}</p>
+                </div>
+              ) : (
+                <ExportWorkList
+                  items={vm.visibleItems}
                   selectedIds={vm.selectedIds}
                   focusId={vm.focusId}
-                  outputNames={vm.outputNames}
-                  activePreset={vm.activePreset}
                   blurCovers={blurCovers}
-                  selectedCount={vm.selectedIds.size}
-                  selectedSize={vm.selectedSize}
-                  onToggle={vm.toggleSelected}
-                  onFocus={vm.focusItem}
-                  onRename={vm.renameOutput}
-                  onSelectReady={vm.selectReady}
-                  onRemoveSelected={vm.removeSelected}
-                  onClear={vm.clearSelected}
+                  onPick={vm.pickItem}
                 />
-                <ExportPresetBar
-                  settings={vm.settings}
-                  activePreset={vm.activePreset}
-                  selectedCount={vm.selectedIds.size}
-                  exportableCount={vm.exportableItems.length}
-                  downloading={vm.downloading}
-                  onPresetChange={vm.changePreset}
-                  onSavePreset={vm.saveNewPreset}
-                  onDownload={vm.downloadSelected}
-                />
-              </div>
-              <ExportPreviewPanel
+              )}
+              <ExportInspector
+                focusItem={focusItem}
+                preview={vm.preview}
                 selectedItems={vm.selectedItems}
                 selectedSize={vm.selectedSize}
-                preview={vm.preview}
-                loading={vm.previewLoading}
+                exportOptions={vm.exportOptions}
+                previewLoading={vm.previewLoading}
                 downloading={vm.downloading}
                 blurCovers={blurCovers}
+                outputNames={vm.outputNames}
+                onRename={vm.renameOutput}
+                onSetOption={vm.setExportOption}
+                onRefresh={vm.refreshPreview}
                 onDownload={vm.downloadSelected}
                 onDownloadOne={vm.downloadOne}
-                onRefresh={vm.refreshPreview}
               />
             </div>
           </>
