@@ -197,3 +197,59 @@ def test_preview_delete_flags_already_gone_and_forbidden(tmp_path):
     assert "already_gone" in preview["items"][0]["warnings"]
     assert "forbidden_path" in preview["items"][1]["warnings"]
     assert preview["reclaim_bytes"] == 0
+
+
+def test_delete_work_cascades_all_tables_and_files(tmp_path):
+    _settings, db, archive, files = _setup(tmp_path)
+    keep_id = _import_work(db, archive, tmp_path, title="Keep", gallery_id=1)
+    drop_id = _import_work(db, archive, tmp_path, title="Drop", gallery_id=2)
+    db.execute(
+        "INSERT INTO remote_tags (remote_id, type, name, slug, payload_json) VALUES (5, 'tag', 't', 't', '{}') "
+        "ON CONFLICT(remote_id) DO NOTHING"
+    )
+    db.execute("INSERT INTO work_tags (work_id, remote_tag_id, tag_type) VALUES (?, 5, 'tag')", (drop_id,))
+    db.execute("INSERT INTO work_metadata (work_id, field, value, source) VALUES (?, 'title', 'X', 'manual')", (drop_id,))
+    db.execute("INSERT INTO reader_progress (work_id, page_index, page_count, progress_percent) VALUES (?, 1, 2, 50)", (drop_id,))
+    db.execute("INSERT INTO reading_history (work_id, page_index) VALUES (?, 1)", (drop_id,))
+    drop_source = Path(db.fetchone("SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (drop_id,))["path"])
+    drop_cover = Path(db.fetchone("SELECT cover_path FROM works WHERE id=?", (drop_id,))["cover_path"])
+    keep_source = Path(db.fetchone("SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (keep_id,))["path"])
+    keep_bytes = keep_source.read_bytes()
+
+    result = files.delete([{"kind": "work", "work_id": drop_id}])
+
+    assert result["removed_works"] == 1
+    assert result["deleted_files"] >= 2
+    assert result["reclaimed_bytes"] > 0
+    assert result["errors"] == []
+    assert not drop_source.exists()
+    assert not drop_cover.exists()
+    for table in ("works", "work_files", "work_pages", "work_tags", "work_metadata", "reader_progress", "reading_history"):
+        assert db.fetchone(f"SELECT 1 FROM {table} WHERE work_id=?", (drop_id,)) is None if table != "works" else db.fetchone("SELECT 1 FROM works WHERE id=?", (drop_id,)) is None
+    # other work untouched
+    assert db.fetchone("SELECT 1 FROM works WHERE id=?", (keep_id,)) is not None
+    assert keep_source.read_bytes() == keep_bytes
+
+
+def test_delete_orphan_removes_only_that_file(tmp_path):
+    settings, _db, _archive, files = _setup(tmp_path)
+    orphan = settings.library_dir / "loose.cbz"
+    orphan.write_bytes(b"xyz")
+
+    result = files.delete([{"kind": "orphan", "path": str(orphan)}])
+
+    assert result["deleted_files"] == 1
+    assert result["reclaimed_bytes"] == 3
+    assert not orphan.exists()
+
+
+def test_delete_rejects_path_outside_managed_roots(tmp_path):
+    _settings, _db, _archive, files = _setup(tmp_path)
+    outside = tmp_path / "evil.cbz"
+    outside.write_bytes(b"nope")
+
+    result = files.delete([{"kind": "stale", "path": str(outside)}])
+
+    assert result["deleted_files"] == 0
+    assert any(err["code"] == "forbidden_path" for err in result["errors"])
+    assert outside.exists()

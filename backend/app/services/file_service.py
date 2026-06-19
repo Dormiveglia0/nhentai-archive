@@ -252,3 +252,52 @@ class FileMaintenanceService:
         works_to_remove = sum(1 for i in items if i["kind"] == "work" and i.get("exists"))
         reclaim_bytes = sum(i["reclaim_bytes"] for i in items)
         return {"items": items, "files_to_delete": files_to_delete, "works_to_remove": works_to_remove, "reclaim_bytes": reclaim_bytes}
+
+    # --- deletion -------------------------------------------------------
+    def _unlink(self, path: Path, target: dict[str, Any], errors: list[dict[str, Any]]) -> int:
+        if not self._within_managed(path):
+            errors.append({"target": target, "code": "forbidden_path", "message": "路径不在受管目录内。"})
+            return 0
+        if not path.is_file():
+            return 0
+        size = path.stat().st_size
+        try:
+            path.unlink()
+        except OSError as exc:
+            errors.append({"target": target, "code": "unlink_failed", "message": str(exc)})
+            return 0
+        return size
+
+    def delete(self, targets: list[dict[str, Any]]) -> dict[str, Any]:
+        deleted_files = 0
+        removed_works = 0
+        reclaimed_bytes = 0
+        errors: list[dict[str, Any]] = []
+
+        for target in targets or []:
+            kind = target.get("kind")
+            if kind == "work":
+                work_id = int(target.get("work_id") or 0)
+                if self.db.fetchone("SELECT 1 FROM works WHERE id=?", (work_id,)) is None:
+                    errors.append({"target": target, "code": "already_gone", "message": "作品不存在。"})
+                    continue
+                paths = self._work_files(work_id)  # gather BEFORE cascade removes work_files rows
+                self.db.execute("DELETE FROM works WHERE id=?", (work_id,))  # ON DELETE CASCADE clears all references
+                removed_works += 1
+                for path in paths:
+                    freed = self._unlink(path, target, errors)
+                    if freed > 0 or (self._within_managed(path) and not path.exists()):
+                        if freed > 0:
+                            deleted_files += 1
+                            reclaimed_bytes += freed
+            elif kind in ("orphan", "stale"):
+                path = self._abs(target.get("path"))
+                if path is None:
+                    errors.append({"target": target, "code": "forbidden_path", "message": "路径无效。"})
+                    continue
+                freed = self._unlink(path, target, errors)
+                if freed > 0:
+                    deleted_files += 1
+                    reclaimed_bytes += freed
+
+        return {"deleted_files": deleted_files, "removed_works": removed_works, "reclaimed_bytes": reclaimed_bytes, "errors": errors}
