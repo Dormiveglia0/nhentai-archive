@@ -47,7 +47,7 @@ class FileMaintenanceService:
         d = directory.resolve()
         if not d.is_dir():
             return []
-        return [p for p in sorted(d.iterdir()) if p.is_file()]
+        return [p.resolve() for p in sorted(d.iterdir()) if p.is_file()]
 
     # --- scanning -----------------------------------------------------
     def _scan(self) -> list[dict[str, Any]]:
@@ -92,6 +92,7 @@ class FileMaintenanceService:
                     "title": w.get("pretty_title") or w.get("title") or w.get("title_japanese") or f"work-{work_id}",
                     "source_path": str(src_abs) if src_abs else None,
                     "cover_path": str(cover_abs) if cover_abs else None,
+                    "source_bytes": src_size,
                     "size_bytes": src_size + cover_size,
                     "page_count": int(w.get("page_count") or 0),
                     "source": w.get("source"),
@@ -137,7 +138,7 @@ class FileMaintenanceService:
         stale_bytes = sum(e["size_bytes"] for e in stale)
         return {
             "work_count": len(works),
-            "source_bytes": sum(e["size_bytes"] for e in works),
+            "source_bytes": sum(e.get("source_bytes", 0) for e in works),
             "cover_ok": sum(1 for e in works if "missing_cover" not in e["flags"]),
             "missing_source": sum(1 for e in works if "missing_source" in e["flags"]),
             "missing_cover": sum(1 for e in works if "missing_cover" in e["flags"]),
