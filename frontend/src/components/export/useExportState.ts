@@ -153,7 +153,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     return () => {
       alive = false;
     };
-  }, [focusId, outputNames]);
+  }, [focusId, outputNames[focusId ?? -1]]);
 
   const refreshPreview = useCallback(async () => {
     if (!focusId) return;
@@ -185,7 +185,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
 
   const removeSelected = useCallback(() => {
     setSelectedIds((current) => {
-      if (!focusId) return new Set();
+      if (!focusId) return current;
       const next = new Set(current);
       next.delete(focusId);
       return next;
