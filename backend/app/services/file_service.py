@@ -286,10 +286,9 @@ class FileMaintenanceService:
                 removed_works += 1
                 for path in paths:
                     freed = self._unlink(path, target, errors)
-                    if freed > 0 or (self._within_managed(path) and not path.exists()):
-                        if freed > 0:
-                            deleted_files += 1
-                            reclaimed_bytes += freed
+                    if freed > 0:
+                        deleted_files += 1
+                        reclaimed_bytes += freed
             elif kind in ("orphan", "stale"):
                 path = self._abs(target.get("path"))
                 if path is None:
