@@ -6,10 +6,13 @@ Phase 4 governance center (作品治理 single-work loop), built on the Phase 3 
 
 Current real slice:
 
-`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save -> per-work governance queue/metadata save`
+`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save -> per-work governance queue/metadata save -> export preview/rename/download CBZ (single or .zip bundle) to the user`
 
 ## Completed
 
+- 导出中心下载选项与检查器重构:后端 `ExportService.preview/build_cbz/build_bundle` 新增 `write_comicinfo`、`keep_json`、`compress` 选项，预览会反映将写入/保留内容，单文件下载和批量 `.zip` 下载都会传递同一组选项；新增测试覆盖不写 ComicInfo、去除 JSON、无压缩打包和预览选项回显。前端导出页从 summary/table/preset/preview 旧分区调整为 `ExportToolbar` + `ExportWorkList` + `ExportInspector`：支持搜索、状态筛选、点击作品聚焦/选择、检查器内改输出名、切换 ComicInfo/JSON/压缩、刷新预览、下载所选或仅下载当前作品；删除旧 `ExportSummary`、`ExportQueueTable`、`ExportPresetBar`、`ExportPreviewPanel`。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 52 passed；`cd frontend && npm run build` passed；Playwright Chromium QA on `http://127.0.0.1:5174/#export` desktop 1440x1000 and mobile 390x844 verified page identity, nonblank render, no framework overlay, no console warnings/errors, search empty-state interaction, and screenshots saved under `/tmp/nh-export-*.png`.
+- 导出语义改造（导出 = 下载给用户，而非写到服务器目录）:按用户预期重定向了导出功能。后端新增 `ExportService.build_cbz()`（在内存中打包带 `ComicInfo.xml` 的单个 CBZ 字节）与 `build_bundle()`（多选打包为一个 `.zip`），新增下载路由 `GET /api/works/{id}/export/download` 与 `POST /api/exports/download`（均以 `Content-Disposition: attachment` 流式返回）。删除了服务器侧写盘逻辑（`generate`/`generate_many`/`history`/输出目录解析）与 `export_records` 表及其迁移；导出不再保留任何记录。前端 `api.downloadExport` / `downloadExportBundle` 以 blob 拉取并触发浏览器下载；`useExportState` 的 `downloadSelected`（单选下单文件 / 多选下 `.zip`）与 `downloadOne` 取代了旧的批量生成；移除了输出目录卡片/编辑、`导出完成后打开输出目录` 复选框与“最近导出记录”区块（删 `ExportHistory.tsx`）；表头按钮 `移除选中`→`移除当前`。`storage.export_dir` 设置项保留但已不再被导出流程使用。后端 `PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 50 passed；`cd frontend && npm run build` 零错误。原始 CBZ 始终只读、不被修改。
+- 导出中心早期 Phase 5 实现（历史）:曾实现服务器输出目录、`export_records`、生成历史、导出预设条和表格式队列；这些能力已被当前“浏览器下载、不写服务器目录、不保留记录”的导出语义改造替代。保留的核心是本地源 CBZ 只读、治理元数据驱动 ComicInfo、`#export` / `#export/{workId}` 真实路由，以及从真实 SQLite/archive 状态计算预览、阻塞与警告。
 - 作品详情页 · 氛围横幅重构(`GalleryDetailPage`):解决了「不同封面比例 + 不同标签数量导致两列高度参差、翻书布局抖动」的根因。hero 改为一整块固定高度横幅(同图模糊奶油色洗白底 + 恒定尺寸封面卡槽,封面按高度约束不裁剪、不留白);标签移出 hero 改为整宽面板、每组独占一行(内容标签横向铺宽不顶高,少标签组无留白);相关作品改为居中固定宽卡片并展示词典中文内容标签。后端 `discover_service.gallery()` 的相关作品改走 feed 富化路径(`_tags_for_items` + `_with_import_state`)以解析 `tag_ids → tags(含 display)`+入库状态;`GallerySummary.tags` 类型补 `display?`。设计见 `docs/superpowers/specs/2026-06-19-gallery-detail-atmosphere-band-design.md`。
 - Phase 4 governance center: implemented the first real single-work governance loop. Added `work_metadata` for field-level final metadata decisions, `GovernanceService` for local-only queue/aggregate/apply, and APIs `GET /api/governance/queue`, `GET /api/works/{id}/governance`, `POST /api/works/{id}/governance/apply`. Governance queue reasons are computed from real SQLite/archive state: missing metadata, untagged works, dictionary review/conflict tags, missing ComicInfo, and missing cover. Aggregate reads `works`, `work_files`, `work_tags`, `remote_galleries.payload_json`, `local_tag_dictionary`, and real CBZ `ComicInfo.xml` / JSON members. Frontend now supports `#governance` and `#governance/{workId}`, with queue, work header, metadata diff editor, tag governance board, right quality/actions column, and real navigation from library/reader. No bulk governance, machine translation, export generation, or CBZ write-back in this phase. Design/plan docs: `docs/superpowers/specs/2026-06-18-phase4-governance-center-design.md` and `docs/superpowers/plans/2026-06-18-phase4-governance-center.md`.
 - 阶段 4 dictionary/settings:完成动画视觉线剩余范围。词典摘要逐项进场、候选行按筛选/翻页结果集 `key` 重播、编辑器按词条 key 淡入切换、应用预览空态/内容态淡入且关联作品逐项进场、批量导入 modal 接入 `Presence`。设置页三栏错峰进场,设置卡片逐项进场,保存/错误 notice keyed 淡入。仅用 `lib/motion` 原语,不改 API/数据逻辑;新增 `.candidate-row-motion`、`.settings-card-motion` 等极小透传类。设计/计划见 `docs/superpowers/specs|plans/2026-06-18-stage4-dictionary-settings-animation*`。
@@ -84,16 +87,16 @@ Current real slice:
 
 ## Not Implemented Yet
 
-- Export center.
 - File maintenance.
 - Job pause/resume/cancel controls.
 - Workbench aggregate dashboard.
 - Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
-- Governance bulk preview/apply, machine translation suggestions, and CBZ ComicInfo write-back.
+- Long-running bulk export jobs through the task center and failure retry through the full task center.
+- Governance bulk preview/apply, machine translation suggestions, and source-CBZ ComicInfo write-back.
 
 ## Next Plan
 
-Phase 5 should build the export center against `design/导出中心.png` and chapter 13 of the design flow, using Phase 4 governance metadata as the source of final metadata decisions. Export preview/generation must remain real-only and must not mutate original source CBZ files.
+Next work should continue Phase 5 polish or move into Phase 6 file maintenance. The remaining export work is task-center orchestration only if long-running export/retry/history becomes necessary, persisted option presets if desired, and deeper visual refinement against `design/导出中心.png`; the core preview/rename/options/browser-download loop is now real.
 
 ## Risks And Decisions
 
@@ -116,7 +119,7 @@ Phase 5 should build the export center against `design/导出中心.png` and cha
 - Decision: library summary shows only real metrics and still does not fabricate a broad 待治理 count. 待补标签 (works with zero `work_tags`) remains the honest library-level proxy; richer governance detail lives in `GovernanceService`.
 - Decision: library shelves (继续阅读/最近添加) only render with real rows and only in the unfiltered default view; filtering switches to the paginated result wall.
 - Decision: library language filter and language facets derive from `work_tags` rows of type `language` (with dictionary display), not the unused `works.language` column.
-- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only; export/write-back belongs to Phase 5.
+- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only; Phase 5 export creates new CBZ files under the export directory instead of writing back to source archives.
 - Decision: governance queue and completeness use real local state only. Missing values are shown as missing/unknown; no fake diffs, fake conflicts, or fake recommended actions.
 - Decision: 全站页面内显示的 tag 一律走词典转换名(`display`,即 `zh_name → name → slug`),英文 `name`/`slug` 仅作无词典项时兜底;英文原文只用于后端 NH API 请求等操作,不直接显示给用户。
 - Decision: 作品详情 hero 的封面按**固定高度**约束(放进恒定尺寸卡槽),绝不按长宽比框死,也不裁剪;空余由同图模糊底填充。标签等数量不定的内容**不得**与封面同列并排,须移到独立整宽区域,避免两列高度互相参差、翻书布局抖动。
@@ -128,7 +131,8 @@ Phase 5 should build the export center against `design/导出中心.png` and cha
 - `PYTHONPATH=backend pytest backend/tests -q`: passed, 28 tests (5 new in `test_library_service.py` covering summary, search filters/pagination, read-status, recent/continue shelves, and dictionary-aware tag filters).
 - `npm run build`: passed (`tsc -b && vite build`).
 - `git diff --check`: passed.
-- In-process API smoke (route functions called directly; `httpx`/TestClient unavailable): empty library → real zero states; after ingesting one real CBZ and linking real tags → correct summary/sources/language facet, keyword + `tag_ids="7,8"` + language search returns the work with real tags and size, malformed `tag_ids` tokens are ignored, `tag-filters` excludes language type, recent-added returns the real row.
+- In-process API smoke (route functions called directly before `httpx` was added): empty library → real zero states; after ingesting one real CBZ and linking real tags → correct summary/sources/language facet, keyword + `tag_ids="7,8"` + language search returns the work with real tags and size, malformed `tag_ids` tokens are ignored, `tag-filters` excludes language type, recent-added returns the real row.
 - Static fake-data scan over `library_service.py` and `components/library/` + `lib/api.ts`: no mock/fake/placeholder/random data; only SQL parameter placeholders and the pre-existing dictionary `samples` field matched.
 - Browser screenshot QA NOT run: no browser/Playwright/chromium is installed in this environment. The library page is local-data only (no NH API), so visual QA is safe to rerun by the user: start backend (`PYTHONPATH=backend uvicorn app.main:app --port 8001`) + `npm run dev`, import a CBZ, then open `#library`.
 - 详情页氛围横幅重构后复测:`PYTHONPATH=backend python3 -m pytest backend/tests -q` 35 passed;`cd frontend && npm run build` 通过;`git diff --check` 干净。后端 related 富化为数据路径改动,需用户重启后端 + 硬刷新后在 `#gallery/{id}` 验收(封面/标签/相关卡)。
+- Phase 5 export download/options slice: `PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 52 passed; `cd frontend && npm run build` passed. Tests cover preview without writes, generated CBZ containing generated `ComicInfo.xml`, real `meta.json` preservation, option-controlled omission of ComicInfo/JSON and stored compression, custom output-name export, missing-source blockers, bundle member-name dedupe, blocked-item bundle skipping, queue ready/blocked/warning summary counts, source CBZ byte preservation, and FastAPI export route success/error mapping through `TestClient`. Playwright Chromium QA on `http://127.0.0.1:5174/#export` verified desktop/mobile render, search empty-state interaction, no framework overlay, no console warnings/errors, and screenshots at `/tmp/nh-export-desktop.png` and `/tmp/nh-export-mobile.png`.

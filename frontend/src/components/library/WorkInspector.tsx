@@ -93,9 +93,9 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
         <PenTool size={16} />
         进入治理
       </button>
-      <button className="secondary-wide" type="button" disabled title="导出中心未接入">
+      <button className="secondary-wide" type="button" onClick={() => navigate({ name: "export", workId: work.id })}>
         <Download size={16} />
-        导出 CBZ（未接入）
+        导出 CBZ
       </button>
       </FadeIn>
     </aside>

@@ -1,4 +1,4 @@
-import { RefreshCw, Save, Tags } from "lucide-react";
+import { Download, RefreshCw, Save, Tags } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -203,6 +203,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
               <TagSection aggregate={aggregate} onApplyDictionaryTag={applyDictionaryTag} />
 
               <GovernanceActionBar
+                workId={aggregate.work.id}
                 changedCount={changedFields.length}
                 saving={saving}
                 onSave={saveMetadata}
@@ -493,11 +494,13 @@ function TagSection({
 }
 
 function GovernanceActionBar({
+  workId,
   changedCount,
   saving,
   onSave,
   onReload,
 }: {
+  workId: number;
   changedCount: number;
   saving: boolean;
   onSave: () => Promise<void>;
@@ -512,6 +515,10 @@ function GovernanceActionBar({
       <button className="governance-action" type="button" onClick={() => navigate({ name: "dictionary" })}>
         <Tags size={16} />
         管理词典
+      </button>
+      <button className="governance-action" type="button" onClick={() => navigate({ name: "export", workId })}>
+        <Download size={16} />
+        进入导出
       </button>
       <button className="governance-action" type="button" onClick={() => void onReload()}>
         <RefreshCw size={16} />

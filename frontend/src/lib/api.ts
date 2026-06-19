@@ -302,6 +302,74 @@ export type GovernanceApplyResult = {
   governance: GovernanceAggregate;
 };
 
+export type ExportBlocker = {
+  code: string;
+  message: string;
+};
+
+export type ExportWarning = {
+  code: string;
+  message: string;
+};
+
+export type ExportSourceFile = {
+  path?: string | null;
+  size_bytes: number;
+  sha256?: string | null;
+  exists: boolean;
+};
+
+export type ExportOptions = {
+  write_comicinfo: boolean;
+  keep_json: boolean;
+  compress: boolean;
+};
+
+export type ExportPreview = {
+  work: LibraryWork;
+  source_file: ExportSourceFile;
+  output_name: string;
+  comic_info: Record<string, string>;
+  options: ExportOptions;
+  will_write: string[];
+  will_keep: string[];
+  will_not_modify: string[];
+  blockers: ExportBlocker[];
+  warnings: ExportWarning[];
+};
+
+export type ExportQueueItem = {
+  work: LibraryWork;
+  output_name: string;
+  blockers: ExportBlocker[];
+  warnings: ExportWarning[];
+  source_file: ExportSourceFile;
+};
+
+export type ExportQueue = {
+  result: ExportQueueItem[];
+  summary: {
+    total: number;
+    ready: number;
+    blocked: number;
+    warnings: number;
+  };
+};
+
+export type ExportSummaryStats = ExportQueue["summary"];
+
+export type ExportRequestOptions = {
+  output_name?: string;
+  write_comicinfo?: boolean;
+  keep_json?: boolean;
+  compress?: boolean;
+};
+
+export type ExportBatchItem = {
+  work_id: number;
+  output_name?: string;
+};
+
 export type PageInfo = {
   id: number;
   work_id: number;
@@ -353,6 +421,19 @@ export type SettingsSummary = {
   reader: {
     default_mode: "single" | "scroll";
   };
+  export: {
+    active_preset_id: string;
+    presets: ExportPreset[];
+  };
+};
+
+export type ExportPreset = {
+  id: string;
+  name: string;
+  naming_rule: string;
+  comicinfo_rule: string;
+  meta_rule: string;
+  compression: string;
 };
 
 export type DiscoverSearchParams = {
@@ -383,6 +464,45 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
     throw new Error(String(message));
   }
   return response.json() as Promise<T>;
+}
+
+function filenameFromDisposition(header: string | null, fallback: string): string {
+  if (!header) return fallback;
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (utf8) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      // fall through to the plain filename
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(header);
+  return plain ? plain[1] : fallback;
+}
+
+async function downloadFile(url: string, options: RequestInit, fallbackName: string): Promise<string> {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    let message = `${response.status} ${response.statusText}`;
+    try {
+      const payload = await response.json();
+      message = payload.detail?.message || payload.detail || message;
+    } catch {
+      // Keep the HTTP status text.
+    }
+    throw new Error(String(message));
+  }
+  const blob = await response.blob();
+  const filename = filenameFromDisposition(response.headers.get("Content-Disposition"), fallbackName);
+  const href = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(href);
+  return filename;
 }
 
 async function cachedDiscoverRequest<T>(url: string, ttlMs = 60_000): Promise<T> {
@@ -525,6 +645,31 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     }),
+  exportQueue: () => request<ExportQueue>("/api/exports/queue"),
+  exportSummary: () => request<ExportSummaryStats>("/api/exports/summary"),
+  exportPreview: (id: number, options?: ExportRequestOptions) =>
+    options
+      ? request<ExportPreview>(`/api/works/${id}/export-preview`, {
+          method: "POST",
+          headers: JSON_HEADERS,
+          body: JSON.stringify(options)
+        })
+      : request<ExportPreview>(`/api/works/${id}/export-preview`),
+  downloadExport: (id: number, options?: ExportRequestOptions) => {
+    const query = new URLSearchParams();
+    if (options?.output_name) query.set("output_name", options.output_name);
+    if (options?.write_comicinfo !== undefined) query.set("write_comicinfo", String(options.write_comicinfo));
+    if (options?.keep_json !== undefined) query.set("keep_json", String(options.keep_json));
+    if (options?.compress !== undefined) query.set("compress", String(options.compress));
+    const qs = query.toString();
+    return downloadFile(`/api/works/${id}/export/download${qs ? `?${qs}` : ""}`, {}, `work-${id}.cbz`);
+  },
+  downloadExportBundle: (items: ExportBatchItem[], options?: Omit<ExportRequestOptions, "output_name">) =>
+    downloadFile(
+      "/api/exports/download",
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items, ...options }) },
+      "导出合集.zip"
+    ),
   works: () => request<{ result: Work[] }>("/api/works"),
   work: (id: number) => request<Work>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
