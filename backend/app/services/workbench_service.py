@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-_JOB_STATUSES = ("running", "queued", "paused", "failed", "completed")
+_JOB_STATUSES = ("running", "queued", "paused", "failed", "completed", "cancelled")
 _FAILED_RECENT_LIMIT = 5
 _SHELF_LIMIT = 8
 

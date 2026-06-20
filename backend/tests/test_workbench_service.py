@@ -66,6 +66,7 @@ def test_overview_empty_db_is_all_real_zeros(tmp_path):
         "paused": 0,
         "failed": 0,
         "completed": 0,
+        "cancelled": 0,
         "failed_recent": [],
     }
     assert data["continue_reading"] == []

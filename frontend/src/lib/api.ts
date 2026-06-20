@@ -542,6 +542,7 @@ export type WorkbenchOverview = {
     paused: number;
     failed: number;
     completed: number;
+    cancelled: number;
     failed_recent: WorkbenchFailedJob[];
   };
   continue_reading: LibraryWork[];
