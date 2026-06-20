@@ -279,11 +279,16 @@ Root: `frontend/src/`
   - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `components/files/` — file maintenance module:
-  - `FilesPage.tsx` — thin container: overview strip + toolbar + multi-select list + inspector.
-  - `useFilesState.ts` — overview/inventory fetch, category/q/status filters with request token, selected Set, focus, delete preview + confirm orchestration.
-  - `FileOverviewStrip.tsx` / `FileToolbar.tsx` / `FileList.tsx` / `FileInspector.tsx` — metrics, filters, selectable rows, focused-detail + delete preview/confirm.
-  - `fileHelpers.tsx` — `formatBytes`, `statusLabel`, `targetKey`, `entryToTarget`.
-  - `App.tsx` renders `FilesPage` for `#files` (replaced the boundary screen).
+  - Visual layout follows `design/文件管理.png`: hairline thin-number metric strip + multi-column file table + bottom cover-detail panel + right health/cleanup rail.
+  - `FilesPage.tsx` — thin container (takes `blurCovers`): overview strip + toolbar + file table + detail panel + health rail.
+  - `useFilesState.ts` — overview/inventory fetch, category/q/status filters with request token, selected Set, focus, delete preview + confirm orchestration; `actionNotice` surfaces delete success/errors; preview cleared on selection/filter change.
+  - `FileOverviewStrip.tsx` — hairline thin-number metric grid (dict-metric idiom).
+  - `FileToolbar.tsx` — category tabs + search + status filter + count.
+  - `FileList.tsx` — multi-column selectable table (文件名/路径/类型/大小/状态) with selected highlight + focus bar.
+  - `FileDetailPanel.tsx` — focused-item detail: real cover thumbnail (respects `blurCovers`) + 4 stat blocks.
+  - `FileHealthRail.tsx` — right rail: 健康度 (real overview), 重复检测 (honest 未接入 boundary — no fake dedupe), 清理工具 (preview → confirm delete + result notice).
+  - `fileHelpers.tsx` — `formatBytes`, `statusLabel`, `kindLabel`, `statusTone`, `targetKey`, `entryToTarget`.
+  - `App.tsx` renders `FilesPage` for `#files` with `blurCovers` (replaced the boundary screen).
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 
