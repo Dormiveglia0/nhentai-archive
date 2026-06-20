@@ -1,7 +1,7 @@
-import { Ban, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
+import { Ban, Languages, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
 
-import { DictionaryApplyPayload } from "../../lib/api";
+import { api, DictionaryApplyPayload } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
 
 type Props = {
@@ -46,6 +46,25 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
 
   function removeChip(field: "aliases" | "scope", item: string) {
     update({ [field]: (value[field] ?? []).filter((chip) => chip !== item) });
+  }
+
+  const [translating, setTranslating] = useState(false);
+  const [mtError, setMtError] = useState<string | null>(null);
+
+  async function machineTranslate() {
+    const text = value.original_text.trim();
+    if (!text) return;
+    setTranslating(true);
+    setMtError(null);
+    try {
+      const result = await api.dictionaryTranslate(text);
+      if (result.translation) update({ zh_name: result.translation });
+      else setMtError("机翻返回为空");
+    } catch (exc) {
+      setMtError(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setTranslating(false);
+    }
   }
 
   return (
@@ -107,8 +126,23 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
           </label>
 
           <div className="machine-suggestion wide">
-            <span>机器建议</span>
-            <em>未接入真实建议服务（接入真实来源后启用）</em>
+            <span>机器翻译</span>
+            <div className="machine-suggestion-row">
+              <button
+                type="button"
+                className="machine-suggestion-btn"
+                onClick={() => void machineTranslate()}
+                disabled={loading || translating || !value.original_text.trim()}
+              >
+                <Languages size={15} />
+                {translating ? "翻译中…" : "机翻填充中文名"}
+              </button>
+              {mtError ? (
+                <em className="machine-suggestion-error">{mtError}</em>
+              ) : (
+                <em>调用设置中的机翻服务翻译「原文」并填入中文名，可再人工校对。</em>
+              )}
+            </div>
           </div>
         </div>
 

@@ -7407,3 +7407,42 @@ button.gallery-tag:hover {
   .governance-rail { position: static; max-height: none; }
   .governance-rail-list { max-height: 320px; }
 }
+
+/* Settings — machine translation provider picker */
+.settings-mt-providers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.settings-mt-provider {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-solid); color: var(--ink); cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.settings-mt-provider:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+.settings-mt-provider.is-active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: rgba(185, 45, 30, 0.05); }
+.settings-mt-provider span { display: flex; flex-direction: column; gap: 2px; }
+.settings-mt-provider strong { font-size: 14px; }
+.settings-mt-provider small { color: var(--muted); font-size: 12px; }
+@media (max-width: 720px) {
+  .settings-mt-providers { grid-template-columns: 1fr; }
+}
+
+/* Dictionary — machine translation controls */
+.dictionary-mt-bar { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
+.dictionary-mt-bar button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--surface-solid); color: var(--ink); cursor: pointer; font-size: 13px;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.dictionary-mt-bar button:hover:not(:disabled) { border-color: var(--accent); background: rgba(185, 45, 30, 0.05); }
+.dictionary-mt-bar button:disabled { opacity: 0.55; cursor: default; }
+.dictionary-mt-bar span { color: var(--muted); font-size: 12px; }
+.machine-suggestion-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.machine-suggestion-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface-solid); color: var(--ink); cursor: pointer; font-size: 13px;
+  transition: border-color 0.18s ease;
+}
+.machine-suggestion-btn:hover:not(:disabled) { border-color: var(--accent); }
+.machine-suggestion-btn:disabled { opacity: 0.5; cursor: default; }
+.machine-suggestion-error { color: var(--accent); font-style: normal; font-size: 12px; }

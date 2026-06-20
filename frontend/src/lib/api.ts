@@ -549,6 +549,23 @@ export type WorkbenchOverview = {
   recent_added: LibraryWork[];
 };
 
+export type TranslationVerifyResult = {
+  ok: boolean;
+  provider: string;
+  sample: string | null;
+  status_code: number | null;
+  message: string;
+};
+
+export type MachineTranslationSettings = {
+  provider: "google_free" | "deepl";
+  deepl_api_key_configured: boolean;
+  deepl_key_source: "env" | "db" | "none";
+  deepl_plan: "free" | "pro";
+  target_lang: string;
+  last_verify: TranslationVerifyResult | null;
+};
+
 export type SettingsSummary = {
   nhentai: {
     base_url: string;
@@ -570,6 +587,7 @@ export type SettingsSummary = {
   reader: {
     default_mode: "single" | "scroll";
   };
+  machine_translation: MachineTranslationSettings | null;
   export: {
     active_preset_id: string;
     presets: ExportPreset[];
@@ -751,6 +769,17 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     }),
+  dictionaryTranslate: (text: string) =>
+    request<{ text: string; translation: string; provider: string }>("/api/dictionary/translate", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ text })
+    }),
+  dictionarySuggestBatch: (limit = 20) =>
+    request<{ generated: number; items: Array<{ original_text: string; zh_name: string; tag_type: string; remote_tag_id: number }> }>(
+      "/api/dictionary/suggest-batch",
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ limit }) }
+    ),
   dictionaryPreviewBulkImport: (rows: BulkImportRow[]) =>
     request<BulkImportPreview>("/api/dictionary/preview-bulk-import", {
       method: "POST",
@@ -872,5 +901,7 @@ export const api = {
     request<{ configured: boolean; ok: boolean; source: string; status_code: number | null; message: string }>(
       "/api/settings/nhentai/verify",
       { method: "POST", headers: JSON_HEADERS }
-    )
+    ),
+  verifyTranslationSettings: () =>
+    request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS })
 };

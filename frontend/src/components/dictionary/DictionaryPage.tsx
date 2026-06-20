@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Languages, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -45,6 +45,7 @@ export function DictionaryPage() {
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
 
   useEffect(() => {
     if (!bulkOpen) return;
@@ -130,6 +131,24 @@ export function DictionaryPage() {
     setEvidence(null);
     setPreview(null);
     setForm(EMPTY_FORM);
+  }
+
+  async function suggestBatch() {
+    setSuggesting(true);
+    setMessage(null);
+    try {
+      const result = await api.dictionarySuggestBatch(20);
+      setMessage(
+        result.generated > 0
+          ? `已生成 ${result.generated} 条机翻建议，请在候选池按「机器建议」筛选并逐条复核。`
+          : "没有可生成建议的未配置远端 tag。"
+      );
+      await refreshList();
+    } catch (exc) {
+      setMessage(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setSuggesting(false);
+    }
   }
 
   async function previewApply() {
@@ -221,6 +240,15 @@ export function DictionaryPage() {
       </div>
 
       <DictionarySummaryStrip summary={summary} />
+
+      <div className="dictionary-mt-bar">
+        <button type="button" onClick={() => void suggestBatch()} disabled={loading || suggesting}>
+          <Languages size={15} />
+          {suggesting ? "生成中…" : "批量机翻未配置项"}
+        </button>
+        <span>用设置里的机翻服务，为未配置的远端 tag 生成「机器建议」，逐条复核后再应用到作品。</span>
+      </div>
+
       {message ? <div className="notice slim dictionary-notice">{message}</div> : null}
 
       <div className="dictionary-workspace">
