@@ -16,6 +16,9 @@ class FakeFiles:
     def delete(self, targets):
         return {"deleted_files": len(targets), "removed_works": 0, "reclaimed_bytes": 7, "errors": []}
 
+    def duplicates(self):
+        return {"hash": {"groups": 1, "files": 2}, "gallery_id": {"groups": 0, "works": 0}, "title_similar": None}
+
 
 def test_files_overview_and_inventory_routes(monkeypatch):
     monkeypatch.setattr(main, "files_service", FakeFiles())
@@ -44,3 +47,12 @@ def test_files_delete_accepts_empty_targets(monkeypatch):
     monkeypatch.setattr(main, "files_service", FakeFiles())
     client = TestClient(main.app)
     assert client.post("/api/files/delete", json={"targets": []}).status_code == 200
+
+
+def test_files_duplicates_route(monkeypatch):
+    monkeypatch.setattr(main, "files_service", FakeFiles())
+    client = TestClient(main.app)
+
+    body = client.get("/api/files/duplicates").json()
+    assert body["hash"]["files"] == 2
+    assert body["title_similar"] is None

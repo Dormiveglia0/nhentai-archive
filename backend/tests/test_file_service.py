@@ -253,3 +253,40 @@ def test_delete_rejects_path_outside_managed_roots(tmp_path):
     assert result["deleted_files"] == 0
     assert any(err["code"] == "forbidden_path" for err in result["errors"])
     assert outside.exists()
+
+
+def test_inventory_work_entry_has_tags_and_modified_time(tmp_path):
+    _settings, db, archive, files = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    db.execute(
+        "INSERT INTO remote_tags (remote_id, type, name, slug, payload_json) "
+        "VALUES (30, 'tag', 'big', 'big', '{}') ON CONFLICT(remote_id) DO NOTHING"
+    )
+    db.execute(
+        "INSERT INTO local_tag_dictionary (original_text, normalized_key, zh_name, tag_type, remote_tag_id) "
+        "VALUES ('big', 'big', '巨乳', 'tag', 30) ON CONFLICT(normalized_key, tag_type) DO NOTHING"
+    )
+    dict_id = db.fetchone("SELECT id FROM local_tag_dictionary WHERE remote_tag_id=30")["id"]
+    db.execute(
+        "INSERT INTO work_tags (work_id, remote_tag_id, dictionary_id, tag_type, remote_name, remote_slug) "
+        "VALUES (?, 30, ?, 'tag', 'big', 'big')",
+        (work_id, dict_id),
+    )
+
+    entry = next(e for e in files.inventory(category="work")["result"] if e["work_id"] == work_id)
+    assert "巨乳" in entry["tags"]
+    assert entry["updated_at"]
+
+
+def test_duplicates_detects_real_hash_and_gallery_id_matches(tmp_path):
+    _settings, db, archive, files = _setup(tmp_path)
+    first = _import_work(db, archive, tmp_path, title="One", gallery_id=1)
+    second = _import_work(db, archive, tmp_path, title="Two", gallery_id=2)
+    db.execute("UPDATE work_files SET sha256='SAMEHASH' WHERE work_id IN (?, ?) AND kind='source_cbz'", (first, second))
+
+    dup = files.duplicates()
+
+    assert dup["hash"]["groups"] == 1
+    assert dup["hash"]["files"] == 2
+    assert dup["gallery_id"]["groups"] == 0
+    assert dup["title_similar"] is None

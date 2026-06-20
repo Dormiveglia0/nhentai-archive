@@ -97,6 +97,7 @@ class FileMaintenanceService:
                     "page_count": int(w.get("page_count") or 0),
                     "source": w.get("source"),
                     "remote_gallery_id": w.get("remote_gallery_id"),
+                    "updated_at": w.get("updated_at"),
                     "status": status,
                     "flags": flags,
                 }
@@ -172,10 +173,51 @@ class FileMaintenanceService:
                 or ql in (e.get("name") or "").lower()
             ]
         total = len(entries)
-        per_page = max(1, min(int(per_page or 50), 200))
+        per_page = max(1, min(int(per_page or 50), 500))
         page = max(1, int(page or 1))
         start = (page - 1) * per_page
-        return {"result": entries[start : start + per_page], "total": total, "page": page, "per_page": per_page}
+        result = entries[start : start + per_page]
+        for entry in result:
+            if entry["kind"] == "work":
+                entry["tags"] = self._work_tags_display(int(entry["work_id"]))
+        return {"result": result, "total": total, "page": page, "per_page": per_page}
+
+    def _work_tags_display(self, work_id: int, limit: int = 12) -> list[str]:
+        rows = self.db.fetchall(
+            """
+            SELECT COALESCE(d.zh_name, wt.remote_name, wt.remote_slug) AS display
+            FROM work_tags wt
+            LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
+            WHERE wt.work_id = ?
+            ORDER BY wt.id
+            LIMIT ?
+            """,
+            (work_id, limit),
+        )
+        return [str(r["display"]) for r in rows if r.get("display")]
+
+    def duplicates(self) -> dict[str, Any]:
+        """Real duplicate detection over stored source files and gallery ids.
+
+        ``hash`` groups identical source CBZs by ``work_files.sha256``. ``gallery_id``
+        groups works sharing a remote gallery id. ``title_similar`` is not
+        implemented and stays ``None`` so the UI shows a 未接入 boundary instead of a
+        fabricated count.
+        """
+        hash_rows = self.db.fetchall(
+            "SELECT sha256, COUNT(*) AS c FROM work_files "
+            "WHERE kind='source_cbz' AND sha256 IS NOT NULL AND sha256 <> '' "
+            "GROUP BY sha256 HAVING c > 1"
+        )
+        gid_rows = self.db.fetchall(
+            "SELECT remote_gallery_id, COUNT(*) AS c FROM works "
+            "WHERE remote_gallery_id IS NOT NULL GROUP BY remote_gallery_id HAVING c > 1"
+        )
+        return {
+            "hash": {"groups": len(hash_rows), "files": sum(int(r["c"]) for r in hash_rows)},
+            "gallery_id": {"groups": len(gid_rows), "works": sum(int(r["c"]) for r in gid_rows)},
+            "title_similar": None,
+        }
 
     # --- preview_delete cascade analysis (read-only) ----------------------
     def _work_files(self, work_id: int) -> list[Path]:

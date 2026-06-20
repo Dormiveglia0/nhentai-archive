@@ -411,6 +411,11 @@ def files_inventory(
     return files_service.inventory(category=category, q=q, status=status, page=page, per_page=per_page)
 
 
+@app.get("/api/files/duplicates")
+def files_duplicates():
+    return files_service.duplicates()
+
+
 @app.post("/api/files/preview-delete")
 def files_preview_delete(payload: FileDeleteRequest):
     return files_service.preview_delete([t.model_dump(exclude_none=True) for t in payload.targets])
