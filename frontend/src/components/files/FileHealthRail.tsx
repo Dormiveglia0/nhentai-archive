@@ -71,10 +71,6 @@ export function FileHealthRail({
               <span>Gallery ID 相同</span>
               <em className={duplicates.gallery_id.works > 0 ? "bad" : "ok"}>{duplicates.gallery_id.works}</em>
             </li>
-            <li>
-              <span>标题相似</span>
-              <em className="muted">未接入</em>
-            </li>
           </ul>
         ) : (
           <p className="files-dim">读取中…</p>

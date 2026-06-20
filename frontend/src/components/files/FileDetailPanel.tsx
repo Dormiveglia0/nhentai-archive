@@ -37,10 +37,6 @@ export function FileDetailPanel({ focus, blurCovers, busy, onDelete }: Props) {
       ];
   const tags = focus.tags ?? [];
 
-  const copyPath = () => {
-    if (path && path !== "—") navigator.clipboard?.writeText(path).catch(() => {});
-  };
-
   return (
     <div className="files-detail">
       <div className="files-detail-cover">
@@ -81,7 +77,6 @@ export function FileDetailPanel({ focus, blurCovers, busy, onDelete }: Props) {
 
       <div className="files-detail-actions">
         <span className="files-detail-actions-label">快捷操作</span>
-        <button type="button" onClick={copyPath}>复制路径</button>
         {isWork ? (
           <>
             <button type="button" onClick={() => { window.location.hash = `#governance/${focus.work_id}`; }}>进入治理</button>

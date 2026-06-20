@@ -6495,3 +6495,5 @@ button.gallery-tag:hover {
 }
 
 .export-toolbar-action.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.files-detail.files-detail-empty { display: block; padding: 18px; }
