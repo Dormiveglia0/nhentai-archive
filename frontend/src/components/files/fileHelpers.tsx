@@ -29,6 +29,19 @@ export function targetKey(entry: FileEntry): string {
   return entry.id;
 }
 
+export function kindLabel(kind: string): string {
+  if (kind === "work") return "作品";
+  if (kind === "orphan") return "孤立文件";
+  if (kind === "stale") return "临时文件";
+  return kind;
+}
+
+export function statusTone(status: string): "ok" | "warn" | "loose" {
+  if (status === "missing_source" || status === "missing_cover") return "warn";
+  if (status === "orphan" || status === "stale") return "loose";
+  return "ok";
+}
+
 export function entryToTarget(entry: FileEntry): FileDeleteTarget {
   if (entry.kind === "work") return { kind: "work", work_id: entry.work_id };
   return { kind: entry.kind, path: entry.path };

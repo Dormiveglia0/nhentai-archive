@@ -1,10 +1,11 @@
-import { FileInspector } from "./FileInspector";
+import { FileDetailPanel } from "./FileDetailPanel";
+import { FileHealthRail } from "./FileHealthRail";
 import { FileList } from "./FileList";
 import { FileOverviewStrip } from "./FileOverviewStrip";
 import { FileToolbar } from "./FileToolbar";
 import { useFilesState } from "./useFilesState";
 
-export function FilesPage() {
+export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
   const state = useFilesState();
   const entries = state.inventory?.result ?? [];
   const focus = entries.find((e) => e.id === state.focusId) ?? null;
@@ -22,7 +23,7 @@ export function FilesPage() {
       <FileOverviewStrip overview={state.overview} />
       {state.error ? <div className="files-error">{state.error}</div> : null}
 
-      <div className="files-body">
+      <div className="files-layout">
         <div className="files-main">
           <FileToolbar
             category={state.category}
@@ -40,16 +41,17 @@ export function FilesPage() {
             onToggle={state.toggleSelect}
             loading={state.loading}
           />
+          <FileDetailPanel focus={focus} blurCovers={blurCovers} />
         </div>
-        <FileInspector
-          focus={focus}
+        <FileHealthRail
+          overview={state.overview}
           selectedCount={state.selected.size}
           preview={state.preview}
           busy={state.busy}
+          actionNotice={state.actionNotice}
           onPreview={state.requestPreview}
           onConfirm={state.confirmDelete}
           onClear={state.clearSelection}
-          actionNotice={state.actionNotice}
         />
       </div>
     </section>

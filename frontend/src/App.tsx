@@ -48,7 +48,7 @@ export default function App() {
         <BoundaryPage title="任务中心" description="底部任务坞站已读取真实 /api/jobs；完整任务列表、暂停、恢复、取消后续接入。" />
       ) : null}
       {page.name === "export" ? <ExportPage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
-      {page.name === "files" ? <FilesPage /> : null}
+      {page.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
       {page.name === "settings" ? (
         <SettingsPage />
       ) : null}
