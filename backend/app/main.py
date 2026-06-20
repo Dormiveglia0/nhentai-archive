@@ -22,6 +22,7 @@ from app.services.governance_service import GovernanceService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
 from app.services.settings_service import SettingsService
+from app.services.workbench_service import WorkbenchService
 
 
 class ReaderStatePatch(BaseModel):
@@ -112,6 +113,7 @@ exports = ExportService(db, settings)
 files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 settings_service = SettingsService(db, settings, client)
+workbench = WorkbenchService(library, governance, jobs, files_service, exports)
 
 app = FastAPI(title="NH Archive", version="0.1.0")
 app.add_middleware(
@@ -393,6 +395,11 @@ def export_download_bundle(payload: ExportBatchRequest):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _download_response(filename, data, "application/zip")
+
+
+@app.get("/api/workbench/overview")
+def workbench_overview():
+    return workbench.overview()
 
 
 @app.get("/api/files/overview")
