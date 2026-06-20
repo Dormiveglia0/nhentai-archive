@@ -10,6 +10,7 @@ Current real slice:
 
 ## Completed
 
+- 工作台聚合面板:`#workbench` 从占位边界页替换为真实每日仪表盘,通过 `GET /api/workbench/overview` 聚合 library/governance/jobs/files/exports 的真实摘要数据,无健康分、无虚假聚合数。页面由四部分构成:馆藏作品/待治理/失败任务/缺失源文件四格真实指标条(`WorkbenchMetricStrip`)、治理/任务/文件/导出四张跳转模块卡(`WorkbenchModuleCards`,分别跳至 `#governance`/`#tasks`/`#files`/`#export`)、复用 `ContinueReadingRow` 渲染的继续阅读书架、以及复用同组件的最近导入书架;两条书架均在无真实数据时自动折叠,`blurCovers` 隐私开关贯穿全页。新增 `WorkbenchService`(只读聚合器,从现有 `LibraryService`/`GovernanceService`/`JobService`/`FileService`/`ExportService` 取数,绝不调 NH API)与前端 `components/workbench/`(`WorkbenchPage`、`useWorkbenchState`、`WorkbenchMetricStrip`、`WorkbenchModuleCards`、`workbenchHelpers`)。新增 `backend/tests/test_workbench_service.py`(3 项)与 `backend/tests/test_workbench_api.py`(1 项)。验证:`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿(90 passed);`cd frontend && npm run build` 通过。
 - Phase 7 任务中心: `#tasks` 从边界页替换为真实 `TasksPage`,只读取和操作现有 `/api/jobs` 数据,不造假任务。后端新增 `job_logs` 表与真实控制 API:`GET /api/jobs/{id}/logs`、`POST /api/jobs/{id}/pause`、`POST /api/jobs/{id}/resume`、`POST /api/jobs/{id}/cancel`;`JobService` 记录创建/阶段/完成/失败/暂停/恢复/取消/重试日志,并提供 `checkpoint()` 让导入线程在安全阶段边界协作暂停/取消(下载阶段取消会在下个 checkpoint 停止并清理 tmp CBZ)。页面按 `design/任务中心.png` 的结构落地:hero + 5 张真实指标卡(`running/queued/failed/completed` 与今日更新吞吐量)、完整状态 tab(`all/running/paused/queued/failed/completed/cancelled`)、搜索、紧凑任务表、右侧任务详情检查器。失败的 `remote_import` 且带 `gallery_id` 的任务可重试;运行/等待任务可暂停;暂停任务可恢复;运行/等待/暂停任务可取消;日志区显示后端持久日志;复制任务 ID 为真实剪贴板操作。新增 `components/tasks/`(状态 hook、summary strip、列表、检查器、helper 标签/时间格式化),`Job` 前端类型补 `created_at` 与 `paused/cancelled`,新增 `JobLog` 类型;新增 `backend/tests/test_job_service.py` 和 `backend/tests/test_jobs_api.py` 覆盖状态机、日志、控制路由与 retry payload。验证:`cd frontend && npm run build` 通过;`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿;静态扫描 touched task files 无假数据命中。
 - Phase 6 文件管理:新增 `FileMaintenanceService`(本地文件系统 + SQLite,绝不调 NH API)与 API `GET /api/files/overview`、`GET /api/files/inventory`、`POST /api/files/preview-delete`、`POST /api/files/delete`。文件清单统一展示三类条目:作品(源 CBZ + 封面聚合为一个单元,状态 ok/missing_source/missing_cover,体积不符标 size_mismatch)、孤立文件(library/covers 下无 DB 引用)、临时残留(tmp/exports)。`work_files.path`/`works.cover_path` 的绝对/相对混用统一归一化为 `.resolve()` 绝对路径后再判定。删除是唯一动盘操作:删除作品经 SQLite `ON DELETE CASCADE` 级联清空 works/work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history 并删源 CBZ + 封面;孤立/临时仅 unlink;受管目录外路径一律拒绝(穿越防护);CBZ 字节从不被修改,只整体删除。删除前强制 preview(展开级联影响、可回收字节、阅读进度/治理警告)。前端 `#files` 边界页替换为真实 `FilesPage`,并按 `design/文件管理.png` 视觉对齐:hairline 细数字指标条(`.files-summary`,沿用 dict-metric 语言)、多列文件表(文件名/路径/类型/大小/状态,可多选+选中高亮+聚焦左条)、底部封面详情面板(`FileDetailPanel`,真实封面缩略+4 格统计,封面遵循 `blurCovers` 隐私模糊)、右栏 `FileHealthRail`(健康度=真实 overview;重复检测=诚实「未接入」边界,不显示假重复数;清理工具=预览→二次确认→执行→刷新,删除结果回显成功/错误)。验证:`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿(新增 test_file_service.py 12 项 + test_files_api.py 3 项);`cd frontend && npm run build` 通过;静态扫描无假数据;临时数据目录手验 overview/preview/级联删除符合真实状态;Playwright(bundled chromium)在 `#files` 桌面 1440 与移动 390 截图核对真实 6 作品数据下的指标条/文件表/封面详情/健康度侧栏渲染正常、无控制台报错(仅 favicon 404)。
 - 导出中心下载选项与检查器重构:后端 `ExportService.preview/build_cbz/build_bundle` 新增 `write_comicinfo`、`keep_json`、`compress` 选项，预览会反映将写入/保留内容，单文件下载和批量 `.zip` 下载都会传递同一组选项；新增测试覆盖不写 ComicInfo、去除 JSON、无压缩打包和预览选项回显。前端导出页从 summary/table/preset/preview 旧分区调整为 `ExportToolbar` + `ExportWorkList` + `ExportInspector`：支持搜索、状态筛选、点击作品聚焦/选择、检查器内改输出名、切换 ComicInfo/JSON/压缩、刷新预览、下载所选或仅下载当前作品；删除旧 `ExportSummary`、`ExportQueueTable`、`ExportPresetBar`、`ExportPreviewPanel`。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 52 passed；`cd frontend && npm run build` passed；Playwright Chromium QA on `http://127.0.0.1:5174/#export` desktop 1440x1000 and mobile 390x844 verified page identity, nonblank render, no framework overlay, no console warnings/errors, search empty-state interaction, and screenshots saved under `/tmp/nh-export-*.png`.
@@ -89,17 +90,17 @@ Current real slice:
 
 ## Not Implemented Yet
 
-- Workbench aggregate dashboard.
 - Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
 - Long-running bulk export jobs through the task center.
 - Governance bulk preview/apply, machine translation suggestions, and source-CBZ ComicInfo write-back.
 
 ## Next Plan
 
-Phase 7 task center now ships the real `/api/jobs` list/detail/pause/resume/cancel/log/retry page. Remaining follow-ups: long-running export jobs that can report progress through the task center, file-inventory UI pagination, Workbench aggregate dashboard, and browser screenshot QA against `design/任务中心.png`.
+工作台聚合面板已落地,所有主模块均为真实页面。剩余方向:长时批量导出任务接入任务中心(进度上报/暂停/重试)、文件清单 UI 分页、阅读历史专属页。
 
 ## Risks And Decisions
 
+- Decision: 工作台只聚合真实模块摘要,不造健康分、不造假聚合数;隐私开关沿用全局,不在工作台重复。
 - Decision: 文件管理是管理库内全部文件,不只异常清理;清单含健康作品,所有行可删。
 - Decision: 删除健康作品的源 CBZ = 级联整体移除该作品(works 及全部引用表 + 封面文件)。
 - Decision: 删除是文件管理唯一会动盘的操作;CBZ 永不被修改,只能整体删除;受管目录(library/covers/tmp/exports)之外的任何路径一律拒绝(目录穿越防护)。

@@ -99,6 +99,8 @@ Root: `backend/app/`
   - Writes durable `job_logs` for creation, stage changes, completion, failures, pause/resume/cancel, and retry.
 - `services/import_service.py`
   - Remote import jobs call `JobService.checkpoint()` between safe stages so pause/cancel is real and cooperative. Cancelling after a temporary CBZ download removes the tmp file before returning.
+- `services/workbench_service.py`
+  - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
   - FastAPI route wiring.
 
@@ -166,6 +168,7 @@ Implemented:
 - `GET /api/settings`
 - `PATCH /api/settings`
 - `POST /api/settings/nhentai/verify`
+- `GET /api/workbench/overview`
 
 Reserved, not implemented:
 
@@ -179,7 +182,7 @@ Root: `frontend/src/`
 
 - `App.tsx`
   - Hash route composition.
-  - Boundary page for workbench; real pages for discover/library/reader/governance/dictionary/export/files/tasks/settings.
+  - All main modules are now real pages: discover/library/reader/governance/dictionary/export/files/tasks/settings/workbench. No module remains a boundary screen.
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
@@ -308,6 +311,13 @@ Root: `frontend/src/`
   - `TaskInspector.tsx` — focused job detail, progress, error/retry-after, real pause/resume/cancel/retry/copy actions, and durable job log timeline.
   - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
   - Only failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel.
+- `components/workbench/` — daily workbench dashboard:
+  - `WorkbenchPage.tsx` — thin container for `#workbench`; takes `blurCovers` and composes the metric strip, two shelves, and four module cards.
+  - `useWorkbenchState.ts` — fetches `GET /api/workbench/overview`; manages loading/error/refresh state.
+  - `WorkbenchMetricStrip.tsx` — hairline thin-number strip showing real metrics: 馆藏作品 / 待治理 / 失败任务 / 缺失源文件.
+  - `WorkbenchModuleCards.tsx` — four jump cards (治理 / 任务 / 文件 / 导出) linking to `#governance` / `#tasks` / `#files` / `#export`.
+  - `workbenchHelpers.ts` — shared label/formatting utilities.
+  - Reuses `ContinueReadingRow` (from library) for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 
