@@ -1,5 +1,7 @@
 import { AlertTriangle, CheckCircle2, Clock3, Loader2, RadioTower } from "lucide-react";
 
+import { Stagger, StaggerItem } from "../../lib/motion";
+import { NumberTicker } from "../effects/NumberTicker";
 import type { TaskSummary } from "./useTasksState";
 
 export function TaskSummaryStrip({ summary }: { summary: TaskSummary }) {
@@ -12,21 +14,21 @@ export function TaskSummaryStrip({ summary }: { summary: TaskSummary }) {
   ];
 
   return (
-    <div className="tasks-summary">
+    <Stagger className="tasks-summary">
       {metrics.map((metric) => {
         const Icon = metric.icon;
         return (
-          <div className={`tasks-summary-metric tone-${metric.tone}`} key={metric.label}>
+          <StaggerItem className={`tasks-summary-metric tone-${metric.tone}`} key={metric.label}>
             <span className="tasks-summary-icon">
               <Icon size={18} />
             </span>
             <div>
-              <strong>{metric.value.toLocaleString("zh-CN")}</strong>
+              <strong><NumberTicker value={metric.value} /></strong>
               <span>{metric.label}</span>
             </div>
-          </div>
+          </StaggerItem>
         );
       })}
-    </div>
+    </Stagger>
   );
 }

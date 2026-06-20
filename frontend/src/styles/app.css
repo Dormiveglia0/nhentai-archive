@@ -1121,7 +1121,7 @@ kbd {
   color: var(--accent-dark);
 }
 
-.tasks-tbody li:last-child .tasks-trow {
+.tasks-tbody > *:last-child .tasks-trow {
   border-bottom: 0;
 }
 
@@ -7152,7 +7152,7 @@ button.gallery-tag:hover {
 .files-trow .num { text-align: right; font-variant-numeric: tabular-nums; }
 .files-tbody { list-style: none; margin: 0; padding: 0; }
 .files-trow { min-height: 46px; border-bottom: 1px solid rgba(88, 70, 48, 0.08); cursor: pointer; font-size: 13px; }
-.files-trow:last-child { border-bottom: 0; }
+.files-tbody > *:last-child .files-trow { border-bottom: 0; }
 .files-trow:hover { background: rgba(185, 45, 30, 0.04); }
 .files-trow.is-selected { background: rgba(185, 45, 30, 0.08); }
 .files-trow.is-focused { box-shadow: inset 3px 0 0 var(--accent); }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import type { Job } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
 import {
   canCancel,
   canDelete,
@@ -63,6 +64,8 @@ export function TaskList({
   if (loading) return <div className="tasks-empty">正在读取任务队列...</div>;
   if (jobs.length === 0) return <div className="tasks-empty">{emptyLabel}</div>;
 
+  const signature = jobs.map((job) => job.id).join("-");
+
   return (
     <div className="tasks-table">
       <div className="tasks-thead">
@@ -73,9 +76,9 @@ export function TaskList({
         <span>时间</span>
         <span>操作</span>
       </div>
-      <ul className="tasks-tbody">
+      <Stagger key={signature} className="tasks-tbody">
         {jobs.map((job) => (
-          <li key={job.id}>
+          <StaggerItem key={job.id}>
             <div
               className={`tasks-trow tone-${statusTone(job.status)}${focusId === job.id ? " is-focused" : ""}${job.status === "failed" ? " is-failed" : ""}`}
               role="button"
@@ -197,9 +200,9 @@ export function TaskList({
                 ) : null}
               </span>
             </div>
-          </li>
+          </StaggerItem>
         ))}
-      </ul>
+      </Stagger>
     </div>
   );
 }

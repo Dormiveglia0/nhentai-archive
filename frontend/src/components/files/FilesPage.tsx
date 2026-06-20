@@ -1,3 +1,4 @@
+import { FadeIn } from "../../lib/motion";
 import { FileDetailPanel } from "./FileDetailPanel";
 import { FileHealthRail } from "./FileHealthRail";
 import { FileList } from "./FileList";
@@ -23,7 +24,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
       <FileOverviewStrip overview={state.overview} />
       {state.error ? <div className="files-error">{state.error}</div> : null}
 
-      <div className="files-layout">
+      <FadeIn className="files-layout" y={8}>
         <div className="files-main">
           <FileToolbar
             category={state.category}
@@ -60,7 +61,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
           onConfirm={state.confirmDelete}
           onCancel={state.cancelDelete}
         />
-      </div>
+      </FadeIn>
     </section>
   );
 }

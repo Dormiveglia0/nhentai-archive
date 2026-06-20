@@ -1,5 +1,6 @@
 import { RefreshCw, Trash2 } from "lucide-react";
 
+import { FadeIn } from "../../lib/motion";
 import { STATUS_TABS } from "./taskHelpers";
 import { TaskInspector } from "./TaskInspector";
 import { TaskList } from "./TaskList";
@@ -35,7 +36,7 @@ export function TasksPage() {
       {vm.error ? <div className="tasks-error">{vm.error}</div> : null}
       {vm.notice ? <div className="tasks-notice">{vm.notice}</div> : null}
 
-      <div className="tasks-layout">
+      <FadeIn className="tasks-layout" y={8}>
         <div className="tasks-main">
           <div className="tasks-toolbar">
             <div className="tasks-tabs" role="tablist" aria-label="任务状态筛选">
@@ -107,7 +108,7 @@ export function TasksPage() {
           onCancel={(id) => void vm.cancelJob(id)}
           onDelete={(id) => void vm.deleteJob(id)}
         />
-      </div>
+      </FadeIn>
     </section>
   );
 }
