@@ -10,6 +10,7 @@ Current real slice:
 
 ## Completed
 
+- Phase 6 文件管理:新增 `FileMaintenanceService`(本地文件系统 + SQLite,绝不调 NH API)与 API `GET /api/files/overview`、`GET /api/files/inventory`、`POST /api/files/preview-delete`、`POST /api/files/delete`。文件清单统一展示三类条目:作品(源 CBZ + 封面聚合为一个单元,状态 ok/missing_source/missing_cover,体积不符标 size_mismatch)、孤立文件(library/covers 下无 DB 引用)、临时残留(tmp/exports)。`work_files.path`/`works.cover_path` 的绝对/相对混用统一归一化为 `.resolve()` 绝对路径后再判定。删除是唯一动盘操作:删除作品经 SQLite `ON DELETE CASCADE` 级联清空 works/work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history 并删源 CBZ + 封面;孤立/临时仅 unlink;受管目录外路径一律拒绝(穿越防护);CBZ 字节从不被修改,只整体删除。删除前强制 preview(展开级联影响、可回收字节、阅读进度/治理警告)。前端 `#files` 边界页替换为真实 `FilesPage`,并按 `design/文件管理.png` 视觉对齐:hairline 细数字指标条(`.files-summary`,沿用 dict-metric 语言)、多列文件表(文件名/路径/类型/大小/状态,可多选+选中高亮+聚焦左条)、底部封面详情面板(`FileDetailPanel`,真实封面缩略+4 格统计,封面遵循 `blurCovers` 隐私模糊)、右栏 `FileHealthRail`(健康度=真实 overview;重复检测=诚实「未接入」边界,不显示假重复数;清理工具=预览→二次确认→执行→刷新,删除结果回显成功/错误)。验证:`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿(新增 test_file_service.py 12 项 + test_files_api.py 3 项);`cd frontend && npm run build` 通过;静态扫描无假数据;临时数据目录手验 overview/preview/级联删除符合真实状态;Playwright(bundled chromium)在 `#files` 桌面 1440 与移动 390 截图核对真实 6 作品数据下的指标条/文件表/封面详情/健康度侧栏渲染正常、无控制台报错(仅 favicon 404)。
 - 导出中心下载选项与检查器重构:后端 `ExportService.preview/build_cbz/build_bundle` 新增 `write_comicinfo`、`keep_json`、`compress` 选项，预览会反映将写入/保留内容，单文件下载和批量 `.zip` 下载都会传递同一组选项；新增测试覆盖不写 ComicInfo、去除 JSON、无压缩打包和预览选项回显。前端导出页从 summary/table/preset/preview 旧分区调整为 `ExportToolbar` + `ExportWorkList` + `ExportInspector`：支持搜索、状态筛选、点击作品聚焦/选择、检查器内改输出名、切换 ComicInfo/JSON/压缩、刷新预览、下载所选或仅下载当前作品；删除旧 `ExportSummary`、`ExportQueueTable`、`ExportPresetBar`、`ExportPreviewPanel`。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 52 passed；`cd frontend && npm run build` passed；Playwright Chromium QA on `http://127.0.0.1:5174/#export` desktop 1440x1000 and mobile 390x844 verified page identity, nonblank render, no framework overlay, no console warnings/errors, search empty-state interaction, and screenshots saved under `/tmp/nh-export-*.png`.
 - 导出语义改造（导出 = 下载给用户，而非写到服务器目录）:按用户预期重定向了导出功能。后端新增 `ExportService.build_cbz()`（在内存中打包带 `ComicInfo.xml` 的单个 CBZ 字节）与 `build_bundle()`（多选打包为一个 `.zip`），新增下载路由 `GET /api/works/{id}/export/download` 与 `POST /api/exports/download`（均以 `Content-Disposition: attachment` 流式返回）。删除了服务器侧写盘逻辑（`generate`/`generate_many`/`history`/输出目录解析）与 `export_records` 表及其迁移；导出不再保留任何记录。前端 `api.downloadExport` / `downloadExportBundle` 以 blob 拉取并触发浏览器下载；`useExportState` 的 `downloadSelected`（单选下单文件 / 多选下 `.zip`）与 `downloadOne` 取代了旧的批量生成；移除了输出目录卡片/编辑、`导出完成后打开输出目录` 复选框与“最近导出记录”区块（删 `ExportHistory.tsx`）；表头按钮 `移除选中`→`移除当前`。`storage.export_dir` 设置项保留但已不再被导出流程使用。后端 `PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 50 passed；`cd frontend && npm run build` 零错误。原始 CBZ 始终只读、不被修改。
 - 导出中心早期 Phase 5 实现（历史）:曾实现服务器输出目录、`export_records`、生成历史、导出预设条和表格式队列；这些能力已被当前“浏览器下载、不写服务器目录、不保留记录”的导出语义改造替代。保留的核心是本地源 CBZ 只读、治理元数据驱动 ComicInfo、`#export` / `#export/{workId}` 真实路由，以及从真实 SQLite/archive 状态计算预览、阻塞与警告。
@@ -87,7 +88,6 @@ Current real slice:
 
 ## Not Implemented Yet
 
-- File maintenance.
 - Job pause/resume/cancel controls.
 - Workbench aggregate dashboard.
 - Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
@@ -96,10 +96,14 @@ Current real slice:
 
 ## Next Plan
 
-Next work should continue Phase 5 polish or move into Phase 6 file maintenance. The remaining export work is task-center orchestration only if long-running export/retry/history becomes necessary, persisted option presets if desired, and deeper visual refinement against `design/导出中心.png`; the core preview/rename/options/browser-download loop is now real.
+Phase 6 file maintenance now ships the full file inventory + preview/cascade-delete loop. Remaining follow-ups: a pagination control for very large libraries (the inventory API already paginates; the UI currently shows the first page), deeper visual refinement against `design/文件管理.png`, and optional polish noted in the plan's ledger. Beyond Phase 6, open work is task-center orchestration for long-running export/retry/history, the workbench aggregate dashboard, and job pause/resume/cancel controls.
 
 ## Risks And Decisions
 
+- Decision: 文件管理是管理库内全部文件,不只异常清理;清单含健康作品,所有行可删。
+- Decision: 删除健康作品的源 CBZ = 级联整体移除该作品(works 及全部引用表 + 封面文件)。
+- Decision: 删除是文件管理唯一会动盘的操作;CBZ 永不被修改,只能整体删除;受管目录(library/covers/tmp/exports)之外的任何路径一律拒绝(目录穿越防护)。
+- Decision: `work_files.path`/`works.cover_path` 绝对/相对混用,一律归一化为 `.resolve()` 绝对路径后再判定存在/删除/穿越。
 - Decision: API Key settings and discover correctness are higher priority than expanding modules.
 - Decision: language/type/sort controls must either call real APIs or be disabled; no inert clickable filters.
 - Decision: Latest-like browsing uses `/api/discover/feed`; it switches to search/tagged only when filters require remote search semantics.

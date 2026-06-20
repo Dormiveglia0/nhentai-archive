@@ -41,6 +41,8 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
               statusFilter={vm.statusFilter}
               onQueryChange={vm.setQuery}
               onStatusFilterChange={vm.setStatusFilter}
+              multiSelect={vm.multiSelect}
+              onToggleMultiSelect={vm.toggleMultiSelect}
               onSelectReady={vm.selectReady}
               onClear={vm.clearSelected}
             />
@@ -56,6 +58,7 @@ export function ExportPage({ initialWorkId, blurCovers }: Props) {
                   items={vm.visibleItems}
                   selectedIds={vm.selectedIds}
                   focusId={vm.focusId}
+                  multiSelect={vm.multiSelect}
                   blurCovers={blurCovers}
                   onPick={vm.pickItem}
                 />

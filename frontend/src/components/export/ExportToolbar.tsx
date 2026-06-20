@@ -5,6 +5,8 @@ type ExportToolbarProps = {
   statusFilter: "all" | "ready" | "warning" | "blocked";
   onQueryChange: (query: string) => void;
   onStatusFilterChange: (filter: "all" | "ready" | "warning" | "blocked") => void;
+  multiSelect: boolean;
+  onToggleMultiSelect: () => void;
   onSelectReady: () => void;
   onClear: () => void;
 };
@@ -21,6 +23,8 @@ export function ExportToolbar({
   statusFilter,
   onQueryChange,
   onStatusFilterChange,
+  multiSelect,
+  onToggleMultiSelect,
   onSelectReady,
   onClear,
 }: ExportToolbarProps) {
@@ -59,13 +63,25 @@ export function ExportToolbar({
         </div>
 
         <div className="export-toolbar-actions">
-          <button type="button" onClick={onSelectReady} className="export-toolbar-action">
-            全选就绪
+          <button
+            type="button"
+            onClick={onToggleMultiSelect}
+            className={`export-toolbar-action${multiSelect ? " is-on" : ""}`}
+            aria-pressed={multiSelect}
+          >
+            多选{multiSelect ? "中" : ""}
           </button>
-          <button type="button" onClick={onClear} className="export-toolbar-action">
-            <XCircle size={14} />
-            清空
-          </button>
+          {multiSelect ? (
+            <>
+              <button type="button" onClick={onSelectReady} className="export-toolbar-action">
+                全选就绪
+              </button>
+              <button type="button" onClick={onClear} className="export-toolbar-action">
+                <XCircle size={14} />
+                清空
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
     </section>

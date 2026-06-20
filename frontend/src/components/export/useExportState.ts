@@ -35,6 +35,8 @@ export type ExportViewModel = {
   query: string;
   statusFilter: "all" | "ready" | "warning" | "blocked";
   visibleItems: ExportQueueItem[];
+  multiSelect: boolean;
+  toggleMultiSelect: () => void;
   toggleSelected: (id: number) => void;
   focusItem: (id: number) => void;
   selectReady: () => void;
@@ -72,6 +74,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "warning" | "blocked">("all");
+  const [multiSelect, setMultiSelect] = useState(false);
 
   const items = useMemo(() => queue?.result ?? [], [queue]);
   const selectedItems = useMemo(
@@ -139,12 +142,9 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
       const fallback = ready[0] ?? queuePayload.result[0];
       const existing = new Set(queuePayload.result.map((item) => item.work.id));
 
-      setSelectedIds((current) => {
-        if (nextFocusId && existing.has(nextFocusId)) return new Set([nextFocusId]);
-        const kept = new Set([...current].filter((id) => existing.has(id)));
-        if (kept.size) return kept;
-        return new Set(ready.length ? ready.map((i) => i.work.id) : fallback ? [fallback.work.id] : []);
-      });
+      // Single-focus is the default; the multi-select toggle builds a bundle set.
+      // Keep any still-existing selection across reloads, but do not auto-select.
+      setSelectedIds((current) => new Set([...current].filter((id) => existing.has(id))));
       setFocusId((current) => {
         if (nextFocusId && existing.has(nextFocusId)) return nextFocusId;
         if (current && existing.has(current)) return current;
@@ -278,29 +278,29 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     }
   }, [items, outputNames, selectedIds, exportOptions]);
 
-  const pickItem = useCallback((id: number) => {
-    const item = items.find((entry) => entry.work.id === id);
-    if (!item) return;
+  const toggleMultiSelect = useCallback(() => {
+    setMultiSelect((on) => !on);
+    setSelectedIds(new Set());
+  }, []);
 
-    // Set as focus always
-    setFocusId(id);
+  const pickItem = useCallback(
+    (id: number) => {
+      const item = items.find((entry) => entry.work.id === id);
+      if (!item) return;
 
-    // If blocked, only set focus, don't add to selection
-    if (item.blockers.length > 0) {
-      return;
-    }
+      // Always focus the clicked item; only build a selection in multi-select mode.
+      setFocusId(id);
+      if (!multiSelect || item.blockers.length > 0) return;
 
-    // Toggle selection for non-blocked items
-    setSelectedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, [items]);
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [items, multiSelect],
+  );
 
   return {
     loading,
@@ -324,6 +324,8 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     query,
     statusFilter,
     visibleItems,
+    multiSelect,
+    toggleMultiSelect,
     toggleSelected,
     focusItem,
     selectReady,
