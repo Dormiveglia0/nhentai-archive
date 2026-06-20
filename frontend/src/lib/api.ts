@@ -372,10 +372,18 @@ export type FileEntry = {
   page_count?: number;
   source?: string | null;
   remote_gallery_id?: number | null;
+  updated_at?: string | null;
+  tags?: string[];
   // loose entries
   path?: string;
   name?: string;
   dir?: string;
+};
+
+export type FileDuplicates = {
+  hash: { groups: number; files: number };
+  gallery_id: { groups: number; works: number };
+  title_similar: number | null;
 };
 
 export type FileOverview = {
@@ -766,6 +774,7 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ targets }),
     }),
+  filesDuplicates: () => request<FileDuplicates>("/api/files/duplicates"),
   works: () => request<{ result: Work[] }>("/api/works"),
   work: (id: number) => request<Work>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),

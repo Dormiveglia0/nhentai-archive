@@ -33,25 +33,32 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             statusFilter={state.statusFilter}
             onStatus={state.setStatusFilter}
             total={state.inventory?.total ?? 0}
+            multiSelect={state.multiSelect}
+            onToggleMultiSelect={state.toggleMultiSelect}
+            selectedCount={state.selected.size}
+            onPreviewSelected={state.previewSelected}
+            onClearSelection={state.clearSelection}
           />
           <FileList
             entries={entries}
             selected={state.selected}
             focusId={state.focusId}
-            onToggle={state.toggleSelect}
+            multiSelect={state.multiSelect}
+            onPick={state.pickRow}
             loading={state.loading}
           />
-          <FileDetailPanel focus={focus} blurCovers={blurCovers} />
+          <FileDetailPanel focus={focus} blurCovers={blurCovers} busy={state.busy} onDelete={state.previewEntry} />
         </div>
         <FileHealthRail
           overview={state.overview}
-          selectedCount={state.selected.size}
+          duplicates={state.duplicates}
           preview={state.preview}
+          pendingLabel={state.pendingLabel}
           busy={state.busy}
           actionNotice={state.actionNotice}
-          onPreview={state.requestPreview}
+          onCleanup={state.cleanupCategory}
           onConfirm={state.confirmDelete}
-          onClear={state.clearSelection}
+          onCancel={state.cancelDelete}
         />
       </div>
     </section>

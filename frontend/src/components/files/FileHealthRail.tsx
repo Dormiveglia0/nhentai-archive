@@ -1,4 +1,4 @@
-import type { FileDeletePreview, FileOverview } from "../../lib/api";
+import type { FileDeletePreview, FileDuplicates, FileOverview } from "../../lib/api";
 import { formatBytes } from "./fileHelpers";
 
 const WARNING_LABELS: Record<string, string> = {
@@ -10,24 +10,35 @@ const WARNING_LABELS: Record<string, string> = {
 
 type Props = {
   overview: FileOverview | null;
-  selectedCount: number;
+  duplicates: FileDuplicates | null;
   preview: FileDeletePreview | null;
+  pendingLabel: string | null;
   busy: boolean;
   actionNotice?: string | null;
-  onPreview: () => void;
+  onCleanup: (cat: "orphan" | "stale", label: string) => void;
   onConfirm: () => void;
-  onClear: () => void;
+  onCancel: () => void;
 };
+
+function HealthRow({ label, count }: { label: string; count: number }) {
+  return (
+    <li>
+      <span>{label}</span>
+      <em className={count > 0 ? "bad" : "ok"}>{count}</em>
+    </li>
+  );
+}
 
 export function FileHealthRail({
   overview,
-  selectedCount,
+  duplicates,
   preview,
+  pendingLabel,
   busy,
   actionNotice,
-  onPreview,
+  onCleanup,
   onConfirm,
-  onClear,
+  onCancel,
 }: Props) {
   const hasHealthyWork = preview?.items.some((i) => i.kind === "work" && i.exists) ?? false;
   const hasWarnings = preview?.items.some((i) => i.warnings.length > 0) ?? false;
@@ -35,42 +46,34 @@ export function FileHealthRail({
   return (
     <aside className="files-rail">
       <section className="files-rail-section">
-        <h4>健康度</h4>
+        <h4>健康检查</h4>
         {overview ? (
           <ul className="files-health">
+            <HealthRow label="缺失源文件" count={overview.missing_source} />
+            <HealthRow label="缺失封面" count={overview.missing_cover} />
+            <HealthRow label="孤立文件" count={overview.orphan_count} />
+            <HealthRow label="临时残留" count={overview.stale_count} />
+          </ul>
+        ) : (
+          <p className="files-dim">读取中…</p>
+        )}
+      </section>
+
+      <section className="files-rail-section">
+        <h4>重复检查</h4>
+        {duplicates ? (
+          <ul className="files-health">
             <li>
-              <span>源文件</span>
-              <span className="files-health-val">
-                <em>{overview.work_count - overview.missing_source} 正常</em>
-                {overview.missing_source > 0 ? <em className="bad">{overview.missing_source} 缺失</em> : null}
-              </span>
+              <span>Hash 相同</span>
+              <em className={duplicates.hash.files > 0 ? "bad" : "ok"}>{duplicates.hash.files}</em>
             </li>
             <li>
-              <span>封面</span>
-              <span className="files-health-val">
-                <em>{overview.cover_ok} 正常</em>
-                {overview.missing_cover > 0 ? <em className="bad">{overview.missing_cover} 缺失</em> : null}
-              </span>
+              <span>Gallery ID 相同</span>
+              <em className={duplicates.gallery_id.works > 0 ? "bad" : "ok"}>{duplicates.gallery_id.works}</em>
             </li>
             <li>
-              <span>孤立文件</span>
-              <span className="files-health-val">
-                <em>{overview.orphan_count}</em>
-                <em className="dim">{formatBytes(overview.orphan_bytes)}</em>
-              </span>
-            </li>
-            <li>
-              <span>临时残留</span>
-              <span className="files-health-val">
-                <em>{overview.stale_count}</em>
-                <em className="dim">{formatBytes(overview.stale_bytes)}</em>
-              </span>
-            </li>
-            <li>
-              <span>可回收</span>
-              <span className="files-health-val">
-                <em>{formatBytes(overview.reclaimable_bytes)}</em>
-              </span>
+              <span>标题相似</span>
+              <em className="muted">未接入</em>
             </li>
           </ul>
         ) : (
@@ -79,18 +82,36 @@ export function FileHealthRail({
       </section>
 
       <section className="files-rail-section">
-        <h4>重复检测</h4>
-        <p className="files-boundary">未接入。重复文件检测尚未实现，不会显示估算或假的重复数。</p>
-      </section>
-
-      <section className="files-rail-section">
         <h4>清理工具</h4>
-        <button type="button" className="files-tool-btn" onClick={onPreview} disabled={busy || selectedCount === 0}>
-          预览删除（{selectedCount}）
-        </button>
+        {overview ? (
+          <ul className="files-cleanup">
+            <li>
+              <span className="files-cleanup-main">
+                <span>临时与导出残留</span>
+                <em>{formatBytes(overview.stale_bytes)} · {overview.stale_count} 项</em>
+              </span>
+              <button type="button" onClick={() => onCleanup("stale", "临时与导出残留")} disabled={busy || overview.stale_count === 0}>
+                清理
+              </button>
+            </li>
+            <li>
+              <span className="files-cleanup-main">
+                <span>孤立文件</span>
+                <em>{formatBytes(overview.orphan_bytes)} · {overview.orphan_count} 项</em>
+              </span>
+              <button type="button" onClick={() => onCleanup("orphan", "孤立文件")} disabled={busy || overview.orphan_count === 0}>
+                清理
+              </button>
+            </li>
+          </ul>
+        ) : (
+          <p className="files-dim">读取中…</p>
+        )}
+
         {preview ? (
           <div className="files-preview">
             <p className="files-preview-line">
+              {pendingLabel ? <span className="files-preview-label">{pendingLabel}</span> : null}
               将删除 <strong>{preview.files_to_delete}</strong> 个文件
               {preview.works_to_remove > 0 ? (
                 <>
@@ -117,13 +138,13 @@ export function FileHealthRail({
               <button type="button" className="files-danger" onClick={onConfirm} disabled={busy}>
                 {hasHealthyWork ? "确认删除（不可恢复）" : "确认删除"}
               </button>
-              <button type="button" className="files-ghost" onClick={onClear} disabled={busy}>
+              <button type="button" className="files-ghost" onClick={onCancel} disabled={busy}>
                 取消
               </button>
             </div>
           </div>
         ) : (
-          <p className="files-dim">勾选清单中的文件，预览删除影响后再确认。</p>
+          <p className="files-dim">开启多选勾选文件，或用上面的清理按钮，预览后再确认删除。</p>
         )}
         {actionNotice ? <p className="files-notice">{actionNotice}</p> : null}
       </section>

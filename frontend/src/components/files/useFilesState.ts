@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   type FileDeletePreview,
+  type FileDeleteTarget,
+  type FileDuplicates,
   type FileEntry,
   type FileInventory,
   type FileOverview,
@@ -11,22 +13,27 @@ import { entryToTarget } from "./fileHelpers";
 
 export function useFilesState() {
   const [overview, setOverview] = useState<FileOverview | null>(null);
+  const [duplicates, setDuplicates] = useState<FileDuplicates | null>(null);
   const [inventory, setInventory] = useState<FileInventory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [category, setCategory] = useState("all");
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [category, setCategoryState] = useState("all");
+  const [query, setQueryState] = useState("");
+  const [statusFilter, setStatusFilterState] = useState("");
   const [page, setPage] = useState(1);
+  const [multiSelect, setMultiSelect] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
   const [preview, setPreview] = useState<FileDeletePreview | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [pendingTargets, setPendingTargets] = useState<FileDeleteTarget[]>([]);
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const requestToken = useRef(0);
 
   const loadOverview = useCallback(() => {
     api.filesOverview().then(setOverview).catch((e) => setError(String(e)));
+    api.filesDuplicates().then(setDuplicates).catch(() => setDuplicates(null));
   }, []);
 
   const loadInventory = useCallback(() => {
@@ -56,72 +63,147 @@ export function useFilesState() {
     loadInventory();
   }, [loadInventory]);
 
+  const clearPending = useCallback(() => {
+    setPreview(null);
+    setPendingTargets([]);
+    setPendingLabel(null);
+  }, []);
+
   const reload = useCallback(() => {
     loadOverview();
     loadInventory();
   }, [loadOverview, loadInventory]);
 
-  const toggleSelect = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setFocusId(id);
-    setPreview(null);
+  const resetFilterExtras = useCallback(() => {
+    setPage(1);
+    clearPending();
     setActionNotice(null);
-  }, []);
+  }, [clearPending]);
+
+  const setCategory = useCallback(
+    (c: string) => {
+      setCategoryState(c);
+      resetFilterExtras();
+    },
+    [resetFilterExtras],
+  );
+  const setQuery = useCallback(
+    (q: string) => {
+      setQueryState(q);
+      resetFilterExtras();
+    },
+    [resetFilterExtras],
+  );
+  const setStatusFilter = useCallback(
+    (s: string) => {
+      setStatusFilterState(s);
+      resetFilterExtras();
+    },
+    [resetFilterExtras],
+  );
+
+  const toggleMultiSelect = useCallback(() => {
+    setMultiSelect((on) => !on);
+    setSelected(new Set());
+    clearPending();
+  }, [clearPending]);
+
+  // Row click: always focus the row; toggle selection only in multi-select mode.
+  const pickRow = useCallback(
+    (id: string) => {
+      setFocusId(id);
+      setActionNotice(null);
+      if (multiSelect) {
+        setSelected((prev) => {
+          const next = new Set(prev);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+        clearPending();
+      }
+    },
+    [multiSelect, clearPending],
+  );
 
   const clearSelection = useCallback(() => {
     setSelected(new Set());
-    setPreview(null);
-  }, []);
+    clearPending();
+  }, [clearPending]);
 
-  const targetsFor = useCallback(
-    (ids: Set<string>) => {
+  const targetsFromIds = useCallback(
+    (ids: Set<string>): FileDeleteTarget[] => {
       const entries = inventory?.result ?? [];
       return entries.filter((e: FileEntry) => ids.has(e.id)).map(entryToTarget);
     },
     [inventory],
   );
 
-  const requestPreview = useCallback(async () => {
-    const targets = targetsFor(selected);
-    if (targets.length === 0) {
-      setPreview(null);
-      return null;
-    }
-    setActionNotice(null);
-    setBusy(true);
-    try {
-      const result = await api.previewFileDelete(targets);
-      setPreview(result);
-      return result;
-    } catch (e) {
-      setError(String(e));
-      return null;
-    } finally {
-      setBusy(false);
-    }
-  }, [selected, targetsFor]);
+  const runPreview = useCallback(
+    async (targets: FileDeleteTarget[], label: string) => {
+      if (targets.length === 0) {
+        clearPending();
+        return;
+      }
+      setBusy(true);
+      setActionNotice(null);
+      try {
+        const result = await api.previewFileDelete(targets);
+        setPreview(result);
+        setPendingTargets(targets);
+        setPendingLabel(label);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [clearPending],
+  );
+
+  const previewSelected = useCallback(
+    () => runPreview(targetsFromIds(selected), `已选 ${selected.size} 项`),
+    [runPreview, targetsFromIds, selected],
+  );
+
+  const previewEntry = useCallback(
+    (entry: FileEntry) =>
+      runPreview([entryToTarget(entry)], entry.kind === "work" ? entry.title ?? "该作品" : entry.name ?? "该文件"),
+    [runPreview],
+  );
+
+  const cleanupCategory = useCallback(
+    async (cat: "orphan" | "stale", label: string) => {
+      setBusy(true);
+      try {
+        const data = await api.filesInventory({ category: cat, per_page: 500 });
+        const targets = data.result.map(entryToTarget);
+        await runPreview(targets, label);
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [runPreview],
+  );
 
   const confirmDelete = useCallback(async () => {
-    const targets = targetsFor(selected);
-    if (targets.length === 0) return;
+    if (pendingTargets.length === 0) return;
     setBusy(true);
     try {
-      const result = await api.deleteFiles(targets);
+      const result = await api.deleteFiles(pendingTargets);
       if (result.errors.length > 0) {
         setActionNotice(
-          `部分目标删除失败（${result.errors.length}）：` +
-            result.errors.map((e) => e.message).join("；"),
+          `部分目标删除失败（${result.errors.length}）：${result.errors.map((e) => e.message).join("；")}`,
         );
       } else {
-        setActionNotice(`已删除 ${result.deleted_files} 个文件` +
-          (result.removed_works > 0 ? `，移除 ${result.removed_works} 个作品` : ""));
+        setActionNotice(
+          `已删除 ${result.deleted_files} 个文件${result.removed_works > 0 ? `，移除 ${result.removed_works} 个作品` : ""}`,
+        );
       }
-      clearSelection();
+      setSelected(new Set());
+      clearPending();
       reload();
     } catch (e) {
       setActionNotice(null);
@@ -129,46 +211,37 @@ export function useFilesState() {
     } finally {
       setBusy(false);
     }
-  }, [selected, targetsFor, clearSelection, reload]);
+  }, [pendingTargets, clearPending, reload]);
 
   return {
     overview,
+    duplicates,
     inventory,
     loading,
     error,
     category,
-    setCategory: (c: string) => {
-      setCategory(c);
-      setPage(1);
-      setPreview(null);
-      setActionNotice(null);
-    },
+    setCategory,
     query,
-    setQuery: (q: string) => {
-      setQuery(q);
-      setPage(1);
-      setPreview(null);
-      setActionNotice(null);
-    },
+    setQuery,
     statusFilter,
-    setStatusFilter: (s: string) => {
-      setStatusFilter(s);
-      setPage(1);
-      setPreview(null);
-      setActionNotice(null);
-    },
+    setStatusFilter,
     page,
     setPage,
+    multiSelect,
+    toggleMultiSelect,
     selected,
-    toggleSelect,
+    pickRow,
     clearSelection,
     focusId,
-    setFocusId,
     preview,
-    requestPreview,
-    confirmDelete,
-    busy,
-    reload,
+    pendingLabel,
     actionNotice,
+    busy,
+    previewSelected,
+    previewEntry,
+    cleanupCategory,
+    confirmDelete,
+    cancelDelete: clearPending,
+    reload,
   };
 }
