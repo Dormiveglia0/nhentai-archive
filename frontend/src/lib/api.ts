@@ -498,6 +498,56 @@ export type JobLog = {
   created_at: string;
 };
 
+export type WorkbenchFailedJob = {
+  id: number;
+  type: string;
+  target: Record<string, unknown>;
+  error?: string | null;
+  updated_at: string;
+};
+
+export type WorkbenchOverview = {
+  library: {
+    total: number;
+    reading: number;
+    completed: number;
+    unread: number;
+    untagged: number;
+    total_pages: number;
+    total_size_bytes: number;
+  };
+  governance: {
+    total: number;
+    missing_metadata: number;
+    untagged: number;
+    dictionary_review: number;
+    dictionary_conflict: number;
+    missing_comicinfo: number;
+    missing_cover: number;
+  };
+  files: {
+    work_count: number;
+    source_bytes: number;
+    cover_ok: number;
+    missing_source: number;
+    missing_cover: number;
+    orphan_count: number;
+    stale_count: number;
+    reclaimable_bytes: number;
+  };
+  exports: { total: number; ready: number; blocked: number; warnings: number };
+  jobs: {
+    running: number;
+    queued: number;
+    paused: number;
+    failed: number;
+    completed: number;
+    failed_recent: WorkbenchFailedJob[];
+  };
+  continue_reading: LibraryWork[];
+  recent_added: LibraryWork[];
+};
+
 export type SettingsSummary = {
   nhentai: {
     base_url: string;
@@ -717,6 +767,7 @@ export const api = {
   dictionaryDelete: (id: number) => request<DictionaryDeleteResult>(`/api/dictionary/${id}`, { method: "DELETE", headers: JSON_HEADERS }),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
+  workbenchOverview: () => request<WorkbenchOverview>("/api/workbench/overview"),
   librarySummary: () => request<LibrarySummary>("/api/library/summary"),
   librarySearch: (params: LibrarySearchParams = {}) => {
     const query = new URLSearchParams();
