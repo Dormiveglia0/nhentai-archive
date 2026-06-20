@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import type { GovernanceAggregate, MetadataFieldDiff } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { type FieldEdit, sourceLabel, splitValues, WIDE_FIELDS } from "./governanceHelpers";
+import { type FieldEdit, sourceLabel, splitValues } from "./governanceHelpers";
 
 type Props = {
   aggregate: GovernanceAggregate;
@@ -32,7 +32,7 @@ export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleD
       <Stagger key={`${aggregate.work.id}-${onlyDiff}`} className="metadata-cards">
         {fields.length ? (
           fields.map((field) => (
-            <StaggerItem key={field.field} className={WIDE_FIELDS.has(field.field) ? "metadata-cell wide" : "metadata-cell"}>
+            <StaggerItem key={field.field} className="metadata-cell">
               <MetadataCard field={field} edit={edits[field.field]} onChange={(edit) => onChange(field.field, edit)} />
             </StaggerItem>
           ))
@@ -54,9 +54,8 @@ function MetadataCard({
   onChange: (edit: FieldEdit) => void;
 }) {
   const sourceAllowed = field.source === "remote" || field.source === "comicinfo" ? field.source : "manual";
-  const wide = WIDE_FIELDS.has(field.field);
   return (
-    <article className={`metadata-card ${field.differs_from_source ? "diff" : ""} ${wide ? "wide" : ""}`}>
+    <article className={`metadata-card ${field.differs_from_source ? "diff" : ""}`}>
       <div className="metadata-card-head">
         <strong>{field.label}</strong>
         {field.source_value ? <span className="metadata-source-badge">{sourceLabel(field.source)}</span> : null}

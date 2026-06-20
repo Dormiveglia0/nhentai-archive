@@ -16,9 +16,6 @@ export const INHERIT_FIELDS = new Set([
   "summary",
 ]);
 
-// Long-form fields span the full editor width.
-export const WIDE_FIELDS = new Set(["summary"]);
-
 export function buildInitialEdits(fields: MetadataFieldDiff[]): Record<string, FieldEdit> {
   return Object.fromEntries(
     fields.map((field) => {
