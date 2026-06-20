@@ -1,6 +1,8 @@
 import { AlertTriangle, BookMarked, ClipboardList, HardDrive } from "lucide-react";
 
 import type { WorkbenchOverview } from "../../lib/api";
+import { Stagger, StaggerItem } from "../../lib/motion";
+import { NumberTicker } from "../effects/NumberTicker";
 
 export function WorkbenchMetricStrip({ overview }: { overview: WorkbenchOverview }) {
   const metrics = [
@@ -11,21 +13,23 @@ export function WorkbenchMetricStrip({ overview }: { overview: WorkbenchOverview
   ];
 
   return (
-    <div className="workbench-summary">
+    <Stagger className="workbench-summary">
       {metrics.map((metric) => {
         const Icon = metric.icon;
         return (
-          <div className={`workbench-summary-metric tone-${metric.tone}`} key={metric.label}>
+          <StaggerItem key={metric.label} className={`workbench-summary-metric tone-${metric.tone}`}>
             <span className="workbench-summary-icon">
               <Icon size={18} />
             </span>
-            <div>
-              <strong>{metric.value.toLocaleString("zh-CN")}</strong>
+            <div className="workbench-summary-text">
+              <strong>
+                <NumberTicker value={metric.value} />
+              </strong>
               <span>{metric.label}</span>
             </div>
-          </div>
+          </StaggerItem>
         );
       })}
-    </div>
+    </Stagger>
   );
 }

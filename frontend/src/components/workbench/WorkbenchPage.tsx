@@ -1,5 +1,6 @@
 import { RefreshCw } from "lucide-react";
 
+import { FadeIn, Reveal } from "../../lib/motion";
 import { ContinueReadingRow } from "../library/ContinueReadingRow";
 import { WorkbenchMetricStrip } from "./WorkbenchMetricStrip";
 import { WorkbenchModuleCards } from "./WorkbenchModuleCards";
@@ -26,12 +27,16 @@ export function WorkbenchPage({ blurCovers }: { blurCovers: boolean }) {
       {loading && !overview ? (
         <div className="workbench-empty">正在加载工作台数据...</div>
       ) : overview ? (
-        <>
+        <FadeIn className="workbench-body" y={8}>
           <WorkbenchMetricStrip overview={overview} />
-          <ContinueReadingRow title="继续阅读" works={overview.continue_reading} blurCovers={blurCovers} />
-          <ContinueReadingRow title="最近导入" works={overview.recent_added} blurCovers={blurCovers} />
+          <Reveal>
+            <ContinueReadingRow title="继续阅读" works={overview.continue_reading} blurCovers={blurCovers} />
+          </Reveal>
+          <Reveal>
+            <ContinueReadingRow title="最近导入" works={overview.recent_added} blurCovers={blurCovers} />
+          </Reveal>
           <WorkbenchModuleCards overview={overview} />
-        </>
+        </FadeIn>
       ) : (
         <div className="workbench-empty">暂无工作台数据。</div>
       )}
