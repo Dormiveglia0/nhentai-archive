@@ -12,9 +12,76 @@ def normalize_key(value: str) -> str:
 
 
 class DictionaryService:
-    def __init__(self, db: Database, client: Any):
+    def __init__(self, db: Database, client: Any, translation: Any = None):
         self.db = db
         self.client = client
+        self.translation = translation
+
+    def translate_text(self, text: str) -> dict[str, Any]:
+        """On-demand machine translation for a single original term."""
+        if not self.translation:
+            raise ValueError("translation service not configured")
+        clean = (text or "").strip()
+        if not clean:
+            raise ValueError("text is required")
+        translation = self.translation.translate_one(clean).strip()
+        return {"text": clean, "translation": translation, "provider": self.translation.config()["provider"]}
+
+    def generate_suggestions(self, limit: int = 20) -> dict[str, Any]:
+        """Machine-translate the top unconfigured remote tags into reviewable
+        `status='suggested'` dictionary rows. Does NOT link work_tags — that
+        only happens when a human confirms/applies the suggestion."""
+        if not self.translation:
+            raise ValueError("translation service not configured")
+        limit = max(1, min(int(limit), 50))
+        candidates = self.candidates(status="unconfigured", limit=limit)["result"]
+        pending: list[tuple[str, str, int]] = []
+        for candidate in candidates:
+            original = candidate.get("name") or candidate.get("slug")
+            remote_id = candidate.get("id")
+            if not original or remote_id is None:
+                continue
+            pending.append((str(original), str(candidate.get("type") or "tag"), int(remote_id)))
+        if not pending:
+            return {"generated": 0, "items": []}
+        translations = self.translation.translate([item[0] for item in pending])
+        items: list[dict[str, Any]] = []
+        for (original, tag_type, remote_id), zh in zip(pending, translations):
+            zh_name = (zh or "").strip()
+            if not zh_name:
+                continue
+            self._upsert_suggestion(original, zh_name, tag_type, remote_id)
+            items.append({"original_text": original, "zh_name": zh_name, "tag_type": tag_type, "remote_tag_id": remote_id})
+        return {"generated": len(items), "items": items}
+
+    def _upsert_suggestion(self, original_text: str, zh_name: str, tag_type: str, remote_tag_id: int) -> None:
+        key = normalize_key(original_text)
+        existing = self.db.fetchone(
+            "SELECT id, status, locked FROM local_tag_dictionary WHERE normalized_key = ? AND tag_type = ?",
+            (key, tag_type),
+        )
+        if existing:
+            # Never overwrite a human-curated or locked entry with a machine guess.
+            if existing["locked"] or existing["status"] in {"configured", "review", "ignored"}:
+                return
+            self.db.execute(
+                """
+                UPDATE local_tag_dictionary
+                SET zh_name = ?, remote_tag_id = ?, status = 'suggested', source = 'machine', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (zh_name, remote_tag_id, existing["id"]),
+            )
+            return
+        self.db.execute(
+            """
+            INSERT INTO local_tag_dictionary
+              (original_text, normalized_key, zh_name, tag_type, remote_tag_id, scope_json, note, status,
+               confidence, locked, ignored, source)
+            VALUES (?, ?, ?, ?, ?, '{}', NULL, 'suggested', 80, 0, 0, 'machine')
+            """,
+            (original_text, key, zh_name, tag_type, remote_tag_id),
+        )
 
     def summary(self) -> dict[str, int]:
         remote_total = self.db.fetchone("SELECT COUNT(*) AS value FROM remote_tags")["value"]

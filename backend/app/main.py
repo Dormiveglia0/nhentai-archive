@@ -22,6 +22,7 @@ from app.services.governance_service import GovernanceService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
 from app.services.settings_service import SettingsService
+from app.services.translation_service import TranslationError, TranslationService
 from app.services.workbench_service import WorkbenchService
 
 
@@ -37,6 +38,7 @@ class SettingsPatch(BaseModel):
     export: dict | None = None
     privacy: dict | None = None
     reader: dict | None = None
+    machine_translation: dict | None = None
 
 
 class DictionaryApplyRequest(BaseModel):
@@ -55,6 +57,14 @@ class DictionaryApplyRequest(BaseModel):
 
 class DictionaryBulkImportRequest(BaseModel):
     rows: list[dict]
+
+
+class DictionaryTranslateRequest(BaseModel):
+    text: str
+
+
+class DictionarySuggestBatchRequest(BaseModel):
+    limit: int = 20
 
 
 class GovernanceMetadataPatch(BaseModel):
@@ -107,12 +117,13 @@ archive = ArchiveService(db, settings)
 discover = DiscoverService(db, client)
 reader = ReaderService(db)
 library = LibraryService(db)
-dictionary = DictionaryService(db, client)
+translation = TranslationService(db)
+dictionary = DictionaryService(db, client, translation)
 governance = GovernanceService(db, dictionary)
 exports = ExportService(db, settings)
 files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
-settings_service = SettingsService(db, settings, client)
+settings_service = SettingsService(db, settings, client, translation)
 workbench = WorkbenchService(library, governance, jobs, files_service, exports)
 
 app = FastAPI(title="NH Archive", version="0.1.0")
@@ -232,6 +243,26 @@ def dictionary_apply(payload: DictionaryApplyRequest):
         return dictionary.apply(payload.model_dump())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/dictionary/translate")
+def dictionary_translate(payload: DictionaryTranslateRequest):
+    try:
+        return dictionary.translate_text(payload.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except TranslationError as exc:
+        raise HTTPException(status_code=502, detail=exc.message) from exc
+
+
+@app.post("/api/dictionary/suggest-batch")
+def dictionary_suggest_batch(payload: DictionarySuggestBatchRequest):
+    try:
+        return dictionary.generate_suggestions(payload.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except TranslationError as exc:
+        raise HTTPException(status_code=502, detail=exc.message) from exc
 
 
 @app.post("/api/dictionary/preview-bulk-import")
@@ -565,6 +596,11 @@ def patch_settings(patch: SettingsPatch):
 @app.post("/api/settings/nhentai/verify")
 def verify_nhentai_settings():
     return settings_service.verify_nhentai()
+
+
+@app.post("/api/settings/translation/verify")
+def verify_translation_settings():
+    return translation.verify()
 
 
 def _remote(call):

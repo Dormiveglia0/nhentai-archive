@@ -20,10 +20,11 @@ DEFAULT_EXPORT_PRESET = {
 
 
 class SettingsService:
-    def __init__(self, db: Database, settings: Settings, client: NhentaiClient):
+    def __init__(self, db: Database, settings: Settings, client: NhentaiClient, translation: Any = None):
         self.db = db
         self.settings = settings
         self.client = client
+        self.translation = translation
         self.apply_runtime_settings()
 
     def get(self) -> dict[str, Any]:
@@ -53,6 +54,7 @@ class SettingsService:
             "reader": {
                 "default_mode": reader_mode,
             },
+            "machine_translation": self.translation.public_config() if self.translation else None,
             "export": self._export_settings(),
         }
 
@@ -72,6 +74,17 @@ class SettingsService:
         reader = payload.get("reader") or {}
         if reader.get("default_mode") in {"single", "scroll"}:
             self._set("reader.default_mode", reader["default_mode"])
+
+        mt = payload.get("machine_translation") or {}
+        if mt.get("clear_deepl_api_key"):
+            self._delete("mt.deepl_api_key")
+        deepl_key = mt.get("deepl_api_key")
+        if isinstance(deepl_key, str) and deepl_key.strip():
+            self._set("mt.deepl_api_key", deepl_key.strip())
+        if mt.get("provider") in {"google_free", "deepl"}:
+            self._set("mt.provider", mt["provider"])
+        if mt.get("deepl_plan") in {"free", "pro"}:
+            self._set("mt.deepl_plan", mt["deepl_plan"])
 
         storage = payload.get("storage") or {}
         export_dir = storage.get("export_dir")
