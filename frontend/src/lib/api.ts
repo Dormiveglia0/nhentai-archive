@@ -470,16 +470,32 @@ export type ReaderState = {
   last_read_at: string | null;
 };
 
+export type JobMeta = {
+  title?: string | null;
+  page_count?: number | null;
+  cover_url?: string | null;
+};
+
 export type Job = {
   id: number;
   type: string;
-  status: "queued" | "running" | "completed" | "failed";
+  status: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled";
   stage: string;
   progress: { current: number; total: number; percent: number };
   target: Record<string, unknown>;
+  meta?: JobMeta | null;
   error?: string | null;
   retry_after?: number | null;
+  created_at: string;
   updated_at: string;
+};
+
+export type JobLog = {
+  id: number;
+  job_id: number;
+  level: "info" | "error" | string;
+  message: string;
+  created_at: string;
 };
 
 export type SettingsSummary = {
@@ -786,7 +802,13 @@ export const api = {
       body: JSON.stringify({ page_index: pageIndex, completed })
     }),
   jobs: () => request<{ result: Job[] }>("/api/jobs"),
+  jobLogs: (id: number) => request<{ result: JobLog[] }>(`/api/jobs/${id}/logs`),
+  pauseJob: (id: number) => request<Job>(`/api/jobs/${id}/pause`, { method: "POST", headers: JSON_HEADERS }),
+  resumeJob: (id: number) => request<Job>(`/api/jobs/${id}/resume`, { method: "POST", headers: JSON_HEADERS }),
+  cancelJob: (id: number) => request<Job>(`/api/jobs/${id}/cancel`, { method: "POST", headers: JSON_HEADERS }),
   retryJob: (id: number) => request<Job>(`/api/jobs/${id}/retry`, { method: "POST", headers: JSON_HEADERS }),
+  deleteJob: (id: number) => request<{ deleted: number }>(`/api/jobs/${id}`, { method: "DELETE" }),
+  clearJobs: () => request<{ deleted: number }>("/api/jobs/clear", { method: "POST", headers: JSON_HEADERS }),
   settings: () => request<SettingsSummary>("/api/settings"),
   updateSettings: (payload: Record<string, unknown>) =>
     request<SettingsSummary>("/api/settings", {

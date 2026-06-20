@@ -129,7 +129,7 @@ export function ArchiveShell({
       </nav>
 
       <main>{children}</main>
-      <TaskDock />
+      {activePage === "tasks" ? null : <TaskDock />}
     </div>
   );
 }

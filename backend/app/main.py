@@ -16,7 +16,7 @@ from app.services.discover_service import DiscoverService
 from app.services.export_service import ExportService
 from app.services.file_service import FileMaintenanceService
 from app.services.import_service import ImportService
-from app.services.job_service import JobService
+from app.services.job_service import JobActive, JobService
 from app.services.library_service import LibraryService
 from app.services.governance_service import GovernanceService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
@@ -490,10 +490,57 @@ def get_job(job_id: int):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.get("/api/jobs/{job_id}/logs")
+def get_job_logs(job_id: int):
+    try:
+        return jobs.logs(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/jobs/{job_id}/pause")
+def pause_job(job_id: int):
+    try:
+        return jobs.pause(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/jobs/{job_id}/resume")
+def resume_job(job_id: int):
+    try:
+        return jobs.resume(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job(job_id: int):
+    try:
+        return jobs.cancel(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @app.post("/api/jobs/{job_id}/retry")
 def retry_job(job_id: int):
     try:
         return imports.retry_job(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/jobs/clear")
+def clear_jobs():
+    return jobs.clear_finished()
+
+
+@app.delete("/api/jobs/{job_id}")
+def delete_job(job_id: int):
+    try:
+        return jobs.delete(job_id)
+    except JobActive as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

@@ -1,6 +1,6 @@
-# Next Stage Prompt: Continue Export Download Polish Or Start File Maintenance
+# Next Stage Prompt: Continue After Task Center
 
-Use this prompt after the current Phase 5 browser-download slice remains green (`pytest` + `npm run build` + browser screenshot check).
+Use this prompt after Phase 7 task center remains green (`pytest` + `npm run build` + browser screenshot check).
 
 ## Required Reading Order
 
@@ -8,8 +8,9 @@ Use this prompt after the current Phase 5 browser-download slice remains green (
 2. `docs/PROJECT_MAP.md`
 3. `docs/DEVELOPMENT_RULES.md`
 4. `design/nh_archive_product_design_flow.md`
-5. For export polish: `design/导出中心.png`, `design/元数据.png`, `design/库.png`
-6. For file maintenance: `design/文件管理.png`
+5. For task/job work: `design/任务中心.png`
+6. For file maintenance follow-up: `design/文件管理.png`
+7. For workbench: `design/库.png`, `design/元数据.png`, and any future workbench reference.
 
 ## What Already Exists
 
@@ -26,29 +27,35 @@ Use this prompt after the current Phase 5 browser-download slice remains green (
 - Export options currently include `write_comicinfo`, `keep_json`, and `compress`; exports are generated in memory and delivered to the browser.
 - No generated exports are written under `settings.export_dir`, and no `export_records` are kept.
 - Original source CBZ files remain read-only.
+- `#tasks` is now a real task center backed by `/api/jobs`; it shows real metrics/list/detail/logs and supports retry, pause, resume, and cancel through backend APIs.
+- Import jobs cooperate with pause/cancel at safe stage checkpoints. Cancellation during a blocking download takes effect at the next checkpoint and cleans temp CBZ files.
 
-## Option A: Continue Phase 5 Export Polish
+## Option A: Long-Running Export Jobs
 
-Finish the export center beyond the first real slice.
+- Move optional long-running/bulk export into the real job system only if progress, pause/resume/cancel, logs, retry, or history is needed.
+- Keep source CBZ files immutable and keep browser download semantics unless a real export-job artifact model is designed.
 
-- Move batch export into the real job/task flow only if long-running progress, pause, retry, or download history becomes necessary. The current UI can already send selected works to the backend and stream multiple CBZ files as one `.zip`.
-- Decide whether export option presets should be persisted again; current controls are immediate per-session switches, not saved settings.
-- Continue visual refinement against `design/导出中心.png`; the current page uses the toolbar + work-list + inspector model with real data, but global chrome and density can still be tuned.
-- Keep source CBZ files immutable.
+## Option B: Task Center Visual QA And Polish
 
-## Option B: Start Phase 6 File Maintenance
+- Run browser screenshot QA against `design/任务中心.png`.
+- Tighten table density, right inspector spacing, and mobile collapse only if screenshots show drift.
+- Do not add fake jobs or fake throughput to make the page look fuller.
 
-Build the file maintenance module against `design/文件管理.png`.
+## Option C: File Maintenance Follow-Up
 
-- Compute file health from real filesystem and SQLite state.
-- Detect missing source files, missing covers, orphaned generated exports, and stale temp files.
-- Any cleanup must be explicit and previewed before deletion.
-- Do not invent capacity, duplicate counts, corruption counts, or orphan rows.
+- Add inventory pagination controls; the API already paginates.
+- Continue visual refinement against `design/文件管理.png`.
+- Keep cleanup explicit and previewed before deletion.
+
+## Option D: Workbench Aggregate Dashboard
+
+- Build `#workbench` only from existing real summaries: library, governance queue, file overview, export summary, and jobs.
+- Do not invent fake aggregate counts or fake recommendations.
 
 ## Verification
 
 - `PYTHONPATH=backend .venv/bin/pytest backend/tests -q`
 - `cd frontend && npm run build`
 - Static scan for mock/sample/random hardcoded records in the touched module.
-- For export work: create/ingest a tiny CBZ in a temp data dir, preview, download/build bytes, verify the output CBZ honors `ComicInfo.xml` / JSON / compression options, and verify the source CBZ bytes did not change.
+- For task work: create real or test DB jobs and verify list/detail/filter/retry/control behavior matches persisted job state.
 - For file work: create a temp data dir with real missing/orphan/stale files and verify the API reports exactly those real findings.

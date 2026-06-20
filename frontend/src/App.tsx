@@ -10,6 +10,7 @@ import { GovernancePage } from "./components/governance/GovernancePage";
 import { LibraryPage } from "./components/library/LibraryPage";
 import { ReaderPage } from "./components/reader/ReaderPage";
 import { SettingsPage } from "./components/settings/SettingsPage";
+import { TasksPage } from "./components/tasks/TasksPage";
 import { Page, pageFromLocation } from "./lib/navigation";
 
 export default function App() {
@@ -44,9 +45,7 @@ export default function App() {
       {page.name === "readerRemote" ? <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} /> : null}
       {page.name === "governance" ? <GovernancePage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
       {page.name === "dictionary" ? <DictionaryPage /> : null}
-      {page.name === "tasks" ? (
-        <BoundaryPage title="任务中心" description="底部任务坞站已读取真实 /api/jobs；完整任务列表、暂停、恢复、取消后续接入。" />
-      ) : null}
+      {page.name === "tasks" ? <TasksPage /> : null}
       {page.name === "export" ? <ExportPage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
       {page.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
       {page.name === "settings" ? (
