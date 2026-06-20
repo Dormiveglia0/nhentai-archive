@@ -2,14 +2,15 @@
 
 ## Current Version
 
-Phase 4 governance center (作品治理 single-work loop), built on the Phase 3 library and Phase 2 dictionary foundations.
+Phase 7 task center, built on the existing real `/api/jobs` import-job pipeline.
 
 Current real slice:
 
-`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save -> per-work governance queue/metadata save -> export preview/rename/download CBZ (single or .zip bundle) to the user`
+`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> real task center status/pause/resume/cancel/log/retry -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save -> per-work governance queue/metadata save -> export preview/rename/download CBZ (single or .zip bundle) to the user`
 
 ## Completed
 
+- Phase 7 任务中心: `#tasks` 从边界页替换为真实 `TasksPage`,只读取和操作现有 `/api/jobs` 数据,不造假任务。后端新增 `job_logs` 表与真实控制 API:`GET /api/jobs/{id}/logs`、`POST /api/jobs/{id}/pause`、`POST /api/jobs/{id}/resume`、`POST /api/jobs/{id}/cancel`;`JobService` 记录创建/阶段/完成/失败/暂停/恢复/取消/重试日志,并提供 `checkpoint()` 让导入线程在安全阶段边界协作暂停/取消(下载阶段取消会在下个 checkpoint 停止并清理 tmp CBZ)。页面按 `design/任务中心.png` 的结构落地:hero + 5 张真实指标卡(`running/queued/failed/completed` 与今日更新吞吐量)、完整状态 tab(`all/running/paused/queued/failed/completed/cancelled`)、搜索、紧凑任务表、右侧任务详情检查器。失败的 `remote_import` 且带 `gallery_id` 的任务可重试;运行/等待任务可暂停;暂停任务可恢复;运行/等待/暂停任务可取消;日志区显示后端持久日志;复制任务 ID 为真实剪贴板操作。新增 `components/tasks/`(状态 hook、summary strip、列表、检查器、helper 标签/时间格式化),`Job` 前端类型补 `created_at` 与 `paused/cancelled`,新增 `JobLog` 类型;新增 `backend/tests/test_job_service.py` 和 `backend/tests/test_jobs_api.py` 覆盖状态机、日志、控制路由与 retry payload。验证:`cd frontend && npm run build` 通过;`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿;静态扫描 touched task files 无假数据命中。
 - Phase 6 文件管理:新增 `FileMaintenanceService`(本地文件系统 + SQLite,绝不调 NH API)与 API `GET /api/files/overview`、`GET /api/files/inventory`、`POST /api/files/preview-delete`、`POST /api/files/delete`。文件清单统一展示三类条目:作品(源 CBZ + 封面聚合为一个单元,状态 ok/missing_source/missing_cover,体积不符标 size_mismatch)、孤立文件(library/covers 下无 DB 引用)、临时残留(tmp/exports)。`work_files.path`/`works.cover_path` 的绝对/相对混用统一归一化为 `.resolve()` 绝对路径后再判定。删除是唯一动盘操作:删除作品经 SQLite `ON DELETE CASCADE` 级联清空 works/work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history 并删源 CBZ + 封面;孤立/临时仅 unlink;受管目录外路径一律拒绝(穿越防护);CBZ 字节从不被修改,只整体删除。删除前强制 preview(展开级联影响、可回收字节、阅读进度/治理警告)。前端 `#files` 边界页替换为真实 `FilesPage`,并按 `design/文件管理.png` 视觉对齐:hairline 细数字指标条(`.files-summary`,沿用 dict-metric 语言)、多列文件表(文件名/路径/类型/大小/状态,可多选+选中高亮+聚焦左条)、底部封面详情面板(`FileDetailPanel`,真实封面缩略+4 格统计,封面遵循 `blurCovers` 隐私模糊)、右栏 `FileHealthRail`(健康度=真实 overview;重复检测=诚实「未接入」边界,不显示假重复数;清理工具=预览→二次确认→执行→刷新,删除结果回显成功/错误)。验证:`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿(新增 test_file_service.py 12 项 + test_files_api.py 3 项);`cd frontend && npm run build` 通过;静态扫描无假数据;临时数据目录手验 overview/preview/级联删除符合真实状态;Playwright(bundled chromium)在 `#files` 桌面 1440 与移动 390 截图核对真实 6 作品数据下的指标条/文件表/封面详情/健康度侧栏渲染正常、无控制台报错(仅 favicon 404)。
 - 导出中心下载选项与检查器重构:后端 `ExportService.preview/build_cbz/build_bundle` 新增 `write_comicinfo`、`keep_json`、`compress` 选项，预览会反映将写入/保留内容，单文件下载和批量 `.zip` 下载都会传递同一组选项；新增测试覆盖不写 ComicInfo、去除 JSON、无压缩打包和预览选项回显。前端导出页从 summary/table/preset/preview 旧分区调整为 `ExportToolbar` + `ExportWorkList` + `ExportInspector`：支持搜索、状态筛选、点击作品聚焦/选择、检查器内改输出名、切换 ComicInfo/JSON/压缩、刷新预览、下载所选或仅下载当前作品；删除旧 `ExportSummary`、`ExportQueueTable`、`ExportPresetBar`、`ExportPreviewPanel`。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 52 passed；`cd frontend && npm run build` passed；Playwright Chromium QA on `http://127.0.0.1:5174/#export` desktop 1440x1000 and mobile 390x844 verified page identity, nonblank render, no framework overlay, no console warnings/errors, search empty-state interaction, and screenshots saved under `/tmp/nh-export-*.png`.
 - 导出语义改造（导出 = 下载给用户，而非写到服务器目录）:按用户预期重定向了导出功能。后端新增 `ExportService.build_cbz()`（在内存中打包带 `ComicInfo.xml` 的单个 CBZ 字节）与 `build_bundle()`（多选打包为一个 `.zip`），新增下载路由 `GET /api/works/{id}/export/download` 与 `POST /api/exports/download`（均以 `Content-Disposition: attachment` 流式返回）。删除了服务器侧写盘逻辑（`generate`/`generate_many`/`history`/输出目录解析）与 `export_records` 表及其迁移；导出不再保留任何记录。前端 `api.downloadExport` / `downloadExportBundle` 以 blob 拉取并触发浏览器下载；`useExportState` 的 `downloadSelected`（单选下单文件 / 多选下 `.zip`）与 `downloadOne` 取代了旧的批量生成；移除了输出目录卡片/编辑、`导出完成后打开输出目录` 复选框与“最近导出记录”区块（删 `ExportHistory.tsx`）；表头按钮 `移除选中`→`移除当前`。`storage.export_dir` 设置项保留但已不再被导出流程使用。后端 `PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 50 passed；`cd frontend && npm run build` 零错误。原始 CBZ 始终只读、不被修改。
@@ -88,15 +89,14 @@ Current real slice:
 
 ## Not Implemented Yet
 
-- Job pause/resume/cancel controls.
 - Workbench aggregate dashboard.
 - Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
-- Long-running bulk export jobs through the task center and failure retry through the full task center.
+- Long-running bulk export jobs through the task center.
 - Governance bulk preview/apply, machine translation suggestions, and source-CBZ ComicInfo write-back.
 
 ## Next Plan
 
-Phase 6 file maintenance now ships the full file inventory + preview/cascade-delete loop. Remaining follow-ups: a pagination control for very large libraries (the inventory API already paginates; the UI currently shows the first page), deeper visual refinement against `design/文件管理.png`, and optional polish noted in the plan's ledger. Beyond Phase 6, open work is task-center orchestration for long-running export/retry/history, the workbench aggregate dashboard, and job pause/resume/cancel controls.
+Phase 7 task center now ships the real `/api/jobs` list/detail/pause/resume/cancel/log/retry page. Remaining follow-ups: long-running export jobs that can report progress through the task center, file-inventory UI pagination, Workbench aggregate dashboard, and browser screenshot QA against `design/任务中心.png`.
 
 ## Risks And Decisions
 
@@ -118,6 +118,7 @@ Phase 6 file maintenance now ships the full file inventory + preview/cascade-del
 - Decision: machine suggestions remain disabled until a real suggestion source exists; the UI must not invent suggestions.
 - Decision: dictionary candidate/evidence/preview metrics are computed from SQLite tables only.
 - Decision: unimplemented modules stay boundary screens.
+- Decision: 任务中心只展示与操作真实 `/api/jobs`;只有失败的 `remote_import` + `gallery_id` 可重试。暂停/恢复/取消通过后端状态机与导入线程 checkpoint 协作,不做前端假控制。
 - Decision: library is local-only; `LibraryService` must never call the NH API and library pages must not re-query remote tags. Tag filters reuse `work_tags` + dictionary mappings only.
 - Decision: library multi-tag filtering uses AND semantics (a work must carry every selected remote tag).
 - Decision: library summary shows only real metrics and still does not fabricate a broad 待治理 count. 待补标签 (works with zero `work_tags`) remains the honest library-level proxy; richer governance detail lives in `GovernanceService`.

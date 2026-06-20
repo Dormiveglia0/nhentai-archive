@@ -94,7 +94,11 @@ Root: `backend/app/`
   - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
   - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
-  - `create/list/get/mark_running/update_progress/complete/fail/retry`.
+  - `create/list/get/mark_running/update_progress/complete/fail/retry/pause/resume/cancel/logs/checkpoint`.
+  - Job payloads include `created_at` / `updated_at`; statuses include `queued/running/paused/completed/failed/cancelled`.
+  - Writes durable `job_logs` for creation, stage changes, completion, failures, pause/resume/cancel, and retry.
+- `services/import_service.py`
+  - Remote import jobs call `JobService.checkpoint()` between safe stages so pause/cancel is real and cooperative. Cancelling after a temporary CBZ download removes the tmp file before returning.
 - `main.py`
   - FastAPI route wiring.
 
@@ -154,6 +158,10 @@ Implemented:
 - `PATCH /api/works/{work_id}/reader-state`
 - `GET /api/jobs`
 - `GET /api/jobs/{job_id}`
+- `GET /api/jobs/{job_id}/logs`
+- `POST /api/jobs/{job_id}/pause`
+- `POST /api/jobs/{job_id}/resume`
+- `POST /api/jobs/{job_id}/cancel`
 - `POST /api/jobs/{job_id}/retry`
 - `GET /api/settings`
 - `PATCH /api/settings`
@@ -171,7 +179,7 @@ Root: `frontend/src/`
 
 - `App.tsx`
   - Hash route composition.
-  - Boundary pages for workbench, export, files, and full tasks.
+  - Boundary page for workbench; real pages for discover/library/reader/governance/dictionary/export/files/tasks/settings.
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
@@ -188,6 +196,7 @@ Root: `frontend/src/`
   - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
   - Governance API types/helpers: queue, aggregate, metadata field diff, tag groups, and apply payload/result. Governance calls are local-only and not run through the discover session cache.
   - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), and persisted preset settings. Export calls are local-only and not run through the discover session cache.
+  - Job API type/helpers: `Job` (including `created_at` / `updated_at`, `paused/cancelled` statuses), `JobLog`, `jobs()`, `jobLogs()`, `pauseJob()`, `resumeJob()`, `cancelJob()`, and `retryJob()`.
 - `vite.config.ts`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
@@ -195,6 +204,7 @@ Root: `frontend/src/`
   - Global topbar, full secondary nav, privacy/blur switches, bottom `TaskDock`.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
+  - Failed-job retry remains available for existing import jobs.
 - `components/discover/DiscoverPage.tsx`
   - Target design baseline is documented in `docs/superpowers/specs/2026-06-14-discover-popular-fan-design.md`.
   - Stable structure is title area + discover controls/results.
@@ -289,6 +299,15 @@ Root: `frontend/src/`
   - `FileHealthRail.tsx` — right rail: 健康度 (real overview), 重复检测 (honest 未接入 boundary — no fake dedupe), 清理工具 (preview → confirm delete + result notice).
   - `fileHelpers.tsx` — `formatBytes`, `statusLabel`, `kindLabel`, `statusTone`, `targetKey`, `entryToTarget`.
   - `App.tsx` renders `FilesPage` for `#files` with `blurCovers` (replaced the boundary screen).
+- `components/tasks/` — task center:
+  - Visual layout follows `design/任务中心.png`: real status metrics + tabbed task table + right inspector.
+  - `TasksPage.tsx` — route container for `#tasks`, replacing the previous boundary page.
+  - `useTasksState.ts` — polls `/api/jobs` every 2.5s, filters by status/query, tracks focus, loads logs, calls pause/resume/cancel/retry.
+  - `TaskSummaryStrip.tsx` — counts real queued/running/paused/failed/completed jobs and today's updated jobs.
+  - `TaskList.tsx` — compact table for task type, target, stage, progress, updated time, and retry/view action.
+  - `TaskInspector.tsx` — focused job detail, progress, error/retry-after, real pause/resume/cancel/retry/copy actions, and durable job log timeline.
+  - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
+  - Only failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 
