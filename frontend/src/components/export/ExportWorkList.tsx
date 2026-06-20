@@ -10,18 +10,19 @@ type ExportWorkListProps = {
   items: ExportQueueItem[];
   selectedIds: Set<number>;
   focusId: number | null;
+  multiSelect: boolean;
   blurCovers: boolean;
   onPick: (id: number) => void;
 };
 
 const STAGGER_CAP = 12;
 
-export function ExportWorkList({ items, selectedIds, focusId, blurCovers, onPick }: ExportWorkListProps) {
+export function ExportWorkList({ items, selectedIds, focusId, multiSelect, blurCovers, onPick }: ExportWorkListProps) {
   const rows = items.map((item) => (
     <Row
       key={item.work.id}
       item={item}
-      selected={selectedIds.has(item.work.id)}
+      selected={multiSelect && selectedIds.has(item.work.id)}
       focused={focusId === item.work.id}
       blurCovers={blurCovers}
       status={itemStatus(item)}
@@ -43,7 +44,7 @@ export function ExportWorkList({ items, selectedIds, focusId, blurCovers, onPick
             <StaggerItem key={item.work.id}>
               <Row
                 item={item}
-                selected={selectedIds.has(item.work.id)}
+                selected={multiSelect && selectedIds.has(item.work.id)}
                 focused={focusId === item.work.id}
                 blurCovers={blurCovers}
                 status={itemStatus(item)}
