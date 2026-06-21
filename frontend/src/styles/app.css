@@ -7443,6 +7443,36 @@ button.gallery-tag:hover {
 .settings-kv dt { color: var(--muted); font-size: 12px; }
 .settings-kv dd { margin: 4px 0 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
 
+.settings-subhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 18px 0 8px; }
+.settings-subhead h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); letter-spacing: 0.02em; }
+.settings-mini-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px;
+  border: 1px solid var(--line); border-radius: 7px; background: var(--surface-solid); color: var(--ink); cursor: pointer; font-size: 12px;
+}
+.settings-mini-btn:disabled { opacity: 0.5; cursor: default; }
+.settings-translate-test { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+.settings-translate-test input {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface-solid); color: var(--ink); font-size: 14px;
+}
+.settings-translate-test button {
+  padding: 9px 18px; border: 1px solid var(--accent); background: var(--accent); color: #fff;
+  border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.settings-translate-test button:disabled { opacity: 0.5; cursor: default; }
+.settings-translate-out {
+  grid-column: 1 / -1; min-height: 38px; padding: 9px 12px; border: 1px dashed var(--line);
+  border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 14px;
+}
+.settings-translate-out .bad { color: var(--accent); }
+.settings-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 12px; color: var(--ink);
+}
+.settings-chip em { font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
+.settings-chip.is-active { border-color: var(--accent); color: var(--accent); }
+
 /* Dictionary — machine translation controls */
 .dictionary-mt-bar { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
 .dictionary-mt-bar button {

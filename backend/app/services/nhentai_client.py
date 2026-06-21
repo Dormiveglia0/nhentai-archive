@@ -203,6 +203,18 @@ class NhentaiClient:
         self._cdn = None
         self._rate_limited_until = 0.0
 
+    def runtime_stats(self) -> dict[str, Any]:
+        now = time.monotonic()
+        active = sum(1 for expiry, _ in self._cache.values() if expiry > now)
+        remaining = round(self._rate_limited_until - now) if self._rate_limited_until > now else 0
+        return {
+            "cache_entries": len(self._cache),
+            "cache_active_entries": active,
+            "cooldown_active": remaining > 0,
+            "cooldown_remaining_seconds": max(0, remaining),
+            "cdn_configured": self._cdn is not None,
+        }
+
     def _cache_ttl(self, method: str, path: str) -> int:
         if method == "POST" and path == "/api/v2/tags/search":
             return 60 * 30

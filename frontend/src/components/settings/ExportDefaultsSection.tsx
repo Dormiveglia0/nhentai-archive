@@ -47,6 +47,21 @@ export function ExportDefaultsSection({ vm }: { vm: SettingsVM }) {
         </dl>
       ) : null}
 
+      {presets.length > 1 ? (
+        <>
+          <div className="settings-subhead">
+            <h3>全部预设</h3>
+          </div>
+          <div className="settings-chip-row">
+            {presets.map((preset) => (
+              <span key={preset.id} className={`settings-chip${preset.id === vm.exportActivePreset ? " is-active" : ""}`}>
+                {preset.name}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : null}
+
       <div className="connection-actions">
         <button type="button" onClick={() => navigate({ name: "export" })}>
           打开导出中心

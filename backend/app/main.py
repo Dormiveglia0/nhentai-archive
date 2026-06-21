@@ -609,6 +609,11 @@ def clear_nhentai_cache():
     return {"ok": True, "message": "远端缓存已清除"}
 
 
+@app.get("/api/settings/nhentai/runtime")
+def nhentai_runtime_stats():
+    return client.runtime_stats()
+
+
 def _remote(call):
     try:
         return call()

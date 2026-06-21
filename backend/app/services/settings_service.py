@@ -89,6 +89,9 @@ class SettingsService:
             self._set("mt.deepl_plan", mt["deepl_plan"])
         if mt.get("target_lang") in {"zh-CN", "zh-TW"}:
             self._set("mt.target_lang", mt["target_lang"])
+        batch_limit = mt.get("batch_limit")
+        if isinstance(batch_limit, int) and 1 <= batch_limit <= 50:
+            self._set("mt.batch_limit", str(batch_limit))
 
         storage = payload.get("storage") or {}
         export_dir = storage.get("export_dir")

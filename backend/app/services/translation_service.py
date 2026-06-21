@@ -73,12 +73,17 @@ class TranslationService:
         provider = self._get("mt.provider") or GOOGLE_FREE
         if provider not in SUPPORTED_PROVIDERS:
             provider = GOOGLE_FREE
+        try:
+            batch_limit = int(self._get("mt.batch_limit") or 20)
+        except (TypeError, ValueError):
+            batch_limit = 20
         return {
             "provider": provider,
             "deepl_api_key": self.env_deepl_key or self._get("mt.deepl_api_key"),
             "deepl_key_source": "env" if self.env_deepl_key else ("db" if self._get("mt.deepl_api_key") else "none"),
             "deepl_plan": self._get("mt.deepl_plan") or "free",
             "target_lang": self._get("mt.target_lang") or "zh-CN",
+            "batch_limit": max(1, min(batch_limit, 50)),
         }
 
     def public_config(self) -> dict[str, Any]:
@@ -89,6 +94,7 @@ class TranslationService:
             "deepl_key_source": cfg["deepl_key_source"],
             "deepl_plan": cfg["deepl_plan"],
             "target_lang": cfg["target_lang"],
+            "batch_limit": cfg["batch_limit"],
             "last_verify": self._get_json("mt.last_verify"),
         }
 

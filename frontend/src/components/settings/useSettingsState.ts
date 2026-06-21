@@ -17,6 +17,7 @@ export function useSettingsState() {
   const [deeplPlan, setDeeplPlan] = useState<"free" | "pro">("free");
   const [deeplKey, setDeeplKey] = useState("");
   const [mtTargetLang, setMtTargetLang] = useState<"zh-CN" | "zh-TW">("zh-CN");
+  const [mtBatchLimit, setMtBatchLimit] = useState(20);
   const [exportActivePreset, setExportActivePreset] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -37,6 +38,7 @@ export function useSettingsState() {
       setMtProvider(payload.machine_translation.provider);
       setDeeplPlan(payload.machine_translation.deepl_plan);
       setMtTargetLang(payload.machine_translation.target_lang === "zh-TW" ? "zh-TW" : "zh-CN");
+      setMtBatchLimit(payload.machine_translation.batch_limit);
     }
     setExportActivePreset(payload.export.active_preset_id);
   }
@@ -70,6 +72,7 @@ export function useSettingsState() {
           provider: mtProvider,
           deepl_plan: deeplPlan,
           target_lang: mtTargetLang,
+          batch_limit: mtBatchLimit,
           deepl_api_key: deeplKey.trim() || undefined,
         },
         export: { active_preset_id: exportActivePreset || undefined },
@@ -142,6 +145,8 @@ export function useSettingsState() {
     setDeeplKey,
     mtTargetLang,
     setMtTargetLang,
+    mtBatchLimit,
+    setMtBatchLimit,
     exportActivePreset,
     setExportActivePreset,
     loading,

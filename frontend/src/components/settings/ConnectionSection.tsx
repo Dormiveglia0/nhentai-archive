@@ -1,5 +1,7 @@
-import { Eraser, RefreshCw } from "lucide-react";
+import { Eraser, Gauge, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
+import { api, NhentaiRuntimeStats } from "../../lib/api";
 import type { SettingsVM } from "./useSettingsState";
 import { StatusDot } from "./settingsHelpers";
 
@@ -7,6 +9,24 @@ export function ConnectionSection({ vm }: { vm: SettingsVM }) {
   const { settings } = vm;
   const nh = settings?.nhentai;
   const lastVerify = nh?.last_verify ?? null;
+
+  const [runtime, setRuntime] = useState<NhentaiRuntimeStats | null>(null);
+  const [runtimeLoading, setRuntimeLoading] = useState(false);
+
+  const loadRuntime = useCallback(async () => {
+    setRuntimeLoading(true);
+    try {
+      setRuntime(await api.nhentaiRuntime());
+    } catch {
+      setRuntime(null);
+    } finally {
+      setRuntimeLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadRuntime();
+  }, [loadRuntime]);
 
   return (
     <section className="settings-card">
@@ -70,6 +90,42 @@ export function ConnectionSection({ vm }: { vm: SettingsVM }) {
         <div>
           <dt>验证信息</dt>
           <dd>{lastVerify?.message ?? "—"}</dd>
+        </div>
+      </dl>
+
+      <div className="settings-subhead">
+        <h3>
+          <Gauge size={15} /> 运行态与配额
+        </h3>
+        <button type="button" className="settings-mini-btn" onClick={() => void loadRuntime()} disabled={runtimeLoading}>
+          <RefreshCw size={13} className={runtimeLoading ? "spin" : undefined} />
+          刷新
+        </button>
+      </div>
+      <dl className="settings-kv">
+        <div>
+          <dt>缓存条目</dt>
+          <dd>{runtime ? `${runtime.cache_active_entries} / ${runtime.cache_entries}（有效/总）` : "—"}</dd>
+        </div>
+        <div>
+          <dt>限流冷却</dt>
+          <dd>
+            {runtime
+              ? runtime.cooldown_active
+                ? `冷却中 · 约 ${runtime.cooldown_remaining_seconds} 秒后恢复`
+                : "正常"
+              : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt>CDN 配置</dt>
+          <dd>{runtime ? (runtime.cdn_configured ? "已解析" : "未解析") : "—"}</dd>
+        </div>
+        <div>
+          <dt>就绪</dt>
+          <dd>
+            <StatusDot ok={Boolean(nh?.api_key_configured) && !(runtime?.cooldown_active ?? false)} />
+          </dd>
         </div>
       </dl>
 

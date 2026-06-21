@@ -53,6 +53,39 @@ export function DataSection() {
           </div>
         ))}
       </div>
+
+      {library ? (
+        <>
+          <div className="settings-subhead">
+            <h3>来源分布</h3>
+          </div>
+          <dl className="settings-kv">
+            <div>
+              <dt>远端入库</dt>
+              <dd>{library.sources.remote}</dd>
+            </div>
+            <div>
+              <dt>本地导入</dt>
+              <dd>{library.sources.local}</dd>
+            </div>
+          </dl>
+        </>
+      ) : null}
+
+      {library && library.languages.length ? (
+        <>
+          <div className="settings-subhead">
+            <h3>语言分布</h3>
+          </div>
+          <div className="settings-chip-row">
+            {library.languages.slice(0, 12).map((lang) => (
+              <span key={lang.value} className="settings-chip">
+                {lang.label} <em>{lang.count}</em>
+              </span>
+            ))}
+          </div>
+        </>
+      ) : null}
     </section>
   );
 }

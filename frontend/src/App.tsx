@@ -12,6 +12,7 @@ import { ReaderPage } from "./components/reader/ReaderPage";
 import { SettingsPage } from "./components/settings/SettingsPage";
 import { TasksPage } from "./components/tasks/TasksPage";
 import { WorkbenchPage } from "./components/workbench/WorkbenchPage";
+import { api } from "./lib/api";
 import { Page, pageFromLocation } from "./lib/navigation";
 
 export default function App() {
@@ -23,6 +24,21 @@ export default function App() {
     const sync = () => setPage(pageFromLocation());
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .settings()
+      .then((payload) => {
+        if (!alive) return;
+        setPrivacyMode(payload.privacy.privacy_mode_default);
+        setBlurCovers(payload.privacy.blur_covers_default);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }, []);
 
   return (

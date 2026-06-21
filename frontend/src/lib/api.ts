@@ -563,7 +563,16 @@ export type MachineTranslationSettings = {
   deepl_key_source: "env" | "db" | "none";
   deepl_plan: "free" | "pro";
   target_lang: string;
+  batch_limit: number;
   last_verify: TranslationVerifyResult | null;
+};
+
+export type NhentaiRuntimeStats = {
+  cache_entries: number;
+  cache_active_entries: number;
+  cooldown_active: boolean;
+  cooldown_remaining_seconds: number;
+  cdn_configured: boolean;
 };
 
 export type SettingsSummary = {
@@ -907,5 +916,6 @@ export const api = {
   verifyTranslationSettings: () =>
     request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS }),
   clearNhentaiCache: () =>
-    request<{ ok: boolean; message: string }>("/api/settings/nhentai/clear-cache", { method: "POST", headers: JSON_HEADERS })
+    request<{ ok: boolean; message: string }>("/api/settings/nhentai/clear-cache", { method: "POST", headers: JSON_HEADERS }),
+  nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime")
 };

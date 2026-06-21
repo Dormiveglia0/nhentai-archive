@@ -137,7 +137,9 @@ export function DictionaryPage() {
     setSuggesting(true);
     setMessage(null);
     try {
-      const result = await api.dictionarySuggestBatch(20);
+      const settings = await api.settings();
+      const limit = settings.machine_translation?.batch_limit ?? 20;
+      const result = await api.dictionarySuggestBatch(limit);
       setMessage(
         result.generated > 0
           ? `已生成 ${result.generated} 条机翻建议，请在候选池按「机器建议」筛选并逐条复核。`
