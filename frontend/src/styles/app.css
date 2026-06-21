@@ -7473,30 +7473,41 @@ button.gallery-tag:hover {
 .settings-chip em { font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
 .settings-chip.is-active { border-color: var(--accent); color: var(--accent); }
 
-.settings-option-list { display: flex; flex-direction: column; gap: 10px; }
-.settings-option-row {
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
-  border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid);
-  cursor: pointer; transition: border-color 0.18s ease, background 0.18s ease;
+/* Export defaults — compact toggles + live archive preview */
+.export-defaults { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 18px; align-items: stretch; }
+.export-defaults-controls { display: flex; flex-direction: column; gap: 8px; }
+.export-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-solid); cursor: pointer; transition: border-color 0.18s ease;
 }
-.settings-option-row:hover { border-color: var(--line-strong); }
-.settings-option-row.is-on { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: rgba(185, 45, 30, 0.04); }
-.settings-option-icon {
-  display: inline-flex; align-items: center; justify-content: center; flex: none;
-  width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted);
+.export-toggle:hover { border-color: var(--line-strong); }
+.export-toggle > span:first-child { font-size: 13px; color: var(--ink); }
+.export-defaults-link {
+  margin-top: 4px; align-self: flex-start; padding: 0; border: 0; background: none;
+  color: var(--accent); cursor: pointer; font-size: 13px;
 }
-.settings-option-row.is-on .settings-option-icon { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
-.settings-option-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-.settings-option-text strong { font-size: 14px; }
-.settings-option-text small { color: var(--muted); font-size: 12px; line-height: 1.45; }
-.settings-option-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
-.settings-option-foot span { color: var(--muted); font-size: 12px; }
-.settings-option-foot button {
-  padding: 8px 16px; border: 1px solid var(--line); border-radius: 9px;
-  background: var(--surface-solid); color: var(--ink); cursor: pointer; font-size: 13px;
-  transition: border-color 0.18s ease;
+.export-defaults-link:hover { text-decoration: underline; }
+
+.export-preview {
+  display: flex; flex-direction: column; min-width: 0;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 14px 16px;
 }
-.settings-option-foot button:hover { border-color: var(--accent); }
+.export-preview-name { font-weight: 600; font-size: 13px; color: var(--ink); margin-bottom: 12px; }
+.export-preview-tree { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.export-preview-tree li { display: flex; align-items: center; gap: 10px; }
+.export-preview-tree code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.export-preview-tree em { margin-left: auto; flex: none; font-style: normal; font-size: 11px; color: var(--muted); }
+.export-preview-tree li.is-off code { color: var(--muted); text-decoration: line-through; opacity: 0.6; }
+.export-preview-tree li.is-off em { color: var(--accent); opacity: 0.8; }
+.export-preview-foot { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.export-preview-foot strong { color: var(--ink); font-weight: 600; }
+@media (max-width: 720px) {
+  .export-defaults { grid-template-columns: 1fr; }
+}
 
 /* Dictionary — machine translation controls */
 .dictionary-mt-bar { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
