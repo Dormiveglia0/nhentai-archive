@@ -36,10 +36,10 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
       ) : (
         <FadeIn key={contextKey} y={8}>
             <div className="preview-metrics">
-              <Metric label="将更新标签" value={preview?.will_update_tags ?? 0} />
-              <Metric label="将影响作品" value={preview?.will_update_works ?? 0} />
-              <Metric label="潜在冲突" value={conflicts.length} danger={conflicts.length > 0} />
-              <Metric label="忽略项" value={preview?.ignored ?? 0} />
+              <Metric label="将更新标签" value={preview ? preview.will_update_tags : "—"} />
+              <Metric label="将影响作品" value={preview ? preview.will_update_works : "—"} />
+              <Metric label="潜在冲突" value={preview ? conflicts.length : "—"} danger={conflicts.length > 0} />
+              <Metric label="忽略项" value={preview ? preview.ignored : "—"} />
             </div>
 
             <div className="preview-split">
@@ -131,7 +131,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
   );
 }
 
-function Metric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) {
+function Metric({ label, value, danger = false }: { label: string; value: number | string; danger?: boolean }) {
   return (
     <div>
       <span>{label}</span>

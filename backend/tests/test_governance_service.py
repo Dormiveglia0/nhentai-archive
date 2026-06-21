@@ -194,6 +194,20 @@ def test_apply_persists_local_metadata_decisions(tmp_path):
     assert fields["language"]["working_value"] == "日语"
 
 
+def test_queue_uses_saved_metadata_when_checking_missing_fields(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    _import_work(db, archive, tmp_path)
+
+    assert service.queue()["summary"]["missing_metadata"] == 1
+
+    service.apply(
+        1,
+        {"metadata": [{"field": "language", "value": "日语", "source": "manual"}]},
+    )
+
+    assert service.queue()["summary"]["missing_metadata"] == 0
+
+
 def test_dictionary_review_tags_surface_pending_and_conflict_summary(tmp_path):
     db, archive, service = _setup(tmp_path)
     work_id = _import_work(db, archive, tmp_path)

@@ -176,8 +176,16 @@ export function useFilesState() {
     async (cat: "orphan" | "stale", label: string) => {
       setBusy(true);
       try {
-        const data = await api.filesInventory({ category: cat, per_page: 500 });
-        const targets = data.result.map(entryToTarget);
+        const targets: FileDeleteTarget[] = [];
+        let nextPage = 1;
+        let total = 0;
+        do {
+          const data = await api.filesInventory({ category: cat, page: nextPage, per_page: 500 });
+          targets.push(...data.result.map(entryToTarget));
+          total = data.total;
+          nextPage += 1;
+          if (data.result.length === 0) break;
+        } while (targets.length < total);
         await runPreview(targets, label);
       } catch (e) {
         setError(String(e));
