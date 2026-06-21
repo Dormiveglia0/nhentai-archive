@@ -45,6 +45,13 @@ export function ExportInspector({
   const keepsJson = (preview?.will_keep.length ?? 0) > 0;
   const compresses = preview?.options.compress ?? true;
   const issues = preview ? [...preview.blockers, ...preview.warnings] : [];
+  const canDownloadCurrent = Boolean(preview && preview.blockers.length === 0);
+  const canDownloadSelection = selectedItems.some((item) => item.blockers.length === 0);
+  const primaryDisabled = downloading || (count > 1 ? !canDownloadSelection : !canDownloadCurrent);
+  const primaryDownload = () => {
+    if (count > 1) onDownload();
+    else if (preview) onDownloadOne(preview.work.id);
+  };
 
   return (
     <aside className="export-inspector">
@@ -180,8 +187,8 @@ export function ExportInspector({
             <button
               type="button"
               className="export-primary-button"
-              disabled={downloading || count === 0}
-              onClick={onDownload}
+              disabled={primaryDisabled}
+              onClick={primaryDownload}
             >
               <Download size={17} />
               {downloading ? "正在下载..." : downloadLabel}

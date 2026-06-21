@@ -19,7 +19,7 @@ export const INHERIT_FIELDS = new Set([
 export function buildInitialEdits(fields: MetadataFieldDiff[]): Record<string, FieldEdit> {
   return Object.fromEntries(
     fields.map((field) => {
-      const hasOverride = field.working_source !== "current";
+      const hasOverride = field.working_source !== "current" || Boolean(field.updated_at);
       if (
         !hasOverride &&
         INHERIT_FIELDS.has(field.field) &&

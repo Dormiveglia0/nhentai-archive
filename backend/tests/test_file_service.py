@@ -1,3 +1,4 @@
+import json
 import zipfile
 from pathlib import Path
 
@@ -112,6 +113,27 @@ def test_orphan_and_stale_files_are_detected(tmp_path):
     assert overview["orphan_count"] == 1
     assert overview["stale_count"] == 2
     assert overview["reclaimable_bytes"] == len(b"loose-bytes") + len(b"tmp") + len(b"export-leftover")
+
+
+def test_running_import_temp_file_is_not_stale(tmp_path):
+    settings, db, archive, files = _setup(tmp_path)
+    _import_work(db, archive, tmp_path)
+    active_tmp = settings.tmp_dir / "nhentai-4321.cbz"
+    active_tmp.write_bytes(b"downloading")
+    stale_tmp = settings.tmp_dir / "partial.download"
+    stale_tmp.write_bytes(b"old")
+    db.execute(
+        """
+        INSERT INTO jobs (type, status, stage, target_json)
+        VALUES ('remote_import', 'running', 'downloading_cbz', ?)
+        """,
+        (json.dumps({"gallery_id": 4321}),),
+    )
+
+    stale = files.inventory(category="stale")["result"]
+
+    assert {entry["name"] for entry in stale} == {"partial.download"}
+    assert files.overview()["stale_count"] == 1
 
 
 def test_size_mismatch_flag_when_db_size_differs(tmp_path):

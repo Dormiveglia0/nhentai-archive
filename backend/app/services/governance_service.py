@@ -51,6 +51,8 @@ class GovernanceService:
               w.*,
               COALESCE(f.size_bytes, 0) AS size_bytes,
               f.path AS source_path,
+              (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata,
+              (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'language') AS language_metadata,
               (SELECT COUNT(*) FROM work_tags wt WHERE wt.work_id = w.id) AS tag_count,
               (SELECT COUNT(*)
                  FROM work_tags wt
@@ -111,7 +113,7 @@ class GovernanceService:
         tag_rows = self._tag_rows(work_id)
         metadata_fields = self._metadata_fields(work, tag_rows, archive_sources, remote_payload, saved)
         tag_groups, tag_summary, dictionary_summary = self._tag_summary(tag_rows)
-        reasons = self._queue_reasons(self._queue_row_for_work(work, files, tag_rows))
+        reasons = self._queue_reasons(self._queue_row_for_work(work, files, tag_rows, saved))
 
         return {
             "work": self._work_summary(work),
@@ -188,8 +190,14 @@ class GovernanceService:
         return reasons
 
     def _missing_metadata(self, row: dict[str, Any]) -> bool:
-        required_values = [row.get("title"), row.get("language")]
+        required_values = [self._final_metadata_value(row, "title"), self._final_metadata_value(row, "language")]
         return any(value is None or str(value).strip() == "" for value in required_values)
+
+    def _final_metadata_value(self, row: dict[str, Any], field: str) -> Any:
+        saved_key = f"{field}_metadata"
+        if saved_key in row and row.get(saved_key) is not None:
+            return row.get(saved_key)
+        return row.get(field)
 
     def _archive_has_comicinfo(self, source_path: str | None) -> bool:
         if not source_path or not Path(source_path).exists() or not zipfile.is_zipfile(source_path):
@@ -399,13 +407,22 @@ class GovernanceService:
     def _work_row(self, work_id: int) -> dict[str, Any] | None:
         return self.db.fetchone("SELECT * FROM works WHERE id = ?", (work_id,))
 
-    def _queue_row_for_work(self, work: dict[str, Any], files: list[dict[str, Any]], tag_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    def _queue_row_for_work(
+        self,
+        work: dict[str, Any],
+        files: list[dict[str, Any]],
+        tag_rows: list[dict[str, Any]],
+        saved: dict[str, dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         source_file = next((row for row in files if row["kind"] == "source_cbz"), None)
         review_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "review")
         conflict_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "conflict")
+        saved = saved or {}
         return {
             **work,
             "source_path": source_file["path"] if source_file else None,
+            "title_metadata": saved.get("title", {}).get("value"),
+            "language_metadata": saved.get("language", {}).get("value"),
             "tag_count": len(tag_rows),
             "review_count": review_count,
             "conflict_count": conflict_count,

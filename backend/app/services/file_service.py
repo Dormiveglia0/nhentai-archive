@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -109,12 +110,34 @@ class FileMaintenanceService:
         for p in self._loose_files(self.settings.covers_dir):
             if str(p) not in referenced_covers:
                 entries.append(self._loose_entry(p, "orphan", "covers"))
+        active_tmp_paths = self._active_import_tmp_paths()
         for p in self._loose_files(self.settings.tmp_dir):
+            if str(p) in active_tmp_paths:
+                continue
             entries.append(self._loose_entry(p, "stale", "tmp"))
         for p in self._loose_files(self.settings.export_dir):
             entries.append(self._loose_entry(p, "stale", "exports"))
 
         return entries
+
+    def _active_import_tmp_paths(self) -> set[str]:
+        paths: set[str] = set()
+        rows = self.db.fetchall(
+            """
+            SELECT target_json
+            FROM jobs
+            WHERE type = 'remote_import' AND status IN ('queued', 'running', 'paused', 'cancelling')
+            """
+        )
+        for row in rows:
+            try:
+                target = json.loads(row.get("target_json") or "{}")
+            except json.JSONDecodeError:
+                continue
+            gallery_id = target.get("gallery_id")
+            if gallery_id:
+                paths.add(str((self.settings.tmp_dir / f"nhentai-{int(gallery_id)}.cbz").resolve()))
+        return paths
 
     def _loose_entry(self, path: Path, kind: str, directory: str) -> dict[str, Any]:
         size = path.stat().st_size if path.is_file() else 0
