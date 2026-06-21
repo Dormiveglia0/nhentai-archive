@@ -822,6 +822,473 @@ kbd {
   margin: 0;
 }
 
+/* Settings console */
+.settings-deck-page {
+  max-width: none;
+  margin: 0 auto;
+  padding: 22px 24px 84px;
+}
+
+.settings-deck-layout {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.settings-console-rail {
+  position: sticky;
+  top: 148px;
+  min-width: 0;
+  display: grid;
+  gap: 28px;
+}
+
+.settings-console-brand {
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  display: grid;
+  gap: 12px;
+  padding: 0 0 26px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-console-brand::before {
+  display: none;
+}
+
+.settings-console-brand::after {
+  display: none;
+}
+
+.settings-console-brand span,
+.settings-console-title span,
+.settings-section-meta span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.settings-console-brand h1 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", SimSun, Georgia, serif;
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.settings-console-brand p {
+  position: relative;
+  z-index: 1;
+  max-width: 220px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.settings-console-nav,
+.settings-status-deck {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-console-nav {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+}
+
+.settings-console-nav button {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+}
+
+.settings-console-nav button:last-child {
+  border-bottom: 0;
+}
+
+.settings-console-nav button svg {
+  color: currentColor;
+}
+
+.settings-console-nav button span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.settings-console-nav button strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.settings-console-nav button small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.settings-console-nav button.active,
+.settings-console-nav button:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
+.settings-console-nav button.active strong {
+  color: var(--accent);
+}
+
+.settings-status-deck {
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+}
+
+.settings-status-card {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.settings-status-cell:nth-child(2n) .settings-status-card {
+  border-right: 0;
+}
+
+.settings-status-cell:last-child .settings-status-card {
+  border-bottom: 0;
+}
+
+.settings-status-card svg {
+  color: var(--accent);
+  grid-row: span 2;
+}
+
+.settings-status-card span,
+.settings-status-card small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.settings-status-card strong {
+  color: var(--ink);
+  justify-self: end;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.settings-status-card.needs-attention {
+  background: transparent;
+}
+
+.settings-status-card.needs-attention strong {
+  color: var(--accent);
+}
+
+.settings-stage-motion,
+.settings-stage {
+  min-width: 0;
+}
+
+.settings-stage {
+  position: relative;
+  overflow: visible;
+  min-height: 680px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-stage::before {
+  display: none;
+}
+
+.settings-console-head {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.settings-console-title p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.settings-console-health {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(73, 108, 82, 0.28);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.settings-console-health.attention {
+  border-color: rgba(185, 45, 30, 0.32);
+  background: transparent;
+  color: var(--accent);
+}
+
+.settings-section-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.settings-section-meta strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.settings-deck-page .settings-main {
+  padding: 24px 0 38px;
+}
+
+.settings-deck-page .settings-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.settings-deck-page .settings-title {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.settings-deck-page .settings-title h2 {
+  display: none;
+}
+
+.settings-deck-page .settings-title p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.85;
+  max-width: 760px;
+}
+
+.settings-deck-page .settings-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.settings-deck-page .settings-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.settings-deck-page .settings-grid label {
+  min-width: 0;
+  padding: 13px 14px 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-deck-page .settings-card input,
+.settings-deck-page .settings-card select,
+.settings-deck-page .settings-translate-test input {
+  border-radius: 6px;
+  background: rgba(255, 252, 246, 0.6);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.settings-deck-page .settings-card input:focus,
+.settings-deck-page .settings-card select:focus,
+.settings-deck-page .settings-translate-test input:focus {
+  border-color: rgba(185, 45, 30, 0.56);
+  background: #fffdf8;
+  box-shadow: 0 0 0 3px rgba(185, 45, 30, 0.08);
+}
+
+.settings-deck-page .settings-kv,
+.settings-deck-page .settings-data-metric,
+.settings-deck-page .settings-mt-provider,
+.settings-deck-page .export-toggle,
+.settings-deck-page .export-preview,
+.settings-deck-page .settings-translate-out {
+  border-color: rgba(203, 189, 172, 0.72);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-deck-page .connection-actions {
+  flex-wrap: wrap;
+}
+
+.settings-deck-page .status-row {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.settings-command-bar {
+  grid-column: 1 / -1;
+  min-height: 64px;
+  position: sticky;
+  bottom: 16px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(247, 241, 231, 0.9);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+}
+
+.settings-command-bar > div {
+  display: flex;
+  gap: 10px;
+}
+
+.settings-command-bar button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-solid);
+  color: var(--ink);
+  padding: 0 14px;
+}
+
+.settings-command-bar .primary-action {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (max-width: 1180px) {
+  .settings-deck-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-console-rail {
+    position: static;
+    grid-template-columns: 240px minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .settings-status-deck {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .settings-deck-page {
+    padding: 16px 16px 82px;
+  }
+
+  .settings-console-rail,
+  .settings-status-deck,
+  .settings-deck-page .settings-title,
+  .settings-deck-page .settings-grid,
+  .preference-row,
+  .path-grid,
+  .export-defaults {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-status-card,
+  .settings-status-cell:nth-child(2n) .settings-status-card {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .settings-status-cell:last-child .settings-status-card {
+    border-bottom: 0;
+  }
+
+  .settings-console-head {
+    display: grid;
+    padding: 24px 20px 22px 28px;
+  }
+
+  .settings-section-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 20px 14px 28px;
+  }
+
+  .settings-deck-page .settings-main {
+    padding: 22px 20px 26px 28px;
+  }
+
+  .settings-command-bar {
+    position: static;
+    display: grid;
+  }
+
+  .settings-command-bar > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .boundary-panel,
 .page-panel {
   margin: 0;
@@ -7505,8 +7972,406 @@ button.gallery-tag:hover {
 .export-preview-tree li.is-off em { color: var(--accent); opacity: 0.8; }
 .export-preview-foot { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .export-preview-foot strong { color: var(--ink); font-weight: 600; }
+
+/* Settings page — minimal inner layout */
+.settings-deck-page .settings-mt-providers,
+.settings-deck-page .preference-row,
+.settings-deck-page .export-defaults {
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.settings-deck-page .settings-mt-provider,
+.settings-deck-page .export-toggle,
+.settings-deck-page .preference-row > label {
+  min-height: 58px;
+  margin: 0;
+  padding: 13px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-deck-page .settings-mt-provider {
+  padding-right: 16px;
+}
+
+.settings-deck-page .settings-mt-provider.is-active {
+  border-color: var(--line);
+  background: transparent;
+  box-shadow: inset 2px 0 0 var(--accent);
+  padding-left: 12px;
+}
+
+.settings-deck-page .settings-mt-provider:hover,
+.settings-deck-page .export-toggle:hover {
+  transform: none;
+  border-color: var(--line);
+}
+
+.settings-deck-page .preference-row {
+  gap: 0;
+}
+
+.settings-deck-page .preference-row > label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.settings-deck-page .preference-row > label:has(select) {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+}
+
+.settings-deck-page .settings-kv {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+}
+
+.settings-deck-page .settings-kv div {
+  min-width: 0;
+  padding: 12px 12px 12px 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.settings-deck-page .settings-kv dt {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.settings-deck-page .settings-kv dd {
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.settings-deck-page .settings-subhead {
+  margin: 22px 0 8px;
+  padding-top: 0;
+}
+
+.settings-deck-page .settings-subhead h3 {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.settings-deck-page .settings-data-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line);
+  border-left: 0;
+}
+
+.settings-deck-page .settings-data-metric {
+  min-height: 88px;
+  padding: 13px 12px 13px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-deck-page .settings-data-metric strong {
+  font-size: 22px;
+  font-weight: 760;
+}
+
+.settings-deck-page .settings-translate-test {
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-top: 1px solid var(--line);
+}
+
+.settings-deck-page .settings-translate-test input {
+  border-right: 0;
+  border-radius: 0;
+}
+
+.settings-deck-page .settings-translate-test button {
+  border-radius: 0 6px 6px 0;
+}
+
+.settings-deck-page .settings-translate-out {
+  margin-top: 8px;
+  border-style: solid;
+  border-radius: 0;
+  background: transparent;
+}
+
+.settings-deck-page .export-defaults {
+  grid-template-columns: minmax(360px, 0.86fr) minmax(420px, 1.14fr);
+  gap: 36px;
+  align-items: start;
+}
+
+.settings-deck-page .export-preview {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.settings-deck-page .export-defaults-controls {
+  gap: 0;
+}
+
+.settings-deck-page .export-toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 76px;
+  padding: 16px 0;
+}
+
+.settings-deck-page .export-toggle > span:first-child {
+  display: grid;
+  gap: 4px;
+  font-size: inherit;
+}
+
+.settings-deck-page .export-toggle strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.settings-deck-page .export-toggle small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.settings-deck-page .export-preview-head {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-deck-page .export-preview-head span {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-deck-page .export-preview-head strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.settings-deck-page .export-preview-head small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-deck-page .export-defaults-link {
+  margin: 0;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 252, 246, 0.64);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.settings-deck-page .export-defaults-link:hover {
+  border-color: var(--line-strong);
+  text-decoration: none;
+}
+
+.settings-deck-page .export-preview-tree {
+  gap: 0;
+}
+
+.settings-deck-page .export-preview-tree li {
+  min-height: 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-deck-page .export-preview-tree code {
+  font-size: 12px;
+}
+
+.settings-deck-page .export-preview-tree em {
+  font-size: 11px;
+}
+
+.settings-deck-page .export-preview-foot {
+  margin-top: 0;
+  padding: 14px 0 0;
+  border-top: 0;
+}
+
+.settings-deck-page .path-grid {
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+
+.settings-deck-page .path-grid label {
+  padding: 13px 14px 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-deck-page .export-recipe {
+  border-top: 1px solid var(--line);
+}
+
+.settings-deck-page .export-recipe-head {
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-deck-page .export-recipe-head div,
+.settings-deck-page .export-manifest-copy span,
+.settings-deck-page .export-recipe-row > span:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-deck-page .export-recipe-head span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.settings-deck-page .export-recipe-head strong {
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.settings-deck-page .export-recipe-row {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(150px, 220px) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.settings-deck-page .export-recipe-row strong,
+.settings-deck-page .export-manifest-copy strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.settings-deck-page .export-recipe-row small,
+.settings-deck-page .export-manifest-copy small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.settings-deck-page .export-recipe-row code {
+  justify-self: start;
+  max-width: 100%;
+  padding: 6px 9px;
+  border: 1px solid rgba(203, 189, 172, 0.7);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.5);
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-deck-page .export-recipe-row code.is-off {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.settings-deck-page .export-manifest {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.36fr) minmax(0, 0.64fr);
+  gap: 28px;
+  padding: 20px 0 0;
+}
+
+.settings-deck-page .export-manifest .export-preview-tree {
+  border-top: 1px solid var(--line);
+}
+
+.settings-deck-page .export-manifest .export-preview-foot {
+  grid-column: 2;
+  padding-top: 0;
+}
+
+.settings-deck-page .export-manifest .export-preview-tree li:first-child {
+  border-top: 0;
+}
+
+.settings-deck-page .export-manifest .export-preview-tree li {
+  min-height: 44px;
+}
+
+.settings-deck-page .export-defaults-link {
+  align-self: center;
+}
+
 @media (max-width: 720px) {
   .export-defaults { grid-template-columns: 1fr; }
+
+  .settings-deck-page .export-defaults {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .settings-deck-page .export-preview-head {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 0;
+  }
+
+  .settings-deck-page .export-recipe-row {
+    grid-template-columns: 1fr auto;
+    gap: 10px 16px;
+  }
+
+  .settings-deck-page .export-recipe-row code {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .settings-deck-page .export-recipe-row .switch-field {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .settings-deck-page .export-manifest {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .settings-deck-page .export-manifest .export-preview-foot {
+    grid-column: auto;
+  }
 }
 
 /* Dictionary — machine translation controls */

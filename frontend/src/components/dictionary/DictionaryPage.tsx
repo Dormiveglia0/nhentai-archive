@@ -145,7 +145,13 @@ export function DictionaryPage() {
           ? `已生成 ${result.generated} 条机翻建议，请在候选池按「机器建议」筛选并逐条复核。`
           : "没有可生成建议的未配置远端 tag。"
       );
-      await refreshList();
+      if (result.generated > 0) {
+        setStatus("suggested");
+        setOffset(0);
+        await loadSummary();
+      } else {
+        await refreshList();
+      }
     } catch (exc) {
       setMessage(exc instanceof Error ? exc.message : String(exc));
     } finally {

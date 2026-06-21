@@ -4,6 +4,7 @@ import pytest
 
 from app.config import Settings
 from app.database import Database
+from app.services.import_service import ImportService
 from app.services.job_service import JobActive, JobCancelled, JobService
 
 
@@ -75,6 +76,22 @@ def test_delete_rejects_active_job(tmp_path):
     assert jobs.get(job["id"])["status"] == "running"
 
 
+def test_cancelled_job_is_active_until_worker_acknowledges(tmp_path):
+    jobs = _service(tmp_path)
+    job = jobs.create("remote_import", {"gallery_id": 123456})
+    jobs.mark_running(job["id"], "downloading_cbz", 1, 5)
+
+    cancelling = jobs.cancel(job["id"])
+
+    assert cancelling["status"] == "cancelling"
+    with pytest.raises(JobActive):
+        jobs.delete(job["id"])
+    assert jobs.clear_finished() == {"deleted": 0}
+
+    jobs.mark_cancelled(job["id"])
+    assert jobs.delete(job["id"]) == {"deleted": job["id"]}
+
+
 def test_delete_missing_job_raises_value_error(tmp_path):
     jobs = _service(tmp_path)
     with pytest.raises(ValueError):
@@ -89,6 +106,7 @@ def test_clear_finished_keeps_active_jobs(tmp_path):
     jobs.fail(failed["id"], "boom")
     cancelled = jobs.create("remote_import", {"gallery_id": 3})
     jobs.cancel(cancelled["id"])
+    jobs.mark_cancelled(cancelled["id"])
     running = jobs.create("remote_import", {"gallery_id": 4})
     jobs.mark_running(running["id"], "downloading_cbz", 1, 5)
 
@@ -115,8 +133,8 @@ def test_job_service_records_logs_and_controls_running_job(tmp_path):
     assert "_paused_from" not in resumed["target"]
 
     cancelled = jobs.cancel(job["id"])
-    assert cancelled["status"] == "cancelled"
-    assert cancelled["stage"] == "cancelled"
+    assert cancelled["status"] == "cancelling"
+    assert cancelled["stage"] == "cancelling"
 
     logs = jobs.logs(job["id"])
     messages = [entry["message"] for entry in logs["result"]]
@@ -155,3 +173,44 @@ def test_job_service_retry_failed_job_resets_progress_and_logs(tmp_path):
     assert retried["error"] is None
     assert retried["retry_after"] is None
     assert jobs.logs(job["id"])["result"][-1]["message"] == "任务已重新加入队列"
+
+
+def test_resume_orphaned_paused_remote_import_restarts_worker(tmp_path, monkeypatch):
+    jobs = _service(tmp_path)
+    job = jobs.create("remote_import", {"gallery_id": 123456})
+    jobs.mark_running(job["id"], "downloading_cbz", 3, 5)
+    jobs.pause(job["id"])
+    imports = ImportService(None, None, jobs, None, None)
+    started: list[tuple[int, int]] = []
+    monkeypatch.setattr(imports, "_start_remote_import", lambda job_id, gallery_id: started.append((job_id, gallery_id)))
+
+    resumed = imports.resume_job(job["id"])
+
+    assert resumed["status"] == "running"
+    assert started == [(job["id"], 123456)]
+
+
+def test_cancel_orphaned_job_marks_terminal_without_worker(tmp_path):
+    jobs = _service(tmp_path)
+    job = jobs.create("remote_import", {"gallery_id": 123456})
+    jobs.mark_running(job["id"], "downloading_cbz", 3, 5)
+    imports = ImportService(None, None, jobs, None, None)
+
+    cancelled = imports.cancel_job(job["id"])
+
+    assert cancelled["status"] == "cancelled"
+    assert jobs.delete(job["id"]) == {"deleted": job["id"]}
+
+
+def test_cancel_running_job_with_live_worker_stays_active_until_ack(tmp_path, monkeypatch):
+    jobs = _service(tmp_path)
+    job = jobs.create("remote_import", {"gallery_id": 123456})
+    jobs.mark_running(job["id"], "downloading_cbz", 3, 5)
+    imports = ImportService(None, None, jobs, None, None)
+    monkeypatch.setattr(imports, "_worker_alive", lambda job_id: True)
+
+    cancelling = imports.cancel_job(job["id"])
+
+    assert cancelling["status"] == "cancelling"
+    with pytest.raises(JobActive):
+        jobs.delete(job["id"])

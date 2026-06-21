@@ -479,7 +479,7 @@ export type JobMeta = {
 export type Job = {
   id: number;
   type: string;
-  status: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled";
+  status: "queued" | "running" | "paused" | "cancelling" | "completed" | "failed" | "cancelled";
   stage: string;
   progress: { current: number; total: number; percent: number };
   target: Record<string, unknown>;
@@ -540,6 +540,7 @@ export type WorkbenchOverview = {
     running: number;
     queued: number;
     paused: number;
+    cancelling: number;
     failed: number;
     completed: number;
     cancelled: number;

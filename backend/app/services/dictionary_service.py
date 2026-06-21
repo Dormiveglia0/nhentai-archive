@@ -237,6 +237,8 @@ class DictionaryService:
             where.append("(d.ignored = 1 OR d.status = 'ignored')")
         elif status == "review":
             where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'review'")
+        elif status == "suggested":
+            where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'suggested'")
         if tag_type != "all":
             where.append("COALESCE(r.type, d.tag_type) = ?")
             params.append(tag_type)
@@ -272,7 +274,7 @@ class DictionaryService:
         params.extend([max(1, min(limit, 100)), max(0, offset)])
         rows = self.db.fetchall(sql, params)
         result = [_remote_tag_result(row, source="candidate") for row in rows]
-        if status in {"all", "configured", "review", "ignored"} and (not q or len(result) < limit):
+        if status in {"all", "configured", "review", "suggested", "ignored"} and (not q or len(result) < limit):
             result.extend(self._local_only_candidates(q, status, tag_type, max(0, limit - len(result))))
         return {"result": result}
 
@@ -612,6 +614,8 @@ class DictionaryService:
             where.append("(d.ignored = 1 OR d.status = 'ignored')")
         elif status == "review":
             where.append("d.ignored = 0 AND d.status = 'review'")
+        elif status == "suggested":
+            where.append("d.ignored = 0 AND d.status = 'suggested'")
         if tag_type != "all":
             where.append("d.tag_type = ?")
             params.append(tag_type)

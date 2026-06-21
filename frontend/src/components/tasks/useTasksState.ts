@@ -8,6 +8,7 @@ export type TaskSummary = {
   total: number;
   running: number;
   queued: number;
+  cancelling: number;
   failed: number;
   completed: number;
   paused: number;
@@ -144,6 +145,7 @@ export function useTasksState(): TasksViewModel {
       running: 0,
       queued: 0,
       paused: 0,
+      cancelling: 0,
       failed: 0,
       completed: 0,
       cancelled: 0,

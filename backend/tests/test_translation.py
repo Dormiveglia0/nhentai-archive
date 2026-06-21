@@ -126,6 +126,9 @@ def test_generate_suggestions_creates_reviewable_rows_without_linking_works(tmp_
     # Suggestions must NOT link work_tags before human review.
     assert db.fetchone("SELECT COUNT(*) AS c FROM work_tags")["c"] == 0
     assert dictionary.summary()["suggestions"] == 2
+    suggested = dictionary.candidates(status="suggested", limit=10)["result"]
+    assert {item["display"] for item in suggested} == {"全彩", "眼镜"}
+    assert all(item["status"] == "suggested" for item in suggested)
 
 
 def test_generate_suggestions_does_not_overwrite_configured_entry(tmp_path):

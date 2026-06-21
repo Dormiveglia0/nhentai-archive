@@ -7,6 +7,7 @@ export const STATUS_TABS: Array<{ key: JobStatusFilter; label: string }> = [
   { key: "running", label: "正在运行" },
   { key: "paused", label: "已暂停" },
   { key: "queued", label: "等待中" },
+  { key: "cancelling", label: "取消中" },
   { key: "failed", label: "失败" },
   { key: "completed", label: "已完成" },
   { key: "cancelled", label: "已取消" },
@@ -17,6 +18,7 @@ export function statusLabel(status: Job["status"]) {
     queued: "等待中",
     running: "正在运行",
     paused: "已暂停",
+    cancelling: "取消中",
     completed: "已完成",
     failed: "失败",
     cancelled: "已取消",
@@ -40,7 +42,7 @@ export function jobTypeDescription(type: string) {
 
 export function statusTone(status: Job["status"]): "ok" | "warn" | "bad" | "muted" {
   if (status === "running") return "ok";
-  if (status === "queued" || status === "paused") return "warn";
+  if (status === "queued" || status === "paused" || status === "cancelling") return "warn";
   if (status === "failed") return "bad";
   return "muted";
 }
@@ -54,6 +56,7 @@ export function stageLabel(stage: string) {
     indexing_archive: "解析入库",
     completed: "已完成",
     failed: "失败",
+    cancelling: "取消中",
     cancelled: "已取消",
   };
   return labels[stage] ?? stage;

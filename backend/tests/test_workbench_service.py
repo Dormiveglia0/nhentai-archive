@@ -64,6 +64,7 @@ def test_overview_empty_db_is_all_real_zeros(tmp_path):
         "running": 0,
         "queued": 0,
         "paused": 0,
+        "cancelling": 0,
         "failed": 0,
         "completed": 0,
         "cancelled": 0,
