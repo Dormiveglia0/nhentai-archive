@@ -124,29 +124,20 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
             <span>备注</span>
             <textarea value={value.note ?? ""} onChange={(event) => update({ note: event.target.value })} rows={5} />
           </label>
-
-          <div className="machine-suggestion wide">
-            <span>机器翻译</span>
-            <div className="machine-suggestion-row">
-              <button
-                type="button"
-                className="machine-suggestion-btn"
-                onClick={() => void machineTranslate()}
-                disabled={loading || translating || !value.original_text.trim()}
-              >
-                <Languages size={15} />
-                {translating ? "翻译中…" : "机翻填充中文名"}
-              </button>
-              {mtError ? (
-                <em className="machine-suggestion-error">{mtError}</em>
-              ) : (
-                <em>调用设置中的机翻服务翻译「原文」并填入中文名，可再人工校对。</em>
-              )}
-            </div>
-          </div>
         </div>
 
+        {mtError ? <p className="dictionary-mt-error">{mtError}</p> : null}
+
         <footer className="dictionary-actions">
+          <button
+            type="button"
+            onClick={() => void machineTranslate()}
+            disabled={loading || translating || !value.original_text.trim()}
+            title="用设置中的机翻服务翻译原文并填入中文名"
+          >
+            <Languages size={16} />
+            {translating ? "翻译中…" : "机翻中文名"}
+          </button>
           <button type="button" onClick={onPreview} disabled={loading || !value.original_text || !value.zh_name}>
             <SearchCheck size={16} />
             预览影响

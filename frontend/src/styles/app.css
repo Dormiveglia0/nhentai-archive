@@ -7425,6 +7425,24 @@ button.gallery-tag:hover {
   .settings-mt-providers { grid-template-columns: 1fr; }
 }
 
+/* Settings — data overview + export defaults */
+.settings-data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.settings-data-metric {
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: linear-gradient(180deg, var(--surface-solid), var(--surface));
+}
+.settings-data-metric strong { font-size: 26px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+.settings-data-metric span { color: var(--muted); font-size: 12px; }
+.settings-data-metric.tone-warn strong { color: var(--accent); }
+.settings-kv {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 14px 0 0;
+  background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+}
+.settings-kv div { background: var(--surface-solid); padding: 10px 12px; min-width: 0; }
+.settings-kv dt { color: var(--muted); font-size: 12px; }
+.settings-kv dd { margin: 4px 0 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+
 /* Dictionary — machine translation controls */
 .dictionary-mt-bar { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; }
 .dictionary-mt-bar button {
@@ -7436,13 +7454,4 @@ button.gallery-tag:hover {
 .dictionary-mt-bar button:hover:not(:disabled) { border-color: var(--accent); background: rgba(185, 45, 30, 0.05); }
 .dictionary-mt-bar button:disabled { opacity: 0.55; cursor: default; }
 .dictionary-mt-bar span { color: var(--muted); font-size: 12px; }
-.machine-suggestion-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.machine-suggestion-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--surface-solid); color: var(--ink); cursor: pointer; font-size: 13px;
-  transition: border-color 0.18s ease;
-}
-.machine-suggestion-btn:hover:not(:disabled) { border-color: var(--accent); }
-.machine-suggestion-btn:disabled { opacity: 0.5; cursor: default; }
-.machine-suggestion-error { color: var(--accent); font-style: normal; font-size: 12px; }
+.dictionary-mt-error { color: var(--accent); font-size: 12px; margin: 0 0 10px; }

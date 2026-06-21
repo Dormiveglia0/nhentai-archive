@@ -1,8 +1,10 @@
-import { Database, EyeOff, Folder, KeyRound, Languages, RefreshCw, Save } from "lucide-react";
+import { BarChart3, Database, Download, EyeOff, Folder, KeyRound, Languages, RefreshCw, Save } from "lucide-react";
 import { FormEvent } from "react";
 
 import { FadeIn, Presence } from "../../lib/motion";
 import { ConnectionSection } from "./ConnectionSection";
+import { DataSection } from "./DataSection";
+import { ExportDefaultsSection } from "./ExportDefaultsSection";
 import { PreferencesSection } from "./PreferencesSection";
 import { StorageSection } from "./StorageSection";
 import { TranslationSection } from "./TranslationSection";
@@ -13,6 +15,8 @@ const NAV: { key: SettingsSection; label: string; icon: typeof Database }[] = [
   { key: "connection", label: "数据源与连接", icon: Database },
   { key: "translation", label: "机器翻译", icon: Languages },
   { key: "preferences", label: "隐私与阅读", icon: EyeOff },
+  { key: "export", label: "导出默认", icon: Download },
+  { key: "data", label: "数据概览", icon: BarChart3 },
   { key: "storage", label: "存储与路径", icon: Folder },
 ];
 
@@ -64,6 +68,8 @@ export function SettingsPage() {
                 {vm.section === "connection" ? <ConnectionSection vm={vm} /> : null}
                 {vm.section === "translation" ? <TranslationSection vm={vm} /> : null}
                 {vm.section === "preferences" ? <PreferencesSection vm={vm} /> : null}
+                {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
+                {vm.section === "data" ? <DataSection /> : null}
                 {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
               </FadeIn>
             </Presence>

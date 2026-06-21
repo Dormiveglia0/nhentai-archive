@@ -40,6 +40,16 @@ export function TranslationSection({ vm }: { vm: SettingsVM }) {
         </button>
       </div>
 
+      <div className="settings-grid">
+        <label>
+          <span>目标语言</span>
+          <select value={vm.mtTargetLang} onChange={(event) => vm.setMtTargetLang(event.target.value as "zh-CN" | "zh-TW")}>
+            <option value="zh-CN">简体中文</option>
+            <option value="zh-TW">繁体中文</option>
+          </select>
+        </label>
+      </div>
+
       {isDeepl ? (
         <div className="settings-grid">
           <label>

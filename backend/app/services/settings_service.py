@@ -85,6 +85,8 @@ class SettingsService:
             self._set("mt.provider", mt["provider"])
         if mt.get("deepl_plan") in {"free", "pro"}:
             self._set("mt.deepl_plan", mt["deepl_plan"])
+        if mt.get("target_lang") in {"zh-CN", "zh-TW"}:
+            self._set("mt.target_lang", mt["target_lang"])
 
         storage = payload.get("storage") or {}
         export_dir = storage.get("export_dir")

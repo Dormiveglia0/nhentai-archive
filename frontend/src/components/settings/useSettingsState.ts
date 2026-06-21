@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { api, SettingsSummary } from "../../lib/api";
 
-export type SettingsSection = "connection" | "translation" | "preferences" | "storage";
+export type SettingsSection = "connection" | "translation" | "preferences" | "export" | "data" | "storage";
 
 export function useSettingsState() {
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
@@ -16,6 +16,8 @@ export function useSettingsState() {
   const [mtProvider, setMtProvider] = useState<"google_free" | "deepl">("google_free");
   const [deeplPlan, setDeeplPlan] = useState<"free" | "pro">("free");
   const [deeplKey, setDeeplKey] = useState("");
+  const [mtTargetLang, setMtTargetLang] = useState<"zh-CN" | "zh-TW">("zh-CN");
+  const [exportActivePreset, setExportActivePreset] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,7 +36,9 @@ export function useSettingsState() {
     if (payload.machine_translation) {
       setMtProvider(payload.machine_translation.provider);
       setDeeplPlan(payload.machine_translation.deepl_plan);
+      setMtTargetLang(payload.machine_translation.target_lang === "zh-TW" ? "zh-TW" : "zh-CN");
     }
+    setExportActivePreset(payload.export.active_preset_id);
   }
 
   async function run(action: () => Promise<void>) {
@@ -65,8 +69,10 @@ export function useSettingsState() {
         machine_translation: {
           provider: mtProvider,
           deepl_plan: deeplPlan,
+          target_lang: mtTargetLang,
           deepl_api_key: deeplKey.trim() || undefined,
         },
+        export: { active_preset_id: exportActivePreset || undefined },
       });
       hydrate(payload);
       setApiKey("");
@@ -127,6 +133,10 @@ export function useSettingsState() {
     setDeeplPlan,
     deeplKey,
     setDeeplKey,
+    mtTargetLang,
+    setMtTargetLang,
+    exportActivePreset,
+    setExportActivePreset,
     loading,
     message,
     error,
