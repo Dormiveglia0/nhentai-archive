@@ -18,7 +18,7 @@ export function useSettingsState() {
   const [deeplKey, setDeeplKey] = useState("");
   const [mtTargetLang, setMtTargetLang] = useState<"zh-CN" | "zh-TW">("zh-CN");
   const [mtBatchLimit, setMtBatchLimit] = useState(20);
-  const [exportActivePreset, setExportActivePreset] = useState("");
+  const [exportDefaults, setExportDefaults] = useState({ write_comicinfo: true, keep_json: true, compress: true });
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function useSettingsState() {
       setMtTargetLang(payload.machine_translation.target_lang === "zh-TW" ? "zh-TW" : "zh-CN");
       setMtBatchLimit(payload.machine_translation.batch_limit);
     }
-    setExportActivePreset(payload.export.active_preset_id);
+    setExportDefaults(payload.export.default_options);
   }
 
   async function run(action: () => Promise<void>) {
@@ -75,7 +75,7 @@ export function useSettingsState() {
           batch_limit: mtBatchLimit,
           deepl_api_key: deeplKey.trim() || undefined,
         },
-        export: { active_preset_id: exportActivePreset || undefined },
+        export: { default_options: exportDefaults },
       });
       hydrate(payload);
       setApiKey("");
@@ -147,8 +147,8 @@ export function useSettingsState() {
     setMtTargetLang,
     mtBatchLimit,
     setMtBatchLimit,
-    exportActivePreset,
-    setExportActivePreset,
+    exportDefaults,
+    setExportDefaults,
     loading,
     message,
     error,

@@ -602,6 +602,7 @@ export type SettingsSummary = {
   export: {
     active_preset_id: string;
     presets: ExportPreset[];
+    default_options: { write_comicinfo: boolean; keep_json: boolean; compress: boolean };
   };
 };
 

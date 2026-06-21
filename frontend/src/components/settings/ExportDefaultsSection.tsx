@@ -2,65 +2,43 @@ import { navigate } from "../../lib/navigation";
 import type { SettingsVM } from "./useSettingsState";
 
 export function ExportDefaultsSection({ vm }: { vm: SettingsVM }) {
-  const exportSettings = vm.settings?.export;
-  const presets = exportSettings?.presets ?? [];
-  const active = presets.find((preset) => preset.id === vm.exportActivePreset) ?? presets[0] ?? null;
+  const opts = vm.exportDefaults;
+
+  const toggles: { key: "write_comicinfo" | "keep_json" | "compress"; label: string; hint: string }[] = [
+    { key: "write_comicinfo", label: "写入 ComicInfo.xml", hint: "用治理后的最终元数据生成 ComicInfo.xml 写入 CBZ" },
+    { key: "keep_json", label: "保留原始 JSON", hint: "导出时保留源 CBZ 内的原始 metadata JSON 成员" },
+    { key: "compress", label: "压缩打包", hint: "以 ZIP 压缩导出（关闭则仅存储，体积更大但更快）" },
+  ];
 
   return (
     <section className="settings-card">
       <div className="settings-title">
         <h2>导出默认</h2>
-        <p>导出中心使用的默认预设；这里切换的活动预设会被保存。命名规则等明细在导出页编辑。</p>
+        <p>导出中心打开时的默认选项。在这里保存后，每次进入导出页都会以这套默认开始（仍可在导出页临时调整）。</p>
       </div>
 
-      <div className="settings-grid">
-        <label>
-          <span>活动预设</span>
-          <select value={vm.exportActivePreset} onChange={(event) => vm.setExportActivePreset(event.target.value)}>
-            {presets.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="preference-row">
+        {toggles.map((toggle) => (
+          <label className="switch-field" key={toggle.key} title={toggle.hint}>
+            <span>{toggle.label}</span>
+            <input
+              type="checkbox"
+              checked={opts[toggle.key]}
+              onChange={(event) => vm.setExportDefaults({ ...opts, [toggle.key]: event.target.checked })}
+            />
+            <i />
+          </label>
+        ))}
       </div>
 
-      {active ? (
-        <dl className="settings-kv">
-          <div>
-            <dt>命名规则</dt>
-            <dd>{active.naming_rule}</dd>
+      <dl className="settings-kv">
+        {toggles.map((toggle) => (
+          <div key={toggle.key}>
+            <dt>{toggle.label}</dt>
+            <dd>{opts[toggle.key] ? "默认开启" : "默认关闭"}</dd>
           </div>
-          <div>
-            <dt>ComicInfo</dt>
-            <dd>{active.comicinfo_rule}</dd>
-          </div>
-          <div>
-            <dt>元数据</dt>
-            <dd>{active.meta_rule}</dd>
-          </div>
-          <div>
-            <dt>压缩</dt>
-            <dd>{active.compression}</dd>
-          </div>
-        </dl>
-      ) : null}
-
-      {presets.length > 1 ? (
-        <>
-          <div className="settings-subhead">
-            <h3>全部预设</h3>
-          </div>
-          <div className="settings-chip-row">
-            {presets.map((preset) => (
-              <span key={preset.id} className={`settings-chip${preset.id === vm.exportActivePreset ? " is-active" : ""}`}>
-                {preset.name}
-              </span>
-            ))}
-          </div>
-        </>
-      ) : null}
+        ))}
+      </dl>
 
       <div className="connection-actions">
         <button type="button" onClick={() => navigate({ name: "export" })}>

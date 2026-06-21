@@ -57,7 +57,7 @@ class SettingsService:
                 "default_mode": reader_mode,
             },
             "machine_translation": self.translation.public_config() if self.translation else None,
-            "export": self._export_settings(),
+            "export": {**self._export_settings(), "default_options": self._export_default_options()},
         }
 
     def patch(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -104,12 +104,17 @@ class SettingsService:
         if export:
             presets = export.get("presets")
             active_preset_id = export.get("active_preset_id")
+            default_options = export.get("default_options")
             if isinstance(presets, list):
                 cleaned = [preset for preset in presets if isinstance(preset, dict) and preset.get("id") and preset.get("name")]
                 if cleaned:
                     self._set("export.presets", json.dumps(cleaned, ensure_ascii=False))
             if isinstance(active_preset_id, str) and active_preset_id.strip():
                 self._set("export.active_preset_id", active_preset_id.strip())
+            if isinstance(default_options, dict):
+                current = self._export_default_options()
+                merged = {key: bool(default_options.get(key, current[key])) for key in current}
+                self._set("export.default_options", json.dumps(merged, ensure_ascii=False))
 
         self.apply_runtime_settings()
         return self.get()
@@ -197,6 +202,11 @@ class SettingsService:
     def _storage_path(self, key: str, fallback: Any) -> Any:
         value = self._get(key)
         return Path(value).expanduser() if value else fallback
+
+    def _export_default_options(self) -> dict[str, bool]:
+        defaults = {"write_comicinfo": True, "keep_json": True, "compress": True}
+        stored = self._get_json("export.default_options") or {}
+        return {key: bool(stored.get(key, value)) for key, value in defaults.items()}
 
     def _export_settings(self) -> dict[str, Any]:
         presets = self._get_json_list("export.presets") or [dict(DEFAULT_EXPORT_PRESET)]
