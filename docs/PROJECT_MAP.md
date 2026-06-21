@@ -56,9 +56,14 @@ Root: `backend/app/`
   - `ignore(id)` / `mark_review(id)` / `delete(id)`: real status transitions and deletion; delete removes aliases and unlinks `work_tags.dictionary_id` without deleting remote tags or works.
   - `preview_bulk_import(rows)` / `bulk_import(rows)`: parse user rows, report valid/duplicate/conflict/invalid rows, write only valid rows. Minimum row shape is `原文, 中文名`; type and aliases are optional.
   - `link_work_tags(work_id, tags)`: links imported works to real gallery tags and existing dictionary mappings.
+  - `translate_text(text)`: single on-demand machine translation via the injected `TranslationService`.
+  - `generate_suggestions(limit)`: machine-translates the top unconfigured remote tags and upserts reviewable `status='suggested'` rows (source `machine`); never overwrites a human-configured/locked entry and never links `work_tags` before confirmation.
+- `services/translation_service.py`
+  - Provider-adapter machine translation over the local `settings` table; uses stdlib `urllib` (no new deps). Two providers: `google_free` (unofficial endpoint, no key) and `deepl` (REST, auth key in `mt.deepl_api_key`). Config under `mt.*` keys.
+  - `translate()` / `translate_one()`: EN→ZH (provider-selected); `verify()` runs a sample translate and records `mt.last_verify`; `public_config()` reports provider/plan/configured state and never echoes the DeepL key. Module-level `_http_get_json` / `_http_post_form` are the monkeypatch seams for tests.
 - `services/settings_service.py`
-  - `get()`: safe settings summary; never returns API key text.
-  - `patch()`: saves DB key, UI preferences, storage export directory, and persisted export preset state; immediately updates runtime `NhentaiClient.api_key` and clears runtime remote cache when the effective key changes.
+  - `get()`: safe settings summary; never returns API key text; includes a `machine_translation` block from `TranslationService.public_config()`.
+  - `patch()`: saves DB key, UI preferences, storage export directory, persisted export preset state, and machine-translation config (`mt.provider` / `mt.deepl_api_key` / `mt.deepl_plan`, plus clear); immediately updates runtime `NhentaiClient.api_key` and clears runtime remote cache when the effective key changes.
   - `verify_nhentai()`: verifies current effective key through an authenticated remote request.
 - `services/import_service.py`
   - `enqueue_remote_import()`, `run_remote_import()`, `retry_job()`.
@@ -128,6 +133,8 @@ Implemented:
 - `POST /api/dictionary/apply`
 - `POST /api/dictionary/preview-bulk-import`
 - `POST /api/dictionary/bulk-import`
+- `POST /api/dictionary/translate` (single on-demand machine translation of one term)
+- `POST /api/dictionary/suggest-batch` (machine-translate top unconfigured remote tags into reviewable `status='suggested'` rows; does not link `work_tags`)
 - `POST /api/dictionary/{id}/ignore`
 - `POST /api/dictionary/{id}/review`
 - `DELETE /api/dictionary/{id}`
@@ -168,6 +175,7 @@ Implemented:
 - `GET /api/settings`
 - `PATCH /api/settings`
 - `POST /api/settings/nhentai/verify`
+- `POST /api/settings/translation/verify`
 - `GET /api/workbench/overview`
 
 Reserved, not implemented:
@@ -240,16 +248,18 @@ Root: `frontend/src/`
   - Shows metadata, tags, related works, `阅读`, and `加入导入队列` only. It does not contain an embedded reader.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
-- `components/settings/SettingsPage.tsx`
-  - NH API Key save/clear/verify, safe config summary, storage paths, UI preferences.
+- `components/settings/` — refactored settings module:
+  - `SettingsPage.tsx` — thin orchestrator: hero + functional left section nav (`Presence`-faded section switch) + active section + config summary aside.
+  - `useSettingsState.ts` — all state/actions (NH key, privacy/blur/reader, machine-translation provider/key/plan, load/save/verify/clear + `verifyTranslation`/`clearDeeplKey`).
+  - `ConnectionSection` / `TranslationSection` (NEW MT config card: provider picker google_free/deepl, DeepL key + plan, 测试机翻) / `PreferencesSection` / `StorageSection`, plus `settingsHelpers` (`StatusDot`/`SummaryRow`).
 - `components/dictionary/DictionaryPage.tsx`
-  - Page orchestration only: loads summary/candidates/evidence/preview, selects candidates, writes terms, status changes, and refreshes dependent sections.
+  - Page orchestration only: loads summary/candidates/evidence/preview, selects candidates, writes terms, status changes, and refreshes dependent sections. Includes a 批量机翻 button (`/api/dictionary/suggest-batch`).
 - `components/dictionary/DictionarySummaryStrip.tsx`
   - Real top summary strip for unconfigured/configured/ignored/review/suggestions.
 - `components/dictionary/DictionaryCandidatePool.tsx`
   - Table-like candidate pool from `/api/dictionary/candidates`, with type/status filters and pagination.
 - `components/dictionary/DictionaryEditor.tsx`
-  - Edits original term, Chinese display, aliases, type, scope, confidence, note; triggers preview/apply/ignore/review. Machine suggestions are visibly disabled until real service exists.
+  - Edits original term, Chinese display, aliases, type, scope, confidence, note; triggers preview/apply/ignore/review. The 机器翻译 block is a real 机翻填充中文名 button (`/api/dictionary/translate`) that fills `zh_name` from the configured provider for human review.
 - `components/dictionary/DictionaryEvidencePanel.tsx`
   - Tabs for real related works, co-tags, remote info, and history from `/api/dictionary/evidence`.
 - `components/dictionary/DictionaryApplyPreview.tsx`
