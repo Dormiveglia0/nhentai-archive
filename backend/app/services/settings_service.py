@@ -36,6 +36,8 @@ class SettingsService:
         return {
             "nhentai": {
                 "base_url": self.settings.nhentai_base_url,
+                "user_agent": self.settings.user_agent,
+                "request_timeout": self.settings.request_timeout,
                 "api_key_configured": bool(effective_key),
                 "api_key_source": source,
                 "last_verify": self._get_json("nhentai.last_verify"),

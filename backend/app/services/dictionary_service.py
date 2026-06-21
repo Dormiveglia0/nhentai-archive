@@ -89,8 +89,10 @@ class DictionaryService:
         ignored = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 1 OR status = 'ignored'")["value"]
         review = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0 AND status = 'review'")["value"]
         suggestions = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0 AND status = 'suggested'")["value"]
+        # A remote tag counts as "handled" once it has any dictionary row — configured
+        # OR ignored (ignored = intentionally kept as original, no translation needed).
         mapped_remote = self.db.fetchone(
-            "SELECT COUNT(DISTINCT remote_tag_id) AS value FROM local_tag_dictionary WHERE remote_tag_id IS NOT NULL AND ignored = 0"
+            "SELECT COUNT(DISTINCT remote_tag_id) AS value FROM local_tag_dictionary WHERE remote_tag_id IS NOT NULL"
         )["value"]
         return {
             "unconfigured": max(0, int(remote_total or 0) - int(mapped_remote or 0)),
@@ -366,7 +368,10 @@ class DictionaryService:
 
     def apply(self, payload: dict[str, Any]) -> dict[str, Any]:
         cleaned = self._clean_payload(payload)
-        if not cleaned["original_text"] or not cleaned["zh_name"]:
+        if not cleaned["original_text"]:
+            raise ValueError("original_text is required")
+        # Ignored terms intentionally keep the original text and need no Chinese name.
+        if not cleaned["zh_name"] and cleaned["status"] != "ignored":
             raise ValueError("original_text and zh_name are required")
         existing = self.db.fetchone(
             "SELECT id, locked FROM local_tag_dictionary WHERE normalized_key = ? AND tag_type = ?",

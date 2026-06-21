@@ -180,13 +180,22 @@ export function DictionaryPage() {
   }
 
   async function ignore() {
-    if (!dictionaryId) return;
+    if (!form.original_text.trim()) return;
     setLoading(true);
+    setMessage(null);
     try {
-      await api.dictionaryIgnore(dictionaryId);
-      setMessage("已忽略该词条。");
+      let nextId = dictionaryId;
+      if (dictionaryId) {
+        await api.dictionaryIgnore(dictionaryId);
+      } else {
+        // Ignoring an unconfigured tag: create an ignored row that keeps the original.
+        const result = await api.dictionaryApply({ ...form, status: "ignored", ignored: true });
+        nextId = result.dictionary.id;
+        setDictionaryId(nextId);
+      }
+      setMessage("已忽略该标签，保留原文不翻译。");
       await refreshList();
-      if (selected) await loadEvidence(selected, dictionaryId);
+      if (selected) await loadEvidence(selected, nextId ?? null);
     } catch (exc) {
       setMessage(exc instanceof Error ? exc.message : String(exc));
     } finally {

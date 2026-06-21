@@ -146,7 +146,12 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
             <Save size={16} />
             {dictionaryId ? "保存修改" : "写入词典"}
           </button>
-          <button type="button" onClick={onIgnore} disabled={loading || !dictionaryId}>
+          <button
+            type="button"
+            onClick={onIgnore}
+            disabled={loading || !value.original_text.trim() || value.ignored}
+            title="保留原文、不翻译；适用于无需中文名的标签"
+          >
             <Ban size={16} />
             忽略
           </button>

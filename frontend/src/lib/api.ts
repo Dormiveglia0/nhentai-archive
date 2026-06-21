@@ -569,6 +569,8 @@ export type MachineTranslationSettings = {
 export type SettingsSummary = {
   nhentai: {
     base_url: string;
+    user_agent: string;
+    request_timeout: number;
     api_key_configured: boolean;
     api_key_source: "env" | "db" | "none";
     last_verify: null | {
@@ -903,5 +905,7 @@ export const api = {
       { method: "POST", headers: JSON_HEADERS }
     ),
   verifyTranslationSettings: () =>
-    request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS })
+    request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS }),
+  clearNhentaiCache: () =>
+    request<{ ok: boolean; message: string }>("/api/settings/nhentai/clear-cache", { method: "POST", headers: JSON_HEADERS })
 };

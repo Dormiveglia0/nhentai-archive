@@ -603,6 +603,12 @@ def verify_translation_settings():
     return translation.verify()
 
 
+@app.post("/api/settings/nhentai/clear-cache")
+def clear_nhentai_cache():
+    client.clear_runtime_cache()
+    return {"ok": True, "message": "远端缓存已清除"}
+
+
 def _remote(call):
     try:
         return call()

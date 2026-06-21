@@ -107,6 +107,13 @@ export function useSettingsState() {
     });
   }
 
+  async function clearCache() {
+    await run(async () => {
+      const result = await api.clearNhentaiCache();
+      setMessage(result.message);
+    });
+  }
+
   async function verifyTranslation() {
     await run(async () => {
       const result = await api.verifyTranslationSettings();
@@ -146,6 +153,7 @@ export function useSettingsState() {
     clearDeeplKey,
     verify,
     verifyTranslation,
+    clearCache,
   };
 }
 
