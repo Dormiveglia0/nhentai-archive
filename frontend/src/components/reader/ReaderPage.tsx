@@ -84,9 +84,10 @@ export function ReaderPage({ source, privacyMode }: Props) {
     setActivePanel((current) => (current === panel ? "none" : panel));
   }, []);
   const toggleChrome = useCallback(() => {
+    if (activePanel !== "none") return; // panel drives the pin; don't fight it
     if (chromeVisible) setPinned(false);
     else reveal();
-  }, [chromeVisible, setPinned, reveal]);
+  }, [activePanel, chromeVisible, setPinned, reveal]);
 
   // 键盘
   useEffect(() => {

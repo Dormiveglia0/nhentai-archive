@@ -8209,6 +8209,7 @@ button.gallery-tag:hover {
 .reader-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
 .reader-toolbar button.active { background: rgba(120, 150, 255, 0.28); border-color: rgba(120, 150, 255, 0.6); }
 .reader-toolbar button.primary-action { background: rgba(120, 150, 255, 0.85); border-color: transparent; color: #0b0d14; }
+.reader-toolbar .back-button { min-height: auto; }
 .reader-toolbar .reader-title {
   max-width: 22ch;
   overflow: hidden;

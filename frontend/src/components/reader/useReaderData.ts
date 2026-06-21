@@ -22,6 +22,7 @@ export function useReaderData(source: ReaderSource) {
 
   const isRemote = source.kind === "remote";
   const sourceKey = source.kind === "local" ? `local:${source.workId}` : `remote:${source.galleryId}`;
+  // identity-stable view of source; updates only when sourceKey changes
   const stableSource = useMemo(() => source, [sourceKey]);
   const persistTimer = useRef<number | null>(null);
 
