@@ -22,6 +22,7 @@ export function useReaderData(source: ReaderSource) {
 
   const isRemote = source.kind === "remote";
   const sourceKey = source.kind === "local" ? `local:${source.workId}` : `remote:${source.galleryId}`;
+  const stableSource = useMemo(() => source, [sourceKey]);
   const persistTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -37,11 +38,11 @@ export function useReaderData(source: ReaderSource) {
       setPageIndex(1);
       setCompleted(false);
       try {
-        if (source.kind === "local") {
+        if (stableSource.kind === "local") {
           const [nextWork, nextPages, nextState] = await Promise.all([
-            api.work(source.workId),
-            api.pages(source.workId),
-            api.readerState(source.workId),
+            api.work(stableSource.workId),
+            api.pages(stableSource.workId),
+            api.readerState(stableSource.workId),
           ]);
           if (cancelled) return;
           setWork(nextWork);
@@ -50,7 +51,7 @@ export function useReaderData(source: ReaderSource) {
           setPageIndex(Math.max(1, nextState.page_index || 1));
           setCompleted(Boolean(nextState.completed));
         } else {
-          const detail = await api.gallery(source.galleryId);
+          const detail = await api.gallery(stableSource.galleryId);
           if (cancelled) return;
           setGallery(detail);
         }
@@ -68,11 +69,11 @@ export function useReaderData(source: ReaderSource) {
   }, [sourceKey]);
 
   const pages = useMemo<ReaderPageItem[]>(() => {
-    if (source.kind === "local") {
+    if (stableSource.kind === "local") {
       return localPages.map((page) => ({
         key: `local-${page.id}`,
         pageIndex: page.page_index,
-        src: `/api/works/${source.workId}/pages/${page.page_index}`,
+        src: `/api/works/${stableSource.workId}/pages/${page.page_index}`,
       }));
     }
     return (gallery?.pages ?? [])
@@ -82,15 +83,15 @@ export function useReaderData(source: ReaderSource) {
         pageIndex: page.index ?? index + 1,
         src: page.url!,
       }));
-  }, [gallery?.pages, localPages, source]);
+  }, [gallery?.pages, localPages, stableSource]);
 
   const pageCount =
-    source.kind === "local"
+    stableSource.kind === "local"
       ? state?.page_count || pages.length
       : pages.length || gallery?.page_count || 0;
 
   const title = isRemote
-    ? gallery?.title.japanese || gallery?.title.pretty || gallery?.title.english || `Gallery ${(source as { galleryId: number }).galleryId}`
+    ? gallery?.title.japanese || gallery?.title.pretty || gallery?.title.english || `Gallery ${(stableSource as { galleryId: number }).galleryId}`
     : work?.title || "NH Archive";
 
   const coverSrc = isRemote
@@ -108,16 +109,16 @@ export function useReaderData(source: ReaderSource) {
 
   const persistLocal = useCallback(
     (next: number, done: boolean) => {
-      if (source.kind !== "local") return;
+      if (stableSource.kind !== "local") return;
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
       persistTimer.current = window.setTimeout(() => {
         api
-          .updateReaderState(source.workId, next, done)
+          .updateReaderState(stableSource.workId, next, done)
           .then((updated) => setState(updated))
           .catch((exc) => setError(exc instanceof Error ? exc.message : String(exc)));
       }, PERSIST_DEBOUNCE_MS);
     },
-    [source]
+    [stableSource]
   );
 
   const setPage = useCallback(
@@ -135,15 +136,15 @@ export function useReaderData(source: ReaderSource) {
   const markCompleted = useCallback(() => setPage(pageCount, true), [pageCount, setPage]);
 
   const importRemote = useCallback(async () => {
-    if (source.kind !== "remote") return;
+    if (stableSource.kind !== "remote") return;
     setError(null);
     try {
-      await api.importGallery(source.galleryId);
-      setNotice(`Gallery ${source.galleryId} 已加入真实导入队列。`);
+      await api.importGallery(stableSource.galleryId);
+      setNotice(`Gallery ${stableSource.galleryId} 已加入真实导入队列。`);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
     }
-  }, [source]);
+  }, [stableSource]);
 
   return {
     loading,

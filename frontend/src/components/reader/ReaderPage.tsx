@@ -4,7 +4,6 @@ import { navigate } from "../../lib/navigation";
 import {
   arrowDelta,
   clamp,
-  Direction,
   Fit,
   Mode,
   ReaderPanel,
@@ -30,7 +29,7 @@ const FIT_ORDER: Fit[] = ["height", "width", "original"];
 export function ReaderPage({ source, privacyMode }: Props) {
   const data = useReaderData(source);
   const { prefs, setMode, setDirection, setFit } = useReaderPrefs();
-  const chrome = useReaderChrome();
+  const { visible: chromeVisible, setPinned, reveal } = useReaderChrome();
 
   const [zoom, setZoom] = useState(1);
   const [masked, setMasked] = useState(false);
@@ -45,8 +44,8 @@ export function ReaderPage({ source, privacyMode }: Props) {
 
   // 面板开启时钉住 chrome
   useEffect(() => {
-    chrome.setPinned(activePanel !== "none");
-  }, [activePanel, chrome]);
+    setPinned(activePanel !== "none");
+  }, [activePanel, setPinned]);
 
   // 标题
   useEffect(() => {
@@ -56,8 +55,8 @@ export function ReaderPage({ source, privacyMode }: Props) {
     };
   }, [privacyMode, data.title]);
 
-  const flip = useCallback((delta: number) => data.setPage(data.pageIndex + delta), [data]);
-  const jump = useCallback((pageIndex: number) => data.setPage(pageIndex), [data]);
+  const flip = useCallback((delta: number) => data.setPage(data.pageIndex + delta), [data.setPage, data.pageIndex]);
+  const jump = useCallback((pageIndex: number) => data.setPage(pageIndex), [data.setPage]);
   const zoomBy = useCallback(
     (steps: number) => setZoom((z) => clamp(Number((z + steps * ZOOM_STEP).toFixed(2)), ZOOM_MIN, ZOOM_MAX)),
     []
@@ -85,9 +84,9 @@ export function ReaderPage({ source, privacyMode }: Props) {
     setActivePanel((current) => (current === panel ? "none" : panel));
   }, []);
   const toggleChrome = useCallback(() => {
-    if (chrome.visible) chrome.setPinned(false);
-    else chrome.reveal();
-  }, [chrome]);
+    if (chromeVisible) setPinned(false);
+    else reveal();
+  }, [chromeVisible, setPinned, reveal]);
 
   // 键盘
   useEffect(() => {
@@ -153,7 +152,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
       {data.notice ? <div className="notice slim reader-notice">{data.notice}</div> : null}
 
       <ReaderToolbar
-        visible={chrome.visible}
+        visible={chromeVisible}
         title={data.title}
         isRemote={data.isRemote}
         pageIndex={data.pageIndex}
@@ -174,7 +173,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
         onToggleFullscreen={toggleFullscreen}
         onOpenPanel={openPanel}
         onImport={data.importRemote}
-        onPanelHoverChange={chrome.setPinned}
+        onPanelHoverChange={setPinned}
       />
 
       <ThumbnailPanel
@@ -183,7 +182,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
         pageIndex={data.pageIndex}
         onJump={jump}
         onClose={() => setActivePanel("none")}
-        onHoverChange={chrome.setPinned}
+        onHoverChange={setPinned}
       />
 
       <ReaderInfoPanel
@@ -203,7 +202,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
         onMarkCompleted={data.markCompleted}
         onImport={data.importRemote}
         onClose={() => setActivePanel("none")}
-        onHoverChange={chrome.setPinned}
+        onHoverChange={setPinned}
       />
     </section>
   );
