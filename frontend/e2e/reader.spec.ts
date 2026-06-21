@@ -31,3 +31,14 @@ test("打开信息面板含阅读设置", async ({ page }) => {
   await page.getByRole("button", { name: "信息" }).click();
   await expect(page.getByText("阅读设置")).toBeVisible();
 });
+
+test("g 键数字跳页", async ({ page }) => {
+  await page.keyboard.press("g");
+  const input = page.locator(".reader-jump input");
+  await expect(input).toBeVisible();
+  await input.fill("3");
+  await input.press("Enter");
+  await expect(page.locator(".reader-jump")).toHaveCount(0);
+  await page.mouse.move(20, 20);
+  await expect(page.locator(".reader-counter")).toContainText("3 /");
+});

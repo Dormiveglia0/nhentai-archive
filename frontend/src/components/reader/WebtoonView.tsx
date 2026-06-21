@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { ReaderImage } from "./ReaderImage";
 import { Fit, ReaderPageItem } from "./readerHelpers";
 
 type WebtoonViewProps = {
@@ -54,18 +55,17 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   return (
     <div className="reader-webtoon" ref={containerRef} onClick={onToggleChrome}>
       {pages.map((page) => (
-        <img
+        <ReaderImage
           key={page.key}
-          data-page-index={page.pageIndex}
           ref={(node) => {
             if (node) itemRefs.current.set(page.pageIndex, node);
             else itemRefs.current.delete(page.pageIndex);
           }}
+          pageIndex={page.pageIndex}
           className={`reader-webtoon-img fit-${fit}`}
           src={page.src}
           alt={`第 ${page.pageIndex} 页`}
           loading="lazy"
-          draggable={false}
         />
       ))}
     </div>

@@ -12,6 +12,7 @@ import {
   ZOOM_STEP,
 } from "./readerHelpers";
 import { ReaderInfoPanel } from "./ReaderInfoPanel";
+import { ReaderJumpDialog } from "./ReaderJumpDialog";
 import { ReaderToolbar } from "./ReaderToolbar";
 import { ReaderViewport } from "./ReaderViewport";
 import { ThumbnailPanel } from "./ThumbnailPanel";
@@ -34,12 +35,14 @@ export function ReaderPage({ source, privacyMode }: Props) {
   const [zoom, setZoom] = useState(1);
   const [masked, setMasked] = useState(false);
   const [activePanel, setActivePanel] = useState<ReaderPanel>("none");
+  const [jumpOpen, setJumpOpen] = useState(false);
 
-  // 切换作品时重置缩放/面板/遮罩
+  // 切换作品时重置缩放/面板/遮罩/跳页层
   useEffect(() => {
     setZoom(1);
     setActivePanel("none");
     setMasked(false);
+    setJumpOpen(false);
   }, [data.sourceKey]);
 
   // 面板开启时钉住 chrome
@@ -117,6 +120,9 @@ export function ReaderPage({ source, privacyMode }: Props) {
         zoomBy(-1);
       } else if (key === "0") {
         setZoom(1);
+      } else if (key === "g") {
+        event.preventDefault();
+        setJumpOpen(true);
       } else if (key === "Escape") {
         if (activePanel !== "none") setActivePanel("none");
         else if (document.fullscreenElement) void document.exitFullscreen();
@@ -145,6 +151,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
         zoom={zoom}
         masked={masked}
         isRemote={data.isRemote}
+        loading={data.loading}
         onFlip={flip}
         onJump={jump}
         onToggleChrome={toggleChrome}
@@ -204,6 +211,13 @@ export function ReaderPage({ source, privacyMode }: Props) {
         onImport={data.importRemote}
         onClose={() => setActivePanel("none")}
         onHoverChange={setPinned}
+      />
+
+      <ReaderJumpDialog
+        open={jumpOpen}
+        pageCount={data.pageCount}
+        onJump={jump}
+        onClose={() => setJumpOpen(false)}
       />
     </section>
   );

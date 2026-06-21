@@ -8311,6 +8311,75 @@ button.gallery-tag:hover {
   z-index: 55;
 }
 
+/* 加载态 */
+.reader-loading {
+  margin: auto;
+  color: #9aa0b4;
+  font-size: 0.95rem;
+}
+
+/* 单图加载失败占位 + 重试 */
+.reader-img-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 40vh;
+  min-width: min(70vw, 360px);
+  color: #9aa0b4;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
+}
+.reader-img-error button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+/* g 跳页输入层 */
+.reader-jump-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 5, 9, 0.62);
+}
+.reader-jump {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.3rem 1.6rem;
+  border-radius: 0.8rem;
+  background: rgba(14, 16, 24, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+.reader-jump p { margin: 0; font-size: 0.95rem; font-weight: 600; }
+.reader-jump input {
+  width: 9rem;
+  padding: 0.45rem 0.6rem;
+  text-align: center;
+  font-size: 1.1rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8eaf2;
+}
+.reader-jump small { color: #9aa0b4; font-size: 0.72rem; }
+
 @media (max-width: 720px) {
   .reader-toolbar { flex-wrap: wrap; }
   .reader-toolbar .reader-title { max-width: 12ch; }

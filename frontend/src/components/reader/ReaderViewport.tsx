@@ -11,6 +11,7 @@ type ReaderViewportProps = {
   zoom: number;
   masked: boolean;
   isRemote: boolean;
+  loading: boolean;
   onFlip: (delta: number) => void;
   onJump: (pageIndex: number) => void;
   onToggleChrome: () => void;
@@ -25,6 +26,7 @@ export function ReaderViewport({
   zoom,
   masked,
   isRemote,
+  loading,
   onFlip,
   onJump,
   onToggleChrome,
@@ -34,7 +36,9 @@ export function ReaderViewport({
 
   return (
     <div className={masked ? "reader-viewport masked" : "reader-viewport"}>
-      {mode === "webtoon" ? (
+      {loading && pages.length === 0 ? (
+        <p className="reader-loading">加载中…</p>
+      ) : mode === "webtoon" ? (
         <WebtoonView
           pages={pages}
           pageIndex={pageIndex}

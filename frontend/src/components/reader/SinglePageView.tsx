@@ -1,3 +1,4 @@
+import { ReaderImage } from "./ReaderImage";
 import { Direction, Fit, ReaderPageItem, clickZoneDelta } from "./readerHelpers";
 
 type SinglePageViewProps = {
@@ -34,13 +35,12 @@ export function SinglePageView({ page, fit, zoom, direction, onFlip, onToggleChr
         aria-label="右侧点击区"
         onClick={() => onFlip(clickZoneDelta("right", direction))}
       />
-      <img
+      <ReaderImage
         key={page.key}
         className={`reader-single-img fit-${fit}`}
         style={{ transform: `scale(${zoom})` }}
         src={page.src}
         alt={`第 ${page.pageIndex} 页`}
-        draggable={false}
       />
     </div>
   );
