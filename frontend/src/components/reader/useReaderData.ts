@@ -65,7 +65,7 @@ export function useReaderData(source: ReaderSource) {
       cancelled = true;
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
     };
-  }, [source, sourceKey]);
+  }, [sourceKey]);
 
   const pages = useMemo<ReaderPageItem[]>(() => {
     if (source.kind === "local") {
