@@ -49,6 +49,24 @@ def test_settings_service_persists_export_directory(tmp_path):
     assert export_dir.exists()
 
 
+def test_settings_service_persists_export_default_options(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = NhentaiClient(settings.nhentai_base_url, settings.user_agent, None, settings.request_timeout)
+    service = SettingsService(db, settings, client)
+
+    initial = service.get()["export"]["default_options"]
+    assert initial == {"write_comicinfo": True, "keep_json": True, "compress": True}
+
+    payload = service.patch({"export": {"default_options": {"write_comicinfo": False, "compress": False}}})
+
+    saved = payload["export"]["default_options"]
+    # Only the provided keys change; omitted keys keep their prior value.
+    assert saved == {"write_comicinfo": False, "keep_json": True, "compress": False}
+    assert service.get()["export"]["default_options"] == saved
+
+
 def test_settings_service_persists_export_presets(tmp_path):
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
     db = Database(settings.database_path)

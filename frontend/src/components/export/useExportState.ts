@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
 import type {
@@ -72,6 +72,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   });
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const defaultsApplied = useRef(false);
   const [query, setQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "warning" | "blocked">("all");
   const [multiSelect, setMultiSelect] = useState(false);
@@ -130,6 +131,11 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
       setQueue(queuePayload);
       setSummary(summaryPayload);
       setSettings(settingsPayload);
+      // Seed export option switches from the saved defaults, once per session.
+      if (!defaultsApplied.current && settingsPayload.export.default_options) {
+        setExportOptions(settingsPayload.export.default_options);
+        defaultsApplied.current = true;
+      }
       setOutputNames((current) => {
         const next: Record<number, string> = {};
         for (const item of queuePayload.result) {

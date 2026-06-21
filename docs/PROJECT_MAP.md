@@ -56,9 +56,14 @@ Root: `backend/app/`
   - `ignore(id)` / `mark_review(id)` / `delete(id)`: real status transitions and deletion; delete removes aliases and unlinks `work_tags.dictionary_id` without deleting remote tags or works.
   - `preview_bulk_import(rows)` / `bulk_import(rows)`: parse user rows, report valid/duplicate/conflict/invalid rows, write only valid rows. Minimum row shape is `原文, 中文名`; type and aliases are optional.
   - `link_work_tags(work_id, tags)`: links imported works to real gallery tags and existing dictionary mappings.
+  - `translate_text(text)`: single on-demand machine translation via the injected `TranslationService`.
+  - `generate_suggestions(limit)`: machine-translates the top unconfigured remote tags and upserts reviewable `status='suggested'` rows (source `machine`); never overwrites a human-configured/locked entry and never links `work_tags` before confirmation.
+- `services/translation_service.py`
+  - Provider-adapter machine translation over the local `settings` table; uses stdlib `urllib` (no new deps). Two providers: `google_free` (unofficial endpoint, no key) and `deepl` (REST, auth key in `mt.deepl_api_key`). Config under `mt.*` keys.
+  - `translate()` / `translate_one()`: EN→ZH (provider-selected); `verify()` runs a sample translate and records `mt.last_verify`; `public_config()` reports provider/plan/configured state and never echoes the DeepL key. Module-level `_http_get_json` / `_http_post_form` are the monkeypatch seams for tests.
 - `services/settings_service.py`
-  - `get()`: safe settings summary; never returns API key text.
-  - `patch()`: saves DB key, UI preferences, storage export directory, and persisted export preset state; immediately updates runtime `NhentaiClient.api_key` and clears runtime remote cache when the effective key changes.
+  - `get()`: safe settings summary; never returns API key text; includes a `machine_translation` block from `TranslationService.public_config()`.
+  - `patch()`: saves DB key, UI preferences, storage export directory, persisted export preset state, and machine-translation config (`mt.provider` / `mt.deepl_api_key` / `mt.deepl_plan`, plus clear); immediately updates runtime `NhentaiClient.api_key` and clears runtime remote cache when the effective key changes.
   - `verify_nhentai()`: verifies current effective key through an authenticated remote request.
 - `services/import_service.py`
   - `enqueue_remote_import()`, `run_remote_import()`, `retry_job()`.
@@ -99,6 +104,8 @@ Root: `backend/app/`
   - Writes durable `job_logs` for creation, stage changes, completion, failures, pause/resume/cancel, and retry.
 - `services/import_service.py`
   - Remote import jobs call `JobService.checkpoint()` between safe stages so pause/cancel is real and cooperative. Cancelling after a temporary CBZ download removes the tmp file before returning.
+- `services/workbench_service.py`
+  - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
   - FastAPI route wiring.
 
@@ -126,6 +133,8 @@ Implemented:
 - `POST /api/dictionary/apply`
 - `POST /api/dictionary/preview-bulk-import`
 - `POST /api/dictionary/bulk-import`
+- `POST /api/dictionary/translate` (single on-demand machine translation of one term)
+- `POST /api/dictionary/suggest-batch` (machine-translate top unconfigured remote tags into reviewable `status='suggested'` rows; does not link `work_tags`)
 - `POST /api/dictionary/{id}/ignore`
 - `POST /api/dictionary/{id}/review`
 - `DELETE /api/dictionary/{id}`
@@ -166,6 +175,8 @@ Implemented:
 - `GET /api/settings`
 - `PATCH /api/settings`
 - `POST /api/settings/nhentai/verify`
+- `POST /api/settings/translation/verify`
+- `GET /api/workbench/overview`
 
 Reserved, not implemented:
 
@@ -179,7 +190,7 @@ Root: `frontend/src/`
 
 - `App.tsx`
   - Hash route composition.
-  - Boundary page for workbench; real pages for discover/library/reader/governance/dictionary/export/files/tasks/settings.
+  - All main modules are now real pages: discover/library/reader/governance/dictionary/export/files/tasks/settings/workbench. No module remains a boundary screen.
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
@@ -237,16 +248,18 @@ Root: `frontend/src/`
   - Shows metadata, tags, related works, `阅读`, and `加入导入队列` only. It does not contain an embedded reader.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
-- `components/settings/SettingsPage.tsx`
-  - NH API Key save/clear/verify, safe config summary, storage paths, UI preferences.
+- `components/settings/` — refactored settings module:
+  - `SettingsPage.tsx` — thin orchestrator: hero + functional left section nav (`Presence`-faded section switch) + active section + config summary aside.
+  - `useSettingsState.ts` — all state/actions (NH key, privacy/blur/reader, machine-translation provider/key/plan, load/save/verify/clear + `verifyTranslation`/`clearDeeplKey`).
+  - `ConnectionSection` / `TranslationSection` (NEW MT config card: provider picker google_free/deepl, DeepL key + plan, 测试机翻) / `PreferencesSection` / `StorageSection`, plus `settingsHelpers` (`StatusDot`/`SummaryRow`).
 - `components/dictionary/DictionaryPage.tsx`
-  - Page orchestration only: loads summary/candidates/evidence/preview, selects candidates, writes terms, status changes, and refreshes dependent sections.
+  - Page orchestration only: loads summary/candidates/evidence/preview, selects candidates, writes terms, status changes, and refreshes dependent sections. Includes a 批量机翻 button (`/api/dictionary/suggest-batch`).
 - `components/dictionary/DictionarySummaryStrip.tsx`
   - Real top summary strip for unconfigured/configured/ignored/review/suggestions.
 - `components/dictionary/DictionaryCandidatePool.tsx`
   - Table-like candidate pool from `/api/dictionary/candidates`, with type/status filters and pagination.
 - `components/dictionary/DictionaryEditor.tsx`
-  - Edits original term, Chinese display, aliases, type, scope, confidence, note; triggers preview/apply/ignore/review. Machine suggestions are visibly disabled until real service exists.
+  - Edits original term, Chinese display, aliases, type, scope, confidence, note; triggers preview/apply/ignore/review. The 机器翻译 block is a real 机翻填充中文名 button (`/api/dictionary/translate`) that fills `zh_name` from the configured provider for human review.
 - `components/dictionary/DictionaryEvidencePanel.tsx`
   - Tabs for real related works, co-tags, remote info, and history from `/api/dictionary/evidence`.
 - `components/dictionary/DictionaryApplyPreview.tsx`
@@ -308,6 +321,13 @@ Root: `frontend/src/`
   - `TaskInspector.tsx` — focused job detail, progress, error/retry-after, real pause/resume/cancel/retry/copy actions, and durable job log timeline.
   - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
   - Only failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel.
+- `components/workbench/` — daily workbench dashboard:
+  - `WorkbenchPage.tsx` — thin container for `#workbench`; takes `blurCovers` and composes the metric strip, two shelves, and four module cards.
+  - `useWorkbenchState.ts` — fetches `GET /api/workbench/overview`; manages loading/error/refresh state.
+  - `WorkbenchMetricStrip.tsx` — hairline thin-number strip showing real metrics: 馆藏作品 / 待治理 / 失败任务 / 缺失源文件.
+  - `WorkbenchModuleCards.tsx` — four jump cards (治理 / 任务 / 文件 / 导出) linking to `#governance` / `#tasks` / `#files` / `#export`.
+  - `workbenchHelpers.ts` — shared label/formatting utilities.
+  - Reuses `ContinueReadingRow` (from library) for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 

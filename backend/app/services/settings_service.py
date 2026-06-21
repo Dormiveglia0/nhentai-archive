@@ -20,10 +20,11 @@ DEFAULT_EXPORT_PRESET = {
 
 
 class SettingsService:
-    def __init__(self, db: Database, settings: Settings, client: NhentaiClient):
+    def __init__(self, db: Database, settings: Settings, client: NhentaiClient, translation: Any = None):
         self.db = db
         self.settings = settings
         self.client = client
+        self.translation = translation
         self.apply_runtime_settings()
 
     def get(self) -> dict[str, Any]:
@@ -35,6 +36,8 @@ class SettingsService:
         return {
             "nhentai": {
                 "base_url": self.settings.nhentai_base_url,
+                "user_agent": self.settings.user_agent,
+                "request_timeout": self.settings.request_timeout,
                 "api_key_configured": bool(effective_key),
                 "api_key_source": source,
                 "last_verify": self._get_json("nhentai.last_verify"),
@@ -53,7 +56,8 @@ class SettingsService:
             "reader": {
                 "default_mode": reader_mode,
             },
-            "export": self._export_settings(),
+            "machine_translation": self.translation.public_config() if self.translation else None,
+            "export": {**self._export_settings(), "default_options": self._export_default_options()},
         }
 
     def patch(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -73,6 +77,22 @@ class SettingsService:
         if reader.get("default_mode") in {"single", "scroll"}:
             self._set("reader.default_mode", reader["default_mode"])
 
+        mt = payload.get("machine_translation") or {}
+        if mt.get("clear_deepl_api_key"):
+            self._delete("mt.deepl_api_key")
+        deepl_key = mt.get("deepl_api_key")
+        if isinstance(deepl_key, str) and deepl_key.strip():
+            self._set("mt.deepl_api_key", deepl_key.strip())
+        if mt.get("provider") in {"google_free", "deepl"}:
+            self._set("mt.provider", mt["provider"])
+        if mt.get("deepl_plan") in {"free", "pro"}:
+            self._set("mt.deepl_plan", mt["deepl_plan"])
+        if mt.get("target_lang") in {"zh-CN", "zh-TW"}:
+            self._set("mt.target_lang", mt["target_lang"])
+        batch_limit = mt.get("batch_limit")
+        if isinstance(batch_limit, int) and 1 <= batch_limit <= 50:
+            self._set("mt.batch_limit", str(batch_limit))
+
         storage = payload.get("storage") or {}
         export_dir = storage.get("export_dir")
         if isinstance(export_dir, str) and export_dir.strip():
@@ -84,12 +104,17 @@ class SettingsService:
         if export:
             presets = export.get("presets")
             active_preset_id = export.get("active_preset_id")
+            default_options = export.get("default_options")
             if isinstance(presets, list):
                 cleaned = [preset for preset in presets if isinstance(preset, dict) and preset.get("id") and preset.get("name")]
                 if cleaned:
                     self._set("export.presets", json.dumps(cleaned, ensure_ascii=False))
             if isinstance(active_preset_id, str) and active_preset_id.strip():
                 self._set("export.active_preset_id", active_preset_id.strip())
+            if isinstance(default_options, dict):
+                current = self._export_default_options()
+                merged = {key: bool(default_options.get(key, current[key])) for key in current}
+                self._set("export.default_options", json.dumps(merged, ensure_ascii=False))
 
         self.apply_runtime_settings()
         return self.get()
@@ -177,6 +202,11 @@ class SettingsService:
     def _storage_path(self, key: str, fallback: Any) -> Any:
         value = self._get(key)
         return Path(value).expanduser() if value else fallback
+
+    def _export_default_options(self) -> dict[str, bool]:
+        defaults = {"write_comicinfo": True, "keep_json": True, "compress": True}
+        stored = self._get_json("export.default_options") or {}
+        return {key: bool(stored.get(key, value)) for key, value in defaults.items()}
 
     def _export_settings(self) -> dict[str, Any]:
         presets = self._get_json_list("export.presets") or [dict(DEFAULT_EXPORT_PRESET)]

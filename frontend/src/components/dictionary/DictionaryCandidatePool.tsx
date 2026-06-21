@@ -37,6 +37,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "全部状态" },
   { value: "unconfigured", label: "未配置" },
   { value: "configured", label: "已配置" },
+  { value: "suggested", label: "机器建议" },
   { value: "review", label: "待复核" },
   { value: "ignored", label: "已忽略" },
 ];

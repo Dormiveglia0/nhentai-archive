@@ -1,260 +1,254 @@
-import { CheckCircle2, Database, EyeOff, Folder, KeyRound, RefreshCw, Save, Shield, XCircle } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Database,
+  Download,
+  EyeOff,
+  Folder,
+  HardDrive,
+  Languages,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+} from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
-import { api, SettingsSummary } from "../../lib/api";
-import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
+import { api, type FileOverview, type LibrarySummary } from "../../lib/api";
+import { FadeIn, Presence, Stagger, StaggerItem } from "../../lib/motion";
+import { NumberTicker } from "../effects/NumberTicker";
+import { formatBytes } from "../library/libraryHelpers";
+import { ConnectionSection } from "./ConnectionSection";
+import { DataSection } from "./DataSection";
+import { ExportDefaultsSection } from "./ExportDefaultsSection";
+import { PreferencesSection } from "./PreferencesSection";
+import { StorageSection } from "./StorageSection";
+import { TranslationSection } from "./TranslationSection";
+import { type SettingsSection, useSettingsState } from "./useSettingsState";
+
+const NAV: { key: SettingsSection; label: string; desc: string; icon: typeof Database }[] = [
+  { key: "connection", label: "连接", desc: "远端 API 与运行态", icon: Database },
+  { key: "translation", label: "翻译", desc: "服务商、语言与测试", icon: Languages },
+  { key: "preferences", label: "隐私阅读", desc: "默认保护与阅读模式", icon: EyeOff },
+  { key: "export", label: "导出", desc: "CBZ 打包默认值", icon: Download },
+  { key: "data", label: "数据", desc: "馆藏摘要与语言分布", icon: BarChart3 },
+  { key: "storage", label: "存储", desc: "目录、源文件与清理", icon: Folder },
+];
 
 export function SettingsPage() {
-  const [settings, setSettings] = useState<SettingsSummary | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [privacyDefault, setPrivacyDefault] = useState(true);
-  const [blurDefault, setBlurDefault] = useState(true);
-  const [readerMode, setReaderMode] = useState<"single" | "scroll">("single");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const vm = useSettingsState();
+  const [library, setLibrary] = useState<LibrarySummary | null>(null);
+  const [files, setFiles] = useState<FileOverview | null>(null);
 
   useEffect(() => {
-    void load();
+    let alive = true;
+    Promise.all([api.librarySummary(), api.filesOverview()])
+      .then(([libraryPayload, filesPayload]) => {
+        if (!alive) return;
+        setLibrary(libraryPayload);
+        setFiles(filesPayload);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  async function load() {
-    await run(async () => {
-      const payload = await api.settings();
-      setSettings(payload);
-      setPrivacyDefault(payload.privacy.privacy_mode_default);
-      setBlurDefault(payload.privacy.blur_covers_default);
-      setReaderMode(payload.reader.default_mode);
-    });
-  }
-
-  async function save(event: FormEvent) {
+  function onSubmit(event: FormEvent) {
     event.preventDefault();
-    await run(async () => {
-      const payload = await api.updateSettings({
-        nhentai_api_key: apiKey.trim() || undefined,
-        privacy: {
-          privacy_mode_default: privacyDefault,
-          blur_covers_default: blurDefault,
-        },
-        reader: {
-          default_mode: readerMode,
-        },
-      });
-      setSettings(payload);
-      setApiKey("");
-      setMessage("设置已保存，运行态连接配置已更新。");
-    });
+    void vm.save();
   }
 
-  async function clearKey() {
-    await run(async () => {
-      const payload = await api.updateSettings({ clear_nhentai_api_key: true });
-      setSettings(payload);
-      setApiKey("");
-      setMessage(payload.nhentai.api_key_source === "env" ? "本地 key 已清除；环境变量 key 仍然生效。" : "NH API Key 已清除。");
-    });
-  }
-
-  async function verify() {
-    await run(async () => {
-      const result = await api.verifyNhentaiSettings();
-      const payload = await api.settings();
-      setSettings(payload);
-      setMessage(result.message);
-    });
-  }
-
-  async function run(action: () => Promise<void>) {
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    try {
-      await action();
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const mt = vm.settings?.machine_translation ?? null;
+  const mtLabel = vm.mtProvider === "deepl" ? "DeepL API" : "Google 免费翻译";
+  const current = NAV.find((item) => item.key === vm.section) ?? NAV[0];
+  const needsStorageAttention = Boolean(files && (files.missing_source > 0 || files.reclaimable_bytes > 0));
+  const needsConnectionAttention = !vm.settings?.nhentai.api_key_configured;
+  const attentionText = needsConnectionAttention
+    ? "连接未就绪"
+    : needsStorageAttention
+      ? "存储需检查"
+      : "配置稳定";
 
   return (
-    <section className="page settings-page">
-      <div className="hero">
-        <div>
-          <h1>设置</h1>
-          <p>管理系统行为、隐私安全、存储路径与阅读偏好。</p>
-        </div>
-        <div className="sketch" aria-hidden="true" />
-      </div>
+    <section className="page settings-page settings-deck-page">
+      <form id="settings-form" className="settings-deck-layout" onSubmit={onSubmit}>
+        <FadeIn className="settings-console-rail" x={-8}>
+          <div className="settings-console-brand">
+            <span>NH Archive</span>
+            <h1>设置</h1>
+            <p>本地配置、密钥状态、导出默认值和存储健康集中在这里处理。</p>
+          </div>
 
-      <form className="settings-layout" onSubmit={save}>
-        <FadeIn className="settings-rail-motion" x={-12}>
-          <aside className="settings-rail">
-            <button className="active" type="button">
-              <Database size={17} />
-              数据源与连接
-            </button>
-            <button type="button">
-              <Folder size={17} />
-              存储与路径
-            </button>
-            <button type="button">
-              <Shield size={17} />
-              隐私与安全
-            </button>
-            <button type="button">
-              <EyeOff size={17} />
-              阅读器
-            </button>
-          </aside>
-        </FadeIn>
-
-        <FadeIn className="settings-main-motion" y={8} delay={0.05}>
-          <main>
-            <Stagger className="settings-main">
-              <StaggerItem className="settings-card-motion">
-                <section className="settings-card">
-                  <div className="settings-title">
-                    <h2>A. 连接与同步</h2>
-                    <p>配置数据源连接与请求策略；敏感值不会在前端回显明文。</p>
-                  </div>
-                  <div className="settings-grid">
-                    <label>
-                      <span>NH API Key</span>
-                      <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(event) => setApiKey(event.target.value)}
-                        placeholder={settings?.nhentai.api_key_configured ? "已配置，输入新 key 可覆盖" : "输入 NH API Key"}
-                        autoComplete="off"
-                      />
-                    </label>
-                    <label>
-                      <span>Base URL</span>
-                      <input value={settings?.nhentai.base_url ?? ""} readOnly />
-                    </label>
-                    <div className="connection-actions">
-                      <button type="button" onClick={verify} disabled={loading}>
-                        <RefreshCw size={16} />
-                        验证连接
-                      </button>
-                      <button type="button" onClick={clearKey} disabled={loading || !settings?.nhentai.api_key_configured}>
-                        清除 Key
-                      </button>
-                    </div>
-                  </div>
-                  <div className="status-row">
-                    <StatusDot ok={Boolean(settings?.nhentai.api_key_configured)} />
+          <Stagger className="settings-console-nav" key="settings-console-nav">
+            {NAV.map((item) => {
+              const Icon = item.icon;
+              return (
+                <StaggerItem key={item.key}>
+                  <button
+                    type="button"
+                    className={vm.section === item.key ? "active" : ""}
+                    onClick={() => vm.setSection(item.key)}
+                  >
+                    <Icon size={17} />
                     <span>
-                      连接状态：
-                      {settings?.nhentai.api_key_configured ? `已配置（${settings.nhentai.api_key_source}）` : "未配置"}
+                      <strong>{item.label}</strong>
+                      <small>{item.desc}</small>
                     </span>
-                    {settings?.nhentai.last_verify ? <span>最后验证：{settings.nhentai.last_verify.message}</span> : null}
-                  </div>
-                </section>
-              </StaggerItem>
+                  </button>
+                </StaggerItem>
+              );
+            })}
+          </Stagger>
 
-              <StaggerItem className="settings-card-motion">
-                <section className="settings-card">
-                  <div className="settings-title">
-                    <h2>B. 本地存储</h2>
-                    <p>当前阶段只展示真实路径；目录迁移和容量策略后续接入。</p>
-                  </div>
-                  <div className="path-grid">
-                    {settings
-                      ? Object.entries(settings.storage).map(([key, value]) => (
-                          <label key={key}>
-                            <span>{key}</span>
-                            <input value={value} readOnly />
-                          </label>
-                        ))
-                      : null}
-                  </div>
-                </section>
-              </StaggerItem>
-
-              <StaggerItem className="settings-card-motion">
-                <section className="settings-card">
-                  <div className="settings-title">
-                    <h2>C. 隐私与阅读偏好</h2>
-                    <p>这些选项会保存为本地 UI 默认值。</p>
-                  </div>
-                  <div className="preference-row">
-                    <label className="switch-field">
-                      <span>隐私模式默认开启</span>
-                      <input type="checkbox" checked={privacyDefault} onChange={(event) => setPrivacyDefault(event.target.checked)} />
-                      <i />
-                    </label>
-                    <label className="switch-field">
-                      <span>封面模糊默认开启</span>
-                      <input type="checkbox" checked={blurDefault} onChange={(event) => setBlurDefault(event.target.checked)} />
-                      <i />
-                    </label>
-                    <label>
-                      <span>默认阅读模式</span>
-                      <select value={readerMode} onChange={(event) => setReaderMode(event.target.value as "single" | "scroll")}>
-                        <option value="single">单页</option>
-                        <option value="scroll">连续滚动</option>
-                      </select>
-                    </label>
-                  </div>
-                </section>
-              </StaggerItem>
-            </Stagger>
-
-            {error ? (
-              <FadeIn key={`error-${error}`} y={6}>
-                <div className="notice error">{error}</div>
-              </FadeIn>
-            ) : null}
-            {message ? (
-              <FadeIn key={`message-${message}`} y={6}>
-                <div className="notice slim">{message}</div>
-              </FadeIn>
-            ) : null}
-
-            <div className="settings-bottom">
-              <button type="button" onClick={load} disabled={loading}>
-                <RefreshCw size={16} />
-                重新读取
-              </button>
-              <button className="primary-action" type="submit" disabled={loading}>
-                <Save size={16} />
-                保存设置
-              </button>
-            </div>
-          </main>
+          <StatusDeck
+            apiReady={Boolean(vm.settings?.nhentai.api_key_configured)}
+            mtLabel={mtLabel}
+            mtReady={vm.mtProvider !== "deepl" || Boolean(mt?.deepl_api_key_configured)}
+            privacyOn={vm.privacyDefault}
+            library={library}
+            files={files}
+          />
         </FadeIn>
 
-        <FadeIn className="settings-summary-motion" x={12} delay={0.1}>
-          <aside className="settings-summary">
-            <h2>配置摘要</h2>
-            <SummaryRow label="NH API Key" value={settings?.nhentai.api_key_configured ? "已配置" : "未配置"} />
-            <SummaryRow label="Key 来源" value={settings?.nhentai.api_key_source ?? "none"} />
-            <SummaryRow label="隐私默认" value={privacyDefault ? "开启" : "关闭"} />
-            <SummaryRow label="封面模糊" value={blurDefault ? "开启" : "关闭"} />
-            <SummaryRow label="阅读模式" value={readerMode === "single" ? "单页" : "连续滚动"} />
-            <div className="settings-help">
-              <KeyRound size={18} />
-              <p>保存后后端会立即更新运行态客户端，发现与导入不需要重启服务。</p>
+        <FadeIn className="settings-stage-motion" y={10}>
+          <section className="settings-stage">
+            <header className="settings-console-head">
+              <div className="settings-console-title">
+                <p>{contextCopy(vm.section)}</p>
+              </div>
+              <div className={`settings-console-health ${needsConnectionAttention || needsStorageAttention ? "attention" : ""}`}>
+                <ShieldCheck size={18} />
+                <span>{attentionText}</span>
+              </div>
+            </header>
+
+            <div className="settings-section-meta">
+              <span>{current.desc}</span>
+              <strong>{vm.loading ? "同步中" : "保存后即时生效"}</strong>
             </div>
-          </aside>
+
+            <Presence>
+              <FadeIn key={vm.section} className="settings-main" y={8}>
+                {vm.section === "connection" ? <ConnectionSection vm={vm} /> : null}
+                {vm.section === "translation" ? <TranslationSection vm={vm} /> : null}
+                {vm.section === "preferences" ? <PreferencesSection vm={vm} /> : null}
+                {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
+                {vm.section === "data" ? <DataSection /> : null}
+                {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
+              </FadeIn>
+            </Presence>
+
+            {vm.error ? (
+              <FadeIn key={`error-${vm.error}`} y={6}>
+                <div className="notice error">{vm.error}</div>
+              </FadeIn>
+            ) : null}
+            {vm.message ? (
+              <FadeIn key={`message-${vm.message}`} y={6}>
+                <div className="notice slim">{vm.message}</div>
+              </FadeIn>
+            ) : null}
+          </section>
         </FadeIn>
+
+        <div className="settings-bottom settings-command-bar">
+          <div>
+            <button type="button" onClick={() => void vm.load()} disabled={vm.loading}>
+              <RefreshCw size={16} />
+              重新读取
+            </button>
+            <button className="primary-action" type="submit" disabled={vm.loading}>
+              <Save size={16} />
+              保存设置
+            </button>
+          </div>
+        </div>
       </form>
     </section>
   );
 }
 
-function StatusDot({ ok }: { ok: boolean }) {
-  return ok ? <CheckCircle2 className="ok" size={17} /> : <XCircle className="bad" size={17} />;
+function StatusDeck({
+  apiReady,
+  mtLabel,
+  mtReady,
+  privacyOn,
+  library,
+  files,
+}: {
+  apiReady: boolean;
+  mtLabel: string;
+  mtReady: boolean;
+  privacyOn: boolean;
+  library: LibrarySummary | null;
+  files: FileOverview | null;
+}) {
+  const reclaimable = files?.reclaimable_bytes ?? 0;
+  const cards = [
+    {
+      label: "远端连接",
+      value: apiReady ? "Ready" : "Missing",
+      detail: apiReady ? "API Key 已配置" : "等待 API Key",
+      icon: Activity,
+      attention: !apiReady,
+    },
+    {
+      label: "翻译引擎",
+      value: mtReady ? "Online" : "Key",
+      detail: mtLabel,
+      icon: Languages,
+      attention: !mtReady,
+    },
+    {
+      label: "馆藏规模",
+      value: library?.total ?? 0,
+      detail: `${library?.reading ?? 0} 部阅读中`,
+      icon: BarChart3,
+    },
+    {
+      label: "可回收空间",
+      value: reclaimable,
+      detail: privacyOn ? "隐私默认开启" : "隐私默认关闭",
+      icon: HardDrive,
+      attention: reclaimable > 0 || (files?.missing_source ?? 0) > 0,
+      format: formatBytes,
+    },
+  ];
+
+  return (
+    <Stagger className="settings-status-deck" key="settings-status-deck">
+      {cards.map((card) => {
+        const Icon = card.icon;
+        return (
+          <StaggerItem key={card.label} className="settings-status-cell">
+            <article className={`settings-status-card${card.attention ? " needs-attention" : ""}`}>
+              <Icon size={20} />
+              <span>{card.label}</span>
+              <strong>
+                {typeof card.value === "number" ? <NumberTicker value={card.value} format={card.format} /> : card.value}
+              </strong>
+              <small>{card.detail}</small>
+            </article>
+          </StaggerItem>
+        );
+      })}
+    </Stagger>
+  );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="summary-row">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+function contextCopy(section: SettingsSection) {
+  switch (section) {
+    case "connection":
+      return "先确认远端连接，导入、发现和缓存状态都会跟着这里变化。";
+    case "translation":
+      return "选择翻译服务并即时测试，词典批量填充会复用同一套配置。";
+    case "preferences":
+      return "这些是本地阅读体验默认值，保存后会影响后续打开的页面。";
+    case "export":
+      return "导出默认只决定起点，导出中心里仍然可以对单次任务临时调整。";
+    case "data":
+      return "这里显示真实馆藏健康度，用来判断是否需要治理或文件维护。";
+    case "storage":
+      return "路径只读展示，清理和删除操作放在文件管理里，避免误删。";
+  }
 }

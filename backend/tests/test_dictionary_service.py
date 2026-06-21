@@ -230,6 +230,32 @@ def test_dictionary_summary_candidates_evidence_and_status_actions_use_real_rows
     assert ignored_summary["ignored"] == 1
 
 
+def test_ignore_unconfigured_tag_creates_ignored_row_and_clears_unconfigured(tmp_path):
+    db, _client, service = make_service(tmp_path)
+    insert_remote_tag(db, remote_id=301, name="full color")
+    assert service.summary()["unconfigured"] == 1
+
+    # Ignoring a tag that has no translation yet: keep original, no zh_name required.
+    result = service.apply(
+        {
+            "original_text": "full color",
+            "zh_name": "",
+            "tag_type": "tag",
+            "remote_tag_id": 301,
+            "status": "ignored",
+            "ignored": True,
+        }
+    )
+
+    row = db.fetchone("SELECT status, ignored, zh_name FROM local_tag_dictionary WHERE id = ?", (result["dictionary"]["id"],))
+    assert row["ignored"] == 1
+    assert row["status"] == "ignored"
+    summary = service.summary()
+    assert summary["ignored"] == 1
+    # The ignored tag is now handled and no longer counts as unconfigured.
+    assert summary["unconfigured"] == 0
+
+
 def test_dictionary_preview_shape_and_bulk_import_conflicts_are_explicit(tmp_path):
     db, _client, service = make_service(tmp_path)
     insert_remote_tag(db)

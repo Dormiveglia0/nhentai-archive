@@ -1,7 +1,7 @@
-import { Ban, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
+import { Ban, Languages, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
 import { KeyboardEvent, useState } from "react";
 
-import { DictionaryApplyPayload } from "../../lib/api";
+import { api, DictionaryApplyPayload } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
 
 type Props = {
@@ -46,6 +46,25 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
 
   function removeChip(field: "aliases" | "scope", item: string) {
     update({ [field]: (value[field] ?? []).filter((chip) => chip !== item) });
+  }
+
+  const [translating, setTranslating] = useState(false);
+  const [mtError, setMtError] = useState<string | null>(null);
+
+  async function machineTranslate() {
+    const text = value.original_text.trim();
+    if (!text) return;
+    setTranslating(true);
+    setMtError(null);
+    try {
+      const result = await api.dictionaryTranslate(text);
+      if (result.translation) update({ zh_name: result.translation });
+      else setMtError("机翻返回为空");
+    } catch (exc) {
+      setMtError(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setTranslating(false);
+    }
   }
 
   return (
@@ -105,14 +124,20 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
             <span>备注</span>
             <textarea value={value.note ?? ""} onChange={(event) => update({ note: event.target.value })} rows={5} />
           </label>
-
-          <div className="machine-suggestion wide">
-            <span>机器建议</span>
-            <em>未接入真实建议服务（接入真实来源后启用）</em>
-          </div>
         </div>
 
+        {mtError ? <p className="dictionary-mt-error">{mtError}</p> : null}
+
         <footer className="dictionary-actions">
+          <button
+            type="button"
+            onClick={() => void machineTranslate()}
+            disabled={loading || translating || !value.original_text.trim()}
+            title="用设置中的机翻服务翻译原文并填入中文名"
+          >
+            <Languages size={16} />
+            {translating ? "翻译中…" : "机翻中文名"}
+          </button>
           <button type="button" onClick={onPreview} disabled={loading || !value.original_text || !value.zh_name}>
             <SearchCheck size={16} />
             预览影响
@@ -121,7 +146,12 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
             <Save size={16} />
             {dictionaryId ? "保存修改" : "写入词典"}
           </button>
-          <button type="button" onClick={onIgnore} disabled={loading || !dictionaryId}>
+          <button
+            type="button"
+            onClick={onIgnore}
+            disabled={loading || !value.original_text.trim() || value.ignored}
+            title="保留原文、不翻译；适用于无需中文名的标签"
+          >
             <Ban size={16} />
             忽略
           </button>

@@ -15,7 +15,7 @@ class JobActive(Exception):
     """Raised when an in-flight job is targeted by a history-only operation."""
 
 
-ACTIVE_STATUSES = frozenset({"queued", "running", "paused"})
+ACTIVE_STATUSES = frozenset({"queued", "running", "paused", "cancelling"})
 
 
 def _as_int(value: Any) -> int | None:
@@ -93,7 +93,7 @@ class JobService:
             self._log_with_conn(conn, job_id, "info", "任务已完成")
 
     def fail(self, job_id: int, message: str, retry_after: int | None = None) -> None:
-        if self.get(job_id)["status"] == "cancelled":
+        if self.get(job_id)["status"] in {"cancelled", "cancelling"}:
             return
         with self.db.connect() as conn:
             conn.execute(
@@ -163,8 +163,22 @@ class JobService:
 
     def cancel(self, job_id: int) -> dict[str, Any]:
         job = self.get(job_id)
-        if job["status"] in {"completed", "failed", "cancelled"}:
+        if job["status"] in {"completed", "failed", "cancelled", "cancelling"}:
             return job
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                UPDATE jobs
+                SET status = 'cancelling', stage = 'cancelling', error = NULL,
+                    retry_after = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (job_id,),
+            )
+            self._log_with_conn(conn, job_id, "info", "任务已取消")
+        return self.get(job_id)
+
+    def mark_cancelled(self, job_id: int) -> None:
         with self.db.connect() as conn:
             conn.execute(
                 """
@@ -175,8 +189,6 @@ class JobService:
                 """,
                 (job_id,),
             )
-            self._log_with_conn(conn, job_id, "info", "任务已取消")
-        return self.get(job_id)
 
     def delete(self, job_id: int) -> dict[str, Any]:
         job = self.get(job_id)
@@ -197,7 +209,7 @@ class JobService:
     def checkpoint(self, job_id: int) -> dict[str, Any]:
         while True:
             job = self.get(job_id)
-            if job["status"] == "cancelled":
+            if job["status"] in {"cancelled", "cancelling"}:
                 raise JobCancelled(f"Job {job_id} cancelled")
             if job["status"] != "paused":
                 return job

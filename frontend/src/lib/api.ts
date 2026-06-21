@@ -479,7 +479,7 @@ export type JobMeta = {
 export type Job = {
   id: number;
   type: string;
-  status: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled";
+  status: "queued" | "running" | "paused" | "cancelling" | "completed" | "failed" | "cancelled";
   stage: string;
   progress: { current: number; total: number; percent: number };
   target: Record<string, unknown>;
@@ -498,9 +498,89 @@ export type JobLog = {
   created_at: string;
 };
 
+export type WorkbenchFailedJob = {
+  id: number;
+  type: string;
+  target: Record<string, unknown>;
+  error?: string | null;
+  updated_at: string;
+};
+
+export type WorkbenchOverview = {
+  library: {
+    total: number;
+    reading: number;
+    completed: number;
+    unread: number;
+    untagged: number;
+    total_pages: number;
+    total_size_bytes: number;
+  };
+  governance: {
+    total: number;
+    missing_metadata: number;
+    untagged: number;
+    dictionary_review: number;
+    dictionary_conflict: number;
+    missing_comicinfo: number;
+    missing_cover: number;
+  };
+  files: {
+    work_count: number;
+    source_bytes: number;
+    cover_ok: number;
+    missing_source: number;
+    missing_cover: number;
+    orphan_count: number;
+    stale_count: number;
+    reclaimable_bytes: number;
+  };
+  exports: { total: number; ready: number; blocked: number; warnings: number };
+  jobs: {
+    running: number;
+    queued: number;
+    paused: number;
+    cancelling: number;
+    failed: number;
+    completed: number;
+    cancelled: number;
+    failed_recent: WorkbenchFailedJob[];
+  };
+  continue_reading: LibraryWork[];
+  recent_added: LibraryWork[];
+};
+
+export type TranslationVerifyResult = {
+  ok: boolean;
+  provider: string;
+  sample: string | null;
+  status_code: number | null;
+  message: string;
+};
+
+export type MachineTranslationSettings = {
+  provider: "google_free" | "deepl";
+  deepl_api_key_configured: boolean;
+  deepl_key_source: "env" | "db" | "none";
+  deepl_plan: "free" | "pro";
+  target_lang: string;
+  batch_limit: number;
+  last_verify: TranslationVerifyResult | null;
+};
+
+export type NhentaiRuntimeStats = {
+  cache_entries: number;
+  cache_active_entries: number;
+  cooldown_active: boolean;
+  cooldown_remaining_seconds: number;
+  cdn_configured: boolean;
+};
+
 export type SettingsSummary = {
   nhentai: {
     base_url: string;
+    user_agent: string;
+    request_timeout: number;
     api_key_configured: boolean;
     api_key_source: "env" | "db" | "none";
     last_verify: null | {
@@ -519,9 +599,11 @@ export type SettingsSummary = {
   reader: {
     default_mode: "single" | "scroll";
   };
+  machine_translation: MachineTranslationSettings | null;
   export: {
     active_preset_id: string;
     presets: ExportPreset[];
+    default_options: { write_comicinfo: boolean; keep_json: boolean; compress: boolean };
   };
 };
 
@@ -700,6 +782,17 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     }),
+  dictionaryTranslate: (text: string) =>
+    request<{ text: string; translation: string; provider: string }>("/api/dictionary/translate", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ text })
+    }),
+  dictionarySuggestBatch: (limit = 20) =>
+    request<{ generated: number; items: Array<{ original_text: string; zh_name: string; tag_type: string; remote_tag_id: number }> }>(
+      "/api/dictionary/suggest-batch",
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ limit }) }
+    ),
   dictionaryPreviewBulkImport: (rows: BulkImportRow[]) =>
     request<BulkImportPreview>("/api/dictionary/preview-bulk-import", {
       method: "POST",
@@ -717,6 +810,7 @@ export const api = {
   dictionaryDelete: (id: number) => request<DictionaryDeleteResult>(`/api/dictionary/${id}`, { method: "DELETE", headers: JSON_HEADERS }),
   importGallery: (id: number) =>
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
+  workbenchOverview: () => request<WorkbenchOverview>("/api/workbench/overview"),
   librarySummary: () => request<LibrarySummary>("/api/library/summary"),
   librarySearch: (params: LibrarySearchParams = {}) => {
     const query = new URLSearchParams();
@@ -820,5 +914,10 @@ export const api = {
     request<{ configured: boolean; ok: boolean; source: string; status_code: number | null; message: string }>(
       "/api/settings/nhentai/verify",
       { method: "POST", headers: JSON_HEADERS }
-    )
+    ),
+  verifyTranslationSettings: () =>
+    request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS }),
+  clearNhentaiCache: () =>
+    request<{ ok: boolean; message: string }>("/api/settings/nhentai/clear-cache", { method: "POST", headers: JSON_HEADERS }),
+  nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime")
 };

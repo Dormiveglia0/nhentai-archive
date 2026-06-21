@@ -81,6 +81,34 @@ class StubImports:
             "updated_at": "2026-06-20 09:02:00",
         }
 
+    def resume_job(self, job_id):
+        return {
+            "id": job_id,
+            "type": "remote_import",
+            "status": "running",
+            "stage": "downloading_cbz",
+            "progress": {"current": 3, "total": 5, "percent": 60},
+            "target": {"gallery_id": 123456},
+            "error": None,
+            "retry_after": None,
+            "created_at": "2026-06-20 09:00:00",
+            "updated_at": "2026-06-20 09:03:00",
+        }
+
+    def cancel_job(self, job_id):
+        return {
+            "id": job_id,
+            "type": "remote_import",
+            "status": "cancelled",
+            "stage": "cancelled",
+            "progress": {"current": 3, "total": 5, "percent": 60},
+            "target": {"gallery_id": 123456},
+            "error": None,
+            "retry_after": None,
+            "created_at": "2026-06-20 09:00:00",
+            "updated_at": "2026-06-20 09:04:00",
+        }
+
 
 def test_jobs_routes_include_created_at_and_retry_payload(monkeypatch):
     monkeypatch.setattr(main, "jobs", StubJobs())
@@ -110,6 +138,7 @@ def test_retry_route_rejects_invalid_retry(monkeypatch):
 
 def test_jobs_control_and_log_routes(monkeypatch):
     monkeypatch.setattr(main, "jobs", StubJobs())
+    monkeypatch.setattr(main, "imports", StubImports())
     client = TestClient(main.app)
 
     assert client.post("/api/jobs/1/pause").json()["status"] == "paused"

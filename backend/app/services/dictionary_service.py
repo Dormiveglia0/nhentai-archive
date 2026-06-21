@@ -12,9 +12,76 @@ def normalize_key(value: str) -> str:
 
 
 class DictionaryService:
-    def __init__(self, db: Database, client: Any):
+    def __init__(self, db: Database, client: Any, translation: Any = None):
         self.db = db
         self.client = client
+        self.translation = translation
+
+    def translate_text(self, text: str) -> dict[str, Any]:
+        """On-demand machine translation for a single original term."""
+        if not self.translation:
+            raise ValueError("translation service not configured")
+        clean = (text or "").strip()
+        if not clean:
+            raise ValueError("text is required")
+        translation = self.translation.translate_one(clean).strip()
+        return {"text": clean, "translation": translation, "provider": self.translation.config()["provider"]}
+
+    def generate_suggestions(self, limit: int = 20) -> dict[str, Any]:
+        """Machine-translate the top unconfigured remote tags into reviewable
+        `status='suggested'` dictionary rows. Does NOT link work_tags — that
+        only happens when a human confirms/applies the suggestion."""
+        if not self.translation:
+            raise ValueError("translation service not configured")
+        limit = max(1, min(int(limit), 50))
+        candidates = self.candidates(status="unconfigured", limit=limit)["result"]
+        pending: list[tuple[str, str, int]] = []
+        for candidate in candidates:
+            original = candidate.get("name") or candidate.get("slug")
+            remote_id = candidate.get("id")
+            if not original or remote_id is None:
+                continue
+            pending.append((str(original), str(candidate.get("type") or "tag"), int(remote_id)))
+        if not pending:
+            return {"generated": 0, "items": []}
+        translations = self.translation.translate([item[0] for item in pending])
+        items: list[dict[str, Any]] = []
+        for (original, tag_type, remote_id), zh in zip(pending, translations):
+            zh_name = (zh or "").strip()
+            if not zh_name:
+                continue
+            self._upsert_suggestion(original, zh_name, tag_type, remote_id)
+            items.append({"original_text": original, "zh_name": zh_name, "tag_type": tag_type, "remote_tag_id": remote_id})
+        return {"generated": len(items), "items": items}
+
+    def _upsert_suggestion(self, original_text: str, zh_name: str, tag_type: str, remote_tag_id: int) -> None:
+        key = normalize_key(original_text)
+        existing = self.db.fetchone(
+            "SELECT id, status, locked FROM local_tag_dictionary WHERE normalized_key = ? AND tag_type = ?",
+            (key, tag_type),
+        )
+        if existing:
+            # Never overwrite a human-curated or locked entry with a machine guess.
+            if existing["locked"] or existing["status"] in {"configured", "review", "ignored"}:
+                return
+            self.db.execute(
+                """
+                UPDATE local_tag_dictionary
+                SET zh_name = ?, remote_tag_id = ?, status = 'suggested', source = 'machine', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (zh_name, remote_tag_id, existing["id"]),
+            )
+            return
+        self.db.execute(
+            """
+            INSERT INTO local_tag_dictionary
+              (original_text, normalized_key, zh_name, tag_type, remote_tag_id, scope_json, note, status,
+               confidence, locked, ignored, source)
+            VALUES (?, ?, ?, ?, ?, '{}', NULL, 'suggested', 80, 0, 0, 'machine')
+            """,
+            (original_text, key, zh_name, tag_type, remote_tag_id),
+        )
 
     def summary(self) -> dict[str, int]:
         remote_total = self.db.fetchone("SELECT COUNT(*) AS value FROM remote_tags")["value"]
@@ -22,8 +89,10 @@ class DictionaryService:
         ignored = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 1 OR status = 'ignored'")["value"]
         review = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0 AND status = 'review'")["value"]
         suggestions = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0 AND status = 'suggested'")["value"]
+        # A remote tag counts as "handled" once it has any dictionary row — configured
+        # OR ignored (ignored = intentionally kept as original, no translation needed).
         mapped_remote = self.db.fetchone(
-            "SELECT COUNT(DISTINCT remote_tag_id) AS value FROM local_tag_dictionary WHERE remote_tag_id IS NOT NULL AND ignored = 0"
+            "SELECT COUNT(DISTINCT remote_tag_id) AS value FROM local_tag_dictionary WHERE remote_tag_id IS NOT NULL"
         )["value"]
         return {
             "unconfigured": max(0, int(remote_total or 0) - int(mapped_remote or 0)),
@@ -168,6 +237,8 @@ class DictionaryService:
             where.append("(d.ignored = 1 OR d.status = 'ignored')")
         elif status == "review":
             where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'review'")
+        elif status == "suggested":
+            where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'suggested'")
         if tag_type != "all":
             where.append("COALESCE(r.type, d.tag_type) = ?")
             params.append(tag_type)
@@ -203,7 +274,7 @@ class DictionaryService:
         params.extend([max(1, min(limit, 100)), max(0, offset)])
         rows = self.db.fetchall(sql, params)
         result = [_remote_tag_result(row, source="candidate") for row in rows]
-        if status in {"all", "configured", "review", "ignored"} and (not q or len(result) < limit):
+        if status in {"all", "configured", "review", "suggested", "ignored"} and (not q or len(result) < limit):
             result.extend(self._local_only_candidates(q, status, tag_type, max(0, limit - len(result))))
         return {"result": result}
 
@@ -299,7 +370,10 @@ class DictionaryService:
 
     def apply(self, payload: dict[str, Any]) -> dict[str, Any]:
         cleaned = self._clean_payload(payload)
-        if not cleaned["original_text"] or not cleaned["zh_name"]:
+        if not cleaned["original_text"]:
+            raise ValueError("original_text is required")
+        # Ignored terms intentionally keep the original text and need no Chinese name.
+        if not cleaned["zh_name"] and cleaned["status"] != "ignored":
             raise ValueError("original_text and zh_name are required")
         existing = self.db.fetchone(
             "SELECT id, locked FROM local_tag_dictionary WHERE normalized_key = ? AND tag_type = ?",
@@ -540,6 +614,8 @@ class DictionaryService:
             where.append("(d.ignored = 1 OR d.status = 'ignored')")
         elif status == "review":
             where.append("d.ignored = 0 AND d.status = 'review'")
+        elif status == "suggested":
+            where.append("d.ignored = 0 AND d.status = 'suggested'")
         if tag_type != "all":
             where.append("d.tag_type = ?")
             params.append(tag_type)

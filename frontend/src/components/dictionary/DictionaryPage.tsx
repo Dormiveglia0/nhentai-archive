@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { Languages, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -45,6 +45,7 @@ export function DictionaryPage() {
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
 
   useEffect(() => {
     if (!bulkOpen) return;
@@ -132,6 +133,32 @@ export function DictionaryPage() {
     setForm(EMPTY_FORM);
   }
 
+  async function suggestBatch() {
+    setSuggesting(true);
+    setMessage(null);
+    try {
+      const settings = await api.settings();
+      const limit = settings.machine_translation?.batch_limit ?? 20;
+      const result = await api.dictionarySuggestBatch(limit);
+      setMessage(
+        result.generated > 0
+          ? `已生成 ${result.generated} 条机翻建议，请在候选池按「机器建议」筛选并逐条复核。`
+          : "没有可生成建议的未配置远端 tag。"
+      );
+      if (result.generated > 0) {
+        setStatus("suggested");
+        setOffset(0);
+        await loadSummary();
+      } else {
+        await refreshList();
+      }
+    } catch (exc) {
+      setMessage(exc instanceof Error ? exc.message : String(exc));
+    } finally {
+      setSuggesting(false);
+    }
+  }
+
   async function previewApply() {
     setLoading(true);
     setMessage(null);
@@ -161,13 +188,22 @@ export function DictionaryPage() {
   }
 
   async function ignore() {
-    if (!dictionaryId) return;
+    if (!form.original_text.trim()) return;
     setLoading(true);
+    setMessage(null);
     try {
-      await api.dictionaryIgnore(dictionaryId);
-      setMessage("已忽略该词条。");
+      let nextId = dictionaryId;
+      if (dictionaryId) {
+        await api.dictionaryIgnore(dictionaryId);
+      } else {
+        // Ignoring an unconfigured tag: create an ignored row that keeps the original.
+        const result = await api.dictionaryApply({ ...form, status: "ignored", ignored: true });
+        nextId = result.dictionary.id;
+        setDictionaryId(nextId);
+      }
+      setMessage("已忽略该标签，保留原文不翻译。");
       await refreshList();
-      if (selected) await loadEvidence(selected, dictionaryId);
+      if (selected) await loadEvidence(selected, nextId ?? null);
     } catch (exc) {
       setMessage(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -221,6 +257,15 @@ export function DictionaryPage() {
       </div>
 
       <DictionarySummaryStrip summary={summary} />
+
+      <div className="dictionary-mt-bar">
+        <button type="button" onClick={() => void suggestBatch()} disabled={loading || suggesting}>
+          <Languages size={15} />
+          {suggesting ? "生成中…" : "批量机翻未配置项"}
+        </button>
+        <span>用设置里的机翻服务，为未配置的远端 tag 生成「机器建议」，逐条复核后再应用到作品。</span>
+      </div>
+
       {message ? <div className="notice slim dictionary-notice">{message}</div> : null}
 
       <div className="dictionary-workspace">
