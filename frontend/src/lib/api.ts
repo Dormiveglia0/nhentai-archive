@@ -294,12 +294,19 @@ export type GovernanceAggregate = {
 export type GovernanceApplyPayload = {
   metadata: Array<{ field: string; value: string | null; source: "manual" | "remote" | "comicinfo" | "current" }>;
   dictionary_apply?: DictionaryApplyPayload[];
+  write_back?: boolean;
 };
 
 export type GovernanceApplyResult = {
   saved: number;
   dictionary: DictionaryApplyResult[];
   governance: GovernanceAggregate;
+  write_back?: {
+    written?: boolean;
+    fields?: Record<string, string>;
+    new_size_bytes?: number;
+    error?: string;
+  };
 };
 
 export type ExportBlocker = {

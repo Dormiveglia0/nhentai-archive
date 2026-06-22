@@ -6,12 +6,16 @@ export function GovernanceActionBar({
   workId,
   changedCount,
   saving,
+  writeBack,
+  onWriteBackChange,
   onSave,
   onReload,
 }: {
   workId: number;
   changedCount: number;
   saving: boolean;
+  writeBack: boolean;
+  onWriteBackChange: (value: boolean) => void;
   onSave: () => Promise<void>;
   onReload: () => Promise<void>;
 }) {
@@ -21,6 +25,15 @@ export function GovernanceActionBar({
         <Save size={17} />
         {saving ? "保存中..." : `保存修改${changedCount ? ` (${changedCount})` : ""}`}
       </button>
+      <label className="governance-writeback">
+        <input
+          type="checkbox"
+          checked={writeBack}
+          onChange={(event) => onWriteBackChange(event.target.checked)}
+        />
+        同时回写源文件（ComicInfo）
+        <span className="governance-writeback-hint">将就地改写源 CBZ，不可撤销</span>
+      </label>
       <button className="governance-action" type="button" onClick={() => navigate({ name: "dictionary" })}>
         <Tags size={16} />
         管理词典

@@ -22,6 +22,7 @@ export function useGovernanceState(initialWorkId?: number) {
   const [edits, setEdits] = useState<Record<string, FieldEdit>>({});
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [writeBack, setWriteBack] = useState(false);
 
   useEffect(() => {
     setSelectedId(initialWorkId ?? null);
@@ -101,6 +102,9 @@ export function useGovernanceState(initialWorkId?: number) {
       setNotice("没有需要保存的修改。");
       return;
     }
+    if (writeBack && !window.confirm("将就地改写源 CBZ 的 ComicInfo，此操作不可撤销。是否继续？")) {
+      return;
+    }
     setSaving(true);
     setNotice(null);
     setError(null);
@@ -110,10 +114,19 @@ export function useGovernanceState(initialWorkId?: number) {
         value: edits[field.field].value.trim() || null,
         source: edits[field.field].source,
       }));
-      const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: changed });
+      const result = await api.applyWorkGovernance(aggregate.work.id, {
+        metadata: changed,
+        write_back: writeBack,
+      });
       setAggregate(result.governance);
       setQueue(await api.governanceQueue());
-      setNotice(`已保存 ${result.saved} 个字段。`);
+      if (result.write_back?.error) {
+        setNotice(`已保存 ${result.saved} 个字段，但回写源文件失败：${result.write_back.error}`);
+      } else if (result.write_back?.written) {
+        setNotice(`已保存 ${result.saved} 个字段，并回写 ComicInfo 到源文件。`);
+      } else {
+        setNotice(`已保存 ${result.saved} 个字段。`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -161,6 +174,8 @@ export function useGovernanceState(initialWorkId?: number) {
     onlyDiff,
     setOnlyDiff,
     saving,
+    writeBack,
+    setWriteBack,
     changedFields,
     changeField,
     reload,
