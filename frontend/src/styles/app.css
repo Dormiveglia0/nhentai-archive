@@ -8162,9 +8162,9 @@ button.gallery-tag:hover {
   border: 0;
   cursor: pointer;
 }
-.reader-zone-left { left: 0; width: 33%; }
-.reader-zone-center { left: 33%; width: 34%; cursor: default; }
-.reader-zone-right { right: 0; width: 33%; }
+/* 以图片中心点(视口中线)分割左右半屏,两侧皆翻页 */
+.reader-zone-left { left: 0; width: 50%; }
+.reader-zone-right { right: 0; width: 50%; }
 
 /* webtoon */
 .reader-webtoon {
@@ -8198,6 +8198,7 @@ button.gallery-tag:hover {
 .reader-toolbar button {
   display: inline-flex;
   align-items: center;
+  flex: none;
   gap: 0.3rem;
   padding: 0.35rem 0.55rem;
   border-radius: 0.55rem;
@@ -8210,17 +8211,101 @@ button.gallery-tag:hover {
 .reader-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
 .reader-toolbar button.active { background: rgba(120, 150, 255, 0.28); border-color: rgba(120, 150, 255, 0.6); }
 .reader-toolbar button.primary-action { background: rgba(120, 150, 255, 0.85); border-color: transparent; color: #0b0d14; }
-.reader-toolbar .back-button { min-height: auto; }
+.reader-toolbar .back-button { min-height: auto; flex: none; }
+/* 进度条移至底部后,标题占据腾出的空间,尽量多显示 */
 .reader-toolbar .reader-title {
-  max-width: 22ch;
+  flex: 1;
+  min-width: 4ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
 }
 .reader-toolbar .reader-counter { font-variant-numeric: tabular-nums; font-size: 0.85rem; }
-.reader-toolbar-spacer { flex: 1; }
-.reader-toolbar progress { width: 90px; height: 6px; }
+
+/* 底部进度条(点击跳页 / 拖动切换) */
+.reader-scrubber {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.6rem 1.4rem 1rem;
+  background: linear-gradient(0deg, rgba(8, 10, 16, 0.95), rgba(8, 10, 16, 0));
+}
+.reader-scrubber-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.reader-scrubber-counter {
+  flex: none;
+  min-width: 5.5ch;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #d4d8ec;
+}
+.reader-scrubber-track {
+  position: relative;
+  flex: 1;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+.reader-scrubber-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  transition: height 0.16s ease;
+}
+.reader-scrubber-track:hover .reader-scrubber-rail,
+.reader-scrubber-row.dragging .reader-scrubber-rail {
+  height: 8px;
+}
+.reader-scrubber-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #6e8bff, #9d7bff);
+  border-radius: 999px;
+}
+.reader-scrubber-knob {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(120, 150, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(120, 150, 255, 0.35);
+  transform: translateX(-50%);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  pointer-events: none;
+}
+.reader-scrubber-track:hover .reader-scrubber-knob,
+.reader-scrubber-row.dragging .reader-scrubber-knob {
+  transform: translateX(-50%) scale(1.22);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 0 6px rgba(120, 150, 255, 0.22);
+}
+.reader-scrubber-bubble {
+  position: absolute;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.45rem;
+  background: rgba(14, 16, 24, 0.98);
+  border: 1px solid rgba(120, 150, 255, 0.45);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
 
 /* 抽屉面板 */
 .reader-panel {
@@ -8249,33 +8334,87 @@ button.gallery-tag:hover {
   cursor: pointer;
 }
 
-/* 缩略图 */
-.reader-thumbs-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  padding: 0.8rem;
-  overflow-y: auto;
+/* 缩略图悬浮平铺:无独立窗口,仅模糊背景;按数量自适应缩放,整屏放下不滚动 */
+.reader-thumb-field {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 左右留出更宽的空白用于点击退出 */
+  padding: 32px clamp(40px, 7vw, 160px);
+  overflow: hidden;
+  background: rgba(6, 7, 12, 0.6);
+  backdrop-filter: blur(10px);
 }
-.reader-thumbs-grid button {
+.reader-thumb-stage {
+  display: grid;
+  place-content: center;
+  /* 滚动时不显示滚动条:滚轮 / 触摸拖动滚动,点击空白处仍可退出 */
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+.reader-thumb-stage::-webkit-scrollbar { display: none; }
+.reader-thumb-tile {
   position: relative;
   padding: 0;
-  border: 2px solid transparent;
+  border: 0;
   border-radius: 0.5rem;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  will-change: transform;
 }
-.reader-thumbs-grid button.active { border-color: rgba(120, 150, 255, 0.85); }
-.reader-thumbs-grid img { width: 100%; display: block; aspect-ratio: 3 / 4; object-fit: cover; }
-.reader-thumbs-grid span {
+.reader-thumb-tile.active {
+  outline-color: rgba(120, 150, 255, 0.95);
+  box-shadow: 0 10px 30px rgba(80, 110, 255, 0.55);
+}
+.reader-thumb-tile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.reader-thumb-skeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.04) 30%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.04) 70%
+  );
+  background-size: 200% 100%;
+  animation: reader-thumb-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes reader-thumb-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.reader-thumb-fail {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: #8b90a6;
+  background: rgba(255, 255, 255, 0.04);
+}
+.reader-thumb-tile span {
   position: absolute;
   bottom: 0;
   right: 0;
-  padding: 0 0.35rem;
+  padding: 0.05rem 0.4rem;
   font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
   background: rgba(0, 0, 0, 0.6);
-  border-top-left-radius: 0.35rem;
+  border-top-left-radius: 0.4rem;
 }
 
 /* 信息面板 */
@@ -8307,7 +8446,7 @@ button.gallery-tag:hover {
 .reader-notice {
   position: absolute;
   left: 50%;
-  bottom: 1.2rem;
+  bottom: 3.6rem;
   transform: translateX(-50%);
   z-index: 55;
 }
@@ -8386,7 +8525,7 @@ button.gallery-tag:hover {
 
 @media (max-width: 720px) {
   .reader-toolbar { flex-wrap: wrap; }
-  .reader-toolbar .reader-title { max-width: 12ch; }
-  .reader-thumbs-grid { grid-template-columns: repeat(3, 1fr); }
+  .reader-toolbar .reader-title { flex-basis: 100%; order: -1; }
+  .reader-thumb-field { padding: 20px clamp(24px, 9vw, 64px); }
 }
 /* =================== /Reader =================== */

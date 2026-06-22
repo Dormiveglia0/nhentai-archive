@@ -16,20 +16,34 @@ test("显示页码计数并能下一页", async ({ page }) => {
 });
 
 test("切换到连续滚动模式", async ({ page }) => {
-  await page.getByRole("button", { name: "连续滚动模式" }).click();
+  await page.getByRole("button", { name: "滚动阅读" }).click();
   await expect(page.locator(".reader-webtoon")).toBeVisible();
 });
 
-test("打开缩略图面板并跳页", async ({ page }) => {
+test("打开缩略图浮层并跳页", async ({ page }) => {
   await page.getByRole("button", { name: "缩略图" }).click();
-  await expect(page.locator(".reader-thumbs")).toBeVisible();
-  await page.locator(".reader-thumbs-grid button").nth(2).click();
+  await expect(page.locator(".reader-thumb-field")).toBeVisible();
+  await page.locator(".reader-thumb-tile").nth(2).click();
+  await expect(page.locator(".reader-thumb-field")).toHaveCount(0);
+  await page.mouse.move(20, 20);
   await expect(page.locator(".reader-counter")).toContainText("3 /");
 });
 
 test("打开信息面板含阅读设置", async ({ page }) => {
   await page.getByRole("button", { name: "信息" }).click();
   await expect(page.getByText("阅读设置")).toBeVisible();
+});
+
+test("底部进度条点击跳页", async ({ page }) => {
+  const track = page.locator(".reader-scrubber-track");
+  const box = await track.boundingBox();
+  if (!box) throw new Error("scrubber track not found");
+  await track.click({ position: { x: box.width - 2, y: box.height / 2 } });
+  await page.mouse.move(20, 20);
+  const counter = page.locator(".reader-counter");
+  const text = (await counter.textContent()) ?? "";
+  const [current, total] = text.split("/").map((part) => Number(part.trim()));
+  expect(current).toBe(total);
 });
 
 test("g 键数字跳页", async ({ page }) => {

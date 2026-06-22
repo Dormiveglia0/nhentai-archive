@@ -13,9 +13,10 @@ import {
 } from "./readerHelpers";
 import { ReaderInfoPanel } from "./ReaderInfoPanel";
 import { ReaderJumpDialog } from "./ReaderJumpDialog";
+import { ReaderScrubber } from "./ReaderScrubber";
 import { ReaderToolbar } from "./ReaderToolbar";
 import { ReaderViewport } from "./ReaderViewport";
-import { ThumbnailPanel } from "./ThumbnailPanel";
+import { ThumbnailOverlay } from "./ThumbnailOverlay";
 import { ReaderSource, useReaderData } from "./useReaderData";
 import { useReaderChrome } from "./useReaderChrome";
 import { useReaderPrefs } from "./useReaderPrefs";
@@ -165,7 +166,6 @@ export function ReaderPage({ source, privacyMode }: Props) {
         isRemote={data.isRemote}
         pageIndex={data.pageIndex}
         pageCount={data.pageCount}
-        progressPercent={data.progressPercent}
         mode={prefs.mode}
         direction={prefs.direction}
         fit={prefs.fit}
@@ -184,13 +184,20 @@ export function ReaderPage({ source, privacyMode }: Props) {
         onPanelHoverChange={setPinned}
       />
 
-      <ThumbnailPanel
+      <ReaderScrubber
+        visible={chromeVisible}
+        pageIndex={data.pageIndex}
+        pageCount={data.pageCount}
+        onJump={jump}
+        onScrubChange={setPinned}
+      />
+
+      <ThumbnailOverlay
         open={activePanel === "thumbnails"}
         pages={data.pages}
         pageIndex={data.pageIndex}
         onJump={jump}
         onClose={() => setActivePanel("none")}
-        onHoverChange={setPinned}
       />
 
       <ReaderInfoPanel

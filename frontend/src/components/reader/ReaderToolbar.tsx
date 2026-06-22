@@ -7,7 +7,6 @@ import {
   Image as ImageIcon,
   Info,
   Maximize,
-  Maximize2,
   Minus,
   Plus,
   ScrollText,
@@ -22,7 +21,6 @@ type ReaderToolbarProps = {
   isRemote: boolean;
   pageIndex: number;
   pageCount: number;
-  progressPercent: number;
   mode: Mode;
   direction: Direction;
   fit: Fit;
@@ -50,7 +48,6 @@ export function ReaderToolbar(props: ReaderToolbarProps) {
     isRemote,
     pageIndex,
     pageCount,
-    progressPercent,
     mode,
     direction,
     fit,
@@ -87,34 +84,21 @@ export function ReaderToolbar(props: ReaderToolbarProps) {
             {title}
           </span>
 
-          <div className="reader-toolbar-spacer" />
-
           <button type="button" onClick={() => onFlip(-1)} disabled={pageIndex <= 1} aria-label="上一页">
             <ChevronLeft size={17} />
           </button>
-          <span className="reader-counter">
-            {pageIndex} / {pageCount}
-          </span>
           <button type="button" onClick={() => onFlip(1)} disabled={pageIndex >= pageCount} aria-label="下一页">
             <ChevronRight size={17} />
           </button>
-          <progress max={100} value={progressPercent} />
 
           <button
             type="button"
-            className={mode === "single" ? "active" : ""}
-            onClick={() => onSetMode("single")}
-            aria-label="单页模式"
-          >
-            <Maximize2 size={17} />
-          </button>
-          <button
-            type="button"
             className={mode === "webtoon" ? "active" : ""}
-            onClick={() => onSetMode("webtoon")}
-            aria-label="连续滚动模式"
+            onClick={() => onSetMode(mode === "webtoon" ? "single" : "webtoon")}
+            aria-label="滚动阅读"
           >
             <ScrollText size={17} />
+            滚动阅读
           </button>
 
           <button type="button" onClick={onToggleDirection} aria-label="阅读方向">

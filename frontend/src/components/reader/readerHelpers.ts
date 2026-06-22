@@ -7,6 +7,8 @@ export type ReaderPageItem = {
   key: string;
   pageIndex: number;
   src: string;
+  /** 缩略图地址(本地有专用缩略图端点);缺省时回退到 src。 */
+  thumbSrc?: string;
 };
 
 export type ReaderPrefs = {

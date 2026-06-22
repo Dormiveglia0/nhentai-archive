@@ -35,6 +35,10 @@ class Settings:
         return self.data_dir / "pages"
 
     @property
+    def thumbs_dir(self) -> Path:
+        return self.data_dir / "thumbs"
+
+    @property
     def tmp_dir(self) -> Path:
         return self.data_dir / "tmp"
 
@@ -48,6 +52,7 @@ class Settings:
             self.library_dir,
             self.covers_dir,
             self.page_cache_dir,
+            self.thumbs_dir,
             self.tmp_dir,
             self.export_dir,
         ):

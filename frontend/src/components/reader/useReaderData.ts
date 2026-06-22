@@ -86,6 +86,7 @@ export function useReaderData(source: ReaderSource) {
         key: `local-${page.id}`,
         pageIndex: page.page_index,
         src: `/api/works/${stableSource.workId}/pages/${page.page_index}`,
+        thumbSrc: `/api/works/${stableSource.workId}/pages/${page.page_index}/thumb`,
       }));
     }
     return (gallery?.pages ?? [])

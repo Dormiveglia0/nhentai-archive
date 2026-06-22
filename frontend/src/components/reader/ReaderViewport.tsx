@@ -54,7 +54,6 @@ export function ReaderViewport({
           zoom={zoom}
           direction={direction}
           onFlip={onFlip}
-          onToggleChrome={onToggleChrome}
           emptyHint={emptyHint}
         />
       )}

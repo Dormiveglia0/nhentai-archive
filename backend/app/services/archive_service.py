@@ -5,8 +5,11 @@ import mimetypes
 import re
 import shutil
 import zipfile
+from io import BytesIO
 from pathlib import Path
 from typing import Any
+
+from PIL import Image
 
 from app.config import Settings
 from app.database import Database
@@ -142,6 +145,22 @@ class ArchiveService:
         with zipfile.ZipFile(archive_file["path"]) as archive:
             return archive.read(page["archive_member"]), page["media_type"]
 
+    def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320) -> tuple[bytes, str]:
+        """Return a downscaled JPEG for a page, generating and caching it on first use."""
+        width = max(64, min(width, 1024))
+        cache_path = self.settings.thumbs_dir / f"{work_id}-{page_index}-{width}.jpg"
+        if cache_path.exists():
+            return cache_path.read_bytes(), "image/jpeg"
+
+        body, _ = self.read_page(work_id, page_index)
+        thumb_bytes = _make_thumbnail(body, width)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        # Write atomically so a concurrent reader never sees a half-written file.
+        tmp_path = cache_path.with_suffix(".jpg.tmp")
+        tmp_path.write_bytes(thumb_bytes)
+        tmp_path.replace(cache_path)
+        return thumb_bytes, "image/jpeg"
+
     def _store_archive(
         self,
         work_id: int,
@@ -197,6 +216,17 @@ class ArchiveService:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
                 digest.update(chunk)
         return digest.hexdigest()
+
+
+def _make_thumbnail(body: bytes, width: int) -> bytes:
+    with Image.open(BytesIO(body)) as image:
+        image = image.convert("RGB")
+        if image.width > width:
+            height = round(image.height * (width / image.width))
+            image = image.resize((width, height), Image.LANCZOS)
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG", quality=78, optimize=True)
+        return buffer.getvalue()
 
 
 def _safe_filename(name: str | None, max_length: int = _MAX_NAME_LENGTH) -> str:

@@ -7,11 +7,10 @@ type SinglePageViewProps = {
   zoom: number;
   direction: Direction;
   onFlip: (delta: number) => void;
-  onToggleChrome: () => void;
   emptyHint: string;
 };
 
-export function SinglePageView({ page, fit, zoom, direction, onFlip, onToggleChrome, emptyHint }: SinglePageViewProps) {
+export function SinglePageView({ page, fit, zoom, direction, onFlip, emptyHint }: SinglePageViewProps) {
   if (!page) {
     return <p className="reader-empty">{emptyHint}</p>;
   }
@@ -22,12 +21,6 @@ export function SinglePageView({ page, fit, zoom, direction, onFlip, onToggleChr
         className="reader-zone reader-zone-left"
         aria-label="左侧点击区"
         onClick={() => onFlip(clickZoneDelta("left", direction))}
-      />
-      <button
-        type="button"
-        className="reader-zone reader-zone-center"
-        aria-label="切换工具栏"
-        onClick={onToggleChrome}
       />
       <button
         type="button"
