@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +10,7 @@ from typing import Any
 from xml.etree import ElementTree
 
 from app.database import Database
+from app.services import comicinfo
 
 
 METADATA_FIELDS = {
@@ -40,9 +43,10 @@ TAG_GROUP_LABELS = {
 class GovernanceService:
     """Local-only metadata/tag governance aggregate backed by SQLite and stored CBZ files."""
 
-    def __init__(self, db: Database, dictionary_service: Any | None = None):
+    def __init__(self, db: Database, dictionary_service: Any | None = None, settings: Any | None = None):
         self.db = db
         self.dictionary_service = dictionary_service
+        self.settings = settings
 
     def queue(self) -> dict[str, Any]:
         rows = self.db.fetchall(
@@ -171,6 +175,54 @@ class GovernanceService:
             dictionary_results.append(self.dictionary_service.apply(dictionary_payload))
 
         return {"saved": saved, "dictionary": dictionary_results, "governance": self.work_governance(work_id)}
+
+    def write_back_comicinfo(self, work_id: int) -> dict[str, Any]:
+        if self.settings is None:
+            raise ValueError("write-back requires settings (library directory)")
+        aggregate = self.work_governance(work_id)
+        row = self.db.fetchone(
+            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (work_id,),
+        )
+        source_path = Path(row["path"]).resolve() if row and row["path"] else None
+        if source_path is None or not source_path.exists() or not zipfile.is_zipfile(source_path):
+            raise ValueError("源 CBZ 文件不存在或不是有效 ZIP，无法回写。")
+        library_root = self.settings.library_dir.resolve()
+        if not (source_path == library_root or library_root in source_path.parents):
+            raise ValueError("源文件不在受管 library 目录内，拒绝回写。")
+
+        fields = comicinfo.build_fields(aggregate)
+        xml = comicinfo.to_xml(fields)
+        data = comicinfo.reseal_cbz(source_path, xml, keep_json=True, compress=True)
+
+        tmp_path = source_path.with_suffix(source_path.suffix + ".tmp")
+        try:
+            with open(tmp_path, "wb") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp_path, source_path)
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+
+        new_sha256 = hashlib.sha256(data).hexdigest()
+        new_size = len(data)
+        self.db.execute(
+            "UPDATE work_files SET sha256 = ?, size_bytes = ? "
+            "WHERE work_id = ? AND kind = 'source_cbz'",
+            (new_sha256, new_size, work_id),
+        )
+        self.db.execute(
+            "UPDATE works SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (work_id,)
+        )
+        return {
+            "written": True,
+            "fields": fields,
+            "new_sha256": new_sha256,
+            "new_size_bytes": new_size,
+        }
 
     def _queue_reasons(self, row: dict[str, Any]) -> list[dict[str, Any]]:
         reasons: list[dict[str, Any]] = []
