@@ -502,6 +502,15 @@ def get_page(work_id: int, page_index: int):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.get("/api/works/{work_id}/pages/{page_index}/thumb")
+def get_page_thumbnail(work_id: int, page_index: int, w: int = 320):
+    try:
+        body, media_type = archive.read_page_thumbnail(work_id, page_index, w)
+        return Response(content=body, media_type=media_type, headers={"Cache-Control": "max-age=86400"})
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @app.get("/api/works/{work_id}/reader-state")
 def get_reader_state(work_id: int):
     return reader.get_state(work_id)

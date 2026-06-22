@@ -43,6 +43,26 @@ def test_archive_service_indexes_cbz_image_pages_in_natural_order(tmp_path):
     assert pages[0]["media_type"] == "image/png"
 
 
+def test_archive_service_generates_and_caches_page_thumbnail(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    cbz_path = tmp_path / "book.cbz"
+    make_tiny_cbz(cbz_path)
+
+    service = ArchiveService(db, settings)
+    work_id = service.ingest_cbz(cbz_path, source="local", title="Tiny Archive", remote_gallery_id=None, metadata={})
+
+    body, media_type = service.read_page_thumbnail(work_id, 1, width=64)
+
+    assert media_type == "image/jpeg"
+    assert body[:2] == b"\xff\xd8"  # JPEG SOI marker
+    cache_file = settings.thumbs_dir / f"{work_id}-1-64.jpg"
+    assert cache_file.exists()
+    # Second call must hit the cache and return identical bytes.
+    assert service.read_page_thumbnail(work_id, 1, width=64)[0] == body
+
+
 def test_reader_service_upserts_progress_and_history(tmp_path):
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
     db = Database(settings.database_path)

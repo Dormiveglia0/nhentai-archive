@@ -40,32 +40,33 @@ export function ExportInspector({
 }: ExportInspectorProps) {
   const count = selectedItems.length;
   const downloadLabel = count > 1 ? `下载所选 ${count} 项 (.zip)` : "下载此作品";
-  const comicEntries = preview ? Object.entries(preview.comic_info) : [];
-  const writesComicInfo = preview?.will_write.includes("ComicInfo.xml") ?? false;
-  const keepsJson = (preview?.will_keep.length ?? 0) > 0;
-  const compresses = preview?.options.compress ?? true;
-  const issues = preview ? [...preview.blockers, ...preview.warnings] : [];
-  const canDownloadCurrent = Boolean(preview && preview.blockers.length === 0);
+  const currentPreview = preview && focusItem && preview.work.id === focusItem.work.id ? preview : null;
+  const comicEntries = currentPreview ? Object.entries(currentPreview.comic_info) : [];
+  const writesComicInfo = currentPreview?.will_write.includes("ComicInfo.xml") ?? false;
+  const keepsJson = (currentPreview?.will_keep.length ?? 0) > 0;
+  const compresses = currentPreview?.options.compress ?? true;
+  const issues = currentPreview ? [...currentPreview.blockers, ...currentPreview.warnings] : [];
+  const canDownloadCurrent = Boolean(currentPreview && !previewLoading && currentPreview.blockers.length === 0);
   const canDownloadSelection = selectedItems.some((item) => item.blockers.length === 0);
   const primaryDisabled = downloading || (count > 1 ? !canDownloadSelection : !canDownloadCurrent);
   const primaryDownload = () => {
     if (count > 1) onDownload();
-    else if (preview) onDownloadOne(preview.work.id);
+    else if (currentPreview) onDownloadOne(currentPreview.work.id);
   };
 
   return (
     <aside className="export-inspector">
-      {preview && focusItem ? (
+      {currentPreview && focusItem ? (
         <FadeIn
-          key={`focus-${preview.work.id}-${writesComicInfo}-${keepsJson}-${compresses}`}
+          key={`focus-${currentPreview.work.id}-${writesComicInfo}-${keepsJson}-${compresses}`}
           y={8}
           className="export-inspector-detail"
         >
           {/* Focus head */}
           <div className="export-inspector-head">
-            <Cover workId={preview.work.id} coverPath={preview.work.cover_path} blurCovers={blurCovers} />
+            <Cover workId={currentPreview.work.id} coverPath={currentPreview.work.cover_path} blurCovers={blurCovers} />
             <div className="export-inspector-head-text">
-              <strong>{workTitle(preview.work)}</strong>
+              <strong>{workTitle(currentPreview.work)}</strong>
               <label className="export-inspector-name-label">
                 <span>输出名</span>
                 <input
@@ -115,7 +116,7 @@ export function ExportInspector({
               {issues.map((issue) => (
                 <p
                   key={`${issue.code}-${issue.message}`}
-                  className={preview.blockers.includes(issue) ? "blocked" : ""}
+                  className={currentPreview.blockers.includes(issue) ? "blocked" : ""}
                 >
                   <AlertTriangle size={13} />
                   {issue.message}
@@ -195,12 +196,12 @@ export function ExportInspector({
             </button>
 
             {/* Secondary action: download only current */}
-            {count > 1 && preview && preview.blockers.length === 0 ? (
+            {count > 1 && currentPreview && currentPreview.blockers.length === 0 ? (
               <button
                 type="button"
                 className="export-secondary-button"
-                disabled={downloading}
-                onClick={() => onDownloadOne(preview.work.id)}
+                disabled={downloading || previewLoading}
+                onClick={() => onDownloadOne(currentPreview.work.id)}
               >
                 仅下载当前作品
               </button>
