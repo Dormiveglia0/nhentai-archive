@@ -89,11 +89,13 @@ Current real slice:
   - Empty library and empty filtered result are distinct real empty states; pagination uses the icon pager so large libraries never render every work at once.
   - Removed the orphaned legacy library CSS (`.filter-ribbon`, `.stats`, old `.work-card*`) replaced by the new `.library-*` system; retargeted the shared progress rule to `.library-card`.
 
+- 治理 ComicInfo 回写源 CBZ：新增共享模块 `comicinfo.py`（ComicInfo 字段生成/XML/zip 重封，ExportService 与回写共用，保证导出下载与源回写产出一致）。`GovernanceService.write_back_comicinfo` 把治理后的 ComicInfo 就地原子写进源 CBZ：写同目录 tmp → fsync → `os.replace`，无备份；只换 ComicInfo.xml，页面图像字节不变；回写后重算并更新 `work_files.sha256`/`size_bytes`。API `POST /api/works/{id}/governance/apply` 增 `write_back` 开关（默认关），metadata 写入成功后回写失败不回滚、以 `write_back.error` 回显。前端应用面板加默认关闭的「同时回写源文件」复选框 + 风险提示 + 二次确认。
+
 ## Not Implemented Yet
 
 - Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
 - Long-running bulk export jobs through the task center.
-- Governance bulk preview/apply and source-CBZ ComicInfo write-back (dictionary machine translation is now connected; governance does not yet auto-translate metadata).
+- Governance bulk preview/apply (dictionary machine translation is now connected; governance does not yet auto-translate metadata).
 
 ## Next Plan
 
@@ -105,6 +107,7 @@ Current real slice:
 - Decision: 文件管理是管理库内全部文件,不只异常清理;清单含健康作品,所有行可删。
 - Decision: 删除健康作品的源 CBZ = 级联整体移除该作品(works 及全部引用表 + 封面文件)。
 - Decision: 删除是文件管理唯一会动盘的操作;CBZ 永不被修改,只能整体删除;受管目录(library/covers/tmp/exports)之外的任何路径一律拒绝(目录穿越防护)。
+- Decision: 治理 ComicInfo 回写是唯一受认可的源 CBZ 改写（仅 ComicInfo、原子替换、无备份、显式 opt-in、默认关）；导出仍永不写源（导出=下载给用户）；文件管理删除仍是另一条独立动盘操作。回写后必须同步 `work_files.sha256`/`size_bytes` 以维持去重/体积检测的真实性。
 - Decision: `work_files.path`/`works.cover_path` 绝对/相对混用,一律归一化为 `.resolve()` 绝对路径后再判定存在/删除/穿越。
 - Decision: API Key settings and discover correctness are higher priority than expanding modules.
 - Decision: language/type/sort controls must either call real APIs or be disabled; no inert clickable filters.
@@ -126,7 +129,7 @@ Current real slice:
 - Decision: library summary shows only real metrics and still does not fabricate a broad 待治理 count. 待补标签 (works with zero `work_tags`) remains the honest library-level proxy; richer governance detail lives in `GovernanceService`.
 - Decision: library shelves (继续阅读/最近添加) only render with real rows and only in the unfiltered default view; filtering switches to the paginated result wall.
 - Decision: library language filter and language facets derive from `work_tags` rows of type `language` (with dictionary display), not the unused `works.language` column.
-- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only; Phase 5 export creates new CBZ files under the export directory instead of writing back to source archives.
+- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only except for the sanctioned governance ComicInfo write-back (opt-in, default off, ComicInfo-only, atomic replace; see the write-back decision above); Phase 5 export creates new CBZ files under the export directory instead of writing back to source archives.
 - Decision: governance queue and completeness use real local state only. Missing values are shown as missing/unknown; no fake diffs, fake conflicts, or fake recommended actions.
 - Decision: 全站页面内显示的 tag 一律走词典转换名(`display`,即 `zh_name → name → slug`),英文 `name`/`slug` 仅作无词典项时兜底;英文原文只用于后端 NH API 请求等操作,不直接显示给用户。
 - Decision: 作品详情 hero 的封面按**固定高度**约束(放进恒定尺寸卡槽),绝不按长宽比框死,也不裁剪;空余由同图模糊底填充。标签等数量不定的内容**不得**与封面同列并排,须移到独立整宽区域,避免两列高度互相参差、翻书布局抖动。
