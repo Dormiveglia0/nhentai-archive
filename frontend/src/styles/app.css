@@ -8104,7 +8104,8 @@ button.gallery-tag:hover {
   background: #07080c;
   color: #e8eaf2;
   overflow: hidden;
-  z-index: 40;
+  /* 必须高于 task-dock(z-index:40)等浮层,否则后渲染的任务坞会盖住沉浸阅读器 */
+  z-index: 90;
 }
 
 /* 舞台 */
@@ -8320,6 +8321,9 @@ button.gallery-tag:hover {
 
 /* 单图加载失败占位 + 重试 */
 .reader-img-error {
+  /* 抬到点击区(.reader-zone z-index:2)之上,否则单页模式下重试按钮点击会被点击区拦截 */
+  position: relative;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;

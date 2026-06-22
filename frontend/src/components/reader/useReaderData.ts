@@ -25,6 +25,8 @@ export function useReaderData(source: ReaderSource) {
   // identity-stable view of source; updates only when sourceKey changes
   const stableSource = useMemo(() => source, [sourceKey]);
   const persistTimer = useRef<number | null>(null);
+  // 记录最近一次待写入的进度,卸载/切换来源时若 debounce 未触发则立即补写,避免丢失
+  const pendingPersist = useRef<{ workId: number; next: number; done: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +67,16 @@ export function useReaderData(source: ReaderSource) {
     void load();
     return () => {
       cancelled = true;
-      if (persistTimer.current) window.clearTimeout(persistTimer.current);
+      if (persistTimer.current) {
+        window.clearTimeout(persistTimer.current);
+        persistTimer.current = null;
+        const pending = pendingPersist.current;
+        pendingPersist.current = null;
+        if (pending) {
+          // 卸载前 debounce 未触发:补一次写入,避免最后的翻页/完成态丢失
+          void api.updateReaderState(pending.workId, pending.next, pending.done).catch(() => {});
+        }
+      }
     };
   }, [sourceKey]);
 
@@ -112,9 +123,13 @@ export function useReaderData(source: ReaderSource) {
     (next: number, done: boolean) => {
       if (stableSource.kind !== "local") return;
       if (persistTimer.current) window.clearTimeout(persistTimer.current);
+      const workId = stableSource.workId;
+      pendingPersist.current = { workId, next, done };
       persistTimer.current = window.setTimeout(() => {
+        persistTimer.current = null;
+        pendingPersist.current = null;
         api
-          .updateReaderState(stableSource.workId, next, done)
+          .updateReaderState(workId, next, done)
           .then((updated) => setState(updated))
           .catch((exc) => setError(exc instanceof Error ? exc.message : String(exc)));
       }, PERSIST_DEBOUNCE_MS);

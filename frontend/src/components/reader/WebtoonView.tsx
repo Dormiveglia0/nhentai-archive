@@ -15,7 +15,9 @@ type WebtoonViewProps = {
 export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome, emptyHint }: WebtoonViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Map<number, HTMLImageElement>>(new Map());
-  const lastReported = useRef<number>(pageIndex);
+  // -1 哨兵:确保进入 webtoon 时下方“外部跳页”effect 至少滚动一次到当前页,
+  // 否则初值等于 pageIndex 会被提前 return,列表停在顶部并把进度回写成第 1 页。
+  const lastReported = useRef<number>(-1);
 
   // 观测视口中部的页面，回写当前页
   useEffect(() => {
