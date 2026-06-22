@@ -76,6 +76,7 @@ class GovernanceMetadataPatch(BaseModel):
 class GovernanceApplyRequest(BaseModel):
     metadata: list[GovernanceMetadataPatch] = []
     dictionary_apply: list[DictionaryApplyRequest] = []
+    write_back: bool = False
 
 
 class ExportItemRequest(BaseModel):
@@ -119,7 +120,7 @@ reader = ReaderService(db)
 library = LibraryService(db)
 translation = TranslationService(db)
 dictionary = DictionaryService(db, client, translation)
-governance = GovernanceService(db, dictionary)
+governance = GovernanceService(db, dictionary, settings)
 exports = ExportService(db, settings)
 files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)

@@ -152,3 +152,51 @@ def test_write_back_keeps_source_intact_when_reseal_fails(tmp_path, monkeypatch)
         governance.write_back_comicinfo(work_id)
     assert source.read_bytes() == before
     assert list(source.parent.glob("*.tmp")) == []
+
+
+def test_apply_with_write_back_writes_source(tmp_path):
+    _settings, db, archive, governance = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    source = _source_path(db, work_id)
+
+    result = governance.apply(
+        work_id,
+        {"metadata": [{"field": "title", "value": "Applied Title", "source": "manual"}], "write_back": True},
+    )
+
+    assert result["write_back"]["written"] is True
+    with zipfile.ZipFile(source) as written:
+        assert "<Title>Applied Title</Title>" in written.read("ComicInfo.xml").decode()
+
+
+def test_apply_without_write_back_never_touches_source(tmp_path):
+    _settings, db, archive, governance = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    source = _source_path(db, work_id)
+    before = source.read_bytes()
+
+    result = governance.apply(
+        work_id,
+        {"metadata": [{"field": "title", "value": "Applied Title", "source": "manual"}]},
+    )
+
+    assert "write_back" not in result
+    assert source.read_bytes() == before
+
+
+def test_apply_keeps_metadata_when_write_back_fails(tmp_path):
+    _settings, db, archive, governance = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    _source_path(db, work_id).unlink()  # force write-back to fail
+
+    result = governance.apply(
+        work_id,
+        {"metadata": [{"field": "title", "value": "Persisted Title", "source": "manual"}], "write_back": True},
+    )
+
+    assert result["saved"] == 1
+    assert "error" in result["write_back"]
+    saved = db.fetchone(
+        "SELECT value FROM work_metadata WHERE work_id = ? AND field = 'title'", (work_id,)
+    )
+    assert saved["value"] == "Persisted Title"

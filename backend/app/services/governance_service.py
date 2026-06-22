@@ -174,7 +174,17 @@ class GovernanceService:
                 raise ValueError("dictionary apply is not configured")
             dictionary_results.append(self.dictionary_service.apply(dictionary_payload))
 
-        return {"saved": saved, "dictionary": dictionary_results, "governance": self.work_governance(work_id)}
+        response: dict[str, Any] = {
+            "saved": saved,
+            "dictionary": dictionary_results,
+        }
+        if payload.get("write_back"):
+            try:
+                response["write_back"] = self.write_back_comicinfo(work_id)
+            except Exception as exc:  # metadata already persisted; a failed write-back does not roll back
+                response["write_back"] = {"error": str(exc)}
+        response["governance"] = self.work_governance(work_id)
+        return response
 
     def write_back_comicinfo(self, work_id: int) -> dict[str, Any]:
         if self.settings is None:
