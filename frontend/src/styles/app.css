@@ -8550,3 +8550,18 @@ button.gallery-tag:hover {
 .history-progress.done { color: var(--green); }
 .history-progress.reading { color: var(--muted); }
 /* =================== /History =================== */
+
+/* =================== Governance Bulk =================== */
+.governance-bulk-toggle { display: flex; justify-content: flex-end; margin-bottom: 0.75rem; }
+.governance-rail-card { display: flex; align-items: flex-start; gap: 0.4rem; }
+.governance-rail-card-body { flex: 1; min-width: 0; background: none; border: none; text-align: left; cursor: pointer; padding: 0; }
+.governance-rail-check { padding-top: 0.4rem; }
+.governance-bulk-bar { border: 1px solid var(--line); border-radius: 8px; padding: 0.85rem; }
+.governance-bulk-head { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; }
+.governance-bulk-head label { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.governance-bulk-hint { color: var(--danger, #c0392b); font-size: 0.8rem; margin: 0.5rem 0 0; }
+.governance-bulk-preview, .governance-bulk-result { margin-top: 0.75rem; }
+.governance-bulk-preview ul, .governance-bulk-result ul { list-style: none; padding: 0; margin: 0.4rem 0 0; }
+.governance-bulk-preview li, .governance-bulk-result li { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.3rem 0; border-bottom: 1px solid var(--line); }
+.governance-bulk-preview small, .governance-bulk-result small { color: var(--muted); text-align: right; }
+/* =================== /Governance Bulk =================== */

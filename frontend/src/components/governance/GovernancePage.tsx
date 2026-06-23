@@ -1,5 +1,6 @@
 import { FadeIn } from "../../lib/motion";
 import { GovernanceActionBar } from "./GovernanceActionBar";
+import { GovernanceBulkBar } from "./GovernanceBulkBar";
 import { GovernanceQueueRail } from "./GovernanceQueueRail";
 import { GovernanceTagBoard } from "./GovernanceTagBoard";
 import { GovernanceWorkHeader } from "./GovernanceWorkHeader";
@@ -38,38 +39,68 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
 
       {!gov.loading && gov.queue && gov.queue.result.length ? (
         <div className="governance-shell">
-          <GovernanceQueueRail queue={gov.queue} selectedId={gov.selectedId} onSelect={gov.selectWork} />
+          <GovernanceQueueRail
+            queue={gov.queue}
+            selectedId={gov.selectedId}
+            onSelect={gov.selectWork}
+            bulkMode={gov.bulkMode}
+            selectedIds={gov.selectedIds}
+            onToggleSelected={gov.toggleSelected}
+          />
 
           <div className="governance-editor">
-            {gov.aggregateLoading ? <div className="page-panel">正在读取作品元数据...</div> : null}
-            {!gov.aggregateLoading && gov.aggregate ? (
-              <FadeIn key={gov.aggregate.work.id} y={10}>
-                <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
+            <div className="governance-bulk-toggle">
+              <button type="button" onClick={gov.toggleBulkMode}>
+                {gov.bulkMode ? "退出批量" : "批量处理"}
+              </button>
+            </div>
 
-                <MetadataEditor
-                  aggregate={gov.aggregate}
-                  edits={gov.edits}
-                  onChange={gov.changeField}
-                  onlyDiff={gov.onlyDiff}
-                  onToggleDiff={() => gov.setOnlyDiff((value) => !value)}
-                />
+            {gov.bulkMode ? (
+              <GovernanceBulkBar
+                selectedCount={gov.selectedIds.size}
+                fill={gov.bulkFill}
+                onFillChange={gov.setBulkFill}
+                writeBack={gov.bulkWriteBack}
+                onWriteBackChange={gov.setBulkWriteBack}
+                busy={gov.bulkBusy}
+                preview={gov.bulkPreview}
+                result={gov.bulkResult}
+                onPreview={gov.runBulkPreview}
+                onApply={gov.runBulkApply}
+              />
+            ) : (
+              <>
+                {gov.aggregateLoading ? <div className="page-panel">正在读取作品元数据...</div> : null}
+                {!gov.aggregateLoading && gov.aggregate ? (
+                  <FadeIn key={gov.aggregate.work.id} y={10}>
+                    <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
 
-                <GovernanceTagBoard aggregate={gov.aggregate} onApplyDictionaryTag={gov.applyDictionaryTag} />
+                    <MetadataEditor
+                      aggregate={gov.aggregate}
+                      edits={gov.edits}
+                      onChange={gov.changeField}
+                      onlyDiff={gov.onlyDiff}
+                      onToggleDiff={() => gov.setOnlyDiff((value) => !value)}
+                    />
 
-                <GovernanceActionBar
-                  workId={gov.aggregate.work.id}
-                  changedCount={gov.changedFields.length}
-                  saving={gov.saving}
-                  writeBack={gov.writeBack}
-                  onWriteBackChange={gov.setWriteBack}
-                  onSave={gov.saveMetadata}
-                  onReload={gov.reload}
-                />
-              </FadeIn>
-            ) : null}
-            {!gov.aggregateLoading && !gov.aggregate ? (
-              <div className="governance-editor-empty">从左侧队列选择一部作品开始编辑。</div>
-            ) : null}
+                    <GovernanceTagBoard aggregate={gov.aggregate} onApplyDictionaryTag={gov.applyDictionaryTag} />
+
+                    <GovernanceActionBar
+                      workId={gov.aggregate.work.id}
+                      changedCount={gov.changedFields.length}
+                      saving={gov.saving}
+                      writeBack={gov.writeBack}
+                      onWriteBackChange={gov.setWriteBack}
+                      onSave={gov.saveMetadata}
+                      onReload={gov.reload}
+                    />
+                  </FadeIn>
+                ) : null}
+                {!gov.aggregateLoading && !gov.aggregate ? (
+                  <div className="governance-editor-empty">从左侧队列选择一部作品开始编辑。</div>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       ) : null}

@@ -334,6 +334,30 @@ export type GovernanceApplyResult = {
   };
 };
 
+export type GovernanceBulkActions = {
+  fill_missing_metadata?: boolean;
+  write_back?: boolean;
+};
+
+export type GovernanceBulkPreview = {
+  result: Array<{
+    work: LibraryWork;
+    fill_fields: Array<{ field: string; label: string; source_value: string; source: string }>;
+    write_back_ready: boolean;
+    blockers: string[];
+  }>;
+  summary: { works: number; fields_to_fill: number; write_back_ready: number };
+};
+
+export type GovernanceBulkResult = {
+  result: Array<{
+    work_id: number;
+    filled: string[];
+    write_back: { written?: boolean; error?: string } | null;
+  }>;
+  summary: { works: number; filled_fields: number; written: number; errors: number };
+};
+
 export type ExportBlocker = {
   code: string;
   message: string;
@@ -870,6 +894,18 @@ export const api = {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
+    }),
+  governanceBulkPreview: (work_ids: number[], actions: GovernanceBulkActions) =>
+    request<GovernanceBulkPreview>("/api/governance/bulk/preview", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ work_ids, actions })
+    }),
+  governanceBulkApply: (work_ids: number[], actions: GovernanceBulkActions) =>
+    request<GovernanceBulkResult>("/api/governance/bulk/apply", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ work_ids, actions })
     }),
   exportQueue: () => request<ExportQueue>("/api/exports/queue"),
   exportSummary: () => request<ExportSummaryStats>("/api/exports/summary"),

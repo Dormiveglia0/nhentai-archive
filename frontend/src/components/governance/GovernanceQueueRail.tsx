@@ -7,9 +7,12 @@ type Props = {
   queue: GovernanceQueue;
   selectedId: number | null;
   onSelect: (id: number) => void;
+  bulkMode: boolean;
+  selectedIds: Set<number>;
+  onToggleSelected: (id: number) => void;
 };
 
-export function GovernanceQueueRail({ queue, selectedId, onSelect }: Props) {
+export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, selectedIds, onToggleSelected }: Props) {
   return (
     <aside className="governance-rail">
       <div className="governance-rail-head">
@@ -24,7 +27,14 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect }: Props) {
       <Stagger key={queue.result.map((item) => item.work.id).join("-")} className="governance-rail-list">
         {queue.result.map((item) => (
           <StaggerItem key={item.work.id}>
-            <QueueCard item={item} selected={selectedId === item.work.id} onSelect={onSelect} />
+            <QueueCard
+              item={item}
+              selected={selectedId === item.work.id}
+              onSelect={onSelect}
+              bulkMode={bulkMode}
+              checked={selectedIds.has(item.work.id)}
+              onToggleSelected={onToggleSelected}
+            />
           </StaggerItem>
         ))}
       </Stagger>
@@ -36,39 +46,51 @@ function QueueCard({
   item,
   selected,
   onSelect,
+  bulkMode,
+  checked,
+  onToggleSelected,
 }: {
   item: GovernanceQueueItem;
   selected: boolean;
   onSelect: (id: number) => void;
+  bulkMode: boolean;
+  checked: boolean;
+  onToggleSelected: (id: number) => void;
 }) {
   const hasDanger = item.reasons.some((reason) => reason.severity === "danger");
   return (
-    <button
-      className={`governance-rail-card${selected ? " selected" : ""}`}
-      type="button"
-      onClick={() => onSelect(item.work.id)}
-    >
-      <div className="governance-rail-card-top">
-        <strong>{workTitle(item.work)}</strong>
-        <span className="governance-rail-pct" data-tone={item.completeness_percent >= 100 ? "ok" : hasDanger ? "bad" : "warn"}>
-          {item.completeness_percent}%
+    <div className={`governance-rail-card${selected ? " selected" : ""}`}>
+      {bulkMode ? (
+        <label className="governance-rail-check" onClick={(e) => e.stopPropagation()}>
+          <input type="checkbox" checked={checked} onChange={() => onToggleSelected(item.work.id)} />
+        </label>
+      ) : null}
+      <button className="governance-rail-card-body" type="button" onClick={() => onSelect(item.work.id)}>
+        <div className="governance-rail-card-top">
+          <strong>{workTitle(item.work)}</strong>
+          <span
+            className="governance-rail-pct"
+            data-tone={item.completeness_percent >= 100 ? "ok" : hasDanger ? "bad" : "warn"}
+          >
+            {item.completeness_percent}%
+          </span>
+        </div>
+        <small>{item.work.remote_gallery_id ? `ID ${item.work.remote_gallery_id}` : item.work.source}</small>
+        <span className="governance-rail-bar" aria-hidden="true">
+          <span style={{ width: `${item.completeness_percent}%` }} />
         </span>
-      </div>
-      <small>{item.work.remote_gallery_id ? `ID ${item.work.remote_gallery_id}` : item.work.source}</small>
-      <span className="governance-rail-bar" aria-hidden="true">
-        <span style={{ width: `${item.completeness_percent}%` }} />
-      </span>
-      <span className="governance-rail-reasons">
-        {item.reasons.length ? (
-          item.reasons.slice(0, 3).map((reason) => (
-            <em key={reason.code} className={reason.severity === "danger" ? "danger" : ""}>
-              {reason.label}
-            </em>
-          ))
-        ) : (
-          <em className="ok">无待办</em>
-        )}
-      </span>
-    </button>
+        <span className="governance-rail-reasons">
+          {item.reasons.length ? (
+            item.reasons.slice(0, 3).map((reason) => (
+              <em key={reason.code} className={reason.severity === "danger" ? "danger" : ""}>
+                {reason.label}
+              </em>
+            ))
+          ) : (
+            <em className="ok">无待办</em>
+          )}
+        </span>
+      </button>
+    </div>
   );
 }

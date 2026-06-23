@@ -4,6 +4,8 @@ import {
   api,
   DictionaryApplyPayload,
   GovernanceAggregate,
+  GovernanceBulkPreview,
+  GovernanceBulkResult,
   GovernanceQueue,
   GovernanceTag,
 } from "../../lib/api";
@@ -23,6 +25,14 @@ export function useGovernanceState(initialWorkId?: number) {
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [saving, setSaving] = useState(false);
   const [writeBack, setWriteBack] = useState(false);
+
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkFill, setBulkFill] = useState(true);
+  const [bulkWriteBack, setBulkWriteBack] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<GovernanceBulkPreview | null>(null);
+  const [bulkResult, setBulkResult] = useState<GovernanceBulkResult | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     setSelectedId(initialWorkId ?? null);
@@ -162,6 +172,73 @@ export function useGovernanceState(initialWorkId?: number) {
     navigate({ name: "governance", workId: id });
   };
 
+  const toggleBulkMode = () => {
+    setBulkMode((on) => !on);
+    setSelectedIds(new Set());
+    setBulkPreview(null);
+    setBulkResult(null);
+  };
+
+  const toggleSelected = (id: number) =>
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const bulkActions = (): { fill_missing_metadata: boolean; write_back: boolean } => ({
+    fill_missing_metadata: bulkFill,
+    write_back: bulkWriteBack,
+  });
+
+  const runBulkPreview = async () => {
+    if (!selectedIds.size) {
+      setNotice("请先勾选要批量处理的作品。");
+      return;
+    }
+    if (!bulkFill && !bulkWriteBack) {
+      setNotice("请至少选择一个批量动作。");
+      return;
+    }
+    setBulkBusy(true);
+    setError(null);
+    setNotice(null);
+    setBulkResult(null);
+    try {
+      setBulkPreview(await api.governanceBulkPreview([...selectedIds], bulkActions()));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const runBulkApply = async () => {
+    if (!selectedIds.size) return;
+    if (!bulkFill && !bulkWriteBack) {
+      setNotice("请至少选择一个批量动作。");
+      return;
+    }
+    if (bulkWriteBack && !window.confirm("将就地改写所选作品源 CBZ 的 ComicInfo，此操作不可撤销。是否继续？")) {
+      return;
+    }
+    setBulkBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await api.governanceBulkApply([...selectedIds], bulkActions());
+      setBulkResult(result);
+      setQueue(await api.governanceQueue());
+      const { filled_fields, written, errors } = result.summary;
+      setNotice(`批量完成：补全 ${filled_fields} 个字段，回写 ${written} 个文件${errors ? `，${errors} 个失败` : ""}。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return {
     queue,
     aggregate,
@@ -182,5 +259,18 @@ export function useGovernanceState(initialWorkId?: number) {
     saveMetadata,
     applyDictionaryTag,
     selectWork,
+    bulkMode,
+    toggleBulkMode,
+    selectedIds,
+    toggleSelected,
+    bulkFill,
+    setBulkFill,
+    bulkWriteBack,
+    setBulkWriteBack,
+    bulkPreview,
+    bulkResult,
+    bulkBusy,
+    runBulkPreview,
+    runBulkApply,
   };
 }
