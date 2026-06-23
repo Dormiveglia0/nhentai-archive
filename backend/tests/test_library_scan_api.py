@@ -15,10 +15,12 @@ def _png() -> bytes:
 
 
 def test_scan_preview_lists_new_local(tmp_path, monkeypatch):
-    with zipfile.ZipFile(main.settings.library_dir / "fresh.cbz", "w") as archive:
+    lib = tmp_path / "library"
+    lib.mkdir()
+    object.__setattr__(main.settings, "data_dir", tmp_path)
+    with zipfile.ZipFile(lib / "fresh.cbz", "w") as archive:
         archive.writestr("001.png", _png())
     client = TestClient(main.app)
     resp = client.post("/api/library/scan/preview")
     assert resp.status_code == 200
     assert resp.json()["counts"]["new_local"] >= 1
-    (main.settings.library_dir / "fresh.cbz").unlink(missing_ok=True)

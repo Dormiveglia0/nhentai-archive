@@ -17,12 +17,12 @@ from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.export_job_service import EXPORT_SYNC_THRESHOLD, ExportJobService
 from app.services.export_service import ExportService
-from app.services.library_scan_service import LibraryScanService
-from app.services.library_scan_job_service import LibraryScanJobService
 from app.services.file_service import FileMaintenanceService
 from app.services.import_service import ImportService
 from app.services.job_service import JobActive, JobService
 from app.services.library_service import LibraryService
+from app.services.library_scan_service import LibraryScanService
+from app.services.library_scan_job_service import LibraryScanJobService
 from app.services.governance_service import GovernanceService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
