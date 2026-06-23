@@ -546,19 +546,33 @@ export type JobMeta = {
   cover_url?: string | null;
 };
 
+export type BulkExportSkip = { work_id: number; reason: string };
+
+export type JobTarget = Record<string, unknown> & {
+  // bulk_export fields (live in target_json)
+  total?: number;
+  packaged?: number;
+  output_name?: string | null;
+  downloaded?: boolean;
+  expires_at?: string | null;
+  skipped?: BulkExportSkip[];
+};
+
 export type Job = {
   id: number;
   type: string;
   status: "queued" | "running" | "paused" | "cancelling" | "completed" | "failed" | "cancelled";
   stage: string;
   progress: { current: number; total: number; percent: number };
-  target: Record<string, unknown>;
+  target: JobTarget;
   meta?: JobMeta | null;
   error?: string | null;
   retry_after?: number | null;
   created_at: string;
   updated_at: string;
 };
+
+export const EXPORT_SYNC_THRESHOLD = 5;
 
 export type JobLog = {
   id: number;
@@ -952,6 +966,13 @@ export const api = {
       { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items, ...options }) },
       "导出合集.zip"
     ),
+  enqueueBulkExport: (workIds: number[], options?: Omit<ExportRequestOptions, "output_name">) =>
+    request<Job>("/api/exports/bulk-jobs", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ work_ids: workIds, options: options ?? {} }),
+    }),
+  bulkExportDownloadUrl: (jobId: number) => `/api/jobs/${jobId}/export/download`,
   filesOverview: () => request<FileOverview>("/api/files/overview"),
   filesInventory: (params: FileInventoryParams = {}) => {
     const query = new URLSearchParams();

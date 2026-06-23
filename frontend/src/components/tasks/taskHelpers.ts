@@ -29,6 +29,7 @@ export function statusLabel(status: Job["status"]) {
 export function jobTypeLabel(type: string) {
   const labels: Record<string, string> = {
     remote_import: "远端下载",
+    bulk_export: "批量导出",
   };
   return labels[type] ?? type;
 }
@@ -36,6 +37,7 @@ export function jobTypeLabel(type: string) {
 export function jobTypeDescription(type: string) {
   const labels: Record<string, string> = {
     remote_import: "从远端存储下载并解析入库",
+    bulk_export: "打包多部作品为可下载合集（临时产物·下载即删）",
   };
   return labels[type] ?? "任务";
 }
@@ -54,6 +56,7 @@ export function stageLabel(stage: string) {
     requesting_download_url: "请求下载地址",
     downloading_cbz: "下载 CBZ",
     indexing_archive: "解析入库",
+    packaging: "打包合集",
     completed: "已完成",
     failed: "失败",
     cancelling: "取消中",
@@ -63,6 +66,11 @@ export function stageLabel(stage: string) {
 }
 
 export function targetLabel(job: Job) {
+  if (job.type === "bulk_export") {
+    const total = numberTarget(job, "total") ?? 0;
+    const packaged = numberTarget(job, "packaged") ?? 0;
+    return job.status === "completed" ? `已打包 ${packaged} 部` : `${packaged}/${total} 部`;
+  }
   const galleryId = numberTarget(job, "gallery_id");
   const workId = numberTarget(job, "work_id");
   const alreadyImported = Boolean(job.target.already_imported);
@@ -73,7 +81,30 @@ export function targetLabel(job: Job) {
 }
 
 export function canRetry(job: Job) {
-  return job.status === "failed" && job.type === "remote_import" && Boolean(numberTarget(job, "gallery_id"));
+  if (job.status !== "failed") return false;
+  if (job.type === "bulk_export") return true;
+  return job.type === "remote_import" && Boolean(numberTarget(job, "gallery_id"));
+}
+
+export function bulkExportExpired(job: Job): boolean {
+  const expiresAt = job.target.expires_at;
+  if (typeof expiresAt !== "string" || !expiresAt) return false;
+  const date = new Date(expiresAt);
+  return !Number.isNaN(date.getTime()) && date.getTime() <= Date.now();
+}
+
+export function canDownloadBulkExport(job: Job): boolean {
+  return (
+    job.type === "bulk_export" &&
+    job.status === "completed" &&
+    !job.target.downloaded &&
+    !bulkExportExpired(job)
+  );
+}
+
+export function bulkExportSkipped(job: Job): Array<{ work_id: number; reason: string }> {
+  const skipped = job.target.skipped;
+  return Array.isArray(skipped) ? skipped : [];
 }
 
 export function canPause(job: Job) {

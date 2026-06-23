@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
+  Download,
   FileText,
   Loader2,
   MoreHorizontal,
@@ -12,11 +13,13 @@ import {
   X,
 } from "lucide-react";
 
+import { api } from "../../lib/api";
 import type { Job } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
 import {
   canCancel,
   canDelete,
+  canDownloadBulkExport,
   canPause,
   canResume,
   canRetry,
@@ -113,6 +116,17 @@ export function TaskList({
                 <small>{formatDurationHint(job)}</small>
               </span>
               <span className="tasks-actions">
+                {canDownloadBulkExport(job) ? (
+                  <a
+                    className="tasks-row-action"
+                    href={api.bulkExportDownloadUrl(job.id)}
+                    download
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <Download size={14} />
+                    下载 .zip
+                  </a>
+                ) : null}
                 {canRetry(job) ? (
                   <button
                     type="button"

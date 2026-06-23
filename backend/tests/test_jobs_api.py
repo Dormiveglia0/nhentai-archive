@@ -127,6 +127,7 @@ def test_jobs_routes_include_created_at_and_retry_payload(monkeypatch):
 def test_retry_route_rejects_invalid_retry(monkeypatch):
     stub_imports = StubImports()
     stub_imports.reject_retry = True
+    monkeypatch.setattr(main, "jobs", StubJobs())
     monkeypatch.setattr(main, "imports", stub_imports)
     client = TestClient(main.app)
 

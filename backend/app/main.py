@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
@@ -7,12 +8,14 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from starlette.background import BackgroundTask
 
 from app.config import load_settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
 from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
+from app.services.export_job_service import EXPORT_SYNC_THRESHOLD, ExportJobService
 from app.services.export_service import ExportService
 from app.services.file_service import FileMaintenanceService
 from app.services.import_service import ImportService
@@ -108,6 +111,11 @@ class ExportBatchRequest(BaseModel):
     compress: bool = True
 
 
+class ExportBulkJobRequest(BaseModel):
+    work_ids: list[int] = []
+    options: dict = {}
+
+
 class FileTargetRequest(BaseModel):
     kind: str
     work_id: int | None = None
@@ -138,10 +146,17 @@ governance = GovernanceService(db, dictionary, settings)
 exports = ExportService(db, settings)
 files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
+export_jobs = ExportJobService(settings, jobs, exports)
 settings_service = SettingsService(db, settings, client, translation)
 workbench = WorkbenchService(library, governance, jobs, files_service, exports)
 
-app = FastAPI(title="NH Archive", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    export_jobs.sweep_exports()
+    yield
+
+
+app = FastAPI(title="NH Archive", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -474,6 +489,50 @@ def export_download_bundle(payload: ExportBatchRequest):
     return _download_response(filename, data, "application/zip")
 
 
+@app.post("/api/exports/bulk-jobs")
+def enqueue_bulk_export(payload: ExportBulkJobRequest):
+    if not payload.work_ids:
+        raise HTTPException(status_code=422, detail="未选择任何作品。")
+    return export_jobs.enqueue_bulk_export(payload.work_ids, payload.options)
+
+
+@app.get("/api/jobs/{job_id}/export/download")
+def download_bulk_export(job_id: int):
+    try:
+        job = jobs.get(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if job["type"] != "bulk_export":
+        raise HTTPException(status_code=404, detail="该任务没有可下载的导出产物。")
+    target = job["target"]
+    if target.get("downloaded"):
+        raise HTTPException(status_code=410, detail="导出产物已下载并清除。")
+    if job["status"] != "completed":
+        raise HTTPException(status_code=404, detail="导出产物尚未就绪。")
+    if _export_artifact_expired(target):
+        raise HTTPException(status_code=410, detail="导出产物已过期。")
+    path = target.get("artifact_path")
+    if not path or not Path(path).exists():
+        raise HTTPException(status_code=404, detail="导出产物不存在。")
+    output_name = target.get("output_name") or f"job-{job_id}.zip"
+    ascii_name = output_name.encode("ascii", "ignore").decode("ascii") or "export.zip"
+    disposition = f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(output_name)}"
+    return FileResponse(
+        path,
+        media_type="application/zip",
+        filename=output_name,
+        headers={"Content-Disposition": disposition},
+        background=BackgroundTask(export_jobs.mark_downloaded, job_id),
+    )
+
+
+def _export_artifact_expired(target: dict) -> bool:
+    from app.services.export_job_service import _now, _parse_iso
+
+    expires_at = _parse_iso(target.get("expires_at"))
+    return expires_at is not None and _now() >= expires_at
+
+
 @app.get("/api/workbench/overview")
 def workbench_overview():
     return workbench.overview()
@@ -573,8 +632,15 @@ def patch_reader_state(work_id: int, patch: ReaderStatePatch):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+def _job_dispatch(job_id: int):
+    """Route a job control action to the service that owns its type."""
+    job_type = jobs.get(job_id)["type"]
+    return export_jobs if job_type == "bulk_export" else imports
+
+
 @app.get("/api/jobs")
 def list_jobs():
+    export_jobs.sweep_exports()
     return {"result": jobs.list()}
 
 
@@ -605,7 +671,7 @@ def pause_job(job_id: int):
 @app.post("/api/jobs/{job_id}/resume")
 def resume_job(job_id: int):
     try:
-        return imports.resume_job(job_id)
+        return _job_dispatch(job_id).resume_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -613,7 +679,7 @@ def resume_job(job_id: int):
 @app.post("/api/jobs/{job_id}/cancel")
 def cancel_job(job_id: int):
     try:
-        return imports.cancel_job(job_id)
+        return _job_dispatch(job_id).cancel_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -621,7 +687,7 @@ def cancel_job(job_id: int):
 @app.post("/api/jobs/{job_id}/retry")
 def retry_job(job_id: int):
     try:
-        return imports.retry_job(job_id)
+        return _job_dispatch(job_id).retry_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

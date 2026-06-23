@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Download, Trash2, Wand2, X } from "lucide-react";
 
-import { api, type FileDeletePreview } from "../../lib/api";
+import { api, EXPORT_SYNC_THRESHOLD, type FileDeletePreview } from "../../lib/api";
 import { formatBytes } from "./libraryHelpers";
 
 type Props = {
@@ -28,8 +28,13 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
     setNotice(null);
     setError(null);
     try {
-      await api.downloadExportBundle(selectedIds.map((work_id) => ({ work_id })));
-      setNotice(`已开始下载 ${count} 部作品的合集`);
+      if (count > EXPORT_SYNC_THRESHOLD) {
+        const job = await api.enqueueBulkExport(selectedIds);
+        setNotice(`已加入任务中心（任务 #${job.id}），完成后可在任务页下载合集`);
+      } else {
+        await api.downloadExportBundle(selectedIds.map((work_id) => ({ work_id })));
+        setNotice(`已开始下载 ${count} 部作品的合集`);
+      }
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
     } finally {

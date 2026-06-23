@@ -1,9 +1,13 @@
-import { AlertTriangle, Copy, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
+import { AlertTriangle, Copy, Download, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
 
+import { api } from "../../lib/api";
 import type { Job, JobLog } from "../../lib/api";
 import {
+  bulkExportExpired,
+  bulkExportSkipped,
   canCancel,
   canDelete,
+  canDownloadBulkExport,
   canPause,
   canResume,
   canRetry,
@@ -127,6 +131,29 @@ export function TaskInspector({
           </dl>
         </div>
       </section>
+
+      {job.type === "bulk_export" ? (
+        <section className="tasks-inspector-section">
+          <h4>导出产物</h4>
+          {canDownloadBulkExport(job) ? (
+            <a className="tasks-row-action" href={api.bulkExportDownloadUrl(job.id)} download>
+              <Download size={15} />
+              下载 .zip（{job.target.output_name ?? "合集"}）
+            </a>
+          ) : job.status === "completed" ? (
+            <p className="tasks-boundary">
+              {job.target.downloaded ? "产物已下载并清除。" : bulkExportExpired(job) ? "产物已过期清除。" : "产物已就绪。"}
+            </p>
+          ) : (
+            <p className="tasks-boundary">完成后可下载临时产物（下载即删，24h 后自动清理）。</p>
+          )}
+          {bulkExportSkipped(job).length > 0 ? (
+            <p className="tasks-boundary">
+              已跳过 {bulkExportSkipped(job).length} 部存在阻塞的作品。
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="tasks-inspector-section">
         <h4>错误 / 提示</h4>
