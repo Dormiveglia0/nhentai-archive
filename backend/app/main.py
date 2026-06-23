@@ -475,10 +475,13 @@ def files_inventory(
     category: str = "all",
     q: str | None = None,
     status: str | None = None,
+    sort: str = "default",
     page: int = 1,
     per_page: int = 50,
 ):
-    return files_service.inventory(category=category, q=q, status=status, page=page, per_page=per_page)
+    return files_service.inventory(
+        category=category, q=q, status=status, sort=sort, page=page, per_page=per_page
+    )
 
 
 @app.get("/api/files/duplicates")

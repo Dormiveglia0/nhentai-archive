@@ -492,6 +492,7 @@ export type FileInventoryParams = {
   category?: string;
   q?: string;
   status?: string;
+  sort?: string;
   page?: number;
   per_page?: number;
 };
@@ -938,6 +939,7 @@ export const api = {
     query.set("category", params.category ?? "all");
     if (params.q) query.set("q", params.q);
     if (params.status) query.set("status", params.status);
+    if (params.sort && params.sort !== "default") query.set("sort", params.sort);
     query.set("page", String(params.page ?? 1));
     query.set("per_page", String(params.per_page ?? 50));
     return request<FileInventory>(`/api/files/inventory?${query.toString()}`);

@@ -178,6 +178,7 @@ class FileMaintenanceService:
         category: str = "all",
         q: str | None = None,
         status: str | None = None,
+        sort: str = "default",
         page: int = 1,
         per_page: int = 50,
     ) -> dict[str, Any]:
@@ -185,7 +186,9 @@ class FileMaintenanceService:
         if category in ("work", "orphan", "stale"):
             entries = [e for e in entries if e["kind"] == category]
         if status:
-            entries = [e for e in entries if e["status"] == status]
+            # Match the single status field OR any computed flag, so flag-only
+            # conditions like size_mismatch (whose status may still be "ok") are filterable.
+            entries = [e for e in entries if e["status"] == status or status in e.get("flags", [])]
         if q:
             ql = q.strip().lower()
             entries = [
@@ -195,6 +198,10 @@ class FileMaintenanceService:
                 or ql in (e.get("source_path") or e.get("path") or "").lower()
                 or ql in (e.get("name") or "").lower()
             ]
+        if sort == "size_desc":
+            entries.sort(key=lambda e: e.get("size_bytes", 0), reverse=True)
+        elif sort == "size_asc":
+            entries.sort(key=lambda e: e.get("size_bytes", 0))
         total = len(entries)
         per_page = max(1, min(int(per_page or 50), 500))
         page = max(1, int(page or 1))

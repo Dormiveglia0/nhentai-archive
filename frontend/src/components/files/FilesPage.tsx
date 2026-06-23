@@ -38,6 +38,8 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             onQuery={state.setQuery}
             statusFilter={state.statusFilter}
             onStatus={state.setStatusFilter}
+            sort={state.sort}
+            onSort={state.setSort}
             total={state.inventory?.total ?? 0}
             multiSelect={state.multiSelect}
             onToggleMultiSelect={state.toggleMultiSelect}

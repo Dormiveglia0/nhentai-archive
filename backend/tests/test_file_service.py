@@ -158,6 +158,40 @@ def test_inventory_filters_by_query_and_status(tmp_path):
     assert files.inventory(status="ok")["total"] == 2
 
 
+def test_inventory_status_filter_isolates_size_mismatch_flag(tmp_path):
+    _settings, db, archive, files = _setup(tmp_path)
+    healthy = _import_work(db, archive, tmp_path, title="Healthy", gallery_id=1)
+    mismatch = _import_work(db, archive, tmp_path, title="Mismatch", gallery_id=2)
+    db.execute(
+        "UPDATE work_files SET size_bytes = 999999999 WHERE work_id=? AND kind='source_cbz'",
+        (mismatch,),
+    )
+
+    # size_mismatch work still reports status "ok" but carries the flag.
+    result = files.inventory(status="size_mismatch")["result"]
+    assert {e["work_id"] for e in result} == {mismatch}
+    # plain "ok" status filter still returns both works.
+    assert files.inventory(status="ok")["total"] == 2
+    assert healthy != mismatch
+
+
+def test_inventory_sort_by_size_orders_entries(tmp_path):
+    settings, db, archive, files = _setup(tmp_path)
+    _import_work(db, archive, tmp_path, title="Work", gallery_id=1)
+    (settings.library_dir / "tiny.cbz").write_bytes(b"a")
+    (settings.export_dir / "huge.cbz").write_bytes(b"z" * 5000)
+
+    desc = files.inventory(sort="size_desc")["result"]
+    sizes_desc = [e["size_bytes"] for e in desc]
+    assert sizes_desc == sorted(sizes_desc, reverse=True)
+    assert desc[0]["size_bytes"] >= desc[-1]["size_bytes"]
+
+    asc = files.inventory(sort="size_asc")["result"]
+    sizes_asc = [e["size_bytes"] for e in asc]
+    assert sizes_asc == sorted(sizes_asc)
+    assert asc[0].get("name") == "tiny.cbz"
+
+
 def test_preview_delete_work_expands_cascade_without_touching_disk(tmp_path):
     _settings, db, archive, files = _setup(tmp_path)
     work_id = _import_work(db, archive, tmp_path)
