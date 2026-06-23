@@ -187,11 +187,6 @@ export function useGovernanceState(initialWorkId?: number) {
       return next;
     });
 
-  const bulkActions = (): { fill_missing_metadata: boolean; write_back: boolean } => ({
-    fill_missing_metadata: bulkFill,
-    write_back: bulkWriteBack,
-  });
-
   const runBulkPreview = async () => {
     if (!selectedIds.size) {
       setNotice("请先勾选要批量处理的作品。");
@@ -206,7 +201,7 @@ export function useGovernanceState(initialWorkId?: number) {
     setNotice(null);
     setBulkResult(null);
     try {
-      setBulkPreview(await api.governanceBulkPreview([...selectedIds], bulkActions()));
+      setBulkPreview(await api.governanceBulkPreview([...selectedIds], { fill_missing_metadata: bulkFill, write_back: bulkWriteBack }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -227,8 +222,9 @@ export function useGovernanceState(initialWorkId?: number) {
     setError(null);
     setNotice(null);
     try {
-      const result = await api.governanceBulkApply([...selectedIds], bulkActions());
+      const result = await api.governanceBulkApply([...selectedIds], { fill_missing_metadata: bulkFill, write_back: bulkWriteBack });
       setBulkResult(result);
+      setBulkPreview(null);
       setQueue(await api.governanceQueue());
       const { filled_fields, written, errors } = result.summary;
       setNotice(`批量完成：补全 ${filled_fields} 个字段，回写 ${written} 个文件${errors ? `，${errors} 个失败` : ""}。`);
