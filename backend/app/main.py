@@ -79,6 +79,16 @@ class GovernanceApplyRequest(BaseModel):
     write_back: bool = False
 
 
+class GovernanceBulkActions(BaseModel):
+    fill_missing_metadata: bool = False
+    write_back: bool = False
+
+
+class GovernanceBulkRequest(BaseModel):
+    work_ids: list[int] = []
+    actions: GovernanceBulkActions = GovernanceBulkActions()
+
+
 class ExportItemRequest(BaseModel):
     work_id: int | None = None
     output_name: str | None = None
@@ -362,6 +372,22 @@ def work_governance(work_id: int):
 def apply_work_governance(work_id: int, payload: GovernanceApplyRequest):
     try:
         return governance.apply(work_id, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/governance/bulk/preview")
+def governance_bulk_preview(payload: GovernanceBulkRequest):
+    try:
+        return governance.bulk_preview(payload.work_ids, payload.actions.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/governance/bulk/apply")
+def governance_bulk_apply(payload: GovernanceBulkRequest):
+    try:
+        return governance.bulk_apply(payload.work_ids, payload.actions.model_dump())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

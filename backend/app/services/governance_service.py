@@ -29,6 +29,10 @@ METADATA_FIELDS = {
 ALLOWED_METADATA_SOURCES = {"manual", "remote", "comicinfo", "current"}
 PROBLEM_DICTIONARY_STATUSES = {"review", "conflict"}
 
+# work_governance 的 source（comicinfo/json/remote/unknown）→ 允许写入 work_metadata 的 source。
+SOURCE_TO_METADATA = {"comicinfo": "comicinfo", "remote": "remote", "json": "remote"}
+BULK_ACTION_KEYS = {"fill_missing_metadata", "write_back"}
+
 TAG_GROUP_LABELS = {
     "artist": "作者与社团",
     "group": "作者与社团",
@@ -185,6 +189,144 @@ class GovernanceService:
                 response["write_back"] = {"error": str(exc)}
         response["governance"] = self.work_governance(work_id)
         return response
+
+    def _fill_fields_for(self, aggregate: dict[str, Any]) -> list[dict[str, Any]]:
+        """空值且有来源值的字段，作为「可补全」返回。绝不含已有非空终值的字段。"""
+        fills: list[dict[str, Any]] = []
+        for field in aggregate["metadata"]["fields"]:
+            working = self._normalize_value(field.get("working_value"))
+            source_value = field.get("source_value")
+            source = str(field.get("source") or "")
+            if working == "" and source_value and source in SOURCE_TO_METADATA:
+                fills.append(
+                    {
+                        "field": field["field"],
+                        "label": field["label"],
+                        "source_value": source_value,
+                        "source": source,
+                    }
+                )
+        return fills
+
+    def bulk_preview(self, work_ids: list[int], actions: dict[str, Any]) -> dict[str, Any]:
+        fill = bool(actions.get("fill_missing_metadata"))
+        write_back = bool(actions.get("write_back"))
+        if not (fill or write_back):
+            raise ValueError("至少选择一个批量动作。")
+
+        result = []
+        fields_to_fill = 0
+        write_back_ready = 0
+        for work_id in work_ids:
+            work = self._work_row(int(work_id))
+            if not work:
+                continue
+            aggregate = self.work_governance(int(work_id))
+            fill_fields = self._fill_fields_for(aggregate) if fill else []
+            fields_to_fill += len(fill_fields)
+            ready, blockers = (False, [])
+            if write_back:
+                ready, blockers = self._write_back_readiness(int(work_id))
+                if ready:
+                    write_back_ready += 1
+            result.append(
+                {
+                    "work": aggregate["work"],
+                    "fill_fields": fill_fields,
+                    "write_back_ready": ready,
+                    "blockers": blockers,
+                }
+            )
+        return {
+            "result": result,
+            "summary": {
+                "works": len(result),
+                "fields_to_fill": fields_to_fill,
+                "write_back_ready": write_back_ready,
+            },
+        }
+
+    def bulk_apply(self, work_ids: list[int], actions: dict[str, Any]) -> dict[str, Any]:
+        fill = bool(actions.get("fill_missing_metadata"))
+        write_back = bool(actions.get("write_back"))
+        if not (fill or write_back):
+            raise ValueError("至少选择一个批量动作。")
+
+        result = []
+        filled_total = 0
+        written = 0
+        errors = 0
+        for work_id in work_ids:
+            work_id = int(work_id)
+            work = self._work_row(work_id)
+            if not work:
+                continue
+            entry: dict[str, Any] = {"work_id": work_id, "filled": [], "write_back": None}
+
+            if fill:
+                aggregate = self.work_governance(work_id)
+                fill_fields = self._fill_fields_for(aggregate)
+                if fill_fields:
+                    with self.db.connect() as conn:
+                        for field in fill_fields:
+                            conn.execute(
+                                """
+                                INSERT INTO work_metadata (work_id, field, value, source, source_value, updated_at)
+                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                                ON CONFLICT(work_id, field) DO UPDATE SET
+                                  value = excluded.value,
+                                  source = excluded.source,
+                                  source_value = excluded.source_value,
+                                  updated_at = CURRENT_TIMESTAMP
+                                """,
+                                (
+                                    work_id,
+                                    field["field"],
+                                    field["source_value"],
+                                    SOURCE_TO_METADATA[field["source"]],
+                                    field["source_value"],
+                                ),
+                            )
+                    entry["filled"] = [field["field"] for field in fill_fields]
+                    filled_total += len(fill_fields)
+
+            if write_back:
+                try:
+                    entry["write_back"] = self.write_back_comicinfo(work_id)
+                    written += 1
+                except Exception as exc:  # 失败隔离：记录并继续下一作品，不回滚已写 metadata
+                    entry["write_back"] = {"error": str(exc)}
+                    errors += 1
+
+            result.append(entry)
+
+        return {
+            "result": result,
+            "summary": {
+                "works": len(result),
+                "filled_fields": filled_total,
+                "written": written,
+                "errors": errors,
+            },
+        }
+
+    def _write_back_readiness(self, work_id: int) -> tuple[bool, list[str]]:
+        """复用 write_back_comicinfo 的前置防护判定，但不动盘。"""
+        blockers: list[str] = []
+        if self.settings is None:
+            return False, ["未配置 library 目录"]
+        row = self.db.fetchone(
+            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (work_id,),
+        )
+        source_path = Path(row["path"]).resolve() if row and row["path"] else None
+        if source_path is None or not source_path.exists() or not zipfile.is_zipfile(source_path):
+            return False, ["源 CBZ 不存在或不是有效 ZIP"]
+        library_root = self.settings.library_dir.resolve()
+        if not (source_path == library_root or library_root in source_path.parents):
+            return False, ["源文件不在受管 library 目录内"]
+        return True, blockers
 
     def write_back_comicinfo(self, work_id: int) -> dict[str, Any]:
         if self.settings is None:
