@@ -31,7 +31,6 @@ PROBLEM_DICTIONARY_STATUSES = {"review", "conflict"}
 
 # work_governance 的 source（comicinfo/json/remote/unknown）→ 允许写入 work_metadata 的 source。
 SOURCE_TO_METADATA = {"comicinfo": "comicinfo", "remote": "remote", "json": "remote"}
-BULK_ACTION_KEYS = {"fill_missing_metadata", "write_back"}
 
 TAG_GROUP_LABELS = {
     "artist": "作者与社团",
