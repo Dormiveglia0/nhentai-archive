@@ -90,16 +90,17 @@ Current real slice:
   - Removed the orphaned legacy library CSS (`.filter-ribbon`, `.stats`, old `.work-card*`) replaced by the new `.library-*` system; retargeted the shared progress rule to `.library-card`.
 
 - 治理 ComicInfo 回写源 CBZ：新增共享模块 `comicinfo.py`（ComicInfo 字段生成/XML/zip 重封，ExportService 与回写共用，保证导出下载与源回写产出一致）。`GovernanceService.write_back_comicinfo` 把治理后的 ComicInfo 就地原子写进源 CBZ：写同目录 tmp → fsync → `os.replace`，无备份；只换 ComicInfo.xml，页面图像字节不变；回写后重算并更新 `work_files.sha256`/`size_bytes`。API `POST /api/works/{id}/governance/apply` 增 `write_back` 开关（默认关），metadata 写入成功后回写失败不回滚、以 `write_back.error` 回显。前端应用面板加默认关闭的「同时回写源文件」复选框 + 风险提示 + 二次确认。
+- 轻量收尾阶段：① 文件管理 `#files` 清单补真实分页翻页器（复用 IconPager，后端 `inventory` 早已支持 page/per_page）；② 新增阅读历史专属页 `#history`：`LibraryService.reading_history` 按 (作品, 日期) 聚合 `reading_history`（当天最近时间/阅读次数/最远页 + 当前总进度），`GET /api/library/reading-history` 分页，前端按「今天/昨天/本周/更早」日期桶分组时间线，点击进本地阅读器，遵守 blurCovers；③ 治理批量：`GovernanceService.bulk_preview/bulk_apply` 对多选作品执行统一动作——批量补全缺失元数据（只填空、绝不覆盖已有值、来源 comicinfo>json>remote）与批量回写 ComicInfo（沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离），API `POST /api/governance/bulk/preview|apply`，治理队列加多选 + 批量条（预览/应用/结果回显 + 回写二次确认）。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿（128 passed，含 reading_history 4 项 + governance_bulk 5 项）；`cd frontend && npm run build` 通过。
 
 ## Not Implemented Yet
 
-- Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
+- Library bulk actions (multi-select batch tray).
 - Long-running bulk export jobs through the task center.
-- Governance bulk preview/apply (dictionary machine translation is now connected; governance does not yet auto-translate metadata).
+- Governance dictionary auto-translation of metadata (machine translation is connected for the dictionary, but governance still does not auto-translate; bulk preview/apply now exists for fill-missing + ComicInfo write-back).
 
 ## Next Plan
 
-工作台聚合面板已落地,所有主模块均为真实页面。剩余方向:长时批量导出任务接入任务中心(进度上报/暂停/重试)、文件清单 UI 分页、阅读历史专属页。
+轻量收尾三项(文件清单分页/阅读历史页/治理批量)已落地。剩余方向:长时批量导出任务接入任务中心——需先单独设计「导出=下载给用户」与后台落盘的语义冲突(产物落盘策略/生命周期/清理);治理批量可继续扩展(词典 review/冲突的批量解决仍留单作品页人工);文件清单更多筛选维度。
 
 ## Risks And Decisions
 
@@ -108,6 +109,9 @@ Current real slice:
 - Decision: 删除健康作品的源 CBZ = 级联整体移除该作品(works 及全部引用表 + 封面文件)。
 - Decision: 删除是文件管理唯一会动盘的操作;CBZ 永不被修改,只能整体删除;受管目录(library/covers/tmp/exports)之外的任何路径一律拒绝(目录穿越防护)。
 - Decision: 治理 ComicInfo 回写是唯一受认可的源 CBZ 改写（仅 ComicInfo、原子替换、无备份、显式 opt-in、默认关）；导出仍永不写源（导出=下载给用户）；文件管理删除仍是另一条独立动盘操作。回写后必须同步 `work_files.sha256`/`size_bytes` 以维持去重/体积检测的真实性。
+- Decision: 治理批量只做「逐作品执行统一动作、取值各自解析」:批量补全缺失元数据(只填空、绝不覆盖人工/已有非空值,来源映射 comicinfo→comicinfo / remote→remote / json→remote)+ 批量回写 ComicInfo(沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离;单作品失败记录 error 并继续,不回滚已写 metadata)。词典 review/冲突不批量,留单作品页人工解决。
+- Decision: 阅读历史按 (作品, 日期) 聚合,前端按日期桶(今天/昨天/本周/更早)分组时间线;高频裸事件(每翻页一行)不展示。历史(完整可分页轨迹)与「继续阅读」(仅在读)、「最近阅读」(Top 12 书架)区分。
+- Decision: 文件清单分页为纯前端补翻页器;后端 `FileMaintenanceService.inventory` 早已支持分页,无需改动。批量导出接任务中心仍不在范围,需先单独设计落盘/生命周期语义。
 - Decision: `work_files.path`/`works.cover_path` 绝对/相对混用,一律归一化为 `.resolve()` 绝对路径后再判定存在/删除/穿越。
 - Decision: API Key settings and discover correctness are higher priority than expanding modules.
 - Decision: language/type/sort controls must either call real APIs or be disabled; no inert clickable filters.
