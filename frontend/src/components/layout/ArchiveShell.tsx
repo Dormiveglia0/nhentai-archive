@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Clock,
   Download,
   EyeOff,
   FileArchive,
@@ -28,6 +29,7 @@ type Props = {
 const NAV = [
   { id: "workbench", label: "工作台", icon: Wrench },
   { id: "library", label: "我的库", icon: Library },
+  { id: "history", label: "历史", icon: Clock },
   { id: "discover", label: "发现", icon: Search },
   { id: "governance", label: "治理", icon: PenTool },
   { id: "dictionary", label: "词典", icon: BookOpen },
@@ -112,6 +114,7 @@ export function ArchiveShell({
                     | "workbench"
                     | "discover"
                     | "library"
+                    | "history"
                     | "governance"
                     | "dictionary"
                     | "tasks"

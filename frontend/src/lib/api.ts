@@ -184,6 +184,31 @@ export type LibrarySummary = {
   languages: Array<{ value: string; label: string; count: number }>;
 };
 
+export type ReadingHistoryEntry = {
+  id: number;
+  title: string;
+  title_japanese?: string | null;
+  pretty_title?: string | null;
+  source: string;
+  remote_gallery_id?: number | null;
+  page_count: number;
+  cover_path?: string | null;
+  date: string;
+  last_opened_at: string;
+  read_events: number;
+  furthest_page: number;
+  progress_percent: number;
+  completed: boolean;
+};
+
+export type ReadingHistoryPage = {
+  result: ReadingHistoryEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+  num_pages: number;
+};
+
 export type LibraryTagFilter = {
   id: number;
   type?: string;
@@ -833,6 +858,8 @@ export const api = {
   },
   libraryRecentAdded: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-added?limit=${limit}`),
   libraryRecentRead: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-read?limit=${limit}`),
+  libraryReadingHistory: (page = 1, per_page = 30) =>
+    request<ReadingHistoryPage>(`/api/library/reading-history?page=${page}&per_page=${per_page}`),
   libraryContinueReading: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/continue-reading?limit=${limit}`),
   libraryTagFilters: (q = "", limit = 40) =>
     request<{ result: LibraryTagFilter[] }>(`/api/library/tag-filters?q=${encodeURIComponent(q)}&limit=${limit}`),
