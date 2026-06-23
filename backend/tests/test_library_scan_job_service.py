@@ -1,3 +1,4 @@
+import time
 import zipfile
 from pathlib import Path
 
@@ -8,6 +9,16 @@ from app.services.archive_service import ArchiveService
 from app.services.job_service import JobService
 from app.services.library_scan_service import LibraryScanService
 from app.services.library_scan_job_service import LibraryScanJobService
+
+
+def _wait_for_job(jobs, job_id, timeout=10.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        job = jobs.get(job_id)
+        if job["status"] in {"completed", "failed", "cancelled"}:
+            return job
+        time.sleep(0.02)
+    raise AssertionError(f"job {job_id} did not finish within {timeout}s (status={jobs.get(job_id)['status']})")
 
 
 def _png() -> bytes:
@@ -46,9 +57,8 @@ def test_run_scan_ingests_linked_and_local(tmp_path):
     preview = scan.preview()
     paths = [p["path"] for p in preview["new_linked"] + preview["new_local"]]
     job = service.enqueue_scan(paths)
-    service._workers[job["id"]].join(timeout=10)
+    done = _wait_for_job(jobs, job["id"])
 
-    done = jobs.get(job["id"])
     assert done["status"] == "completed"
     assert done["target"]["ingested"] == 2
     linked = db.fetchone("SELECT remote_gallery_id FROM works WHERE remote_gallery_id = 177013")
@@ -64,9 +74,8 @@ def test_run_scan_skips_unreadable(tmp_path):
     service = LibraryScanJobService(settings, jobs, archive, scan)
 
     job = service.enqueue_scan([str(bad.resolve())])
-    service._workers[job["id"]].join(timeout=10)
+    done = _wait_for_job(jobs, job["id"])
 
-    done = jobs.get(job["id"])
     assert done["status"] == "completed"
     assert done["target"]["ingested"] == 0
     assert len(done["target"]["skipped"]) == 1
