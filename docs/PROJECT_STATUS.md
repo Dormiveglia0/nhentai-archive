@@ -92,15 +92,16 @@ Current real slice:
 - 治理 ComicInfo 回写源 CBZ：新增共享模块 `comicinfo.py`（ComicInfo 字段生成/XML/zip 重封，ExportService 与回写共用，保证导出下载与源回写产出一致）。`GovernanceService.write_back_comicinfo` 把治理后的 ComicInfo 就地原子写进源 CBZ：写同目录 tmp → fsync → `os.replace`，无备份；只换 ComicInfo.xml，页面图像字节不变；回写后重算并更新 `work_files.sha256`/`size_bytes`。API `POST /api/works/{id}/governance/apply` 增 `write_back` 开关（默认关），metadata 写入成功后回写失败不回滚、以 `write_back.error` 回显。前端应用面板加默认关闭的「同时回写源文件」复选框 + 风险提示 + 二次确认。
 - 轻量收尾阶段：① 文件管理 `#files` 清单补真实分页翻页器（复用 IconPager，后端 `inventory` 早已支持 page/per_page）；② 新增阅读历史专属页 `#history`：`LibraryService.reading_history` 按 (作品, 日期) 聚合 `reading_history`（当天最近时间/阅读次数/最远页 + 当前总进度），`GET /api/library/reading-history` 分页，前端按「今天/昨天/本周/更早」日期桶分组时间线，点击进本地阅读器，遵守 blurCovers；③ 治理批量：`GovernanceService.bulk_preview/bulk_apply` 对多选作品执行统一动作——批量补全缺失元数据（只填空、绝不覆盖已有值、来源 comicinfo>json>remote）与批量回写 ComicInfo（沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离），API `POST /api/governance/bulk/preview|apply`，治理队列加多选 + 批量条（预览/应用/结果回显 + 回写二次确认）。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿（128 passed，含 reading_history 4 项 + governance_bulk 5 项）；`cd frontend && npm run build` 通过。
 
+- 轻量收尾第二轮：① 文件清单 `#files` 加体积排序（后端 `inventory` 新增 `sort` default/size_desc/size_asc，过滤后分页前对整列表排序）+ 补齐 `size_mismatch` 状态筛选（状态匹配改为 `status==e.status or status in e.flags`，使 flag-only 条件可筛）；② 我的库 `#library` 多选 + 批量托盘 `LibraryBatchTray`，只复用现有端点：导出下载合集、批量补全缺失元数据（`governanceBulkApply` fill-missing）、删除所选（`previewFileDelete`→二次确认→`deleteFiles` 级联）；③ 治理元数据机翻：只读 `GovernanceService.translate_metadata`（title/title_japanese/summary，source=auto，绝不写库）产出可复核建议，`POST /api/works/{id}/governance/translate`，前端「机翻填充中文」按钮把建议预填编辑框（source=manual），人工保存才落地；`TranslationService` DeepL 支持 source=auto。设计见 `docs/superpowers/specs/2026-06-23-lightweight-finishing-round2-design.md`。验证：`pytest backend/tests -q` 全绿（134 passed，新增 file_service 2 项 + governance_translate 4 项）；`npm run build` 通过。
+
 ## Not Implemented Yet
 
-- Library bulk actions (multi-select batch tray).
-- Long-running bulk export jobs through the task center.
-- Governance dictionary auto-translation of metadata (machine translation is connected for the dictionary, but governance still does not auto-translate; bulk preview/apply now exists for fill-missing + ComicInfo write-back).
+- Long-running bulk export jobs through the task center（唯一悬而未决的大特性，需先单独设计「导出=下载给用户」与后台落盘产物的生命周期冲突）。
+- Governance 词典 review/冲突的批量解决（仍留单作品页人工；批量补全缺失元数据 + ComicInfo 回写 + 元数据机翻建议均已具备）。
 
 ## Next Plan
 
-轻量收尾三项(文件清单分页/阅读历史页/治理批量)已落地。剩余方向:长时批量导出任务接入任务中心——需先单独设计「导出=下载给用户」与后台落盘的语义冲突(产物落盘策略/生命周期/清理);治理批量可继续扩展(词典 review/冲突的批量解决仍留单作品页人工);文件清单更多筛选维度。
+轻量收尾两轮（文件清单分页+排序+状态筛选 / 阅读历史页 / 治理批量+元数据机翻 / 库多选批量托盘）已落地。唯一剩余大方向：长时批量导出任务接入任务中心——需先单独设计「导出=下载给用户」与后台落盘的语义冲突（产物落盘策略/生命周期/清理），这是个产品取舍而非技术债，待与用户确认后再设计实现。
 
 ## Risks And Decisions
 
