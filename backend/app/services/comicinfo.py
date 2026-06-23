@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -60,6 +61,9 @@ def build_fields(aggregate: dict[str, Any]) -> dict[str, str]:
     tags = _tag_output(aggregate)
     if tags:
         comic_info["Tags"] = tags
+    gallery_id = aggregate.get("work", {}).get("remote_gallery_id")
+    if gallery_id:
+        comic_info["Web"] = f"https://nhentai.net/g/{int(gallery_id)}/"
     return comic_info
 
 
@@ -70,7 +74,23 @@ def to_xml(fields: dict[str, str]) -> str:
         if value:
             child = ElementTree.SubElement(root, key)
             child.text = value
+    web = _stringify(fields.get("Web"))
+    if web:
+        child = ElementTree.SubElement(root, "Web")
+        child.text = web
     return ElementTree.tostring(root, encoding="unicode", short_empty_elements=False)
+
+
+def gallery_id_from_xml(xml_text: str) -> int | None:
+    try:
+        root = ElementTree.fromstring(xml_text)
+    except ElementTree.ParseError:
+        return None
+    web = root.findtext("Web")
+    if not web:
+        return None
+    match = re.search(r"nhentai\.net/g/(\d+)", web)
+    return int(match.group(1)) if match else None
 
 
 def reseal_cbz(
