@@ -4950,11 +4950,144 @@ body {
 }
 
 .library-results-head {
-  height: 34px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   color: var(--muted);
   font-size: 13px;
+}
+
+.library-results-tools {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.library-batch-toggle {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.library-batch-toggle.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.library-batch-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+.library-batch-link:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+/* 多选选中态:封面左上角勾选 + 卡片描边 */
+.library-check {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.library-check.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.library-card.batch-checked {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.library-batch-tray {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 4px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.batch-tray-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.batch-count {
+  font-size: 13px;
+  color: var(--ink, var(--muted));
+  font-weight: 600;
+}
+.batch-clear {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.batch-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid, #fff);
+  color: var(--ink, inherit);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.batch-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.batch-actions button.batch-danger {
+  color: var(--danger, #c0392b);
+  border-color: color-mix(in srgb, var(--danger, #c0392b) 40%, var(--line));
+}
+.batch-actions button.batch-ghost {
+  color: var(--muted);
+}
+.batch-warning {
+  color: var(--danger, #c0392b);
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+}
+.batch-notice {
+  font-size: 12px;
+  color: var(--muted);
+}
+.batch-notice.error {
+  color: var(--danger, #c0392b);
 }
 
 .library-grid {

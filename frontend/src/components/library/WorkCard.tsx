@@ -13,20 +13,33 @@ type Props = {
   selected: boolean;
   onSelect: () => void;
   onPickTag: (tag: LibraryTag) => void;
+  multiSelect?: boolean;
+  checked?: boolean;
+  onToggle?: () => void;
 };
 
-export function WorkCard({ work, view, blurCovers, selected, onSelect, onPickTag }: Props) {
+export function WorkCard({ work, view, blurCovers, selected, onSelect, onPickTag, multiSelect, checked, onToggle }: Props) {
   const status = readStatusLabel(work);
   const title = workTitle(work);
+  const handlePrimary = multiSelect ? (onToggle ?? onSelect) : onSelect;
 
   return (
-    <article className={`library-card ${view === "list" ? "list-card" : ""} ${selected ? "selected" : ""}`.trim()}>
+    <article
+      className={`library-card ${view === "list" ? "list-card" : ""} ${selected ? "selected" : ""} ${
+        multiSelect && checked ? "batch-checked" : ""
+      }`.trim()}
+    >
       <button
         type="button"
         className="library-cover"
-        onClick={onSelect}
-        onDoubleClick={() => navigate({ name: "reader", workId: work.id })}
+        onClick={handlePrimary}
+        onDoubleClick={() => !multiSelect && navigate({ name: "reader", workId: work.id })}
       >
+        {multiSelect ? (
+          <span className={`library-check ${checked ? "on" : ""}`} aria-hidden="true">
+            {checked ? <Check size={14} /> : null}
+          </span>
+        ) : null}
         {work.cover_path ? (
           <img className={blurCovers ? "blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
         ) : (
@@ -43,8 +56,8 @@ export function WorkCard({ work, view, blurCovers, selected, onSelect, onPickTag
         className="library-card-body"
         role="button"
         tabIndex={0}
-        onClick={onSelect}
-        onKeyDown={(event) => event.key === "Enter" && onSelect()}
+        onClick={handlePrimary}
+        onKeyDown={(event) => event.key === "Enter" && handlePrimary()}
       >
         <div className="card-meta">
           <span>{work.source === "remote" ? "远端" : "本地"}</span>
