@@ -340,6 +340,11 @@ def library_tag_filters(q: str = "", limit: int = 40):
     return library.tag_filters(q, limit)
 
 
+@app.get("/api/library/reading-history")
+def library_reading_history(page: int = 1, per_page: int = 30):
+    return library.reading_history(page, per_page)
+
+
 @app.get("/api/governance/queue")
 def governance_queue():
     return governance.queue()
