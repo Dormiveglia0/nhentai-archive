@@ -4,6 +4,8 @@ frontend/dist/
 frontend/.cache/
 frontend/test-results/
 frontend/playwright-report/
+test-results/
+playwright-report/
 frontend/tsconfig.tsbuildinfo
 backend/.local-data/
 backend/.pytest_cache/
