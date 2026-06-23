@@ -5398,6 +5398,31 @@ body {
   font-size: 12px;
 }
 
+.governance-panel-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.governance-translate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-solid, #fff);
+  color: var(--ink, inherit);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.governance-translate-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .governance-panel-head h2,
 .governance-panel h2 {
   margin: 0;

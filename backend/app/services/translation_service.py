@@ -150,7 +150,10 @@ class TranslationService:
         base = "https://api.deepl.com" if cfg["deepl_plan"] == "pro" else "https://api-free.deepl.com"
         url = f"{base}/v2/translate"
         target_lang = "ZH" if target.lower().startswith("zh") else target.upper()
-        fields: list[tuple[str, str]] = [("source_lang", source.upper()), ("target_lang", target_lang)]
+        # DeepL 自动检测源语言:留空 source_lang，不可传 "AUTO"。
+        fields: list[tuple[str, str]] = [("target_lang", target_lang)]
+        if source.lower() not in {"auto", ""}:
+            fields.append(("source_lang", source.upper()))
         fields.extend(("text", text) for text in texts)
         data = _http_post_form(url, fields, headers={"Authorization": f"DeepL-Auth-Key {key}"}, timeout=self.timeout)
         translations = data.get("translations") if isinstance(data, dict) else None

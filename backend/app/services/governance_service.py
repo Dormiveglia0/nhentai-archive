@@ -29,6 +29,10 @@ METADATA_FIELDS = {
 ALLOWED_METADATA_SOURCES = {"manual", "remote", "comicinfo", "current"}
 PROBLEM_DICTIONARY_STATUSES = {"review", "conflict"}
 
+# 自由文本字段，可机翻为中文建议供人工复核；artist/group/language/tags 走词典，
+# pages/published_at 为结构化字段，均不机翻。
+TRANSLATABLE_METADATA_FIELDS = ("title", "title_japanese", "summary")
+
 # work_governance 的 source（comicinfo/json/remote/unknown）→ 允许写入 work_metadata 的 source。
 SOURCE_TO_METADATA = {"comicinfo": "comicinfo", "remote": "remote", "json": "remote"}
 
@@ -188,6 +192,52 @@ class GovernanceService:
                 response["write_back"] = {"error": str(exc)}
         response["governance"] = self.work_governance(work_id)
         return response
+
+    def translate_metadata(self, work_id: int, fields: list[str] | None = None) -> dict[str, Any]:
+        """机翻自由文本元数据字段为中文，返回可复核建议。
+
+        只读：绝不写库，绝不自动改写任何字段。仅为指定（默认全部可译）字段
+        生成 `{field, label, original, suggestion}`，由前端预填进编辑框，经人工
+        确认后才通过现有 apply 路径以 source=manual 持久化。
+        """
+        translation = getattr(self.dictionary_service, "translation", None)
+        if translation is None:
+            raise ValueError("机翻服务未配置")
+
+        aggregate = self.work_governance(work_id)
+        field_map = {field["field"]: field for field in aggregate["metadata"]["fields"]}
+        requested = [f for f in (fields or TRANSLATABLE_METADATA_FIELDS) if f in TRANSLATABLE_METADATA_FIELDS]
+
+        pending: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        for field in requested:
+            diff = field_map.get(field)
+            if not diff:
+                continue
+            original = self._translatable_original(diff)
+            label = str(diff.get("label") or METADATA_FIELDS.get(field, {}).get("label") or field)
+            if not original:
+                skipped.append({"field": field, "label": label, "reason": "no_source"})
+                continue
+            pending.append({"field": field, "label": label, "original": original})
+
+        translations = translation.translate([item["original"] for item in pending], source="auto") if pending else []
+        result: list[dict[str, Any]] = []
+        for item, raw in zip(pending, translations):
+            suggestion = str(raw or "").strip()
+            if not suggestion or self._normalize_value(suggestion) == self._normalize_value(item["original"]):
+                skipped.append({"field": item["field"], "label": item["label"], "reason": "no_change"})
+                continue
+            result.append({**item, "suggestion": suggestion})
+
+        return {"result": result, "skipped": skipped, "provider": translation.config().get("provider")}
+
+    def _translatable_original(self, diff: dict[str, Any]) -> str | None:
+        """选用字段当前最有意义的原文:本地最终值 → 库内当前值 → 解析来源值。"""
+        for key in ("working_value", "current_value", "source_value"):
+            if self._normalize_value(diff.get(key)):
+                return str(diff.get(key))
+        return None
 
     def _fill_fields_for(self, aggregate: dict[str, Any]) -> list[dict[str, Any]]:
         """空值且有来源值的字段，作为「可补全」返回。绝不含已有非空终值的字段。"""

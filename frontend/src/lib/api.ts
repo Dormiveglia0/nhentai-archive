@@ -334,6 +334,19 @@ export type GovernanceApplyResult = {
   };
 };
 
+export type GovernanceTranslateSuggestion = {
+  field: string;
+  label: string;
+  original: string;
+  suggestion: string;
+};
+
+export type GovernanceTranslateResult = {
+  result: GovernanceTranslateSuggestion[];
+  skipped: Array<{ field: string; label: string; reason: string }>;
+  provider: string | null;
+};
+
 export type GovernanceBulkActions = {
   fill_missing_metadata?: boolean;
   write_back?: boolean;
@@ -895,6 +908,12 @@ export const api = {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
+    }),
+  translateWorkGovernance: (id: number, fields?: string[]) =>
+    request<GovernanceTranslateResult>(`/api/works/${id}/governance/translate`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ fields: fields ?? null })
     }),
   governanceBulkPreview: (work_ids: number[], actions: GovernanceBulkActions) =>
     request<GovernanceBulkPreview>("/api/governance/bulk/preview", {

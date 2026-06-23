@@ -89,6 +89,10 @@ class GovernanceBulkRequest(BaseModel):
     actions: GovernanceBulkActions = GovernanceBulkActions()
 
 
+class GovernanceTranslateRequest(BaseModel):
+    fields: list[str] | None = None
+
+
 class ExportItemRequest(BaseModel):
     work_id: int | None = None
     output_name: str | None = None
@@ -374,6 +378,16 @@ def apply_work_governance(work_id: int, payload: GovernanceApplyRequest):
         return governance.apply(work_id, payload.model_dump())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/works/{work_id}/governance/translate")
+def translate_work_governance(work_id: int, payload: GovernanceTranslateRequest):
+    try:
+        return governance.translate_metadata(work_id, payload.fields)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except TranslationError as exc:
+        raise HTTPException(status_code=502, detail=exc.message) from exc
 
 
 @app.post("/api/governance/bulk/preview")

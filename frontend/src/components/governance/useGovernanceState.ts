@@ -24,6 +24,7 @@ export function useGovernanceState(initialWorkId?: number) {
   const [edits, setEdits] = useState<Record<string, FieldEdit>>({});
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [writeBack, setWriteBack] = useState(false);
 
   const [bulkMode, setBulkMode] = useState(false);
@@ -144,6 +145,33 @@ export function useGovernanceState(initialWorkId?: number) {
     }
   };
 
+  const translateMetadata = async () => {
+    if (!aggregate) return;
+    setTranslating(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const out = await api.translateWorkGovernance(aggregate.work.id);
+      if (!out.result.length) {
+        setNotice("没有可机翻的字段（来源为空或翻译无变化）。");
+        return;
+      }
+      // 仅预填进编辑框供人工复核;不写库,需用户点击保存才持久化。
+      setEdits((current) => {
+        const next = { ...current };
+        out.result.forEach((item) => {
+          next[item.field] = { value: item.suggestion, source: "manual" };
+        });
+        return next;
+      });
+      setNotice(`已机翻填充 ${out.result.length} 个字段（${out.provider ?? "机翻"}），请复核后保存。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const applyDictionaryTag = async (tag: GovernanceTag) => {
     if (!aggregate || !tag.remote_tag_id) return;
     const original = tag.name || tag.slug || tag.display;
@@ -253,6 +281,8 @@ export function useGovernanceState(initialWorkId?: number) {
     changeField,
     reload,
     saveMetadata,
+    translating,
+    translateMetadata,
     applyDictionaryTag,
     selectWork,
     bulkMode,

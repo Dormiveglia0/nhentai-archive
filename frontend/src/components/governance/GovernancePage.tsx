@@ -81,6 +81,8 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onChange={gov.changeField}
                       onlyDiff={gov.onlyDiff}
                       onToggleDiff={() => gov.setOnlyDiff((value) => !value)}
+                      onTranslate={gov.translateMetadata}
+                      translating={gov.translating}
                     />
 
                     <GovernanceTagBoard aggregate={gov.aggregate} onApplyDictionaryTag={gov.applyDictionaryTag} />
