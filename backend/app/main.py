@@ -17,6 +17,8 @@ from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.export_job_service import EXPORT_SYNC_THRESHOLD, ExportJobService
 from app.services.export_service import ExportService
+from app.services.library_scan_service import LibraryScanService
+from app.services.library_scan_job_service import LibraryScanJobService
 from app.services.file_service import FileMaintenanceService
 from app.services.import_service import ImportService
 from app.services.job_service import JobActive, JobService
@@ -126,6 +128,10 @@ class FileDeleteRequest(BaseModel):
     targets: list[FileTargetRequest] = []
 
 
+class LibraryScanRequest(BaseModel):
+    paths: list[str] | None = None
+
+
 settings = load_settings()
 db = Database(settings.database_path)
 db.init_schema()
@@ -147,6 +153,8 @@ exports = ExportService(db, settings)
 files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
 export_jobs = ExportJobService(settings, jobs, exports)
+library_scan_service = LibraryScanService(settings, db)
+library_scan_jobs = LibraryScanJobService(settings, jobs, archive, library_scan_service)
 settings_service = SettingsService(db, settings, client, translation)
 workbench = WorkbenchService(library, governance, jobs, files_service, exports)
 
@@ -496,6 +504,20 @@ def enqueue_bulk_export(payload: ExportBulkJobRequest):
     return export_jobs.enqueue_bulk_export(payload.work_ids, payload.options)
 
 
+@app.post("/api/library/scan/preview")
+def library_scan_preview():
+    return library_scan_service.preview()
+
+
+@app.post("/api/library/scan")
+def library_scan(payload: LibraryScanRequest):
+    paths = payload.paths
+    if paths is None:
+        preview = library_scan_service.preview()
+        paths = [p["path"] for p in preview["new_linked"] + preview["new_local"]]
+    return library_scan_jobs.enqueue_scan(paths)
+
+
 @app.get("/api/jobs/{job_id}/export/download")
 def download_bulk_export(job_id: int):
     try:
@@ -635,7 +657,11 @@ def patch_reader_state(work_id: int, patch: ReaderStatePatch):
 def _job_dispatch(job_id: int):
     """Route a job control action to the service that owns its type."""
     job_type = jobs.get(job_id)["type"]
-    return export_jobs if job_type == "bulk_export" else imports
+    if job_type == "bulk_export":
+        return export_jobs
+    if job_type == "library_scan":
+        return library_scan_jobs
+    return imports
 
 
 @app.get("/api/jobs")
