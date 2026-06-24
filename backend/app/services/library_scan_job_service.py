@@ -21,8 +21,17 @@ class LibraryScanJobService:
         self._worker_lock = threading.Lock()
         self._workers: dict[int, threading.Thread] = {}
 
+    @staticmethod
+    def _contained(path: Path, root: Path) -> bool:
+        return path == root or root in path.parents
+
     def enqueue_scan(self, paths: list[str]) -> dict[str, Any]:
-        clean = [str(Path(p).resolve()) for p in paths if p]
+        root = self.settings.library_dir.resolve()
+        clean = [
+            str(Path(p).resolve())
+            for p in paths
+            if p and self._contained(Path(p).resolve(), root)
+        ]
         target = {"paths": clean, "total": len(clean), "ingested": 0, "skipped": []}
         job = self.jobs.create("library_scan", target)
         self._start_worker(job["id"])
@@ -81,21 +90,33 @@ class LibraryScanJobService:
         ingested = 0
         try:
             self.jobs.mark_running(job_id, "ingesting", 0, total)
+            root = self.settings.library_dir.resolve()
             for path in paths:
                 self.jobs.checkpoint(job_id)
                 try:
                     gallery_id = self.scan._read_gallery_id(path)
                     if gallery_id is not None:
-                        self.archive.ingest_cbz(
+                        work_id = self.archive.ingest_cbz(
                             path, source="remote", title=path.stem,
                             remote_gallery_id=gallery_id, metadata={"remote": "nhentai"},
                         )
                     else:
-                        self.archive.ingest_cbz(
+                        work_id = self.archive.ingest_cbz(
                             path, source="local", title=path.stem,
                             remote_gallery_id=None, metadata={},
                         )
                     ingested += 1
+                    # Delete the loose original when ingest produced a canonical copy elsewhere.
+                    row = self.archive.db.fetchone(
+                        "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'"
+                        " ORDER BY created_at DESC, id DESC LIMIT 1",
+                        (work_id,),
+                    )
+                    if row:
+                        stored = Path(row["path"]).resolve()
+                        loose = path.resolve()
+                        if stored != loose and self._contained(loose, root):
+                            loose.unlink(missing_ok=True)
                 except Exception as exc:  # noqa: BLE001 - 单文件失败不中断整批
                     skipped.append({"path": str(path), "reason": str(exc)})
                 self.jobs.update_progress(job_id, "running", "ingesting", ingested + len(skipped), total)

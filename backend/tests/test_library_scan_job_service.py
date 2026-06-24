@@ -79,3 +79,56 @@ def test_run_scan_skips_unreadable(tmp_path):
     assert done["status"] == "completed"
     assert done["target"]["ingested"] == 0
     assert len(done["target"]["skipped"]) == 1
+
+
+def test_enqueue_scan_rejects_out_of_library_paths(tmp_path):
+    """Fix 1: paths outside library_dir must be silently dropped (containment guard)."""
+    settings, db, archive, jobs, scan = _setup(tmp_path)
+
+    # One valid in-library CBZ, one out-of-tree CBZ written directly under tmp_path.
+    in_lib = settings.library_dir / "inside.cbz"
+    _make_cbz(in_lib)
+    out_of_tree = tmp_path / "outside.cbz"
+    _make_cbz(out_of_tree)
+
+    service = LibraryScanJobService(settings, jobs, archive, scan)
+    job = service.enqueue_scan([str(in_lib), str(out_of_tree)])
+    done = _wait_for_job(jobs, job["id"])
+
+    assert done["status"] == "completed"
+    assert done["target"]["ingested"] == 1
+    # Out-of-tree file must not have been touched.
+    assert out_of_tree.exists(), "out-of-tree file must remain untouched"
+    work_count = db.fetchone("SELECT COUNT(*) AS c FROM works")["c"]
+    assert work_count == 1
+
+
+def test_run_scan_deletes_loose_original_after_ingest(tmp_path):
+    """Fix 2: loose original inside library_dir must be unlinked after canonical copy is stored."""
+    settings, db, archive, jobs, scan = _setup(tmp_path)
+
+    loose = settings.library_dir / "loose_copy.cbz"
+    _make_cbz(loose)
+
+    service = LibraryScanJobService(settings, jobs, archive, scan)
+    job = service.enqueue_scan([str(loose)])
+    done = _wait_for_job(jobs, job["id"])
+
+    assert done["status"] == "completed"
+    assert done["target"]["ingested"] == 1
+
+    # The loose original must have been removed.
+    assert not loose.exists(), "loose original must be deleted after ingest"
+
+    # Exactly one CBZ must exist in library_dir (the canonical copy).
+    cbzs = list(settings.library_dir.glob("*.cbz"))
+    assert len(cbzs) == 1, f"expected 1 canonical cbz, found: {cbzs}"
+
+    # The work is indexed and its stored path is the canonical copy, not the loose original.
+    row = db.fetchone(
+        "SELECT path FROM work_files WHERE kind = 'source_cbz' ORDER BY id DESC LIMIT 1"
+    )
+    assert row is not None
+    stored = Path(row["path"])
+    assert stored.exists()
+    assert stored != loose
