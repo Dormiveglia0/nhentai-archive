@@ -363,20 +363,25 @@ class GovernanceService:
                         "ORDER BY created_at DESC, id DESC LIMIT 1",
                         (work_id,),
                     )
-                    source_path = row["path"] if row else None
-                    comicinfo_fields = self._archive_metadata(source_path)["comicinfo"]
-                    if comicinfo_fields.get("Web"):
-                        skip_entry = {"work_id": work_id, "reason": "already_has_web"}
+                    if not row or not row["path"]:
+                        skip_entry = {"work_id": work_id, "reason": "no_source_cbz"}
                         skipped.append(skip_entry)
-                        entry["backfill_web"] = {"skipped": "already_has_web"}
+                        entry["backfill_web"] = {"skipped": "no_source_cbz"}
                     else:
-                        try:
-                            wb_result = self.write_back_comicinfo(work_id)
-                            entry["backfill_web"] = {"written": True, "new_sha256": wb_result["new_sha256"]}
-                            web_written += 1
-                        except Exception as exc:  # 失败隔离：记录并继续下一作品
-                            entry["backfill_web"] = {"error": str(exc)}
-                            web_errors += 1
+                        source_path = row["path"] if row else None
+                        comicinfo_fields = self._archive_metadata(source_path)["comicinfo"]
+                        if comicinfo_fields.get("Web"):
+                            skip_entry = {"work_id": work_id, "reason": "already_has_web"}
+                            skipped.append(skip_entry)
+                            entry["backfill_web"] = {"skipped": "already_has_web"}
+                        else:
+                            try:
+                                wb_result = self.write_back_comicinfo(work_id)
+                                entry["backfill_web"] = {"written": True, "new_sha256": wb_result["new_sha256"]}
+                                web_written += 1
+                            except Exception as exc:  # 失败隔离：记录并继续下一作品
+                                entry["backfill_web"] = {"error": str(exc)}
+                                web_errors += 1
 
             result.append(entry)
 

@@ -228,3 +228,33 @@ def test_backfill_false_still_raises_if_no_action(tmp_path):
     work_id = _import_work(db, archive, tmp_path, 9005, title="No Action Work")
     with pytest.raises(ValueError):
         service.bulk_apply([work_id], {"backfill_source_web": False})
+
+
+# ---------------------------------------------------------------------------
+# Test 7: work with remote_gallery_id but no source_cbz is skipped as no_source_cbz
+# ---------------------------------------------------------------------------
+def test_backfill_skips_work_without_source_cbz(tmp_path):
+    """A work with remote_gallery_id but no source_cbz is skipped with reason no_source_cbz."""
+    _settings, db, archive, service = _setup(tmp_path)
+    gallery_id = 9006
+    # Create a work row with remote_gallery_id but no source_cbz file
+    # We do this by creating a work manually without ingest (ingest always creates source_cbz)
+    db.execute(
+        "INSERT INTO works (title, remote_gallery_id, language, page_count, source, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+        ("Work with Missing CBZ", gallery_id, "english", 0, "remote")
+    )
+    work_id = db.fetchone("SELECT id FROM works WHERE remote_gallery_id = ? ORDER BY id DESC LIMIT 1", (gallery_id,))["id"]
+
+    result = service.bulk_apply([work_id], {"backfill_source_web": True})
+
+    # Entry must record skipped reason as no_source_cbz
+    entries = {e["work_id"]: e for e in result["result"]}
+    assert entries[work_id]["backfill_web"] == {"skipped": "no_source_cbz"}
+
+    # Skipped list in summary must include this work with reason no_source_cbz
+    skipped_reasons = {s["work_id"]: s["reason"] for s in result["summary"]["skipped"]}
+    assert skipped_reasons[work_id] == "no_source_cbz"
+
+    # Verify it's NOT in web_errors
+    assert result["summary"]["web_errors"] == 0
