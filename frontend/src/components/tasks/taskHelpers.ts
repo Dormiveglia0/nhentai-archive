@@ -112,12 +112,14 @@ export function canDownloadBulkExport(job: Job): boolean {
 
 export function bulkExportSkipped(job: Job): Array<{ work_id: number; reason: string }> {
   const skipped = job.target.skipped;
-  return Array.isArray(skipped) ? skipped : [];
+  if (!Array.isArray(skipped)) return [];
+  return skipped.filter((item): item is { work_id: number; reason: string } => "work_id" in item);
 }
 
 export function libraryScanSkipped(job: Job): Array<{ path: string; reason: string }> {
-  const skipped = job.target.scan_skipped;
-  return Array.isArray(skipped) ? skipped : [];
+  const skipped = job.target.skipped;
+  if (!Array.isArray(skipped)) return [];
+  return skipped.filter((item): item is { path: string; reason: string } => "path" in item);
 }
 
 export function canPause(job: Job) {

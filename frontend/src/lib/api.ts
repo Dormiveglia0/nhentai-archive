@@ -565,11 +565,11 @@ export type JobTarget = Record<string, unknown> & {
   output_name?: string | null;
   downloaded?: boolean;
   expires_at?: string | null;
-  skipped?: BulkExportSkip[];
+  // shared by bulk_export ({ work_id, reason }) and library_scan ({ path, reason })
+  skipped?: (BulkExportSkip | LibraryScanSkip)[];
   // library_scan fields
   paths?: string[];
   ingested?: number;
-  scan_skipped?: LibraryScanSkip[];
 };
 
 export type Job = {
