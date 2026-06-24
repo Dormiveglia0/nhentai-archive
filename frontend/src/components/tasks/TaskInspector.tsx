@@ -14,6 +14,7 @@ import {
   formatDurationHint,
   formatTime,
   jobTypeLabel,
+  libraryScanSkipped,
   numberTarget,
   stageLabel,
   statusLabel,
@@ -150,6 +151,23 @@ export function TaskInspector({
           {bulkExportSkipped(job).length > 0 ? (
             <p className="tasks-boundary">
               已跳过 {bulkExportSkipped(job).length} 部存在阻塞的作品。
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {job.type === "library_scan" ? (
+        <section className="tasks-inspector-section">
+          <h4>入库详情</h4>
+          <dl className="tasks-kv">
+            <div>
+              <dt>已入库</dt>
+              <dd>{numberTarget(job, "ingested") ?? 0} / {numberTarget(job, "total") ?? 0} 个</dd>
+            </div>
+          </dl>
+          {libraryScanSkipped(job).length > 0 ? (
+            <p className="tasks-boundary">
+              跳过 {libraryScanSkipped(job).length} 个（不可读/失败）。
             </p>
           ) : null}
         </section>

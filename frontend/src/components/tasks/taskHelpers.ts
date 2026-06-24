@@ -30,6 +30,7 @@ export function jobTypeLabel(type: string) {
   const labels: Record<string, string> = {
     remote_import: "远端下载",
     bulk_export: "批量导出",
+    library_scan: "扫描库",
   };
   return labels[type] ?? type;
 }
@@ -38,6 +39,7 @@ export function jobTypeDescription(type: string) {
   const labels: Record<string, string> = {
     remote_import: "从远端存储下载并解析入库",
     bulk_export: "打包多部作品为可下载合集（临时产物·下载即删）",
+    library_scan: "扫描库目录并把未索引的 CBZ 入库",
   };
   return labels[type] ?? "任务";
 }
@@ -57,6 +59,7 @@ export function stageLabel(stage: string) {
     downloading_cbz: "下载 CBZ",
     indexing_archive: "解析入库",
     packaging: "打包合集",
+    ingesting: "入库中",
     completed: "已完成",
     failed: "失败",
     cancelling: "取消中",
@@ -70,6 +73,11 @@ export function targetLabel(job: Job) {
     const total = numberTarget(job, "total") ?? 0;
     const packaged = numberTarget(job, "packaged") ?? 0;
     return job.status === "completed" ? `已打包 ${packaged} 部` : `${packaged}/${total} 部`;
+  }
+  if (job.type === "library_scan") {
+    const total = numberTarget(job, "total") ?? 0;
+    const ingested = numberTarget(job, "ingested") ?? 0;
+    return job.status === "completed" ? `已入库 ${ingested} 个` : `${ingested}/${total} 个`;
   }
   const galleryId = numberTarget(job, "gallery_id");
   const workId = numberTarget(job, "work_id");
@@ -104,6 +112,11 @@ export function canDownloadBulkExport(job: Job): boolean {
 
 export function bulkExportSkipped(job: Job): Array<{ work_id: number; reason: string }> {
   const skipped = job.target.skipped;
+  return Array.isArray(skipped) ? skipped : [];
+}
+
+export function libraryScanSkipped(job: Job): Array<{ path: string; reason: string }> {
+  const skipped = job.target.scan_skipped;
   return Array.isArray(skipped) ? skipped : [];
 }
 

@@ -1,4 +1,6 @@
-import type { FileDeletePreview, FileDuplicates, FileOverview } from "../../lib/api";
+import { useState } from "react";
+
+import { api, type FileDeletePreview, type FileDuplicates, type FileOverview, type LibraryScanPreview } from "../../lib/api";
 import { formatBytes } from "./fileHelpers";
 
 const WARNING_LABELS: Record<string, string> = {
@@ -42,6 +44,41 @@ export function FileHealthRail({
 }: Props) {
   const hasHealthyWork = preview?.items.some((i) => i.kind === "work" && i.exists) ?? false;
   const hasWarnings = preview?.items.some((i) => i.warnings.length > 0) ?? false;
+
+  const [scanPreview, setScanPreview] = useState<LibraryScanPreview | null>(null);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const handleScanPreview = async () => {
+    setScanBusy(true);
+    setScanPreview(null);
+    setScanNotice(null);
+    setScanError(null);
+    try {
+      const result = await api.scanLibraryPreview();
+      setScanPreview(result);
+    } catch (e) {
+      setScanError(String(e));
+    } finally {
+      setScanBusy(false);
+    }
+  };
+
+  const handleScanStart = async () => {
+    setScanBusy(true);
+    setScanNotice(null);
+    setScanError(null);
+    try {
+      await api.enqueueLibraryScan();
+      setScanPreview(null);
+      setScanNotice("已加入任务中心");
+    } catch (e) {
+      setScanError(String(e));
+    } finally {
+      setScanBusy(false);
+    }
+  };
 
   return (
     <aside className="files-rail">
@@ -143,6 +180,45 @@ export function FileHealthRail({
           <p className="files-dim">开启多选勾选文件，或用上面的清理按钮，预览后再确认删除。</p>
         )}
         {actionNotice ? <p className="files-notice">{actionNotice}</p> : null}
+      </section>
+
+      <section className="files-rail-section">
+        <h4>扫描库</h4>
+        <ul className="files-cleanup">
+          <li>
+            <span className="files-cleanup-main">
+              <span>扫描未索引 CBZ</span>
+              <em>将新文件入库</em>
+            </span>
+            <button type="button" onClick={() => void handleScanPreview()} disabled={scanBusy}>
+              预览
+            </button>
+          </li>
+        </ul>
+
+        {scanPreview ? (
+          <div className="files-preview">
+            <p className="files-preview-line">
+              新增 <strong>{scanPreview.counts.new_linked}</strong> linked /{" "}
+              <strong>{scanPreview.counts.new_local}</strong> local · 已知{" "}
+              <strong>{scanPreview.counts.already_known}</strong> · 不可读{" "}
+              <strong>{scanPreview.counts.unreadable}</strong>
+            </p>
+            <div className="files-confirm-row">
+              <button type="button" onClick={() => void handleScanStart()} disabled={scanBusy}>
+                开始扫描
+              </button>
+              <button type="button" className="files-ghost" onClick={() => setScanPreview(null)} disabled={scanBusy}>
+                取消
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="files-dim">点击「预览」查看可入库的新文件。</p>
+        )}
+
+        {scanNotice ? <p className="files-notice">{scanNotice}</p> : null}
+        {scanError ? <p className="files-notice">{scanError}</p> : null}
       </section>
     </aside>
   );

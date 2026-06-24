@@ -548,6 +548,16 @@ export type JobMeta = {
 
 export type BulkExportSkip = { work_id: number; reason: string };
 
+export type LibraryScanSkip = { path: string; reason: string };
+
+export interface LibraryScanPreview {
+  new_linked: { path: string; gallery_id: number }[];
+  new_local: { path: string; gallery_id: number | null }[];
+  already_known: { path: string }[];
+  unreadable: { path: string }[];
+  counts: { new_linked: number; new_local: number; already_known: number; unreadable: number };
+}
+
 export type JobTarget = Record<string, unknown> & {
   // bulk_export fields (live in target_json)
   total?: number;
@@ -556,6 +566,10 @@ export type JobTarget = Record<string, unknown> & {
   downloaded?: boolean;
   expires_at?: string | null;
   skipped?: BulkExportSkip[];
+  // library_scan fields
+  paths?: string[];
+  ingested?: number;
+  scan_skipped?: LibraryScanSkip[];
 };
 
 export type Job = {
@@ -1031,5 +1045,13 @@ export const api = {
     request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS }),
   clearNhentaiCache: () =>
     request<{ ok: boolean; message: string }>("/api/settings/nhentai/clear-cache", { method: "POST", headers: JSON_HEADERS }),
-  nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime")
+  nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime"),
+  scanLibraryPreview: () =>
+    request<LibraryScanPreview>("/api/library/scan/preview", { method: "POST", headers: JSON_HEADERS }),
+  enqueueLibraryScan: (paths?: string[]) =>
+    request<Job>("/api/library/scan", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ paths: paths ?? null }),
+    }),
 };
