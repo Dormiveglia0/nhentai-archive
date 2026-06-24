@@ -217,7 +217,11 @@ export function FileHealthRail({
           <p className="files-dim">点击「预览」查看可入库的新文件。</p>
         )}
 
-        {scanNotice ? <p className="files-notice">{scanNotice}</p> : null}
+        {scanNotice ? (
+          <p className="files-notice">
+            {scanNotice} · <a href="#tasks">查看任务中心</a>
+          </p>
+        ) : null}
         {scanError ? <p className="files-notice">{scanError}</p> : null}
       </section>
     </aside>
