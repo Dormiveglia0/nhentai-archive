@@ -298,13 +298,17 @@ class GovernanceService:
     def bulk_apply(self, work_ids: list[int], actions: dict[str, Any]) -> dict[str, Any]:
         fill = bool(actions.get("fill_missing_metadata"))
         write_back = bool(actions.get("write_back"))
-        if not (fill or write_back):
+        backfill_web = bool(actions.get("backfill_source_web"))
+        if not (fill or write_back or backfill_web):
             raise ValueError("至少选择一个批量动作。")
 
         result = []
         filled_total = 0
         written = 0
         errors = 0
+        skipped: list[dict[str, Any]] = []
+        web_written = 0
+        web_errors = 0
         for work_id in work_ids:
             work_id = int(work_id)
             work = self._work_row(work_id)
@@ -347,6 +351,33 @@ class GovernanceService:
                     entry["write_back"] = {"error": str(exc)}
                     errors += 1
 
+            if backfill_web:
+                gallery_id = work.get("remote_gallery_id")
+                if not gallery_id:
+                    skip_entry = {"work_id": work_id, "reason": "no_gallery_id"}
+                    skipped.append(skip_entry)
+                    entry["backfill_web"] = {"skipped": "no_gallery_id"}
+                else:
+                    row = self.db.fetchone(
+                        "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+                        "ORDER BY created_at DESC, id DESC LIMIT 1",
+                        (work_id,),
+                    )
+                    source_path = row["path"] if row else None
+                    comicinfo_fields = self._archive_metadata(source_path)["comicinfo"]
+                    if comicinfo_fields.get("Web"):
+                        skip_entry = {"work_id": work_id, "reason": "already_has_web"}
+                        skipped.append(skip_entry)
+                        entry["backfill_web"] = {"skipped": "already_has_web"}
+                    else:
+                        try:
+                            wb_result = self.write_back_comicinfo(work_id)
+                            entry["backfill_web"] = {"written": True, "new_sha256": wb_result["new_sha256"]}
+                            web_written += 1
+                        except Exception as exc:  # 失败隔离：记录并继续下一作品
+                            entry["backfill_web"] = {"error": str(exc)}
+                            web_errors += 1
+
             result.append(entry)
 
         return {
@@ -356,6 +387,9 @@ class GovernanceService:
                 "filled_fields": filled_total,
                 "written": written,
                 "errors": errors,
+                "web_written": web_written,
+                "web_errors": web_errors,
+                "skipped": skipped,
             },
         }
 
