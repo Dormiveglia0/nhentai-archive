@@ -350,6 +350,16 @@ export type GovernanceTranslateResult = {
 export type GovernanceBulkActions = {
   fill_missing_metadata?: boolean;
   write_back?: boolean;
+  confirm_dictionary_terms?: boolean;
+};
+
+export type GovernanceBulkDictionaryTerm = {
+  dictionary_id: number;
+  original_text: string;
+  zh_name: string;
+  tag_type: string;
+  status: string;
+  reason?: string;
 };
 
 export type GovernanceBulkPreview = {
@@ -358,8 +368,16 @@ export type GovernanceBulkPreview = {
     fill_fields: Array<{ field: string; label: string; source_value: string; source: string }>;
     write_back_ready: boolean;
     blockers: string[];
+    dictionary_terms: GovernanceBulkDictionaryTerm[];
+    skipped_dictionary_terms: GovernanceBulkDictionaryTerm[];
   }>;
-  summary: { works: number; fields_to_fill: number; write_back_ready: number };
+  summary: {
+    works: number;
+    fields_to_fill: number;
+    write_back_ready: number;
+    dictionary_terms_to_confirm: number;
+    dictionary_terms_skipped: number;
+  };
 };
 
 export type GovernanceBulkResult = {
@@ -367,8 +385,16 @@ export type GovernanceBulkResult = {
     work_id: number;
     filled: string[];
     write_back: { written?: boolean; error?: string } | null;
+    dictionary_terms: GovernanceBulkDictionaryTerm[];
   }>;
-  summary: { works: number; filled_fields: number; written: number; errors: number };
+  summary: {
+    works: number;
+    filled_fields: number;
+    written: number;
+    errors: number;
+    dictionary_terms_confirmed: number;
+    dictionary_terms_skipped: number;
+  };
 };
 
 export type ExportBlocker = {

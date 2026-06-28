@@ -31,6 +31,7 @@ export function useGovernanceState(initialWorkId?: number) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkFill, setBulkFill] = useState(true);
   const [bulkWriteBack, setBulkWriteBack] = useState(false);
+  const [bulkConfirmTerms, setBulkConfirmTerms] = useState(false);
   const [bulkPreview, setBulkPreview] = useState<GovernanceBulkPreview | null>(null);
   const [bulkResult, setBulkResult] = useState<GovernanceBulkResult | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -231,12 +232,17 @@ export function useGovernanceState(initialWorkId?: number) {
     clearBulkPreview();
   };
 
+  const changeBulkConfirmTerms = (value: boolean) => {
+    setBulkConfirmTerms(value);
+    clearBulkPreview();
+  };
+
   const runBulkPreview = async () => {
     if (!selectedIds.size) {
       setNotice("请先勾选要批量处理的作品。");
       return;
     }
-    if (!bulkFill && !bulkWriteBack) {
+    if (!bulkFill && !bulkWriteBack && !bulkConfirmTerms) {
       setNotice("请至少选择一个批量动作。");
       return;
     }
@@ -245,7 +251,13 @@ export function useGovernanceState(initialWorkId?: number) {
     setNotice(null);
     setBulkResult(null);
     try {
-      setBulkPreview(await api.governanceBulkPreview([...selectedIds], { fill_missing_metadata: bulkFill, write_back: bulkWriteBack }));
+      setBulkPreview(
+        await api.governanceBulkPreview([...selectedIds], {
+          fill_missing_metadata: bulkFill,
+          write_back: bulkWriteBack,
+          confirm_dictionary_terms: bulkConfirmTerms,
+        })
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -255,7 +267,7 @@ export function useGovernanceState(initialWorkId?: number) {
 
   const runBulkApply = async () => {
     if (!selectedIds.size) return;
-    if (!bulkFill && !bulkWriteBack) {
+    if (!bulkFill && !bulkWriteBack && !bulkConfirmTerms) {
       setNotice("请至少选择一个批量动作。");
       return;
     }
@@ -266,12 +278,18 @@ export function useGovernanceState(initialWorkId?: number) {
     setError(null);
     setNotice(null);
     try {
-      const result = await api.governanceBulkApply([...selectedIds], { fill_missing_metadata: bulkFill, write_back: bulkWriteBack });
+      const result = await api.governanceBulkApply([...selectedIds], {
+        fill_missing_metadata: bulkFill,
+        write_back: bulkWriteBack,
+        confirm_dictionary_terms: bulkConfirmTerms,
+      });
       setBulkResult(result);
       setBulkPreview(null);
       setQueue(await api.governanceQueue());
-      const { filled_fields, written, errors } = result.summary;
-      setNotice(`批量完成：补全 ${filled_fields} 个字段，回写 ${written} 个文件${errors ? `，${errors} 个失败` : ""}。`);
+      const { filled_fields, written, errors, dictionary_terms_confirmed } = result.summary;
+      setNotice(
+        `批量完成：补全 ${filled_fields} 个字段，确认 ${dictionary_terms_confirmed} 个词条，回写 ${written} 个文件${errors ? `，${errors} 个失败` : ""}。`
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -309,6 +327,8 @@ export function useGovernanceState(initialWorkId?: number) {
     setBulkFill: changeBulkFill,
     bulkWriteBack,
     setBulkWriteBack: changeBulkWriteBack,
+    bulkConfirmTerms,
+    setBulkConfirmTerms: changeBulkConfirmTerms,
     bulkPreview,
     bulkResult,
     bulkBusy,

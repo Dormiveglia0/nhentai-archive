@@ -87,6 +87,7 @@ class GovernanceApplyRequest(BaseModel):
 class GovernanceBulkActions(BaseModel):
     fill_missing_metadata: bool = False
     write_back: bool = False
+    confirm_dictionary_terms: bool = False
 
 
 class GovernanceBulkRequest(BaseModel):

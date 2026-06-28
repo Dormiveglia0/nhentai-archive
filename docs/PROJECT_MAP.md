@@ -86,12 +86,16 @@ Root: `backend/app/`
   - `work_governance(work_id)`: aggregate with work header, files, metadata field diffs, tag groups, dictionary summary, recommended actions, and completeness.
   - Reads source metadata from real stored CBZ members (`ComicInfo.xml` and the first JSON metadata file when present) plus cached `remote_galleries.payload_json`.
   - `apply(work_id, payload)`: persists final metadata decisions into `work_metadata`; optional dictionary apply delegates to `DictionaryService.apply()`. It does not mutate source CBZ files.
+  - `bulk_preview()` / `bulk_apply()`: selected-work batch actions for fill-missing metadata, opt-in ComicInfo write-back, source Web backfill, and confirming existing dictionary `review/conflict` terms when they are unlocked, not ignored, and already have a Chinese name.
 - `services/export_service.py`
   - Local-only export preview/packaging for **browser download**; never calls the NH API, never mutates source CBZ files, and never writes a second copy to the server. No export records are kept.
   - `queue()` / `summary()`: real export readiness from `works`, `work_files`, source file existence, and preview blockers/warnings. `summary()` returns only the queue counts (`total`/`ready`/`blocked`/`warnings`).
   - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, output name, ComicInfo fields, resolved export options, members to keep/write, blockers, and warnings. `options.output_name` is sanitized and forced to `.cbz`; `write_comicinfo` / `keep_json` / `compress` control the preview. No server output path is involved.
   - `build_cbz(work_id, options)`: packages a single work into CBZ **bytes** in memory, honoring `write_comicinfo`, `keep_json`, and `compress`, and returns `(filename, bytes)`; raises `ValueError` when the work has blockers. The original archive is never touched.
   - `build_bundle(items, options)`: packages multiple works into one `.zip` of CBZs (bytes) for a single download, applying shared export options, deduping member names, skipping blocked items, and raising when none can be exported.
+- `services/export_job_service.py`
+  - Long-running bulk export owner for `bulk_export` jobs. Selections over `EXPORT_SYNC_THRESHOLD` are packaged in a daemon worker, using `JobService` progress/log/control and `ExportService.build_cbz()`.
+  - Artifacts are temporary `.zip` files under the export-jobs directory, deleted after download and swept after 24h; source CBZ files remain immutable.
 - `services/file_service.py`
   - Local-only file inventory + deletion over the managed data dir; never calls the NH API.
   - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
@@ -104,6 +108,8 @@ Root: `backend/app/`
   - Writes durable `job_logs` for creation, stage changes, completion, failures, pause/resume/cancel, and retry.
 - `services/import_service.py`
   - Remote import jobs call `JobService.checkpoint()` between safe stages so pause/cancel is real and cooperative. Cancelling after a temporary CBZ download removes the tmp file before returning.
+- `services/library_scan_service.py` / `services/library_scan_job_service.py`
+  - Local library scan preview and background ingestion for already-present CBZ files under the managed library directory, routed through the task center as `library_scan` jobs.
 - `services/workbench_service.py`
   - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
@@ -144,18 +150,26 @@ Implemented:
 - `GET /api/library/recent-added?limit=`
 - `GET /api/library/recent-read?limit=`
 - `GET /api/library/continue-reading?limit=`
+- `GET /api/library/reading-history?page=&per_page=`
 - `GET /api/library/tag-filters?q=&limit=`
+- `POST /api/library/scan/preview`
+- `POST /api/library/scan`
 - `GET /api/governance/queue`
 - `GET /api/works/{work_id}/governance`
 - `POST /api/works/{work_id}/governance/apply`
+- `POST /api/works/{work_id}/governance/translate`
+- `POST /api/governance/bulk/preview`
+- `POST /api/governance/bulk/apply`
 - `GET /api/exports/queue`
 - `GET /api/exports/summary`
 - `GET /api/works/{work_id}/export-preview`
 - `POST /api/works/{work_id}/export-preview`
 - `GET /api/works/{work_id}/export/download` (streams a single CBZ as a download)
 - `POST /api/exports/download` (streams a `.zip` bundle of selected CBZs as a download)
+- `POST /api/exports/bulk-jobs` (creates a temporary-artifact `bulk_export` job)
+- `GET /api/jobs/{job_id}/export/download` (downloads a completed bulk-export artifact once, then deletes it)
 - `GET /api/files/overview`
-- `GET /api/files/inventory?category=&q=&status=&page=&per_page=`
+- `GET /api/files/inventory?category=&q=&status=&sort=&page=&per_page=`
 - `POST /api/files/preview-delete`
 - `POST /api/files/delete`
 - `GET /api/works`
@@ -172,17 +186,13 @@ Implemented:
 - `POST /api/jobs/{job_id}/resume`
 - `POST /api/jobs/{job_id}/cancel`
 - `POST /api/jobs/{job_id}/retry`
+- `POST /api/jobs/clear`
+- `DELETE /api/jobs/{job_id}`
 - `GET /api/settings`
 - `PATCH /api/settings`
 - `POST /api/settings/nhentai/verify`
 - `POST /api/settings/translation/verify`
 - `GET /api/workbench/overview`
-
-Reserved, not implemented:
-
-- Governance bulk preview/apply.
-- Long-running batch export jobs and failed-export retry through the full task center.
-- Job controls: pause/resume/cancel
 
 ## Frontend Map
 
@@ -205,9 +215,9 @@ Root: `frontend/src/`
   - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
   - Dictionary API types and helpers live here: candidates, autocomplete, preview/apply, preview/import bulk rows.
   - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
-  - Governance API types/helpers: queue, aggregate, metadata field diff, tag groups, and apply payload/result. Governance calls are local-only and not run through the discover session cache.
-  - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), and persisted preset settings. Export calls are local-only and not run through the discover session cache.
-  - Job API type/helpers: `Job` (including `created_at` / `updated_at`, `paused/cancelled` statuses), `JobLog`, `jobs()`, `jobLogs()`, `pauseJob()`, `resumeJob()`, `cancelJob()`, and `retryJob()`.
+  - Governance API types/helpers: queue, aggregate, metadata translate, bulk preview/apply (fill missing metadata, write-back, confirm dictionary terms), and apply payload/result. Governance calls are local-only and not run through the discover session cache.
+  - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), `enqueueBulkExport` for task-center bulk artifacts, and persisted preset settings. Export calls are local-only and not run through the discover session cache.
+  - Job API type/helpers: `Job` (including `created_at` / `updated_at`, `paused/cancelled/cancelling` statuses and bulk-export target fields), `JobLog`, `jobs()`, `jobLogs()`, `pauseJob()`, `resumeJob()`, `cancelJob()`, `retryJob()`, delete/clear, and bulk-export download URL.
 - `vite.config.ts`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.

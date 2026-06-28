@@ -260,12 +260,15 @@ class GovernanceService:
     def bulk_preview(self, work_ids: list[int], actions: dict[str, Any]) -> dict[str, Any]:
         fill = bool(actions.get("fill_missing_metadata"))
         write_back = bool(actions.get("write_back"))
-        if not (fill or write_back):
+        confirm_terms = bool(actions.get("confirm_dictionary_terms"))
+        if not (fill or write_back or confirm_terms):
             raise ValueError("至少选择一个批量动作。")
 
         result = []
         fields_to_fill = 0
         write_back_ready = 0
+        dictionary_terms: set[int] = set()
+        skipped_dictionary_terms: set[int] = set()
         for work_id in work_ids:
             work = self._work_row(int(work_id))
             if not work:
@@ -278,12 +281,17 @@ class GovernanceService:
                 ready, blockers = self._write_back_readiness(int(work_id))
                 if ready:
                     write_back_ready += 1
+            confirmable, skipped = self._dictionary_terms_for_bulk_confirm(int(work_id)) if confirm_terms else ([], [])
+            dictionary_terms.update(int(item["dictionary_id"]) for item in confirmable)
+            skipped_dictionary_terms.update(int(item["dictionary_id"]) for item in skipped)
             result.append(
                 {
                     "work": aggregate["work"],
                     "fill_fields": fill_fields,
                     "write_back_ready": ready,
                     "blockers": blockers,
+                    "dictionary_terms": confirmable,
+                    "skipped_dictionary_terms": skipped,
                 }
             )
         return {
@@ -292,6 +300,8 @@ class GovernanceService:
                 "works": len(result),
                 "fields_to_fill": fields_to_fill,
                 "write_back_ready": write_back_ready,
+                "dictionary_terms_to_confirm": len(dictionary_terms),
+                "dictionary_terms_skipped": len(skipped_dictionary_terms),
             },
         }
 
@@ -299,7 +309,8 @@ class GovernanceService:
         fill = bool(actions.get("fill_missing_metadata"))
         write_back = bool(actions.get("write_back"))
         backfill_web = bool(actions.get("backfill_source_web"))
-        if not (fill or write_back or backfill_web):
+        confirm_terms = bool(actions.get("confirm_dictionary_terms"))
+        if not (fill or write_back or backfill_web or confirm_terms):
             raise ValueError("至少选择一个批量动作。")
 
         result = []
@@ -309,12 +320,14 @@ class GovernanceService:
         skipped: list[dict[str, Any]] = []
         web_written = 0
         web_errors = 0
+        confirmed_dictionary_terms: set[int] = set()
+        skipped_dictionary_terms: set[int] = set()
         for work_id in work_ids:
             work_id = int(work_id)
             work = self._work_row(work_id)
             if not work:
                 continue
-            entry: dict[str, Any] = {"work_id": work_id, "filled": [], "write_back": None}
+            entry: dict[str, Any] = {"work_id": work_id, "filled": [], "write_back": None, "dictionary_terms": []}
 
             if fill:
                 aggregate = self.work_governance(work_id)
@@ -350,6 +363,24 @@ class GovernanceService:
                 except Exception as exc:  # 失败隔离：记录并继续下一作品，不回滚已写 metadata
                     entry["write_back"] = {"error": str(exc)}
                     errors += 1
+
+            if confirm_terms:
+                confirmable, skipped_terms = self._dictionary_terms_for_bulk_confirm(work_id)
+                entry["dictionary_terms"] = confirmable
+                skipped_dictionary_terms.update(int(item["dictionary_id"]) for item in skipped_terms)
+                for term in confirmable:
+                    dictionary_id = int(term["dictionary_id"])
+                    if dictionary_id in confirmed_dictionary_terms:
+                        continue
+                    self.db.execute(
+                        """
+                        UPDATE local_tag_dictionary
+                        SET status = 'configured', ignored = 0, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                        (dictionary_id,),
+                    )
+                    confirmed_dictionary_terms.add(dictionary_id)
 
             if backfill_web:
                 gallery_id = work.get("remote_gallery_id")
@@ -395,8 +426,52 @@ class GovernanceService:
                 "web_written": web_written,
                 "web_errors": web_errors,
                 "skipped": skipped,
+                "dictionary_terms_confirmed": len(confirmed_dictionary_terms),
+                "dictionary_terms_skipped": len(skipped_dictionary_terms),
             },
         }
+
+    def _dictionary_terms_for_bulk_confirm(self, work_id: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        rows = self.db.fetchall(
+            """
+            SELECT DISTINCT
+              d.id AS dictionary_id,
+              d.original_text,
+              d.zh_name,
+              d.tag_type,
+              d.status,
+              d.locked,
+              d.ignored
+            FROM work_tags wt
+            JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
+            WHERE wt.work_id = ?
+              AND d.status IN ('review', 'conflict')
+            ORDER BY d.tag_type ASC, d.original_text ASC, d.id ASC
+            """,
+            (work_id,),
+        )
+        confirmable: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        for row in rows:
+            item = {
+                "dictionary_id": int(row["dictionary_id"]),
+                "original_text": row["original_text"],
+                "zh_name": row["zh_name"],
+                "tag_type": row["tag_type"],
+                "status": row["status"],
+            }
+            reason = None
+            if int(row.get("ignored") or 0):
+                reason = "ignored"
+            elif int(row.get("locked") or 0):
+                reason = "locked"
+            elif not str(row.get("zh_name") or "").strip():
+                reason = "missing_zh_name"
+            if reason:
+                skipped.append(item | {"reason": reason})
+            else:
+                confirmable.append(item)
+        return confirmable, skipped
 
     def _write_back_readiness(self, work_id: int) -> tuple[bool, list[str]]:
         """复用 write_back_comicinfo 的前置防护判定，但不动盘。"""
