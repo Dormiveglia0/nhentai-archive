@@ -115,6 +115,7 @@ class ExportBatchRequest(BaseModel):
 
 class ExportBulkJobRequest(BaseModel):
     work_ids: list[int] = []
+    items: list[ExportItemRequest] = []
     options: dict = {}
 
 
@@ -499,9 +500,12 @@ def export_download_bundle(payload: ExportBatchRequest):
 
 @app.post("/api/exports/bulk-jobs")
 def enqueue_bulk_export(payload: ExportBulkJobRequest):
-    if not payload.work_ids:
+    items = [item.model_dump(exclude_none=True) for item in payload.items if item.work_id]
+    if not items:
+        items = [{"work_id": work_id} for work_id in payload.work_ids if work_id]
+    if not items:
         raise HTTPException(status_code=422, detail="未选择任何作品。")
-    return export_jobs.enqueue_bulk_export(payload.work_ids, payload.options)
+    return export_jobs.enqueue_bulk_export(items, payload.options)
 
 
 @app.post("/api/library/scan/preview")

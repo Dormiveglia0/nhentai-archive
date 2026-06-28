@@ -980,11 +980,11 @@ export const api = {
       { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items, ...options }) },
       "导出合集.zip"
     ),
-  enqueueBulkExport: (workIds: number[], options?: Omit<ExportRequestOptions, "output_name">) =>
+  enqueueBulkExport: (items: ExportBatchItem[], options?: Omit<ExportRequestOptions, "output_name">) =>
     request<Job>("/api/exports/bulk-jobs", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ work_ids: workIds, options: options ?? {} }),
+      body: JSON.stringify({ items, options: options ?? {} }),
     }),
   bulkExportDownloadUrl: (jobId: number) => `/api/jobs/${jobId}/export/download`,
   filesOverview: () => request<FileOverview>("/api/files/overview"),

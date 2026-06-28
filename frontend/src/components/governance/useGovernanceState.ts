@@ -109,7 +109,7 @@ export function useGovernanceState(initialWorkId?: number) {
   };
 
   const saveMetadata = async () => {
-    if (!aggregate || !changedFields.length) {
+    if (!aggregate || (!changedFields.length && !writeBack)) {
       setNotice("没有需要保存的修改。");
       return;
     }
@@ -207,13 +207,29 @@ export function useGovernanceState(initialWorkId?: number) {
     setBulkResult(null);
   };
 
+  const clearBulkPreview = () => {
+    setBulkPreview(null);
+    setBulkResult(null);
+  };
+
   const toggleSelected = (id: number) =>
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      clearBulkPreview();
       return next;
     });
+
+  const changeBulkFill = (value: boolean) => {
+    setBulkFill(value);
+    clearBulkPreview();
+  };
+
+  const changeBulkWriteBack = (value: boolean) => {
+    setBulkWriteBack(value);
+    clearBulkPreview();
+  };
 
   const runBulkPreview = async () => {
     if (!selectedIds.size) {
@@ -290,9 +306,9 @@ export function useGovernanceState(initialWorkId?: number) {
     selectedIds,
     toggleSelected,
     bulkFill,
-    setBulkFill,
+    setBulkFill: changeBulkFill,
     bulkWriteBack,
-    setBulkWriteBack,
+    setBulkWriteBack: changeBulkWriteBack,
     bulkPreview,
     bulkResult,
     bulkBusy,

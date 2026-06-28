@@ -51,9 +51,20 @@ class ExportJobService:
 
     # ---- queue control (symmetric with ImportService) -------------------
 
-    def enqueue_bulk_export(self, work_ids: list[int], options: dict[str, Any] | None) -> dict[str, Any]:
-        ids = [int(wid) for wid in work_ids if wid]
+    def enqueue_bulk_export(self, items: list[Any], options: dict[str, Any] | None) -> dict[str, Any]:
+        export_items: list[dict[str, Any]] = []
+        for item in items:
+            if isinstance(item, dict):
+                work_id = item.get("work_id")
+                output_name = item.get("output_name")
+            else:
+                work_id = item
+                output_name = None
+            if work_id:
+                export_items.append({"work_id": int(work_id), "output_name": output_name})
+        ids = [item["work_id"] for item in export_items]
         target = {
+            "items": export_items,
             "work_ids": ids,
             "options": options or {},
             "total": len(ids),
@@ -131,9 +142,9 @@ class ExportJobService:
     def run_bulk_export(self, job_id: int) -> None:
         job = self.jobs.get(job_id)
         target = job["target"]
-        work_ids = [int(wid) for wid in target.get("work_ids", []) if wid]
+        items = target.get("items") or [{"work_id": wid} for wid in target.get("work_ids", [])]
         options = target.get("options") or {}
-        total = len(work_ids)
+        total = len(items)
         artifact_path = self._artifact_path(job_id)
         self._exports_dir().mkdir(parents=True, exist_ok=True)
 
@@ -143,10 +154,14 @@ class ExportJobService:
         try:
             self.jobs.mark_running(job_id, "packaging", 0, total)
             with zipfile.ZipFile(artifact_path, "w", compression=zipfile.ZIP_STORED) as bundle:
-                for work_id in work_ids:
+                for item in items:
+                    work_id = int(item.get("work_id") or 0)
+                    if not work_id:
+                        continue
                     self.jobs.checkpoint(job_id)
                     try:
-                        name, data = self.exports.build_cbz(work_id, options)
+                        item_options = {**options, "output_name": item.get("output_name")}
+                        name, data = self.exports.build_cbz(work_id, item_options)
                     except ValueError as exc:
                         skipped.append({"work_id": work_id, "reason": str(exc)})
                         continue

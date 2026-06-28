@@ -82,6 +82,22 @@ def test_worker_packages_artifact_and_completes(tmp_path):
         assert len(bundle.namelist()) == 2
 
 
+def test_worker_preserves_requested_output_name(tmp_path):
+    _settings, db, archive, _exports, jobs, export_jobs = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path, title="A", gallery_id=1)
+    job = jobs.create("bulk_export", {
+        "items": [{"work_id": work_id, "output_name": "renamed.cbz"}], "work_ids": [work_id], "options": {}, "total": 1,
+        "packaged": 0, "skipped": [], "artifact_path": None,
+        "output_name": None, "expires_at": None, "downloaded": False,
+    })
+
+    export_jobs.run_bulk_export(job["id"])
+
+    artifact = Path(jobs.get(job["id"])["target"]["artifact_path"])
+    with zipfile.ZipFile(artifact) as bundle:
+        assert bundle.namelist() == ["renamed.cbz"]
+
+
 def test_worker_skips_blocked_works(tmp_path):
     _settings, db, archive, _exports, jobs, export_jobs = _setup(tmp_path)
     ready = _import_work(db, archive, tmp_path, title="Ready", gallery_id=1)

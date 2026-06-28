@@ -109,7 +109,7 @@ def reseal_cbz(
                 continue
             if not keep_json and name.endswith(".json"):
                 continue
-            target.writestr(info.filename, source.read(info.filename))
+            target.writestr(info.filename, source.read(info))
         if comic_info_xml is not None:
             target.writestr("ComicInfo.xml", comic_info_xml)
     return buffer.getvalue()

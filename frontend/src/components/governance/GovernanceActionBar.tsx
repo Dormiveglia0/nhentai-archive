@@ -21,9 +21,9 @@ export function GovernanceActionBar({
 }) {
   return (
     <div className="governance-actionbar">
-      <button className="governance-action primary" type="button" onClick={() => void onSave()} disabled={saving || changedCount === 0}>
+      <button className="governance-action primary" type="button" onClick={() => void onSave()} disabled={saving || (!writeBack && changedCount === 0)}>
         <Save size={17} />
-        {saving ? "保存中..." : `保存修改${changedCount ? ` (${changedCount})` : ""}`}
+        {saving ? "保存中..." : writeBack && !changedCount ? "回写源文件" : `保存修改${changedCount ? ` (${changedCount})` : ""}`}
       </button>
       <label className="governance-writeback">
         <input

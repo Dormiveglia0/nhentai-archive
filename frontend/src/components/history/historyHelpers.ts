@@ -1,15 +1,15 @@
 import type { ReadingHistoryEntry } from "../../lib/api";
 
-// 把 YYYY-MM-DD(UTC 日期)按相对今天归入桶。
+// 把 YYYY-MM-DD(UTC 日期)按 UTC 的相对今天归入桶。
 export function dateBucket(date: string): string {
   const today = new Date();
-  const todayStr = toDateStr(today);
+  const todayStr = toUtcDateStr(today);
   const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const yesterdayStr = toDateStr(yesterday);
+  yesterday.setUTCDate(today.getUTCDate() - 1);
+  const yesterdayStr = toUtcDateStr(yesterday);
   const weekAgo = new Date(today);
-  weekAgo.setDate(today.getDate() - 6);
-  const weekAgoStr = toDateStr(weekAgo);
+  weekAgo.setUTCDate(today.getUTCDate() - 6);
+  const weekAgoStr = toUtcDateStr(weekAgo);
 
   if (date === todayStr) return "今天";
   if (date === yesterdayStr) return "昨天";
@@ -17,10 +17,10 @@ export function dateBucket(date: string): string {
   return date;
 }
 
-function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+function toUtcDateStr(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 

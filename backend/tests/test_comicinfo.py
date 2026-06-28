@@ -59,6 +59,19 @@ def test_reseal_cbz_replaces_comicinfo_and_preserves_pages(tmp_path):
             assert resealed.read(name) == body
 
 
+def test_reseal_cbz_preserves_duplicate_member_bytes(tmp_path):
+    source = tmp_path / "src.cbz"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("001.png", b"first")
+        archive.writestr("001.png", b"second")
+
+    data = comicinfo.reseal_cbz(source, None)
+
+    with zipfile.ZipFile(io.BytesIO(data)) as resealed:
+        entries = [info for info in resealed.infolist() if info.filename == "001.png"]
+        assert [resealed.read(info) for info in entries] == [b"first", b"second"]
+
+
 def _aggregate(remote_gallery_id):
     return {
         "work": {"page_count": 3, "remote_gallery_id": remote_gallery_id},

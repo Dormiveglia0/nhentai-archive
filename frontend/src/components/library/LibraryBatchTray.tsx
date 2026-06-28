@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Download, Trash2, Wand2, X } from "lucide-react";
 
-import { api, EXPORT_SYNC_THRESHOLD, type FileDeletePreview } from "../../lib/api";
+import { api, EXPORT_SYNC_THRESHOLD, type FileDeletePreview, type FileDeleteTarget } from "../../lib/api";
 import { formatBytes } from "./libraryHelpers";
 
 type Props = {
@@ -20,6 +20,7 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletePreview, setDeletePreview] = useState<FileDeletePreview | null>(null);
+  const [deleteTargets, setDeleteTargets] = useState<FileDeleteTarget[]>([]);
 
   const count = selectedIds.length;
 
@@ -29,7 +30,7 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
     setError(null);
     try {
       if (count > EXPORT_SYNC_THRESHOLD) {
-        const job = await api.enqueueBulkExport(selectedIds);
+        const job = await api.enqueueBulkExport(selectedIds.map((work_id) => ({ work_id })));
         setNotice(`已加入任务中心（任务 #${job.id}），完成后可在任务页下载合集`);
       } else {
         await api.downloadExportBundle(selectedIds.map((work_id) => ({ work_id })));
@@ -62,8 +63,10 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
     setNotice(null);
     setError(null);
     try {
-      const preview = await api.previewFileDelete(selectedIds.map((work_id) => ({ kind: "work", work_id })));
+      const targets = selectedIds.map((work_id) => ({ kind: "work" as const, work_id }));
+      const preview = await api.previewFileDelete(targets);
       setDeletePreview(preview);
+      setDeleteTargets(targets);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -75,13 +78,14 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const result = await api.deleteFiles(selectedIds.map((work_id) => ({ kind: "work", work_id })));
+      const result = await api.deleteFiles(deleteTargets);
       if (result.errors.length > 0) {
         setError(`部分删除失败（${result.errors.length}）：${result.errors.map((e) => e.message).join("；")}`);
       } else {
         setNotice(`已删除 ${result.removed_works} 部作品，释放 ${formatBytes(result.reclaimed_bytes)}`);
       }
       setDeletePreview(null);
+      setDeleteTargets([]);
       onDone();
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));

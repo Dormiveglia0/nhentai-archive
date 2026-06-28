@@ -110,6 +110,15 @@ export function useFilesState() {
     [resetFilterExtras],
   );
 
+  const changePage = useCallback(
+    (nextPage: number) => {
+      setPage(nextPage);
+      setSelected(new Set());
+      clearPending();
+    },
+    [clearPending],
+  );
+
   const toggleMultiSelect = useCallback(() => {
     setMultiSelect((on) => !on);
     setSelected(new Set());
@@ -244,7 +253,7 @@ export function useFilesState() {
     sort,
     setSort,
     page,
-    setPage,
+    setPage: changePage,
     multiSelect,
     toggleMultiSelect,
     selected,
