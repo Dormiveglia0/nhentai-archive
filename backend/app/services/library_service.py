@@ -226,6 +226,60 @@ class LibraryService:
             ]
         }
 
+    def reading_history(self, page: int = 1, per_page: int = 30) -> dict[str, Any]:
+        page = max(1, int(page))
+        per_page = max(1, min(int(per_page), 100))
+        total = int(
+            self.db.fetchone(
+                "SELECT COUNT(*) AS value FROM ("
+                " SELECT 1 FROM reading_history GROUP BY work_id, date(opened_at)"
+                ")"
+            )["value"]
+        )
+        num_pages = max(1, (total + per_page - 1) // per_page)
+        offset = (page - 1) * per_page
+        rows = self.db.fetchall(
+            """
+            SELECT
+              h.work_id AS id,
+              date(h.opened_at) AS date,
+              MAX(h.opened_at) AS last_opened_at,
+              COUNT(*) AS read_events,
+              MAX(h.page_index) AS furthest_page,
+              w.title, w.title_japanese, w.pretty_title, w.source,
+              w.remote_gallery_id, w.page_count, w.cover_path,
+              COALESCE(rp.progress_percent, 0) AS progress_percent,
+              COALESCE(rp.completed, 0) AS completed
+            FROM reading_history h
+            JOIN works w ON w.id = h.work_id
+            LEFT JOIN reader_progress rp ON rp.work_id = h.work_id
+            GROUP BY h.work_id, date(h.opened_at)
+            ORDER BY last_opened_at DESC, h.work_id DESC
+            LIMIT ? OFFSET ?
+            """,
+            [per_page, offset],
+        )
+        result = [
+            {
+                "id": int(row["id"]),
+                "title": row["title"],
+                "title_japanese": row["title_japanese"],
+                "pretty_title": row["pretty_title"],
+                "source": row["source"],
+                "remote_gallery_id": row["remote_gallery_id"],
+                "page_count": int(row["page_count"] or 0),
+                "cover_path": row["cover_path"],
+                "date": row["date"],
+                "last_opened_at": row["last_opened_at"],
+                "read_events": int(row["read_events"]),
+                "furthest_page": int(row["furthest_page"] or 0),
+                "progress_percent": int(row["progress_percent"]),
+                "completed": bool(row["completed"]),
+            }
+            for row in rows
+        ]
+        return {"result": result, "total": total, "page": page, "per_page": per_page, "num_pages": num_pages}
+
     # -- internals -------------------------------------------------------
 
     def _build_filters(

@@ -10,8 +10,15 @@ const STATUSES = [
   { key: "ok", label: "正常" },
   { key: "missing_source", label: "缺失源" },
   { key: "missing_cover", label: "缺失封面" },
+  { key: "size_mismatch", label: "体积不符" },
   { key: "orphan", label: "孤立" },
   { key: "stale", label: "临时" },
+];
+
+const SORTS = [
+  { key: "default", label: "默认排序" },
+  { key: "size_desc", label: "体积 ↓" },
+  { key: "size_asc", label: "体积 ↑" },
 ];
 
 type Props = {
@@ -21,6 +28,8 @@ type Props = {
   onQuery: (q: string) => void;
   statusFilter: string;
   onStatus: (s: string) => void;
+  sort: string;
+  onSort: (s: string) => void;
   total: number;
   multiSelect: boolean;
   onToggleMultiSelect: () => void;
@@ -36,6 +45,8 @@ export function FileToolbar({
   onQuery,
   statusFilter,
   onStatus,
+  sort,
+  onSort,
   total,
   multiSelect,
   onToggleMultiSelect,
@@ -66,6 +77,13 @@ export function FileToolbar({
       />
       <select className="files-status" value={statusFilter} onChange={(e) => onStatus(e.target.value)}>
         {STATUSES.map((s) => (
+          <option key={s.key} value={s.key}>
+            {s.label}
+          </option>
+        ))}
+      </select>
+      <select className="files-status" value={sort} onChange={(e) => onSort(e.target.value)}>
+        {SORTS.map((s) => (
           <option key={s.key} value={s.key}>
             {s.label}
           </option>

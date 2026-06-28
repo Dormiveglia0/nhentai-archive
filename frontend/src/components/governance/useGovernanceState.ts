@@ -4,6 +4,8 @@ import {
   api,
   DictionaryApplyPayload,
   GovernanceAggregate,
+  GovernanceBulkPreview,
+  GovernanceBulkResult,
   GovernanceQueue,
   GovernanceTag,
 } from "../../lib/api";
@@ -22,6 +24,16 @@ export function useGovernanceState(initialWorkId?: number) {
   const [edits, setEdits] = useState<Record<string, FieldEdit>>({});
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [writeBack, setWriteBack] = useState(false);
+
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkFill, setBulkFill] = useState(true);
+  const [bulkWriteBack, setBulkWriteBack] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<GovernanceBulkPreview | null>(null);
+  const [bulkResult, setBulkResult] = useState<GovernanceBulkResult | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
     setSelectedId(initialWorkId ?? null);
@@ -97,8 +109,11 @@ export function useGovernanceState(initialWorkId?: number) {
   };
 
   const saveMetadata = async () => {
-    if (!aggregate || !changedFields.length) {
+    if (!aggregate || (!changedFields.length && !writeBack)) {
       setNotice("没有需要保存的修改。");
+      return;
+    }
+    if (writeBack && !window.confirm("将就地改写源 CBZ 的 ComicInfo，此操作不可撤销。是否继续？")) {
       return;
     }
     setSaving(true);
@@ -110,14 +125,50 @@ export function useGovernanceState(initialWorkId?: number) {
         value: edits[field.field].value.trim() || null,
         source: edits[field.field].source,
       }));
-      const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: changed });
+      const result = await api.applyWorkGovernance(aggregate.work.id, {
+        metadata: changed,
+        write_back: writeBack,
+      });
       setAggregate(result.governance);
       setQueue(await api.governanceQueue());
-      setNotice(`已保存 ${result.saved} 个字段。`);
+      if (result.write_back?.error) {
+        setNotice(`已保存 ${result.saved} 个字段，但回写源文件失败：${result.write_back.error}`);
+      } else if (result.write_back?.written) {
+        setNotice(`已保存 ${result.saved} 个字段，并回写 ComicInfo 到源文件。`);
+      } else {
+        setNotice(`已保存 ${result.saved} 个字段。`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const translateMetadata = async () => {
+    if (!aggregate) return;
+    setTranslating(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const out = await api.translateWorkGovernance(aggregate.work.id);
+      if (!out.result.length) {
+        setNotice("没有可机翻的字段（来源为空或翻译无变化）。");
+        return;
+      }
+      // 仅预填进编辑框供人工复核;不写库,需用户点击保存才持久化。
+      setEdits((current) => {
+        const next = { ...current };
+        out.result.forEach((item) => {
+          next[item.field] = { value: item.suggestion, source: "manual" };
+        });
+        return next;
+      });
+      setNotice(`已机翻填充 ${out.result.length} 个字段（${out.provider ?? "机翻"}），请复核后保存。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -149,6 +200,85 @@ export function useGovernanceState(initialWorkId?: number) {
     navigate({ name: "governance", workId: id });
   };
 
+  const toggleBulkMode = () => {
+    setBulkMode((on) => !on);
+    setSelectedIds(new Set());
+    setBulkPreview(null);
+    setBulkResult(null);
+  };
+
+  const clearBulkPreview = () => {
+    setBulkPreview(null);
+    setBulkResult(null);
+  };
+
+  const toggleSelected = (id: number) =>
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      clearBulkPreview();
+      return next;
+    });
+
+  const changeBulkFill = (value: boolean) => {
+    setBulkFill(value);
+    clearBulkPreview();
+  };
+
+  const changeBulkWriteBack = (value: boolean) => {
+    setBulkWriteBack(value);
+    clearBulkPreview();
+  };
+
+  const runBulkPreview = async () => {
+    if (!selectedIds.size) {
+      setNotice("请先勾选要批量处理的作品。");
+      return;
+    }
+    if (!bulkFill && !bulkWriteBack) {
+      setNotice("请至少选择一个批量动作。");
+      return;
+    }
+    setBulkBusy(true);
+    setError(null);
+    setNotice(null);
+    setBulkResult(null);
+    try {
+      setBulkPreview(await api.governanceBulkPreview([...selectedIds], { fill_missing_metadata: bulkFill, write_back: bulkWriteBack }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const runBulkApply = async () => {
+    if (!selectedIds.size) return;
+    if (!bulkFill && !bulkWriteBack) {
+      setNotice("请至少选择一个批量动作。");
+      return;
+    }
+    if (bulkWriteBack && !window.confirm("将就地改写所选作品源 CBZ 的 ComicInfo，此操作不可撤销。是否继续？")) {
+      return;
+    }
+    setBulkBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await api.governanceBulkApply([...selectedIds], { fill_missing_metadata: bulkFill, write_back: bulkWriteBack });
+      setBulkResult(result);
+      setBulkPreview(null);
+      setQueue(await api.governanceQueue());
+      const { filled_fields, written, errors } = result.summary;
+      setNotice(`批量完成：补全 ${filled_fields} 个字段，回写 ${written} 个文件${errors ? `，${errors} 个失败` : ""}。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return {
     queue,
     aggregate,
@@ -161,11 +291,28 @@ export function useGovernanceState(initialWorkId?: number) {
     onlyDiff,
     setOnlyDiff,
     saving,
+    writeBack,
+    setWriteBack,
     changedFields,
     changeField,
     reload,
     saveMetadata,
+    translating,
+    translateMetadata,
     applyDictionaryTag,
     selectWork,
+    bulkMode,
+    toggleBulkMode,
+    selectedIds,
+    toggleSelected,
+    bulkFill,
+    setBulkFill: changeBulkFill,
+    bulkWriteBack,
+    setBulkWriteBack: changeBulkWriteBack,
+    bulkPreview,
+    bulkResult,
+    bulkBusy,
+    runBulkPreview,
+    runBulkApply,
   };
 }

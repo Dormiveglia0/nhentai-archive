@@ -5,6 +5,7 @@ import { api, LibrarySummary, LibraryTag, LibraryTagFilter, LibraryWork } from "
 import { Stagger, StaggerItem } from "../../lib/motion";
 import { ContinueReadingRow } from "./ContinueReadingRow";
 import { IconPager } from "../discover/IconPager";
+import { LibraryBatchTray } from "./LibraryBatchTray";
 import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
 import { LibraryToolbar, LibraryView } from "./LibraryToolbar";
 import { WorkCard } from "./WorkCard";
@@ -34,6 +35,10 @@ export function LibraryPage({ blurCovers }: Props) {
   const [tags, setTags] = useState<LibraryTagFilter[]>([]);
   const [view, setView] = useState<LibraryView>("grid");
   const [page, setPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const [multiSelect, setMultiSelect] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,7 +101,39 @@ export function LibraryPage({ blurCovers }: Props) {
       .finally(() => {
         if (token.current === current) setLoading(false);
       });
-  }, [q, page, sort, readStatus, source, language, tags]);
+  }, [q, page, sort, readStatus, source, language, tags, reloadKey]);
+
+  const reload = useCallback(() => {
+    setReloadKey((value) => value + 1);
+    void loadOverview();
+  }, [loadOverview]);
+
+  function toggleMultiSelect() {
+    setMultiSelect((on) => !on);
+    setSelectedIds(new Set());
+  }
+
+  function toggleId(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllOnPage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      works.forEach((work) => next.add(work.id));
+      return next;
+    });
+  }
+
+  function afterBulk() {
+    setSelectedIds(new Set());
+    reload();
+  }
 
   function resetFilters() {
     setQ("");
@@ -175,7 +212,30 @@ export function LibraryPage({ blurCovers }: Props) {
                 {loading ? "读取中…" : `共 ${total.toLocaleString()} 部作品`}
                 {filtersActive ? " · 已筛选" : ""}
               </span>
+              <div className="library-results-tools">
+                {multiSelect ? (
+                  <button type="button" className="library-batch-link" onClick={selectAllOnPage} disabled={works.length === 0}>
+                    选中本页
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={`library-batch-toggle${multiSelect ? " is-on" : ""}`}
+                  onClick={toggleMultiSelect}
+                  aria-pressed={multiSelect}
+                >
+                  {multiSelect ? "退出多选" : "多选"}
+                </button>
+              </div>
             </div>
+
+            {multiSelect ? (
+              <LibraryBatchTray
+                selectedIds={Array.from(selectedIds)}
+                onClear={() => setSelectedIds(new Set())}
+                onDone={afterBulk}
+              />
+            ) : null}
 
             {!loading && works.length === 0 && !error ? (
               <div className="empty-state compact">
@@ -197,6 +257,9 @@ export function LibraryPage({ blurCovers }: Props) {
                       selected={selected?.id === work.id}
                       onSelect={() => setSelected(work)}
                       onPickTag={pickTag}
+                      multiSelect={multiSelect}
+                      checked={selectedIds.has(work.id)}
+                      onToggle={() => toggleId(work.id)}
                     />
                   </StaggerItem>
                 ))}

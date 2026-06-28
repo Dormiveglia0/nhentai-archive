@@ -1,4 +1,5 @@
 import { FadeIn } from "../../lib/motion";
+import { IconPager } from "../discover/IconPager";
 import { FileDetailPanel } from "./FileDetailPanel";
 import { FileHealthRail } from "./FileHealthRail";
 import { FileList } from "./FileList";
@@ -10,6 +11,10 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
   const state = useFilesState();
   const entries = state.inventory?.result ?? [];
   const focus = entries.find((e) => e.id === state.focusId) ?? null;
+
+  const total = state.inventory?.total ?? 0;
+  const perPage = state.inventory?.per_page ?? 50;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   return (
     <section className="page files-page">
@@ -33,6 +38,8 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             onQuery={state.setQuery}
             statusFilter={state.statusFilter}
             onStatus={state.setStatusFilter}
+            sort={state.sort}
+            onSort={state.setSort}
             total={state.inventory?.total ?? 0}
             multiSelect={state.multiSelect}
             onToggleMultiSelect={state.toggleMultiSelect}
@@ -48,6 +55,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             onPick={state.pickRow}
             loading={state.loading}
           />
+          <IconPager page={state.page} totalPages={totalPages} loading={state.loading} onPage={state.setPage} />
           <FileDetailPanel focus={focus} blurCovers={blurCovers} busy={state.busy} onDelete={state.previewEntry} />
         </div>
         <FileHealthRail

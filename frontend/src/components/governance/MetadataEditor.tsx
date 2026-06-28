@@ -1,3 +1,4 @@
+import { Languages } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
 import type { GovernanceAggregate, MetadataFieldDiff } from "../../lib/api";
@@ -10,9 +11,11 @@ type Props = {
   onChange: (field: string, edit: FieldEdit) => void;
   onlyDiff: boolean;
   onToggleDiff: () => void;
+  onTranslate: () => void;
+  translating: boolean;
 };
 
-export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleDiff }: Props) {
+export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleDiff, onTranslate, translating }: Props) {
   const fields = onlyDiff
     ? aggregate.metadata.fields.filter((field) => field.differs_from_source || field.dirty)
     : aggregate.metadata.fields;
@@ -24,10 +27,16 @@ export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleD
           <span className="eyebrow">ComicInfo / 字段</span>
           <h2>元数据对照编辑</h2>
         </div>
-        <label className="governance-check">
-          <input type="checkbox" checked={onlyDiff} onChange={onToggleDiff} />
-          仅显示有差异
-        </label>
+        <div className="governance-panel-tools">
+          <button type="button" className="governance-translate-btn" onClick={onTranslate} disabled={translating}>
+            <Languages size={14} />
+            {translating ? "机翻中…" : "机翻填充中文"}
+          </button>
+          <label className="governance-check">
+            <input type="checkbox" checked={onlyDiff} onChange={onToggleDiff} />
+            仅显示有差异
+          </label>
+        </div>
       </div>
       <Stagger key={`${aggregate.work.id}-${onlyDiff}`} className="metadata-cards">
         {fields.length ? (

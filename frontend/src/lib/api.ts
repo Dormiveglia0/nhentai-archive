@@ -184,6 +184,31 @@ export type LibrarySummary = {
   languages: Array<{ value: string; label: string; count: number }>;
 };
 
+export type ReadingHistoryEntry = {
+  id: number;
+  title: string;
+  title_japanese?: string | null;
+  pretty_title?: string | null;
+  source: string;
+  remote_gallery_id?: number | null;
+  page_count: number;
+  cover_path?: string | null;
+  date: string;
+  last_opened_at: string;
+  read_events: number;
+  furthest_page: number;
+  progress_percent: number;
+  completed: boolean;
+};
+
+export type ReadingHistoryPage = {
+  result: ReadingHistoryEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+  num_pages: number;
+};
+
 export type LibraryTagFilter = {
   id: number;
   type?: string;
@@ -294,12 +319,56 @@ export type GovernanceAggregate = {
 export type GovernanceApplyPayload = {
   metadata: Array<{ field: string; value: string | null; source: "manual" | "remote" | "comicinfo" | "current" }>;
   dictionary_apply?: DictionaryApplyPayload[];
+  write_back?: boolean;
 };
 
 export type GovernanceApplyResult = {
   saved: number;
   dictionary: DictionaryApplyResult[];
   governance: GovernanceAggregate;
+  write_back?: {
+    written?: boolean;
+    fields?: Record<string, string>;
+    new_size_bytes?: number;
+    error?: string;
+  };
+};
+
+export type GovernanceTranslateSuggestion = {
+  field: string;
+  label: string;
+  original: string;
+  suggestion: string;
+};
+
+export type GovernanceTranslateResult = {
+  result: GovernanceTranslateSuggestion[];
+  skipped: Array<{ field: string; label: string; reason: string }>;
+  provider: string | null;
+};
+
+export type GovernanceBulkActions = {
+  fill_missing_metadata?: boolean;
+  write_back?: boolean;
+};
+
+export type GovernanceBulkPreview = {
+  result: Array<{
+    work: LibraryWork;
+    fill_fields: Array<{ field: string; label: string; source_value: string; source: string }>;
+    write_back_ready: boolean;
+    blockers: string[];
+  }>;
+  summary: { works: number; fields_to_fill: number; write_back_ready: number };
+};
+
+export type GovernanceBulkResult = {
+  result: Array<{
+    work_id: number;
+    filled: string[];
+    write_back: { written?: boolean; error?: string } | null;
+  }>;
+  summary: { works: number; filled_fields: number; written: number; errors: number };
 };
 
 export type ExportBlocker = {
@@ -436,6 +505,7 @@ export type FileInventoryParams = {
   category?: string;
   q?: string;
   status?: string;
+  sort?: string;
   page?: number;
   per_page?: number;
 };
@@ -476,19 +546,47 @@ export type JobMeta = {
   cover_url?: string | null;
 };
 
+export type BulkExportSkip = { work_id: number; reason: string };
+
+export type LibraryScanSkip = { path: string; reason: string };
+
+export interface LibraryScanPreview {
+  new_linked: { path: string; gallery_id: number }[];
+  new_local: { path: string; gallery_id: number | null }[];
+  already_known: { path: string }[];
+  unreadable: { path: string }[];
+  counts: { new_linked: number; new_local: number; already_known: number; unreadable: number };
+}
+
+export type JobTarget = Record<string, unknown> & {
+  // bulk_export fields (live in target_json)
+  total?: number;
+  packaged?: number;
+  output_name?: string | null;
+  downloaded?: boolean;
+  expires_at?: string | null;
+  // shared by bulk_export ({ work_id, reason }) and library_scan ({ path, reason })
+  skipped?: (BulkExportSkip | LibraryScanSkip)[];
+  // library_scan fields
+  paths?: string[];
+  ingested?: number;
+};
+
 export type Job = {
   id: number;
   type: string;
   status: "queued" | "running" | "paused" | "cancelling" | "completed" | "failed" | "cancelled";
   stage: string;
   progress: { current: number; total: number; percent: number };
-  target: Record<string, unknown>;
+  target: JobTarget;
   meta?: JobMeta | null;
   error?: string | null;
   retry_after?: number | null;
   created_at: string;
   updated_at: string;
 };
+
+export const EXPORT_SYNC_THRESHOLD = 5;
 
 export type JobLog = {
   id: number;
@@ -826,6 +924,8 @@ export const api = {
   },
   libraryRecentAdded: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-added?limit=${limit}`),
   libraryRecentRead: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-read?limit=${limit}`),
+  libraryReadingHistory: (page = 1, per_page = 30) =>
+    request<ReadingHistoryPage>(`/api/library/reading-history?page=${page}&per_page=${per_page}`),
   libraryContinueReading: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/continue-reading?limit=${limit}`),
   libraryTagFilters: (q = "", limit = 40) =>
     request<{ result: LibraryTagFilter[] }>(`/api/library/tag-filters?q=${encodeURIComponent(q)}&limit=${limit}`),
@@ -836,6 +936,24 @@ export const api = {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
+    }),
+  translateWorkGovernance: (id: number, fields?: string[]) =>
+    request<GovernanceTranslateResult>(`/api/works/${id}/governance/translate`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ fields: fields ?? null })
+    }),
+  governanceBulkPreview: (work_ids: number[], actions: GovernanceBulkActions) =>
+    request<GovernanceBulkPreview>("/api/governance/bulk/preview", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ work_ids, actions })
+    }),
+  governanceBulkApply: (work_ids: number[], actions: GovernanceBulkActions) =>
+    request<GovernanceBulkResult>("/api/governance/bulk/apply", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ work_ids, actions })
     }),
   exportQueue: () => request<ExportQueue>("/api/exports/queue"),
   exportSummary: () => request<ExportSummaryStats>("/api/exports/summary"),
@@ -862,12 +980,20 @@ export const api = {
       { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ items, ...options }) },
       "导出合集.zip"
     ),
+  enqueueBulkExport: (items: ExportBatchItem[], options?: Omit<ExportRequestOptions, "output_name">) =>
+    request<Job>("/api/exports/bulk-jobs", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ items, options: options ?? {} }),
+    }),
+  bulkExportDownloadUrl: (jobId: number) => `/api/jobs/${jobId}/export/download`,
   filesOverview: () => request<FileOverview>("/api/files/overview"),
   filesInventory: (params: FileInventoryParams = {}) => {
     const query = new URLSearchParams();
     query.set("category", params.category ?? "all");
     if (params.q) query.set("q", params.q);
     if (params.status) query.set("status", params.status);
+    if (params.sort && params.sort !== "default") query.set("sort", params.sort);
     query.set("page", String(params.page ?? 1));
     query.set("per_page", String(params.per_page ?? 50));
     return request<FileInventory>(`/api/files/inventory?${query.toString()}`);
@@ -919,5 +1045,13 @@ export const api = {
     request<TranslationVerifyResult>("/api/settings/translation/verify", { method: "POST", headers: JSON_HEADERS }),
   clearNhentaiCache: () =>
     request<{ ok: boolean; message: string }>("/api/settings/nhentai/clear-cache", { method: "POST", headers: JSON_HEADERS }),
-  nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime")
+  nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime"),
+  scanLibraryPreview: () =>
+    request<LibraryScanPreview>("/api/library/scan/preview", { method: "POST", headers: JSON_HEADERS }),
+  enqueueLibraryScan: (paths?: string[]) =>
+    request<Job>("/api/library/scan", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ paths: paths ?? null }),
+    }),
 };

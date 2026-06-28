@@ -5,25 +5,11 @@ import re
 import zipfile
 from pathlib import Path
 from typing import Any
-from xml.etree import ElementTree
 
 from app.config import Settings
 from app.database import Database
+from app.services import comicinfo
 from app.services.governance_service import GovernanceService
-
-
-COMICINFO_KEYS = {
-    "title": "Title",
-    "title_japanese": "AlternateSeries",
-    "pretty_title": "LocalizedSeries",
-    "artist": "Writer",
-    "group": "Publisher",
-    "language": "LanguageISO",
-    "tags": "Tags",
-    "summary": "Summary",
-    "published_at": "Year",
-    "pages": "PageCount",
-}
 
 _ILLEGAL_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 _MAX_NAME_LENGTH = 120
@@ -91,7 +77,7 @@ class ExportService:
         work = aggregate["work"]
         source_file = self._source_file(work_id)
         output_name = self._requested_output_name(work, opts)
-        comic_info = self._comic_info(aggregate)
+        comic_info = comicinfo.build_fields(aggregate)
         json_members = self._kept_members(source_file["path"]) if source_file["exists"] else []
         will_keep = json_members if opts["keep_json"] else []
         blockers = self._blockers(source_file)
@@ -122,8 +108,8 @@ class ExportService:
             raise ValueError("; ".join(blocker["message"] for blocker in preview["blockers"]))
 
         source_path = Path(preview["source_file"]["path"])
-        comic_info_xml = self._comicinfo_xml(preview["comic_info"]) if opts["write_comicinfo"] else None
-        data = self._package_bytes(source_path, comic_info_xml, opts["keep_json"], opts["compress"])
+        comic_info_xml = comicinfo.to_xml(preview["comic_info"]) if opts["write_comicinfo"] else None
+        data = comicinfo.reseal_cbz(source_path, comic_info_xml, opts["keep_json"], opts["compress"])
         return preview["output_name"], data
 
     def build_bundle(
@@ -149,27 +135,6 @@ class ExportService:
         if packaged == 0:
             raise ValueError("没有可导出的作品（所选项均存在阻塞）。")
         return f"导出合集 ({packaged}).zip", buffer.getvalue()
-
-    def _package_bytes(
-        self, source_path: Path, comic_info_xml: str | None, keep_json: bool = True, compress: bool = True
-    ) -> bytes:
-        compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(source_path) as source, zipfile.ZipFile(
-            buffer, "w", compression=compression
-        ) as target:
-            for info in source.infolist():
-                if info.is_dir():
-                    continue
-                name = Path(info.filename).name.lower()
-                if name == "comicinfo.xml":
-                    continue
-                if not keep_json and name.endswith(".json"):
-                    continue
-                target.writestr(info.filename, source.read(info.filename))
-            if comic_info_xml is not None:
-                target.writestr("ComicInfo.xml", comic_info_xml)
-        return buffer.getvalue()
 
     def _unique_member_name(self, name: str, used: set[str]) -> str:
         candidate = name
@@ -197,38 +162,6 @@ class ExportService:
             "sha256": row.get("sha256") if row else None,
             "exists": exists,
         }
-
-    def _comic_info(self, aggregate: dict[str, Any]) -> dict[str, str]:
-        fields = {field["field"]: field for field in aggregate["metadata"]["fields"]}
-        comic_info: dict[str, str] = {}
-        for field, key in COMICINFO_KEYS.items():
-            value = self._field_value(fields.get(field))
-            if value:
-                comic_info[key] = value
-        if "PageCount" not in comic_info:
-            comic_info["PageCount"] = str(aggregate["work"].get("page_count") or 0)
-        tags = self._tag_output(aggregate)
-        if tags:
-            comic_info["Tags"] = tags
-        return comic_info
-
-    def _field_value(self, field: dict[str, Any] | None) -> str | None:
-        if not field:
-            return None
-        for key in ("working_value", "current_value", "source_value"):
-            value = self._stringify(field.get(key))
-            if value:
-                return value
-        return None
-
-    def _tag_output(self, aggregate: dict[str, Any]) -> str | None:
-        values: list[str] = []
-        for group in aggregate["tags"]["groups"]:
-            for tag in group["tags"]:
-                display = self._stringify(tag.get("display") or tag.get("name") or tag.get("slug"))
-                if display and display not in values:
-                    values.append(display)
-        return ", ".join(values) if values else None
 
     def _blockers(self, source_file: dict[str, Any]) -> list[dict[str, str]]:
         if not source_file["exists"]:
@@ -265,15 +198,6 @@ class ExportService:
                 if name.lower().endswith(".json"):
                     kept.append(info.filename)
         return sorted(kept)
-
-    def _comicinfo_xml(self, fields: dict[str, str]) -> str:
-        root = ElementTree.Element("ComicInfo")
-        for key in COMICINFO_KEYS.values():
-            value = self._stringify(fields.get(key))
-            if value:
-                child = ElementTree.SubElement(root, key)
-                child.text = value
-        return ElementTree.tostring(root, encoding="unicode", short_empty_elements=False)
 
     def _output_name(self, work: dict[str, Any]) -> str:
         title = work.get("pretty_title") or work.get("title_japanese") or work.get("title") or f"work-{work['id']}"

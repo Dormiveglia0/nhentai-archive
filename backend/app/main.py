@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
 
@@ -7,17 +8,21 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from starlette.background import BackgroundTask
 
 from app.config import load_settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
 from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
+from app.services.export_job_service import EXPORT_SYNC_THRESHOLD, ExportJobService
 from app.services.export_service import ExportService
 from app.services.file_service import FileMaintenanceService
 from app.services.import_service import ImportService
 from app.services.job_service import JobActive, JobService
 from app.services.library_service import LibraryService
+from app.services.library_scan_service import LibraryScanService
+from app.services.library_scan_job_service import LibraryScanJobService
 from app.services.governance_service import GovernanceService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 from app.services.reader_service import ReaderService
@@ -76,6 +81,21 @@ class GovernanceMetadataPatch(BaseModel):
 class GovernanceApplyRequest(BaseModel):
     metadata: list[GovernanceMetadataPatch] = []
     dictionary_apply: list[DictionaryApplyRequest] = []
+    write_back: bool = False
+
+
+class GovernanceBulkActions(BaseModel):
+    fill_missing_metadata: bool = False
+    write_back: bool = False
+
+
+class GovernanceBulkRequest(BaseModel):
+    work_ids: list[int] = []
+    actions: GovernanceBulkActions = GovernanceBulkActions()
+
+
+class GovernanceTranslateRequest(BaseModel):
+    fields: list[str] | None = None
 
 
 class ExportItemRequest(BaseModel):
@@ -93,6 +113,12 @@ class ExportBatchRequest(BaseModel):
     compress: bool = True
 
 
+class ExportBulkJobRequest(BaseModel):
+    work_ids: list[int] = []
+    items: list[ExportItemRequest] = []
+    options: dict = {}
+
+
 class FileTargetRequest(BaseModel):
     kind: str
     work_id: int | None = None
@@ -101,6 +127,10 @@ class FileTargetRequest(BaseModel):
 
 class FileDeleteRequest(BaseModel):
     targets: list[FileTargetRequest] = []
+
+
+class LibraryScanRequest(BaseModel):
+    paths: list[str] | None = None
 
 
 settings = load_settings()
@@ -119,14 +149,23 @@ reader = ReaderService(db)
 library = LibraryService(db)
 translation = TranslationService(db)
 dictionary = DictionaryService(db, client, translation)
-governance = GovernanceService(db, dictionary)
+governance = GovernanceService(db, dictionary, settings)
 exports = ExportService(db, settings)
 files_service = FileMaintenanceService(db, settings)
 imports = ImportService(settings, client, jobs, archive, discover, dictionary)
+export_jobs = ExportJobService(settings, jobs, exports)
+library_scan_service = LibraryScanService(settings, db)
+library_scan_jobs = LibraryScanJobService(settings, jobs, archive, library_scan_service)
 settings_service = SettingsService(db, settings, client, translation)
 workbench = WorkbenchService(library, governance, jobs, files_service, exports)
 
-app = FastAPI(title="NH Archive", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    export_jobs.sweep_exports()
+    yield
+
+
+app = FastAPI(title="NH Archive", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -339,6 +378,11 @@ def library_tag_filters(q: str = "", limit: int = 40):
     return library.tag_filters(q, limit)
 
 
+@app.get("/api/library/reading-history")
+def library_reading_history(page: int = 1, per_page: int = 30):
+    return library.reading_history(page, per_page)
+
+
 @app.get("/api/governance/queue")
 def governance_queue():
     return governance.queue()
@@ -356,6 +400,32 @@ def work_governance(work_id: int):
 def apply_work_governance(work_id: int, payload: GovernanceApplyRequest):
     try:
         return governance.apply(work_id, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/works/{work_id}/governance/translate")
+def translate_work_governance(work_id: int, payload: GovernanceTranslateRequest):
+    try:
+        return governance.translate_metadata(work_id, payload.fields)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except TranslationError as exc:
+        raise HTTPException(status_code=502, detail=exc.message) from exc
+
+
+@app.post("/api/governance/bulk/preview")
+def governance_bulk_preview(payload: GovernanceBulkRequest):
+    try:
+        return governance.bulk_preview(payload.work_ids, payload.actions.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/governance/bulk/apply")
+def governance_bulk_apply(payload: GovernanceBulkRequest):
+    try:
+        return governance.bulk_apply(payload.work_ids, payload.actions.model_dump())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -428,6 +498,67 @@ def export_download_bundle(payload: ExportBatchRequest):
     return _download_response(filename, data, "application/zip")
 
 
+@app.post("/api/exports/bulk-jobs")
+def enqueue_bulk_export(payload: ExportBulkJobRequest):
+    items = [item.model_dump(exclude_none=True) for item in payload.items if item.work_id]
+    if not items:
+        items = [{"work_id": work_id} for work_id in payload.work_ids if work_id]
+    if not items:
+        raise HTTPException(status_code=422, detail="未选择任何作品。")
+    return export_jobs.enqueue_bulk_export(items, payload.options)
+
+
+@app.post("/api/library/scan/preview")
+def library_scan_preview():
+    return library_scan_service.preview()
+
+
+@app.post("/api/library/scan")
+def library_scan(payload: LibraryScanRequest):
+    paths = payload.paths
+    if paths is None:
+        preview = library_scan_service.preview()
+        paths = [p["path"] for p in preview["new_linked"] + preview["new_local"]]
+    return library_scan_jobs.enqueue_scan(paths)
+
+
+@app.get("/api/jobs/{job_id}/export/download")
+def download_bulk_export(job_id: int):
+    try:
+        job = jobs.get(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if job["type"] != "bulk_export":
+        raise HTTPException(status_code=404, detail="该任务没有可下载的导出产物。")
+    target = job["target"]
+    if target.get("downloaded"):
+        raise HTTPException(status_code=410, detail="导出产物已下载并清除。")
+    if job["status"] != "completed":
+        raise HTTPException(status_code=404, detail="导出产物尚未就绪。")
+    if _export_artifact_expired(target):
+        raise HTTPException(status_code=410, detail="导出产物已过期。")
+    path = target.get("artifact_path")
+    if not path or not Path(path).exists():
+        raise HTTPException(status_code=404, detail="导出产物不存在。")
+    output_name = target.get("output_name") or f"job-{job_id}.zip"
+    ascii_name = output_name.encode("ascii", "ignore").decode("ascii") or "export.zip"
+    disposition = f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(output_name)}"
+    return FileResponse(
+        path,
+        media_type="application/zip",
+        filename=output_name,
+        headers={"Content-Disposition": disposition},
+        background=BackgroundTask(export_jobs.mark_downloaded, job_id),
+    )
+
+
+def _export_artifact_expired(target: dict) -> bool:
+    from app.services.export_job_service import _now, _parse_iso
+
+    expires_at = _parse_iso(target.get("expires_at"))
+    return expires_at is not None and _now() >= expires_at
+
+
 @app.get("/api/workbench/overview")
 def workbench_overview():
     return workbench.overview()
@@ -443,10 +574,13 @@ def files_inventory(
     category: str = "all",
     q: str | None = None,
     status: str | None = None,
+    sort: str = "default",
     page: int = 1,
     per_page: int = 50,
 ):
-    return files_service.inventory(category=category, q=q, status=status, page=page, per_page=per_page)
+    return files_service.inventory(
+        category=category, q=q, status=status, sort=sort, page=page, per_page=per_page
+    )
 
 
 @app.get("/api/files/duplicates")
@@ -524,8 +658,19 @@ def patch_reader_state(work_id: int, patch: ReaderStatePatch):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+def _job_dispatch(job_id: int):
+    """Route a job control action to the service that owns its type."""
+    job_type = jobs.get(job_id)["type"]
+    if job_type == "bulk_export":
+        return export_jobs
+    if job_type == "library_scan":
+        return library_scan_jobs
+    return imports
+
+
 @app.get("/api/jobs")
 def list_jobs():
+    export_jobs.sweep_exports()
     return {"result": jobs.list()}
 
 
@@ -556,7 +701,7 @@ def pause_job(job_id: int):
 @app.post("/api/jobs/{job_id}/resume")
 def resume_job(job_id: int):
     try:
-        return imports.resume_job(job_id)
+        return _job_dispatch(job_id).resume_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -564,7 +709,7 @@ def resume_job(job_id: int):
 @app.post("/api/jobs/{job_id}/cancel")
 def cancel_job(job_id: int):
     try:
-        return imports.cancel_job(job_id)
+        return _job_dispatch(job_id).cancel_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -572,7 +717,7 @@ def cancel_job(job_id: int):
 @app.post("/api/jobs/{job_id}/retry")
 def retry_job(job_id: int):
     try:
-        return imports.retry_job(job_id)
+        return _job_dispatch(job_id).retry_job(job_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

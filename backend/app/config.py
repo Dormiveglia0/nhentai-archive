@@ -46,6 +46,10 @@ class Settings:
     def export_dir(self) -> Path:
         return self.data_dir / "exports"
 
+    @property
+    def export_jobs_dir(self) -> Path:
+        return self.tmp_dir / "exports"
+
     def ensure_directories(self) -> None:
         for path in (
             self.data_dir,
@@ -55,6 +59,7 @@ class Settings:
             self.thumbs_dir,
             self.tmp_dir,
             self.export_dir,
+            self.export_jobs_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)
 

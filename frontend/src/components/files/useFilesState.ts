@@ -20,6 +20,7 @@ export function useFilesState() {
   const [category, setCategoryState] = useState("all");
   const [query, setQueryState] = useState("");
   const [statusFilter, setStatusFilterState] = useState("");
+  const [sort, setSortState] = useState("default");
   const [page, setPage] = useState(1);
   const [multiSelect, setMultiSelect] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -40,7 +41,7 @@ export function useFilesState() {
     const token = ++requestToken.current;
     setLoading(true);
     api
-      .filesInventory({ category, q: query || undefined, status: statusFilter || undefined, page })
+      .filesInventory({ category, q: query || undefined, status: statusFilter || undefined, sort, page })
       .then((data) => {
         if (token !== requestToken.current) return;
         setInventory(data);
@@ -53,7 +54,7 @@ export function useFilesState() {
       .finally(() => {
         if (token === requestToken.current) setLoading(false);
       });
-  }, [category, query, statusFilter, page]);
+  }, [category, query, statusFilter, sort, page]);
 
   useEffect(() => {
     loadOverview();
@@ -100,6 +101,22 @@ export function useFilesState() {
       resetFilterExtras();
     },
     [resetFilterExtras],
+  );
+  const setSort = useCallback(
+    (s: string) => {
+      setSortState(s);
+      resetFilterExtras();
+    },
+    [resetFilterExtras],
+  );
+
+  const changePage = useCallback(
+    (nextPage: number) => {
+      setPage(nextPage);
+      setSelected(new Set());
+      clearPending();
+    },
+    [clearPending],
   );
 
   const toggleMultiSelect = useCallback(() => {
@@ -233,8 +250,10 @@ export function useFilesState() {
     setQuery,
     statusFilter,
     setStatusFilter,
+    sort,
+    setSort,
     page,
-    setPage,
+    setPage: changePage,
     multiSelect,
     toggleMultiSelect,
     selected,

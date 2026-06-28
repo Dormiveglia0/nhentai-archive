@@ -89,15 +89,19 @@ Current real slice:
   - Empty library and empty filtered result are distinct real empty states; pagination uses the icon pager so large libraries never render every work at once.
   - Removed the orphaned legacy library CSS (`.filter-ribbon`, `.stats`, old `.work-card*`) replaced by the new `.library-*` system; retargeted the shared progress rule to `.library-card`.
 
+- 治理 ComicInfo 回写源 CBZ：新增共享模块 `comicinfo.py`（ComicInfo 字段生成/XML/zip 重封，ExportService 与回写共用，保证导出下载与源回写产出一致）。`GovernanceService.write_back_comicinfo` 把治理后的 ComicInfo 就地原子写进源 CBZ：写同目录 tmp → fsync → `os.replace`，无备份；只换 ComicInfo.xml，页面图像字节不变；回写后重算并更新 `work_files.sha256`/`size_bytes`。API `POST /api/works/{id}/governance/apply` 增 `write_back` 开关（默认关），metadata 写入成功后回写失败不回滚、以 `write_back.error` 回显。前端应用面板加默认关闭的「同时回写源文件」复选框 + 风险提示 + 二次确认。
+- 轻量收尾阶段：① 文件管理 `#files` 清单补真实分页翻页器（复用 IconPager，后端 `inventory` 早已支持 page/per_page）；② 新增阅读历史专属页 `#history`：`LibraryService.reading_history` 按 (作品, 日期) 聚合 `reading_history`（当天最近时间/阅读次数/最远页 + 当前总进度），`GET /api/library/reading-history` 分页，前端按「今天/昨天/本周/更早」日期桶分组时间线，点击进本地阅读器，遵守 blurCovers；③ 治理批量：`GovernanceService.bulk_preview/bulk_apply` 对多选作品执行统一动作——批量补全缺失元数据（只填空、绝不覆盖已有值、来源 comicinfo>json>remote）与批量回写 ComicInfo（沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离），API `POST /api/governance/bulk/preview|apply`，治理队列加多选 + 批量条（预览/应用/结果回显 + 回写二次确认）。验证：`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿（128 passed，含 reading_history 4 项 + governance_bulk 5 项）；`cd frontend && npm run build` 通过。
+
+- 轻量收尾第二轮：① 文件清单 `#files` 加体积排序（后端 `inventory` 新增 `sort` default/size_desc/size_asc，过滤后分页前对整列表排序）+ 补齐 `size_mismatch` 状态筛选（状态匹配改为 `status==e.status or status in e.flags`，使 flag-only 条件可筛）；② 我的库 `#library` 多选 + 批量托盘 `LibraryBatchTray`，只复用现有端点：导出下载合集、批量补全缺失元数据（`governanceBulkApply` fill-missing）、删除所选（`previewFileDelete`→二次确认→`deleteFiles` 级联）；③ 治理元数据机翻：只读 `GovernanceService.translate_metadata`（title/title_japanese/summary，source=auto，绝不写库）产出可复核建议，`POST /api/works/{id}/governance/translate`，前端「机翻填充中文」按钮把建议预填编辑框（source=manual），人工保存才落地；`TranslationService` DeepL 支持 source=auto。设计见 `docs/superpowers/specs/2026-06-23-lightweight-finishing-round2-design.md`。验证：`pytest backend/tests -q` 全绿（134 passed，新增 file_service 2 项 + governance_translate 4 项）；`npm run build` 通过。
+
 ## Not Implemented Yet
 
-- Library bulk actions (multi-select batch tray) and a dedicated reading-history page.
-- Long-running bulk export jobs through the task center.
-- Governance bulk preview/apply and source-CBZ ComicInfo write-back (dictionary machine translation is now connected; governance does not yet auto-translate metadata).
+- Long-running bulk export jobs through the task center（唯一悬而未决的大特性，需先单独设计「导出=下载给用户」与后台落盘产物的生命周期冲突）。
+- Governance 词典 review/冲突的批量解决（仍留单作品页人工；批量补全缺失元数据 + ComicInfo 回写 + 元数据机翻建议均已具备）。
 
 ## Next Plan
 
-工作台聚合面板已落地,所有主模块均为真实页面。剩余方向:长时批量导出任务接入任务中心(进度上报/暂停/重试)、文件清单 UI 分页、阅读历史专属页。
+轻量收尾两轮（文件清单分页+排序+状态筛选 / 阅读历史页 / 治理批量+元数据机翻 / 库多选批量托盘）已落地。唯一剩余大方向：长时批量导出任务接入任务中心——需先单独设计「导出=下载给用户」与后台落盘的语义冲突（产物落盘策略/生命周期/清理），这是个产品取舍而非技术债，待与用户确认后再设计实现。
 
 ## Risks And Decisions
 
@@ -105,6 +109,10 @@ Current real slice:
 - Decision: 文件管理是管理库内全部文件,不只异常清理;清单含健康作品,所有行可删。
 - Decision: 删除健康作品的源 CBZ = 级联整体移除该作品(works 及全部引用表 + 封面文件)。
 - Decision: 删除是文件管理唯一会动盘的操作;CBZ 永不被修改,只能整体删除;受管目录(library/covers/tmp/exports)之外的任何路径一律拒绝(目录穿越防护)。
+- Decision: 治理 ComicInfo 回写是唯一受认可的源 CBZ 改写（仅 ComicInfo、原子替换、无备份、显式 opt-in、默认关）；导出仍永不写源（导出=下载给用户）；文件管理删除仍是另一条独立动盘操作。回写后必须同步 `work_files.sha256`/`size_bytes` 以维持去重/体积检测的真实性。
+- Decision: 治理批量只做「逐作品执行统一动作、取值各自解析」:批量补全缺失元数据(只填空、绝不覆盖人工/已有非空值,来源映射 comicinfo→comicinfo / remote→remote / json→remote)+ 批量回写 ComicInfo(沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离;单作品失败记录 error 并继续,不回滚已写 metadata)。词典 review/冲突不批量,留单作品页人工解决。
+- Decision: 阅读历史按 (作品, 日期) 聚合,前端按日期桶(今天/昨天/本周/更早)分组时间线;高频裸事件(每翻页一行)不展示。历史(完整可分页轨迹)与「继续阅读」(仅在读)、「最近阅读」(Top 12 书架)区分。
+- Decision: 文件清单分页为纯前端补翻页器;后端 `FileMaintenanceService.inventory` 早已支持分页,无需改动。批量导出接任务中心仍不在范围,需先单独设计落盘/生命周期语义。
 - Decision: `work_files.path`/`works.cover_path` 绝对/相对混用,一律归一化为 `.resolve()` 绝对路径后再判定存在/删除/穿越。
 - Decision: API Key settings and discover correctness are higher priority than expanding modules.
 - Decision: language/type/sort controls must either call real APIs or be disabled; no inert clickable filters.
@@ -126,7 +134,7 @@ Current real slice:
 - Decision: library summary shows only real metrics and still does not fabricate a broad 待治理 count. 待补标签 (works with zero `work_tags`) remains the honest library-level proxy; richer governance detail lives in `GovernanceService`.
 - Decision: library shelves (继续阅读/最近添加) only render with real rows and only in the unfiltered default view; filtering switches to the paginated result wall.
 - Decision: library language filter and language facets derive from `work_tags` rows of type `language` (with dictionary display), not the unused `works.language` column.
-- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only; Phase 5 export creates new CBZ files under the export directory instead of writing back to source archives.
+- Decision: governance metadata decisions live in `work_metadata`, not additional `works` columns and not a JSON blob. Original CBZ files stay read-only except for the sanctioned governance ComicInfo write-back (opt-in, default off, ComicInfo-only, atomic replace; see the write-back decision above); Phase 5 export creates new CBZ files under the export directory instead of writing back to source archives.
 - Decision: governance queue and completeness use real local state only. Missing values are shown as missing/unknown; no fake diffs, fake conflicts, or fake recommended actions.
 - Decision: 全站页面内显示的 tag 一律走词典转换名(`display`,即 `zh_name → name → slug`),英文 `name`/`slug` 仅作无词典项时兜底;英文原文只用于后端 NH API 请求等操作,不直接显示给用户。
 - Decision: 作品详情 hero 的封面按**固定高度**约束(放进恒定尺寸卡槽),绝不按长宽比框死,也不裁剪;空余由同图模糊底填充。标签等数量不定的内容**不得**与封面同列并排,须移到独立整宽区域,避免两列高度互相参差、翻书布局抖动。

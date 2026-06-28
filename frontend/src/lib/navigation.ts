@@ -12,6 +12,7 @@ export type Page =
   | { name: "dictionary" }
   | { name: "tasks" }
   | { name: "files" }
+  | { name: "history" }
   | { name: "settings" };
 
 export function pageFromLocation(): Page {
@@ -35,6 +36,7 @@ export function pageFromLocation(): Page {
   if (route === "tasks") return { name: "tasks" };
   if (route === "export") return { name: "export" };
   if (route === "files") return { name: "files" };
+  if (route === "history") return { name: "history" };
   if (route === "settings") return { name: "settings" };
   if (route === "discover") {
     const tagId = Number(query.get("tag_id"));

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api } from "../../lib/api";
+import { api, EXPORT_SYNC_THRESHOLD } from "../../lib/api";
 import type {
   ExportOptions,
   ExportPreset,
@@ -267,6 +267,15 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
           ...exportOptions,
         });
         setNotice(`已开始下载：${filename}`);
+      } else if (targets.length > EXPORT_SYNC_THRESHOLD) {
+        const job = await api.enqueueBulkExport(
+          targets.map((item) => ({
+            work_id: item.work.id,
+            output_name: outputNames[item.work.id] || item.output_name,
+          })),
+          exportOptions,
+        );
+        setNotice(`已加入任务中心（任务 #${job.id}），完成后可在任务页下载合集`);
       } else {
         const filename = await api.downloadExportBundle(
           targets.map((item) => ({

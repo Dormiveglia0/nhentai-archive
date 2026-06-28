@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +10,7 @@ from typing import Any
 from xml.etree import ElementTree
 
 from app.database import Database
+from app.services import comicinfo
 
 
 METADATA_FIELDS = {
@@ -26,6 +29,13 @@ METADATA_FIELDS = {
 ALLOWED_METADATA_SOURCES = {"manual", "remote", "comicinfo", "current"}
 PROBLEM_DICTIONARY_STATUSES = {"review", "conflict"}
 
+# 自由文本字段，可机翻为中文建议供人工复核；artist/group/language/tags 走词典，
+# pages/published_at 为结构化字段，均不机翻。
+TRANSLATABLE_METADATA_FIELDS = ("title", "title_japanese", "summary")
+
+# work_governance 的 source（comicinfo/json/remote/unknown）→ 允许写入 work_metadata 的 source。
+SOURCE_TO_METADATA = {"comicinfo": "comicinfo", "remote": "remote", "json": "remote"}
+
 TAG_GROUP_LABELS = {
     "artist": "作者与社团",
     "group": "作者与社团",
@@ -40,9 +50,10 @@ TAG_GROUP_LABELS = {
 class GovernanceService:
     """Local-only metadata/tag governance aggregate backed by SQLite and stored CBZ files."""
 
-    def __init__(self, db: Database, dictionary_service: Any | None = None):
+    def __init__(self, db: Database, dictionary_service: Any | None = None, settings: Any | None = None):
         self.db = db
         self.dictionary_service = dictionary_service
+        self.settings = settings
 
     def queue(self) -> dict[str, Any]:
         rows = self.db.fetchall(
@@ -170,7 +181,288 @@ class GovernanceService:
                 raise ValueError("dictionary apply is not configured")
             dictionary_results.append(self.dictionary_service.apply(dictionary_payload))
 
-        return {"saved": saved, "dictionary": dictionary_results, "governance": self.work_governance(work_id)}
+        response: dict[str, Any] = {
+            "saved": saved,
+            "dictionary": dictionary_results,
+        }
+        if payload.get("write_back"):
+            try:
+                response["write_back"] = self.write_back_comicinfo(work_id)
+            except Exception as exc:  # metadata already persisted; a failed write-back does not roll back
+                response["write_back"] = {"error": str(exc)}
+        response["governance"] = self.work_governance(work_id)
+        return response
+
+    def translate_metadata(self, work_id: int, fields: list[str] | None = None) -> dict[str, Any]:
+        """机翻自由文本元数据字段为中文，返回可复核建议。
+
+        只读：绝不写库，绝不自动改写任何字段。仅为指定（默认全部可译）字段
+        生成 `{field, label, original, suggestion}`，由前端预填进编辑框，经人工
+        确认后才通过现有 apply 路径以 source=manual 持久化。
+        """
+        translation = getattr(self.dictionary_service, "translation", None)
+        if translation is None:
+            raise ValueError("机翻服务未配置")
+
+        aggregate = self.work_governance(work_id)
+        field_map = {field["field"]: field for field in aggregate["metadata"]["fields"]}
+        requested = [f for f in (fields or TRANSLATABLE_METADATA_FIELDS) if f in TRANSLATABLE_METADATA_FIELDS]
+
+        pending: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        for field in requested:
+            diff = field_map.get(field)
+            if not diff:
+                continue
+            original = self._translatable_original(diff)
+            label = str(diff.get("label") or METADATA_FIELDS.get(field, {}).get("label") or field)
+            if not original:
+                skipped.append({"field": field, "label": label, "reason": "no_source"})
+                continue
+            pending.append({"field": field, "label": label, "original": original})
+
+        translations = translation.translate([item["original"] for item in pending], source="auto") if pending else []
+        result: list[dict[str, Any]] = []
+        for item, raw in zip(pending, translations):
+            suggestion = str(raw or "").strip()
+            if not suggestion or self._normalize_value(suggestion) == self._normalize_value(item["original"]):
+                skipped.append({"field": item["field"], "label": item["label"], "reason": "no_change"})
+                continue
+            result.append({**item, "suggestion": suggestion})
+
+        return {"result": result, "skipped": skipped, "provider": translation.config().get("provider")}
+
+    def _translatable_original(self, diff: dict[str, Any]) -> str | None:
+        """选用字段当前最有意义的原文:本地最终值 → 库内当前值 → 解析来源值。"""
+        for key in ("working_value", "current_value", "source_value"):
+            if self._normalize_value(diff.get(key)):
+                return str(diff.get(key))
+        return None
+
+    def _fill_fields_for(self, aggregate: dict[str, Any]) -> list[dict[str, Any]]:
+        """空值且有来源值的字段，作为「可补全」返回。绝不含已有非空终值的字段。"""
+        fills: list[dict[str, Any]] = []
+        for field in aggregate["metadata"]["fields"]:
+            working = self._normalize_value(field.get("working_value"))
+            source_value = field.get("source_value")
+            source = str(field.get("source") or "")
+            if working == "" and source_value and source in SOURCE_TO_METADATA:
+                fills.append(
+                    {
+                        "field": field["field"],
+                        "label": field["label"],
+                        "source_value": source_value,
+                        "source": source,
+                    }
+                )
+        return fills
+
+    def bulk_preview(self, work_ids: list[int], actions: dict[str, Any]) -> dict[str, Any]:
+        fill = bool(actions.get("fill_missing_metadata"))
+        write_back = bool(actions.get("write_back"))
+        if not (fill or write_back):
+            raise ValueError("至少选择一个批量动作。")
+
+        result = []
+        fields_to_fill = 0
+        write_back_ready = 0
+        for work_id in work_ids:
+            work = self._work_row(int(work_id))
+            if not work:
+                continue
+            aggregate = self.work_governance(int(work_id))
+            fill_fields = self._fill_fields_for(aggregate) if fill else []
+            fields_to_fill += len(fill_fields)
+            ready, blockers = (False, [])
+            if write_back:
+                ready, blockers = self._write_back_readiness(int(work_id))
+                if ready:
+                    write_back_ready += 1
+            result.append(
+                {
+                    "work": aggregate["work"],
+                    "fill_fields": fill_fields,
+                    "write_back_ready": ready,
+                    "blockers": blockers,
+                }
+            )
+        return {
+            "result": result,
+            "summary": {
+                "works": len(result),
+                "fields_to_fill": fields_to_fill,
+                "write_back_ready": write_back_ready,
+            },
+        }
+
+    def bulk_apply(self, work_ids: list[int], actions: dict[str, Any]) -> dict[str, Any]:
+        fill = bool(actions.get("fill_missing_metadata"))
+        write_back = bool(actions.get("write_back"))
+        backfill_web = bool(actions.get("backfill_source_web"))
+        if not (fill or write_back or backfill_web):
+            raise ValueError("至少选择一个批量动作。")
+
+        result = []
+        filled_total = 0
+        written = 0
+        errors = 0
+        skipped: list[dict[str, Any]] = []
+        web_written = 0
+        web_errors = 0
+        for work_id in work_ids:
+            work_id = int(work_id)
+            work = self._work_row(work_id)
+            if not work:
+                continue
+            entry: dict[str, Any] = {"work_id": work_id, "filled": [], "write_back": None}
+
+            if fill:
+                aggregate = self.work_governance(work_id)
+                fill_fields = self._fill_fields_for(aggregate)
+                if fill_fields:
+                    with self.db.connect() as conn:
+                        for field in fill_fields:
+                            conn.execute(
+                                """
+                                INSERT INTO work_metadata (work_id, field, value, source, source_value, updated_at)
+                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                                ON CONFLICT(work_id, field) DO UPDATE SET
+                                  value = excluded.value,
+                                  source = excluded.source,
+                                  source_value = excluded.source_value,
+                                  updated_at = CURRENT_TIMESTAMP
+                                """,
+                                (
+                                    work_id,
+                                    field["field"],
+                                    field["source_value"],
+                                    SOURCE_TO_METADATA[field["source"]],
+                                    field["source_value"],
+                                ),
+                            )
+                    entry["filled"] = [field["field"] for field in fill_fields]
+                    filled_total += len(fill_fields)
+
+            if write_back:
+                try:
+                    entry["write_back"] = self.write_back_comicinfo(work_id)
+                    written += 1
+                except Exception as exc:  # 失败隔离：记录并继续下一作品，不回滚已写 metadata
+                    entry["write_back"] = {"error": str(exc)}
+                    errors += 1
+
+            if backfill_web:
+                gallery_id = work.get("remote_gallery_id")
+                if not gallery_id:
+                    skip_entry = {"work_id": work_id, "reason": "no_gallery_id"}
+                    skipped.append(skip_entry)
+                    entry["backfill_web"] = {"skipped": "no_gallery_id"}
+                else:
+                    row = self.db.fetchone(
+                        "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+                        "ORDER BY created_at DESC, id DESC LIMIT 1",
+                        (work_id,),
+                    )
+                    if not row or not row["path"]:
+                        skip_entry = {"work_id": work_id, "reason": "no_source_cbz"}
+                        skipped.append(skip_entry)
+                        entry["backfill_web"] = {"skipped": "no_source_cbz"}
+                    else:
+                        source_path = row["path"] if row else None
+                        comicinfo_fields = self._archive_metadata(source_path)["comicinfo"]
+                        if comicinfo_fields.get("Web"):
+                            skip_entry = {"work_id": work_id, "reason": "already_has_web"}
+                            skipped.append(skip_entry)
+                            entry["backfill_web"] = {"skipped": "already_has_web"}
+                        else:
+                            try:
+                                wb_result = self.write_back_comicinfo(work_id)
+                                entry["backfill_web"] = {"written": True, "new_sha256": wb_result["new_sha256"]}
+                                web_written += 1
+                            except Exception as exc:  # 失败隔离：记录并继续下一作品
+                                entry["backfill_web"] = {"error": str(exc)}
+                                web_errors += 1
+
+            result.append(entry)
+
+        return {
+            "result": result,
+            "summary": {
+                "works": len(result),
+                "filled_fields": filled_total,
+                "written": written,
+                "errors": errors,
+                "web_written": web_written,
+                "web_errors": web_errors,
+                "skipped": skipped,
+            },
+        }
+
+    def _write_back_readiness(self, work_id: int) -> tuple[bool, list[str]]:
+        """复用 write_back_comicinfo 的前置防护判定，但不动盘。"""
+        blockers: list[str] = []
+        if self.settings is None:
+            return False, ["未配置 library 目录"]
+        row = self.db.fetchone(
+            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (work_id,),
+        )
+        source_path = Path(row["path"]).resolve() if row and row["path"] else None
+        if source_path is None or not source_path.exists() or not zipfile.is_zipfile(source_path):
+            return False, ["源 CBZ 不存在或不是有效 ZIP"]
+        library_root = self.settings.library_dir.resolve()
+        if not (source_path == library_root or library_root in source_path.parents):
+            return False, ["源文件不在受管 library 目录内"]
+        return True, blockers
+
+    def write_back_comicinfo(self, work_id: int) -> dict[str, Any]:
+        if self.settings is None:
+            raise ValueError("write-back requires settings (library directory)")
+        aggregate = self.work_governance(work_id)
+        row = self.db.fetchone(
+            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+            "ORDER BY created_at DESC, id DESC LIMIT 1",
+            (work_id,),
+        )
+        source_path = Path(row["path"]).resolve() if row and row["path"] else None
+        if source_path is None or not source_path.exists() or not zipfile.is_zipfile(source_path):
+            raise ValueError("源 CBZ 文件不存在或不是有效 ZIP，无法回写。")
+        library_root = self.settings.library_dir.resolve()
+        if not (source_path == library_root or library_root in source_path.parents):
+            raise ValueError("源文件不在受管 library 目录内，拒绝回写。")
+
+        fields = comicinfo.build_fields(aggregate)
+        xml = comicinfo.to_xml(fields)
+        data = comicinfo.reseal_cbz(source_path, xml, keep_json=True, compress=True)
+
+        tmp_path = source_path.with_suffix(source_path.suffix + ".tmp")
+        try:
+            with open(tmp_path, "wb") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp_path, source_path)
+        finally:
+            if tmp_path.exists():
+                tmp_path.unlink()
+
+        new_sha256 = hashlib.sha256(data).hexdigest()
+        new_size = len(data)
+        self.db.execute(
+            "UPDATE work_files SET sha256 = ?, size_bytes = ? "
+            "WHERE work_id = ? AND kind = 'source_cbz'",
+            (new_sha256, new_size, work_id),
+        )
+        self.db.execute(
+            "UPDATE works SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (work_id,)
+        )
+        return {
+            "written": True,
+            "fields": fields,
+            "new_sha256": new_sha256,
+            "new_size_bytes": new_size,
+        }
 
     def _queue_reasons(self, row: dict[str, Any]) -> list[dict[str, Any]]:
         reasons: list[dict[str, Any]] = []
