@@ -912,10 +912,10 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ text })
     }),
-  dictionarySuggestBatch: (limit = 20) =>
+  dictionarySuggestBatch: (limit = 20, remoteTagIds?: number[]) =>
     request<{ generated: number; items: Array<{ original_text: string; zh_name: string; tag_type: string; remote_tag_id: number }> }>(
       "/api/dictionary/suggest-batch",
-      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ limit }) }
+      { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ limit, remote_tag_ids: remoteTagIds }) }
     ),
   dictionaryPreviewBulkImport: (rows: BulkImportRow[]) =>
     request<BulkImportPreview>("/api/dictionary/preview-bulk-import", {

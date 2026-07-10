@@ -3,7 +3,7 @@ import { BookOpen, Download } from "lucide-react";
 import { GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 import { DiscoverViewMode, TagFilter } from "./discoverTypes";
-import { TagScroller } from "./TagScroller";
+import { defaultDisplayTag, TagScroller } from "./TagScroller";
 
 type Props = {
   item: GallerySummary;
@@ -17,7 +17,7 @@ type Props = {
 export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onPickTag }: Props) {
   const tags = item.tags ?? [];
   const author = tagName(tags, "artist") || tagName(tags, "group") || "作者未缓存";
-  const language = tagName(tags, "language") || "语言未缓存";
+  const language = languageLabel(tags);
   // The card already surfaces author/language/category elsewhere; the tag row should only
   // carry real content tags, not meta types like category (doujinshi) or parody (original).
   const contentTags = tags.filter((tag) => tag.type === "tag" || tag.type === "character");
@@ -66,5 +66,16 @@ export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onP
 }
 
 function tagName(tags: RemoteTag[], type: string) {
-  return tags.find((tag) => tag.type === type)?.name;
+  const tag = tags.find((item) => item.type === type);
+  return tag ? defaultDisplayTag(tag) : "";
+}
+
+function languageLabel(tags: RemoteTag[]) {
+  const language = tags.find((tag) => tag.type === "language" && !isTranslatedTag(tag));
+  return language ? defaultDisplayTag(language) : "语言未缓存";
+}
+
+function isTranslatedTag(tag: RemoteTag) {
+  const value = `${tag.name ?? ""} ${tag.slug ?? ""}`.toLowerCase();
+  return value.includes("translated");
 }

@@ -11,6 +11,10 @@ def normalize_key(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().casefold())
 
 
+DEFAULT_IGNORED_REMOTE_TYPES = ("artist", "group", "character", "parody")
+DEFAULT_IGNORED_REMOTE_TYPE_SQL = "'artist','group','character','parody'"
+
+
 class DictionaryService:
     def __init__(self, db: Database, client: Any, translation: Any = None):
         self.db = db
@@ -27,14 +31,18 @@ class DictionaryService:
         translation = self.translation.translate_one(clean).strip()
         return {"text": clean, "translation": translation, "provider": self.translation.config()["provider"]}
 
-    def generate_suggestions(self, limit: int = 20) -> dict[str, Any]:
+    def generate_suggestions(self, limit: int = 20, remote_tag_ids: list[int] | None = None) -> dict[str, Any]:
         """Machine-translate the top unconfigured remote tags into reviewable
         `status='suggested'` dictionary rows. Does NOT link work_tags — that
         only happens when a human confirms/applies the suggestion."""
         if not self.translation:
             raise ValueError("translation service not configured")
         limit = max(1, min(int(limit), 50))
-        candidates = self.candidates(status="unconfigured", limit=limit)["result"]
+        if remote_tag_ids is None:
+            candidates = self.candidates(status="unconfigured", limit=limit, tag_type="tag")["result"]
+        else:
+            ids = [int(value) for value in dict.fromkeys(remote_tag_ids) if int(value) > 0][:limit]
+            candidates = self._unconfigured_remote_tags_by_ids(ids)
         pending: list[tuple[str, str, int]] = []
         for candidate in candidates:
             original = candidate.get("name") or candidate.get("slug")
@@ -78,15 +86,59 @@ class DictionaryService:
             INSERT INTO local_tag_dictionary
               (original_text, normalized_key, zh_name, tag_type, remote_tag_id, scope_json, note, status,
                confidence, locked, ignored, source)
-            VALUES (?, ?, ?, ?, ?, '{}', NULL, 'suggested', 80, 0, 0, 'machine')
+            VALUES (?, ?, ?, ?, ?, '[]', NULL, 'suggested', 80, 0, 0, 'machine')
             """,
             (original_text, key, zh_name, tag_type, remote_tag_id),
         )
 
+    def _unconfigured_remote_tags_by_ids(self, remote_tag_ids: list[int]) -> list[dict[str, Any]]:
+        if not remote_tag_ids:
+            return []
+        placeholders = ",".join("?" for _ in remote_tag_ids)
+        rows = self.db.fetchall(
+            f"""
+            SELECT r.remote_id, r.type, r.name, r.slug
+            FROM remote_tags r
+            WHERE r.remote_id IN ({placeholders})
+              AND COALESCE(r.type, 'tag') = 'tag'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM local_tag_dictionary d
+                WHERE d.remote_tag_id = r.remote_id
+                  OR (
+                    d.remote_tag_id IS NULL
+                    AND d.ignored = 0
+                    AND d.tag_type = COALESCE(r.type, d.tag_type)
+                    AND (
+                      d.normalized_key = lower(COALESCE(r.name, ''))
+                      OR d.normalized_key = lower(COALESCE(r.slug, ''))
+                    )
+                  )
+              )
+            """,
+            remote_tag_ids,
+        )
+        return [
+            {"id": row["remote_id"], "type": row["type"], "name": row["name"], "slug": row["slug"]}
+            for row in rows
+        ]
+
     def summary(self) -> dict[str, int]:
         remote_total = self.db.fetchone("SELECT COUNT(*) AS value FROM remote_tags")["value"]
         configured = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0")["value"]
-        ignored = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 1 OR status = 'ignored'")["value"]
+        explicit_ignored = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 1 OR status = 'ignored'")[
+            "value"
+        ]
+        default_ignored = self.db.fetchone(
+            f"""
+            SELECT COUNT(*) AS value
+            FROM remote_tags r
+            WHERE COALESCE(r.type, 'tag') IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})
+              AND NOT EXISTS (
+                SELECT 1 FROM local_tag_dictionary d WHERE d.remote_tag_id = r.remote_id
+              )
+            """
+        )["value"]
         review = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0 AND status = 'review'")["value"]
         suggestions = self.db.fetchone("SELECT COUNT(*) AS value FROM local_tag_dictionary WHERE ignored = 0 AND status = 'suggested'")["value"]
         # A remote tag counts as "handled" once it has any dictionary row — configured
@@ -95,9 +147,9 @@ class DictionaryService:
             "SELECT COUNT(DISTINCT remote_tag_id) AS value FROM local_tag_dictionary WHERE remote_tag_id IS NOT NULL"
         )["value"]
         return {
-            "unconfigured": max(0, int(remote_total or 0) - int(mapped_remote or 0)),
+            "unconfigured": max(0, int(remote_total or 0) - int(mapped_remote or 0) - int(default_ignored or 0)),
             "configured": int(configured or 0),
-            "ignored": int(ignored or 0),
+            "ignored": int(explicit_ignored or 0) + int(default_ignored or 0),
             "review": int(review or 0),
             "suggestions": int(suggestions or 0),
         }
@@ -227,14 +279,30 @@ class DictionaryService:
         params: list[Any] = []
         where = ["1 = 1"]
         if q:
-            where.append("(lower(COALESCE(r.name, '')) LIKE ? OR lower(COALESCE(r.slug, '')) LIKE ?)")
-            params.extend([f"%{q}%", f"%{q}%"])
+            where.append(
+                """(
+                lower(COALESCE(r.name, '')) LIKE ?
+                OR lower(COALESCE(r.slug, '')) LIKE ?
+                OR lower(COALESCE(d.zh_name, '')) LIKE ?
+                OR EXISTS (
+                  SELECT 1 FROM tag_aliases a
+                  WHERE a.dictionary_id = d.id AND a.normalized_key LIKE ?
+                )
+              )"""
+            )
+            params.extend([f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"])
         if status == "unconfigured":
-            where.append("d.id IS NULL")
+            where.append(f"d.id IS NULL AND COALESCE(r.type, 'tag') NOT IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})")
         elif status == "configured":
             where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'configured'")
         elif status == "ignored":
-            where.append("(d.ignored = 1 OR d.status = 'ignored')")
+            where.append(
+                f"""(
+                d.ignored = 1
+                OR d.status = 'ignored'
+                OR (d.id IS NULL AND COALESCE(r.type, 'tag') IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL}))
+              )"""
+            )
         elif status == "review":
             where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'review'")
         elif status == "suggested":
@@ -273,7 +341,14 @@ class DictionaryService:
         """
         params.extend([max(1, min(limit, 100)), max(0, offset)])
         rows = self.db.fetchall(sql, params)
-        result = [_remote_tag_result(row, source="candidate") for row in rows]
+        result = []
+        seen: set[tuple[str, int]] = set()
+        for row in rows:
+            key = ("remote", int(row["remote_id"])) if row["remote_id"] is not None else ("dictionary", int(row["dictionary_id"]))
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(_remote_tag_result(row, source="candidate"))
         if status in {"all", "configured", "review", "suggested", "ignored"} and (not q or len(result) < limit):
             result.extend(self._local_only_candidates(q, status, tag_type, max(0, limit - len(result))))
         return {"result": result}
@@ -375,6 +450,8 @@ class DictionaryService:
         # Ignored terms intentionally keep the original text and need no Chinese name.
         if not cleaned["zh_name"] and cleaned["status"] != "ignored":
             raise ValueError("original_text and zh_name are required")
+        if cleaned["status"] == "suggested" and not cleaned["ignored"]:
+            cleaned["status"] = "configured"
         existing = self.db.fetchone(
             "SELECT id, locked FROM local_tag_dictionary WHERE normalized_key = ? AND tag_type = ?",
             (cleaned["normalized_key"], cleaned["tag_type"]),
@@ -789,6 +866,8 @@ class DictionaryService:
 
 
 def _remote_tag_result(row: dict[str, Any], source: str) -> dict[str, Any]:
+    default_ignored = row.get("dictionary_id") is None and row.get("type") in DEFAULT_IGNORED_REMOTE_TYPES
+    ignored = bool(row.get("ignored", 0)) or default_ignored
     return {
         "source": source,
         "id": row["remote_id"],
@@ -797,9 +876,9 @@ def _remote_tag_result(row: dict[str, Any], source: str) -> dict[str, Any]:
         "slug": row.get("slug"),
         "display": row.get("zh_name") or row.get("name") or row.get("slug") or str(row["remote_id"]),
         "dictionary_id": row.get("dictionary_id"),
-        "status": row.get("status"),
+        "status": row.get("status") or ("ignored" if default_ignored else None),
         "configured": row.get("dictionary_id") is not None,
-        "ignored": bool(row.get("ignored", 0)),
+        "ignored": ignored,
         "impact_work_count": int(row.get("impact_work_count", 0) or 0),
     }
 
@@ -807,13 +886,14 @@ def _remote_tag_result(row: dict[str, Any], source: str) -> dict[str, Any]:
 def _dictionary_result(row: dict[str, Any] | None) -> dict[str, Any] | None:
     if not row:
         return None
+    scope = json.loads(row["scope_json"] or "[]")
     return {
         "id": row["id"],
         "original_text": row["original_text"],
         "zh_name": row["zh_name"],
         "tag_type": row["tag_type"],
         "remote_tag_id": row["remote_tag_id"],
-        "scope": json.loads(row["scope_json"] or "[]"),
+        "scope": scope if isinstance(scope, list) else [],
         "note": row["note"],
         "status": row["status"],
         "confidence": row["confidence"],

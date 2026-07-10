@@ -39,7 +39,8 @@ Root: `backend/app/`
   - `latest/popular/random/feed/tagged/search/gallery/tag_autocomplete/cached_tags`.
   - `feed()` is the unified discovery entry:
     - no filters: current page only through `/api/v2/galleries`;
-    - language/type/query/sort: real `/api/v2/search` query;
+    - language/type/query: real `/api/v2/search` query;
+    - empty query: current latest feed, never the old `pages:>0` search fallback;
     - single remote tag: `/api/v2/galleries/tagged`.
   - Adds local `imported/work_id` state to remote gallery summaries.
   - `build_search_query()` appends confirmed remote filters such as `language:japanese`, `tag:"doujinshi"`, and `tag:"manga"`.
@@ -49,7 +50,7 @@ Root: `backend/app/`
 - `services/dictionary_service.py`
   - `summary()`: counts unconfigured/configured/ignored/review/suggested terms from real tables.
   - `autocomplete(q, limit)`: local dictionary, aliases, cached `remote_tags`, then real remote tag search only when no local/cache hit exists.
-  - `candidates(q, status, limit, offset, tag_type)`: real remote tag candidate pool with impact count and configured/ignored state; also exposes local-only dictionary rows so bad imports can be selected and removed.
+  - `candidates(q, status, limit, offset, tag_type)`: real remote tag candidate pool with impact count and configured/ignored state; searches original text, slug, Chinese name, and aliases; also exposes local-only dictionary rows so bad imports can be selected and removed.
   - `evidence(remote_tag_id, dictionary_id)`: real related works, co-tags, remote tag info, and local status history.
   - `preview_apply(payload)`: calculates conflicts, affected real works, samples, and tag update counts without writes.
   - `apply(payload)`: writes/updates `local_tag_dictionary`, `tag_aliases`, remote mapping, and related `work_tags`; if `remote_tag_id` is omitted it resolves a cached remote tag by normalized original text and type.
@@ -233,15 +234,15 @@ Root: `frontend/src/`
   - Single feed with keyword/Gallery ID input, filters, grid/list, title-side popular fan, random/gallery/detail modal, import action.
   - Card title uses Japanese title first; author/language/tags come from real cached remote tags.
 - `components/discover/DiscoverToolbar.tsx`
-  - Feed/upload/scan tabs, keyword or Gallery ID input, remote tag selector, custom language/type/sort menus, unimported toggle, random action.
+  - Icon-only random action immediately left of the `.view-actions` query submit button, keyword/Gallery ID input, remote tag selector, custom language/type/sort menus, unimported toggle, and grid/list controls. Upload/scan are not discover toolbar modes.
 - `components/discover/FilterMenu.tsx`
   - Custom compact menu used instead of native select controls on discover filters.
 - `components/discover/DiscoverFeed.tsx`
   - Result count, empty/error/notice states, dynamic current-page cards, icon pager.
 - `components/discover/DiscoverCard.tsx`
-  - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row.
+  - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
 - `components/discover/TagFilterSelector.tsx`
-  - Real cached multi-select tag picker plus dictionary-aware autocomplete.
+  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, and selected tags are shown inside the popover so toolbar height stays fixed.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.
 - `components/discover/TagScroller.tsx`
   - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support.

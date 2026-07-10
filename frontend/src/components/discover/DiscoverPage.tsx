@@ -4,7 +4,7 @@ import { api, GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 import { DiscoverFeed } from "./DiscoverFeed";
 import { DiscoverToolbar } from "./DiscoverToolbar";
-import { DiscoverSurface, DiscoverViewMode, TagFilter } from "./discoverTypes";
+import { DiscoverViewMode, TagFilter } from "./discoverTypes";
 import {
   canReplaceDiscoverHash,
   discoverFilterKey,
@@ -21,11 +21,9 @@ type Props = {
   initialTag?: RemoteTag;
 };
 
-const PER_PAGE = 24;
-
 export function DiscoverPage({ blurCovers, initialTag }: Props) {
   const restored = useMemo(() => readDiscoverState(), []);
-  const [surface, setSurface] = useState<DiscoverSurface>(restored.surface);
+  const surface = "feed" as const;
   const [viewMode, setViewMode] = useState<DiscoverViewMode>(restored.viewMode);
   const [query, setQuery] = useState(restored.query);
   const [submittedQuery, setSubmittedQuery] = useState(restored.submittedQuery);
@@ -35,6 +33,7 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
   const [unimportedOnly, setUnimportedOnly] = useState(restored.unimportedOnly);
   const [selectedTags, setSelectedTags] = useState<TagFilter[]>(() => (initialTag ? [initialTag] : restored.selectedTags));
   const [page, setPage] = useState(restored.page);
+  const [perPage, setPerPage] = useState(discoverPerPage);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [items, setItems] = useState<GallerySummary[]>([]);
@@ -45,8 +44,7 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const activeQuery = surface === "feed" ? submittedQuery : "";
-  const isBoundary = surface === "upload" || surface === "scan";
+  const activeQuery = submittedQuery;
   const collapsePopular = useCallback(() => setPopularCollapseSignal((value) => value + 1), []);
   const initialTagKey = initialTag?.id ?? null;
   const initialPageRef = useRef(restored.page);
@@ -68,7 +66,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
 
   const loadFeed = useCallback(
     async (nextPage: number, queryOverride?: string) => {
-      if (isBoundary) return;
       setLoading(true);
       setError(null);
       setNotice(null);
@@ -77,7 +74,7 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
         const payload = await api.feed({
           q: remoteQuery,
           page: nextPage,
-          per_page: PER_PAGE,
+          per_page: perPage,
           sort,
           language,
           type: kind,
@@ -94,8 +91,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
           setNotice(`已按词典标签「${label}」筛选；远端查询使用原始 tag 标识。`);
         } else if (payload.reason === "min_query_length") {
           setNotice("请输入关键词，或使用语言、类型、tag 组成远端查询。");
-        } else if (payload.query) {
-          setNotice(`远端查询：${payload.query}`);
         }
       } catch (exc) {
         setError(exc instanceof Error ? exc.message : String(exc));
@@ -103,7 +98,7 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
         setLoading(false);
       }
     },
-    [activeQuery, isBoundary, kind, language, selectedTags, sort, surface, unimportedOnly]
+    [activeQuery, kind, language, perPage, selectedTags, sort, surface, unimportedOnly]
   );
 
   useEffect(() => {
@@ -115,7 +110,18 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
     void loadFeed(next.page);
-  }, [filterKey]);
+  }, [filterKey, perPage]);
+
+  useEffect(() => {
+    function updatePageSize() {
+      setPerPage((current) => {
+        const next = discoverPerPage();
+        return current === next ? current : next;
+      });
+    }
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   useEffect(() => {
     const previous = window.history.scrollRestoration;
@@ -184,19 +190,12 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
     if (!initialTagKey || !initialTag) return;
     if (initialTagSeenRef.current === initialTagKey) return;
     initialTagSeenRef.current = initialTagKey;
-    setSurface("feed");
     setQuery("");
     setSubmittedQuery("");
     setSelectedTags([initialTag]);
     setPage(1);
     collapsePopular();
   }, [collapsePopular, initialTag, initialTagKey]);
-
-  const boundaryNotice = useMemo(() => {
-    if (surface === "upload") return "上传 CBZ 将在本地导入模块接入后开放；当前不显示假上传任务。";
-    if (surface === "scan") return "扫描目录将在文件维护模块接入后开放；当前不显示假扫描结果。";
-    return null;
-  }, [surface]);
 
   const loadPopular = useCallback(async () => {
     setPopularLoading(true);
@@ -251,7 +250,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
   }
 
   async function submitToolbar() {
-    if (surface !== "feed") return;
     collapsePopular();
     const nextQuery = query.trim();
     if (/^\d+$/.test(nextQuery)) {
@@ -284,11 +282,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
     collapsePopular();
     setSelectedTags((current) => (current.some((item) => item.id === tag.id) ? current : [...current, tag]));
     setPage(1);
-  }
-
-  function setSurfaceAndCollapse(nextSurface: DiscoverSurface) {
-    collapsePopular();
-    setSurface(nextSurface);
   }
 
   function setQueryAndCollapse(value: string) {
@@ -370,7 +363,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
 
       <div className="discover-workspace">
         <DiscoverToolbar
-          surface={surface}
           query={query}
           language={language}
           kind={kind}
@@ -378,7 +370,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
           unimportedOnly={unimportedOnly}
           viewMode={viewMode}
           selectedTags={selectedTags}
-          onSurface={setSurfaceAndCollapse}
           onQuery={setQueryAndCollapse}
           onLanguage={setLanguageAndCollapse}
           onKind={setKindAndCollapse}
@@ -389,7 +380,6 @@ export function DiscoverPage({ blurCovers, initialTag }: Props) {
           onSubmit={submitToolbar}
           onRandom={openRandom}
         />
-        {boundaryNotice ? <div className="notice slim boundary-notice">{boundaryNotice}</div> : null}
         <div className="discover-stage">
           <DiscoverFeed
             items={items}
@@ -448,4 +438,13 @@ function persistDiscoverState(state: PersistedDiscoverState, syncUrl: boolean) {
 
 function currentDiscoverState(state: Omit<PersistedDiscoverState, "scrollY">): PersistedDiscoverState {
   return { ...state, scrollY: window.scrollY };
+}
+
+function discoverPerPage() {
+  const workspaceGutter = 76;
+  const cardWidth = 224;
+  const gap = 16;
+  const usableWidth = Math.max(cardWidth, window.innerWidth - workspaceGutter);
+  const columns = Math.max(1, Math.floor((usableWidth + gap) / (cardWidth + gap)));
+  return columns * 4;
 }

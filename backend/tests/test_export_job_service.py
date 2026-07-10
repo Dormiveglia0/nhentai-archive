@@ -33,6 +33,7 @@ def _setup(tmp_path):
     exports = ExportService(db, settings)
     jobs = JobService(db)
     export_jobs = ExportJobService(settings, jobs, exports)
+    export_jobs._start_worker = lambda _job_id: None
     return settings, db, archive, exports, jobs, export_jobs
 
 

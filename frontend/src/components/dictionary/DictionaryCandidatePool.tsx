@@ -75,10 +75,6 @@ export function DictionaryCandidatePool({
   onPage,
   onLimit,
 }: Props) {
-  const firstKey = candidates[0] ? candidateRowKey(candidates[0]) : "none";
-  const lastKey = candidates[candidates.length - 1] ? candidateRowKey(candidates[candidates.length - 1]) : "none";
-  const resultKey = `${query}:${typeFilter}:${status}:${offset}:${limit}:${candidates.length}:${firstKey}:${lastKey}`;
-
   return (
     <section className="dictionary-pane candidate-pool">
       <header className="dictionary-pane-head">
@@ -113,7 +109,7 @@ export function DictionaryCandidatePool({
           <span>影响</span>
           <span>状态</span>
         </div>
-        <Stagger key={resultKey} className="candidate-row-list">
+        <Stagger className="candidate-row-list">
           {candidates.map((candidate) => {
             const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
             const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";

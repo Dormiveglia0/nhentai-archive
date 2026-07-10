@@ -107,6 +107,12 @@ def test_discover_search_query_adds_real_remote_filters():
     assert query == 'snow language:japanese tag:"manga"'
 
 
+def test_discover_search_query_language_all_adds_no_language_filter():
+    query = build_search_query("", language="all", kind="all")
+
+    assert query == ""
+
+
 class FakeDiscoverClient:
     def __init__(self):
         self.calls = []
@@ -159,7 +165,7 @@ def test_discover_feed_defaults_to_current_latest_page_only(tmp_path):
     assert payload["result"] == []
 
 
-def test_discover_feed_uses_search_for_sort_without_loading_all_pages(tmp_path):
+def test_discover_feed_without_filters_ignores_sort_fallback_and_uses_latest(tmp_path):
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
     db = Database(settings.database_path)
     db.init_schema()
@@ -168,7 +174,19 @@ def test_discover_feed_uses_search_for_sort_without_loading_all_pages(tmp_path):
 
     service.feed(page=2, per_page=24, sort="popular")
 
-    assert client.calls == [("search", "pages:>0", 2, 24, "popular")]
+    assert client.calls == [("latest", 2, 24)]
+
+
+def test_discover_feed_language_filter_uses_remote_language_query(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    service.feed(page=1, per_page=24, language="chinese")
+
+    assert client.calls == [("search", "language:chinese", 1, 24, "date")]
 
 
 def test_discover_feed_uses_search_for_multiple_tags(tmp_path):

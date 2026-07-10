@@ -24,13 +24,13 @@ def make_service(tmp_path):
     return db, client, DictionaryService(db, client)
 
 
-def insert_remote_tag(db, remote_id=101, name="snowmelt"):
+def insert_remote_tag(db, remote_id=101, name="snowmelt", tag_type="tag"):
     db.execute(
         """
         INSERT INTO remote_tags (remote_id, type, name, slug, payload_json)
-        VALUES (?, 'tag', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         """,
-        (remote_id, name, name, json.dumps({"id": remote_id, "type": "tag", "name": name, "slug": name})),
+        (remote_id, tag_type, name, name, json.dumps({"id": remote_id, "type": tag_type, "name": name, "slug": name})),
     )
 
 
@@ -92,6 +92,17 @@ def test_dictionary_autocomplete_uses_local_alias_cached_remote_and_remote_searc
     assert client.calls == [("tag_search", "winter", 10)]
     assert any(item["id"] == 202 and item["source"] == "remote" for item in remote["result"])
     assert db.fetchone("SELECT remote_id FROM remote_tags WHERE remote_id = ?", (202,)) is not None
+
+
+def test_dictionary_candidates_searches_chinese_and_dedupes_remote_tags(tmp_path):
+    db, _client, service = make_service(tmp_path)
+    insert_remote_tag(db)
+    service.apply({"original_text": "snowmelt", "zh_name": "雪融", "tag_type": "tag", "remote_tag_id": 101})
+
+    result = service.candidates(query="雪", limit=10)["result"]
+
+    assert [item["id"] for item in result] == [101]
+    assert result[0]["display"] == "雪融"
 
 
 def test_dictionary_preview_apply_does_not_write_then_apply_updates_work_tags(tmp_path):
@@ -254,6 +265,25 @@ def test_ignore_unconfigured_tag_creates_ignored_row_and_clears_unconfigured(tmp
     assert summary["ignored"] == 1
     # The ignored tag is now handled and no longer counts as unconfigured.
     assert summary["unconfigured"] == 0
+
+
+def test_artist_group_character_and_parody_default_to_ignored(tmp_path):
+    db, _client, service = make_service(tmp_path)
+    insert_remote_tag(db, remote_id=401, name="some artist", tag_type="artist")
+    insert_remote_tag(db, remote_id=402, name="some group", tag_type="group")
+    insert_remote_tag(db, remote_id=403, name="some character", tag_type="character")
+    insert_remote_tag(db, remote_id=404, name="some parody", tag_type="parody")
+    insert_remote_tag(db, remote_id=405, name="full color", tag_type="tag")
+
+    summary = service.summary()
+    unconfigured = service.candidates(status="unconfigured", limit=10)["result"]
+    ignored = service.candidates(status="ignored", limit=10)["result"]
+
+    assert summary["unconfigured"] == 1
+    assert summary["ignored"] == 4
+    assert [item["id"] for item in unconfigured] == [405]
+    assert {item["id"] for item in ignored} == {401, 402, 403, 404}
+    assert all(item["ignored"] and item["status"] == "ignored" for item in ignored)
 
 
 def test_dictionary_preview_shape_and_bulk_import_conflicts_are_explicit(tmp_path):

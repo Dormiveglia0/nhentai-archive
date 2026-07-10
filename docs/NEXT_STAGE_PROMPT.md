@@ -22,6 +22,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 ## Next Work
 
 - Browser QA against real or user-provided data: `#tasks`, `#governance`, `#export`, `#files`, and `#workbench`.
+- Discover QA should include Chinese tag search, selected-tag popover stability, language filters, language label display, and responsive grid row filling.
 - Mobile layout polish only where screenshots show concrete overlap, wrapping, or density problems.
 - Long-list performance checks for library/export/governance queues.
 - Small user-feedback fixes. Keep them scoped and covered by the smallest relevant test.

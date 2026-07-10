@@ -34,6 +34,7 @@ def _wire(tmp_path, monkeypatch):
     exports = ExportService(db, settings)
     jobs = JobService(db)
     export_jobs = ExportJobService(settings, jobs, exports)
+    export_jobs._start_worker = lambda _job_id: None
     monkeypatch.setattr(main, "jobs", jobs)
     monkeypatch.setattr(main, "exports", exports)
     monkeypatch.setattr(main, "export_jobs", export_jobs)
