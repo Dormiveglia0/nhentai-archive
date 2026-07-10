@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { FrontendDemo } from "./components/demo/FrontendDemo";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { DictionaryPage } from "./components/dictionary/DictionaryPage";
 import { DiscoverPage } from "./components/discover/DiscoverPage";
@@ -17,6 +18,11 @@ import { api } from "./lib/api";
 import { Page, pageFromLocation } from "./lib/navigation";
 
 export default function App() {
+  const isDemo = window.location.pathname === "/demo" || window.location.hash === "#demo";
+  return isDemo ? <FrontendDemo /> : <ArchiveApp />;
+}
+
+function ArchiveApp() {
   const [page, setPage] = useState<Page>(() => pageFromLocation());
   const [privacyMode, setPrivacyMode] = useState(true);
   const [blurCovers, setBlurCovers] = useState(true);

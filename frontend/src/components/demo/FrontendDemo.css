@@ -1,0 +1,1133 @@
+.folio-demo {
+  --folio-paper: #f3f0e7;
+  --folio-paper-deep: #e7e1d4;
+  --folio-ink: #191916;
+  --folio-muted: #6f6b62;
+  --folio-line: rgba(25, 25, 22, 0.2);
+  --folio-line-strong: rgba(25, 25, 22, 0.72);
+  --folio-red: #a9362e;
+  min-height: 100vh;
+  padding: clamp(14px, 2.2vw, 34px);
+  color: var(--folio-ink);
+  background: #d9d7d1;
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  position: relative;
+  isolation: isolate;
+}
+
+.folio-demo::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.24;
+  background-image:
+    repeating-linear-gradient(93deg, transparent 0 48px, rgba(255, 255, 255, 0.16) 49px 50px),
+    repeating-linear-gradient(7deg, rgba(30, 29, 25, 0.025) 0 1px, transparent 1px 7px);
+}
+
+.folio-demo button,
+.folio-demo input,
+.folio-demo select {
+  font: inherit;
+}
+
+.folio-demo button:focus-visible,
+.folio-demo input:focus-visible,
+.folio-demo select:focus-visible {
+  outline: 2px solid var(--folio-red);
+  outline-offset: 3px;
+}
+
+.folio-demo-shell {
+  width: min(1540px, 100%);
+  min-height: calc(100vh - clamp(28px, 4.4vw, 68px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  border: 1px solid rgba(25, 25, 22, 0.55);
+  background-color: var(--folio-paper);
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(25, 25, 22, 0.012) 5px 6px),
+    repeating-linear-gradient(90deg, transparent 0 71px, rgba(255, 255, 255, 0.09) 71px 72px);
+  box-shadow:
+    8px 10px 0 rgba(247, 244, 235, 0.72),
+    16px 18px 28px rgba(34, 32, 28, 0.18);
+  position: relative;
+}
+
+.folio-demo-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 8px;
+  width: 1px;
+  background: rgba(169, 54, 46, 0.52);
+  pointer-events: none;
+}
+
+.folio-demo-masthead {
+  min-height: 82px;
+  padding: 0 clamp(24px, 3vw, 48px);
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  border-bottom: 1px solid var(--folio-line-strong);
+  position: relative;
+  z-index: 20;
+}
+
+.folio-demo-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  width: max-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--folio-ink);
+  text-align: left;
+}
+
+.folio-demo-brand > span:first-child {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  line-height: 1;
+}
+
+.folio-demo-brand strong,
+.folio-demo-brand small {
+  display: block;
+}
+
+.folio-demo-brand strong {
+  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.folio-demo-brand small {
+  margin-top: 3px;
+  color: var(--folio-muted);
+  font-size: 9px;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+
+.folio-demo-global-nav {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 1.4vw, 24px);
+}
+
+.folio-demo-global-nav button {
+  padding: 27px 0 25px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  transition: color 180ms ease, border-color 180ms ease;
+}
+
+.folio-demo-global-nav button:hover,
+.folio-demo-global-nav button.active {
+  color: var(--folio-ink);
+}
+
+.folio-demo-global-nav button.active {
+  border-bottom-color: var(--folio-red);
+}
+
+.folio-demo-mast-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.folio-demo-privacy,
+.folio-demo-menu-button {
+  min-height: 38px;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+}
+
+.folio-demo-privacy {
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.folio-demo-privacy strong {
+  color: var(--folio-ink);
+  font-size: 11px;
+}
+
+.folio-demo-privacy.active svg {
+  color: var(--folio-red);
+}
+
+.folio-demo-menu-button {
+  width: 40px;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.folio-demo-mobile-menu {
+  display: none;
+}
+
+.folio-demo-workspace {
+  min-height: 760px;
+  display: grid;
+  grid-template-columns: clamp(248px, 20vw, 306px) minmax(0, 1fr);
+}
+
+.folio-demo-index {
+  padding: clamp(44px, 5vw, 76px) clamp(28px, 3vw, 46px) 34px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--folio-line-strong);
+  position: relative;
+}
+
+.folio-demo-index::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--folio-red);
+  position: absolute;
+  top: 49px;
+  right: -4px;
+}
+
+.folio-demo-index-title > span {
+  color: var(--folio-red);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.folio-demo-index-title h1 {
+  margin: 12px 0 8px;
+  font-family: "Noto Serif SC", "Songti SC", STSong, Georgia, serif;
+  font-size: clamp(46px, 4.4vw, 68px);
+  font-weight: 500;
+  letter-spacing: -0.08em;
+  line-height: 1;
+}
+
+.folio-demo-index-title p {
+  margin: 0;
+  color: var(--folio-muted);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 13px;
+}
+
+.folio-demo-section-nav {
+  margin-top: clamp(34px, 4vw, 56px);
+  border-top: 1px solid var(--folio-line);
+}
+
+.folio-demo-section-nav button {
+  width: 100%;
+  min-height: 70px;
+  padding: 13px 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  text-align: left;
+  position: relative;
+  transition: color 180ms ease, padding-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-demo-section-nav button::before {
+  content: "";
+  width: 0;
+  height: 1px;
+  background: var(--folio-red);
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-demo-section-nav button:hover,
+.folio-demo-section-nav button.active {
+  color: var(--folio-ink);
+}
+
+.folio-demo-section-nav button.active {
+  padding-left: 8px;
+}
+
+.folio-demo-section-nav button.active::before {
+  width: 100%;
+}
+
+.folio-demo-section-number {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.folio-demo-section-copy strong,
+.folio-demo-section-copy small {
+  display: block;
+}
+
+.folio-demo-section-copy strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.folio-demo-section-copy small {
+  margin-top: 4px;
+  color: var(--folio-muted);
+  font-size: 10px;
+}
+
+.folio-demo-section-icon {
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.folio-demo-section-nav button.active .folio-demo-section-icon,
+.folio-demo-section-nav button:hover .folio-demo-section-icon {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.folio-demo-index-note {
+  margin-top: auto;
+  padding-top: 26px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--folio-muted);
+  border-top: 1px solid var(--folio-line);
+}
+
+.folio-demo-index-note svg {
+  flex: 0 0 auto;
+  color: var(--folio-red);
+}
+
+.folio-demo-index-note p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.folio-demo-page-wrap {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.folio-demo-page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.folio-demo-page-head {
+  min-height: 210px;
+  padding: clamp(42px, 5vw, 74px) clamp(36px, 6vw, 90px) 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 30px;
+  border-bottom: 1px solid var(--folio-line);
+  position: relative;
+  overflow: hidden;
+}
+
+.folio-demo-page-head::after {
+  content: "";
+  width: 52px;
+  height: 1px;
+  background: var(--folio-red);
+  position: absolute;
+  left: clamp(36px, 6vw, 90px);
+  bottom: -1px;
+}
+
+.folio-demo-page-head h2 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", STSong, Georgia, serif;
+  font-size: clamp(52px, 6vw, 88px);
+  font-weight: 500;
+  letter-spacing: -0.09em;
+  line-height: 0.95;
+}
+
+.folio-demo-page-head p {
+  margin: 18px 0 0;
+  color: var(--folio-muted);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.folio-demo-page-head > span {
+  color: rgba(25, 25, 22, 0.075);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(82px, 11vw, 154px);
+  line-height: 0.75;
+  letter-spacing: -0.08em;
+  user-select: none;
+}
+
+.folio-demo-page-content {
+  flex: 1;
+  padding: clamp(34px, 4.5vw, 68px) clamp(36px, 6vw, 90px) 54px;
+}
+
+.folio-demo-panel-title {
+  margin-bottom: 38px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.folio-demo-panel-title h3 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(23px, 2vw, 31px);
+  font-weight: 600;
+}
+
+.folio-demo-panel-title p {
+  max-width: 610px;
+  margin: 10px 0 0;
+  color: var(--folio-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.folio-demo-panel-title .folio-demo-state {
+  margin: 5px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--folio-red);
+  white-space: nowrap;
+}
+
+.folio-demo-state span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.folio-demo-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 27px 30px;
+}
+
+.folio-demo-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: var(--folio-muted);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.folio-demo-form-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.folio-demo-form-grid input,
+.folio-demo-form-grid select,
+.folio-demo-secret-input {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-line-strong);
+  border-radius: 0;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--folio-ink);
+  font-size: 13px;
+}
+
+.folio-demo-form-grid input,
+.folio-demo-form-grid select {
+  padding: 0 12px;
+}
+
+.folio-demo-form-grid input[readonly] {
+  color: var(--folio-muted);
+}
+
+.folio-demo-secret-input {
+  display: flex;
+  align-items: center;
+}
+
+.folio-demo-secret-input input {
+  min-height: 45px;
+  border: 0;
+  background: transparent;
+}
+
+.folio-demo-secret-input button {
+  width: 45px;
+  min-height: 45px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--folio-muted);
+}
+
+.folio-demo-inline-actions {
+  margin-top: 36px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.folio-demo-inline-actions button,
+.folio-demo-command-bar button {
+  min-height: 42px;
+  padding: 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--folio-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 11px;
+  transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.folio-demo-inline-actions button:hover:not(:disabled),
+.folio-demo-command-bar button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--folio-ink);
+  color: var(--folio-paper);
+}
+
+.folio-demo-inline-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.folio-demo-kv {
+  margin: 38px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--folio-line);
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-demo-kv div {
+  min-height: 66px;
+  padding: 13px 17px;
+  border-right: 1px solid var(--folio-line);
+}
+
+.folio-demo-kv div:last-child {
+  border-right: 0;
+}
+
+.folio-demo-kv dt {
+  color: var(--folio-muted);
+  font-size: 10px;
+}
+
+.folio-demo-kv dd {
+  margin: 8px 0 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+}
+
+.folio-demo-choice-list {
+  margin-bottom: 34px;
+  border-top: 1px solid var(--folio-line);
+}
+
+.folio-demo-choice-list button {
+  width: 100%;
+  min-height: 66px;
+  padding: 14px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 20px;
+  align-items: center;
+  gap: 18px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-ink);
+  text-align: left;
+}
+
+.folio-demo-choice-list small {
+  color: var(--folio-muted);
+  font-size: 10px;
+}
+
+.folio-demo-choice-list svg {
+  color: var(--folio-red);
+  opacity: 0;
+}
+
+.folio-demo-choice-list button.active svg {
+  opacity: 1;
+}
+
+.folio-demo-toggle-list {
+  border-top: 1px solid var(--folio-line);
+}
+
+.folio-demo-toggle-list > label {
+  min-height: 78px;
+  padding: 17px 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--folio-line);
+  cursor: pointer;
+}
+
+.folio-demo-toggle-list strong,
+.folio-demo-toggle-list small {
+  display: block;
+}
+
+.folio-demo-toggle-list strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.folio-demo-toggle-list small {
+  margin-top: 6px;
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+
+.folio-demo-toggle-list input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.folio-demo-toggle-list i {
+  width: 44px;
+  height: 22px;
+  padding: 3px;
+  display: block;
+  border: 1px solid var(--folio-line-strong);
+  border-radius: 0;
+  transition: background-color 180ms ease;
+}
+
+.folio-demo-toggle-list i span {
+  width: 14px;
+  height: 14px;
+  display: block;
+  background: var(--folio-ink);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease;
+}
+
+.folio-demo-toggle-list input:focus-visible + i {
+  outline: 2px solid var(--folio-red);
+  outline-offset: 3px;
+}
+
+.folio-demo-toggle-list input:checked + i {
+  background: var(--folio-red);
+  border-color: var(--folio-red);
+}
+
+.folio-demo-toggle-list input:checked + i span {
+  transform: translateX(21px);
+  background: var(--folio-paper);
+}
+
+.folio-demo-mode-field {
+  margin: 36px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.folio-demo-mode-field legend {
+  margin-bottom: 11px;
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+
+.folio-demo-mode-field button {
+  min-width: 116px;
+  min-height: 42px;
+  border: 1px solid var(--folio-line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+
+.folio-demo-mode-field button + button {
+  border-left: 0;
+}
+
+.folio-demo-mode-field button.active {
+  background: var(--folio-ink);
+  color: var(--folio-paper);
+}
+
+.folio-demo-unavailable {
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  border-top: 1px solid var(--folio-line);
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-demo-unavailable svg {
+  color: var(--folio-red);
+}
+
+.folio-demo-unavailable h3 {
+  max-width: 590px;
+  margin: 24px 0 10px;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(25px, 3vw, 40px);
+  font-weight: 500;
+}
+
+.folio-demo-unavailable p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--folio-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.folio-demo-unavailable > span {
+  margin-top: 38px;
+  color: var(--folio-line-strong);
+  font-family: Georgia, serif;
+  font-size: 28px;
+}
+
+.folio-demo-command-bar {
+  min-height: 82px;
+  margin-top: auto;
+  padding: 16px clamp(36px, 6vw, 90px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-top: 1px solid var(--folio-line-strong);
+  background: rgba(243, 240, 231, 0.92);
+}
+
+.folio-demo-command-bar p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--folio-muted);
+  font-size: 10px;
+}
+
+.folio-demo-command-bar p span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--folio-red);
+}
+
+.folio-demo-command-bar > div {
+  display: flex;
+  gap: 10px;
+}
+
+.folio-demo-command-bar button.primary {
+  min-width: 148px;
+  border-color: var(--folio-red);
+  background: var(--folio-red);
+  color: #fffaf0;
+}
+
+.folio-demo-command-bar button.primary:hover {
+  background: var(--folio-ink);
+  border-color: var(--folio-ink);
+}
+
+.folio-demo-notice {
+  max-width: min(420px, calc(100vw - 32px));
+  min-height: 46px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--folio-ink);
+  background: var(--folio-ink);
+  color: var(--folio-paper);
+  box-shadow: 5px 5px 0 rgba(169, 54, 46, 0.82);
+  font-size: 11px;
+  line-height: 1.5;
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 100;
+}
+
+@media (max-width: 1180px) {
+  .folio-demo-masthead {
+    grid-template-columns: 176px minmax(0, 1fr) auto;
+    gap: 16px;
+  }
+
+  .folio-demo-global-nav {
+    gap: 12px;
+  }
+
+  .folio-demo-global-nav button {
+    font-size: 11px;
+  }
+
+  .folio-demo-privacy span {
+    display: none;
+  }
+}
+
+@media (max-width: 940px) {
+  .folio-demo {
+    overflow-x: clip;
+  }
+
+  .folio-demo-masthead {
+    grid-template-columns: 1fr auto;
+  }
+
+  .folio-demo-global-nav {
+    display: none;
+  }
+
+  .folio-demo-menu-button {
+    display: inline-flex;
+  }
+
+  .folio-demo-mobile-menu {
+    padding: 18px clamp(18px, 4vw, 34px) 24px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    border-bottom: 1px solid var(--folio-line-strong);
+    background: var(--folio-paper);
+    position: absolute;
+    top: 82px;
+    left: 0;
+    right: 0;
+    z-index: 18;
+  }
+
+  .folio-demo-mobile-menu button {
+    min-height: 48px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 0;
+    border-bottom: 1px solid var(--folio-line);
+    background: transparent;
+    color: var(--folio-muted);
+    font-size: 12px;
+  }
+
+  .folio-demo-mobile-menu button.active {
+    color: var(--folio-red);
+  }
+
+  .folio-demo-workspace {
+    display: block;
+  }
+
+  .folio-demo-index {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 34px 34px 0;
+    overflow: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--folio-line-strong);
+  }
+
+  .folio-demo-index::after,
+  .folio-demo-index-note {
+    display: none;
+  }
+
+  .folio-demo-index-title h1 {
+    font-size: 48px;
+  }
+
+  .folio-demo-section-nav {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-top: 28px;
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-top: 0;
+  }
+
+  .folio-demo-section-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .folio-demo-section-nav button {
+    min-width: 150px;
+    min-height: 54px;
+    grid-template-columns: 28px auto;
+    padding: 10px 0;
+  }
+
+  .folio-demo-section-nav button.active {
+    padding-left: 4px;
+  }
+
+  .folio-demo-section-copy small,
+  .folio-demo-section-icon {
+    display: none;
+  }
+
+  .folio-demo-page-head {
+    min-height: 180px;
+  }
+
+  .folio-demo-page-wrap,
+  .folio-demo-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .folio-demo {
+    padding: 0;
+  }
+
+  .folio-demo-shell {
+    min-height: 100vh;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .folio-demo-shell::before {
+    left: 5px;
+  }
+
+  .folio-demo-masthead {
+    min-height: 70px;
+    padding: 0 17px;
+  }
+
+  .folio-demo-brand > span:first-child {
+    font-size: 29px;
+  }
+
+  .folio-demo-brand strong {
+    font-size: 15px;
+  }
+
+  .folio-demo-brand small {
+    display: none;
+  }
+
+  .folio-demo-privacy {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .folio-demo-privacy span,
+  .folio-demo-privacy strong {
+    display: none;
+  }
+
+  .folio-demo-mobile-menu {
+    top: 70px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .folio-demo-index {
+    padding: 27px 18px 0;
+  }
+
+  .folio-demo-index-title h1 {
+    margin-top: 9px;
+    font-size: 43px;
+  }
+
+  .folio-demo-index-title p {
+    font-size: 12px;
+  }
+
+  .folio-demo-section-nav {
+    margin-top: 22px;
+  }
+
+  .folio-demo-section-nav button {
+    min-width: 116px;
+  }
+
+  .folio-demo-section-copy strong {
+    font-size: 14px;
+  }
+
+  .folio-demo-page-head {
+    min-height: 142px;
+    padding: 31px 20px 24px;
+  }
+
+  .folio-demo-page-head::after {
+    left: 20px;
+  }
+
+  .folio-demo-page-head h2 {
+    font-size: 48px;
+  }
+
+  .folio-demo-page-head p {
+    margin-top: 12px;
+    font-size: 11px;
+  }
+
+  .folio-demo-page-head > span {
+    font-size: 82px;
+  }
+
+  .folio-demo-page-content {
+    padding: 30px 20px 42px;
+  }
+
+  .folio-demo-panel-title {
+    margin-bottom: 28px;
+    display: block;
+  }
+
+  .folio-demo-panel-title .folio-demo-state {
+    margin-top: 17px;
+  }
+
+  .folio-demo-form-grid {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .folio-demo-form-grid label.wide {
+    grid-column: auto;
+  }
+
+  .folio-demo-inline-actions {
+    align-items: stretch;
+  }
+
+  .folio-demo-inline-actions button {
+    flex: 1 1 calc(50% - 5px);
+  }
+
+  .folio-demo-kv {
+    grid-template-columns: 1fr;
+  }
+
+  .folio-demo-kv div {
+    min-height: 58px;
+    border-right: 0;
+    border-bottom: 1px solid var(--folio-line);
+  }
+
+  .folio-demo-kv div:last-child {
+    border-bottom: 0;
+  }
+
+  .folio-demo-choice-list button {
+    grid-template-columns: minmax(0, 1fr) 20px;
+  }
+
+  .folio-demo-choice-list small {
+    display: none;
+  }
+
+  .folio-demo-command-bar {
+    min-height: 102px;
+    padding: 14px 20px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+
+  .folio-demo-command-bar > div {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .folio-demo-command-bar button,
+  .folio-demo-command-bar button.primary {
+    width: 100%;
+    min-width: 0;
+    padding: 0 11px;
+  }
+
+  .folio-demo-notice {
+    top: auto;
+    right: 16px;
+    bottom: 18px;
+    left: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-demo *,
+  .folio-demo *::before,
+  .folio-demo *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
