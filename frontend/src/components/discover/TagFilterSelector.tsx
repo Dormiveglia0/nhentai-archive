@@ -1,5 +1,5 @@
 import { ChevronDown, Search, X } from "lucide-react";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { api, RemoteTag } from "../../lib/api";
 import { TagFilter } from "./discoverTypes";
@@ -34,7 +34,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
     setCachedLoading(true);
     api
       .dictionaryCandidates({ limit: 80 })
-      .then((payload) => setCached(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number")))
+      .then((payload) => setCached(uniqueRemoteTags(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number"))))
       .catch((exc) => setError(exc instanceof Error ? exc.message : String(exc)))
       .finally(() => setCachedLoading(false));
   }, [cached.length, cachedLoading, open]);
@@ -43,7 +43,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
     const q = query.trim();
     latestQuery.current = q;
     setError(null);
-    if (!open || q.length < 2) {
+    if (!open || !canSearchTag(q)) {
       setSuggestions([]);
       return;
     }
@@ -51,7 +51,9 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
       setLoading(true);
       try {
         const payload = await api.dictionaryAutocomplete(q, 12);
-        if (latestQuery.current === q) setSuggestions(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number"));
+        if (latestQuery.current === q) {
+          setSuggestions(uniqueRemoteTags(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number")));
+        }
       } catch (exc) {
         if (latestQuery.current === q) setError(exc instanceof Error ? exc.message : String(exc));
       } finally {
@@ -61,12 +63,17 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
     return () => window.clearTimeout(handle);
   }, [query, open]);
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    const first = (query.trim().length >= 2 ? suggestions : cached)[0];
+  function submit() {
+    const first = (canSearchTag(query.trim()) ? suggestions : cached)[0];
     if (first) {
       choose(first);
     }
+  }
+
+  function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    submit();
   }
 
   function remove(tag: RemoteTag) {
@@ -100,54 +107,64 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   }
 
   const q = query.trim();
-  const visible = q.length >= 2 ? suggestions : cached;
+  const visible = canSearchTag(q) ? suggestions : cached;
+  const selectedSummary = selected.length
+    ? `${defaultDisplayTag(selected[0])}${selected.length > 1 ? ` +${selected.length - 1}` : ""}`
+    : "选择或搜索远端 tag";
 
   return (
     <div ref={rootRef} className={open ? "tag-filter-shell open" : "tag-filter-shell"}>
       <button className="tag-filter tag-filter-trigger" type="button" onClick={() => setOpen((value) => !value)}>
         <Search size={15} />
-        <span>{selected.length ? `已选 ${selected.length} 个 tag` : "选择或搜索远端 tag"}</span>
+        <span>{selectedSummary}</span>
         <ChevronDown size={15} />
       </button>
-      {selected.length ? (
-        <div className="tag-filter-chips">
-          {selected.map((tag) => (
-            <button key={tag.id} type="button" onClick={() => remove(tag)}>
-              {defaultDisplayTag(tag)}
-              <X size={12} />
-            </button>
-          ))}
-          <button className="clear-tags" type="button" onClick={clear} aria-label="清除全部标签">
-            清除
-          </button>
-        </div>
-      ) : null}
       {open ? (
         <div className="tag-picker">
-          <form className="tag-picker-search" onSubmit={submit}>
+          <div className="tag-picker-search">
             <Search size={15} />
             <input
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="输入 tag，词典接入后支持中文映射"
+              onKeyDown={onSearchKeyDown}
+              placeholder="输入中文译名、别名或原始 tag"
             />
             {loading || cachedLoading ? <span className="tag-filter-state">...</span> : null}
             {error ? <span className="tag-filter-state error">!</span> : null}
-          </form>
+          </div>
+          {selected.length ? (
+            <div className="tag-picker-selected">
+              <span>已选</span>
+              <div>
+                {selected.map((tag) => (
+                  <button key={tag.id} type="button" onClick={() => remove(tag)}>
+                    {defaultDisplayTag(tag)}
+                    <X size={12} />
+                  </button>
+                ))}
+                <button className="clear-tags" type="button" onClick={clear} aria-label="清除全部标签">
+                  清除
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div className="tag-picker-list">
             {visible.map((tag) => {
               const active = selected.some((item) => item.id === tag.id);
               return (
                 <button key={tag.id} className={active ? "active" : ""} type="button" onClick={() => toggle(tag)}>
-                  <strong>{defaultDisplayTag(tag)}</strong>
+                  <span className="tag-picker-labels">
+                    <strong>{defaultDisplayTag(tag)}</strong>
+                    <small>{tag.name || tag.slug || `#${tag.id}`}</small>
+                  </span>
                   <span>{active ? "已选" : tag.type || "tag"}</span>
                 </button>
               );
             })}
             {!visible.length && !loading && !cachedLoading ? (
               <div className="tag-picker-empty">
-                {q.length >= 2 ? "没有真实 tag 结果" : "暂无缓存 tag，输入至少 2 个字符搜索远端"}
+                {canSearchTag(q) ? "没有真实 tag 结果" : "暂无缓存 tag，输入中文或至少 2 个字符搜索"}
               </div>
             ) : null}
           </div>
@@ -155,4 +172,17 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
       ) : null}
     </div>
   );
+}
+
+function canSearchTag(value: string) {
+  return /[^\x00-\x7F]/.test(value) || value.length >= 2;
+}
+
+function uniqueRemoteTags(tags: RemoteTag[]) {
+  const seen = new Set<number>();
+  return tags.filter((tag) => {
+    if (typeof tag.id !== "number" || seen.has(tag.id)) return false;
+    seen.add(tag.id);
+    return true;
+  });
 }

@@ -70,6 +70,7 @@ class DictionaryTranslateRequest(BaseModel):
 
 class DictionarySuggestBatchRequest(BaseModel):
     limit: int = 20
+    remote_tag_ids: list[int] | None = None
 
 
 class GovernanceMetadataPatch(BaseModel):
@@ -87,6 +88,7 @@ class GovernanceApplyRequest(BaseModel):
 class GovernanceBulkActions(BaseModel):
     fill_missing_metadata: bool = False
     write_back: bool = False
+    confirm_dictionary_terms: bool = False
 
 
 class GovernanceBulkRequest(BaseModel):
@@ -297,7 +299,7 @@ def dictionary_translate(payload: DictionaryTranslateRequest):
 @app.post("/api/dictionary/suggest-batch")
 def dictionary_suggest_batch(payload: DictionarySuggestBatchRequest):
     try:
-        return dictionary.generate_suggestions(payload.limit)
+        return dictionary.generate_suggestions(payload.limit, payload.remote_tag_ids)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except TranslationError as exc:

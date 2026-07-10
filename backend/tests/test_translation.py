@@ -131,6 +131,49 @@ def test_generate_suggestions_creates_reviewable_rows_without_linking_works(tmp_
     assert all(item["status"] == "suggested" for item in suggested)
 
 
+def test_generate_suggestions_only_translates_requested_remote_tags(tmp_path):
+    db = _db(tmp_path)
+    _seed_remote_tag(db, 701, "full color", "full-color")
+    _seed_remote_tag(db, 702, "glasses", "glasses")
+    _seed_remote_tag(db, 703, "stockings", "stockings")
+    dictionary = DictionaryService(
+        db, client=None, translation=FakeTranslation({"full color": "全彩", "glasses": "眼镜", "stockings": "丝袜"})
+    )
+
+    result = dictionary.generate_suggestions(limit=10, remote_tag_ids=[702])
+
+    assert result["generated"] == 1
+    rows = db.fetchall("SELECT zh_name, remote_tag_id FROM local_tag_dictionary")
+    assert [(row["zh_name"], row["remote_tag_id"]) for row in rows] == [("眼镜", 702)]
+
+
+def test_generate_suggestions_read_back_empty_scope_as_array(tmp_path):
+    db = _db(tmp_path)
+    _seed_remote_tag(db, 704, "glasses", "glasses")
+    dictionary = DictionaryService(db, client=None, translation=FakeTranslation({"glasses": "眼镜"}))
+
+    dictionary.generate_suggestions(limit=10, remote_tag_ids=[704])
+
+    row = db.fetchone("SELECT id, scope_json FROM local_tag_dictionary WHERE remote_tag_id = 704")
+    assert row["scope_json"] == "[]"
+    assert dictionary.evidence(dictionary_id=row["id"])["dictionary"]["scope"] == []
+
+
+def test_generate_suggestions_skips_non_tag_remote_types(tmp_path):
+    db = _db(tmp_path)
+    _seed_remote_tag(db, 801, "some artist", "some-artist", tag_type="artist")
+    _seed_remote_tag(db, 802, "glasses", "glasses", tag_type="tag")
+    dictionary = DictionaryService(
+        db, client=None, translation=FakeTranslation({"some artist": "某作者", "glasses": "眼镜"})
+    )
+
+    result = dictionary.generate_suggestions(limit=10, remote_tag_ids=[801, 802])
+
+    assert result["generated"] == 1
+    rows = db.fetchall("SELECT zh_name, remote_tag_id FROM local_tag_dictionary")
+    assert [(row["zh_name"], row["remote_tag_id"]) for row in rows] == [("眼镜", 802)]
+
+
 def test_generate_suggestions_does_not_overwrite_configured_entry(tmp_path):
     db = _db(tmp_path)
     _seed_remote_tag(db, 600, "stockings", "stockings")
@@ -150,6 +193,21 @@ def test_generate_suggestions_does_not_overwrite_configured_entry(tmp_path):
     row = db.fetchone("SELECT zh_name, status FROM local_tag_dictionary WHERE normalized_key = 'stockings'")
     assert row["zh_name"] == "长袜（人工）"
     assert row["status"] == "configured"
+
+
+def test_manual_apply_promotes_machine_suggestion_to_configured(tmp_path):
+    db = _db(tmp_path)
+    _seed_remote_tag(db, 601, "glasses", "glasses")
+    dictionary = DictionaryService(db, client=None, translation=FakeTranslation({"glasses": "眼镜"}))
+    dictionary.generate_suggestions(limit=10)
+    row = db.fetchone("SELECT id FROM local_tag_dictionary WHERE remote_tag_id = 601")
+    suggested = dictionary.evidence(dictionary_id=row["id"])["dictionary"]
+
+    applied = dictionary.apply(suggested)
+
+    assert applied["dictionary"]["status"] == "configured"
+    assert dictionary.summary()["suggestions"] == 0
+    assert dictionary.summary()["configured"] == 1
 
 
 def test_translate_without_service_raises_value_error(tmp_path):

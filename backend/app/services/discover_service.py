@@ -34,7 +34,7 @@ class DiscoverService:
             return self.tagged(tag_id, page, per_page, sort, unimported_only)
 
         remote_query = build_search_query(query, language, kind, selected_tags)
-        if remote_query or sort != "date":
+        if remote_query:
             return self.search(query, page, per_page, sort, language, kind, unimported_only, selected_tags)
 
         mapped = self.latest(page, per_page)
@@ -84,8 +84,6 @@ class DiscoverService:
         tag_names: list[str] | None = None,
     ) -> dict[str, Any]:
         remote_query = build_search_query(query, language, kind, tag_names or [])
-        if not remote_query and sort != "date":
-            remote_query = "pages:>0"
         if len(remote_query.strip()) < 1:
             return {"result": [], "total": 0, "num_pages": 0, "per_page": per_page, "reason": "min_query_length"}
         payload = self.client.search(remote_query, page, per_page, sort)

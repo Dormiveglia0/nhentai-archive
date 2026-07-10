@@ -62,6 +62,8 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 onFillChange={gov.setBulkFill}
                 writeBack={gov.bulkWriteBack}
                 onWriteBackChange={gov.setBulkWriteBack}
+                confirmTerms={gov.bulkConfirmTerms}
+                onConfirmTermsChange={gov.setBulkConfirmTerms}
                 busy={gov.bulkBusy}
                 preview={gov.bulkPreview}
                 result={gov.bulkResult}

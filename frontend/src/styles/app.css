@@ -2200,41 +2200,6 @@ kbd {
   background: transparent;
 }
 
-.discover-toolbar .mode-tabs {
-  gap: 8px;
-  padding: 0;
-}
-
-.discover-toolbar .mode-tabs button {
-  height: 42px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  padding: 0 12px;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.discover-toolbar .mode-tabs button.active,
-.discover-toolbar .mode-tabs button:hover {
-  border-color: #ead0c6;
-  background: #fff3ec;
-  color: var(--accent);
-}
-
-.discover-toolbar .mode-tabs button.active::after {
-  display: none;
-}
-
-.discover-toolbar .mode-tabs .random-action {
-  margin-left: auto;
-  border-color: #dfc8bc;
-  background: #241d17;
-  color: #fffaf2;
-}
-
 .discover-filters.unified {
   grid-template-columns: minmax(280px, 1.25fr) minmax(260px, 1fr) 118px 132px 140px 112px auto;
   gap: 12px;
@@ -2722,22 +2687,26 @@ kbd {
   background: transparent;
 }
 
-.discover-toolbar .mode-tabs {
-  border-bottom-color: rgba(222, 210, 194, 0.72);
-}
-
-.discover-toolbar .mode-tabs button.active,
-.discover-toolbar .mode-tabs button:hover {
-  background: rgba(255, 243, 236, 0.46);
-}
-
-.discover-toolbar .mode-tabs .random-action {
-  border-color: #2d211b;
-}
-
 .discover-filters.unified {
-  grid-template-columns: minmax(300px, 1.15fr) minmax(265px, 0.95fr) 122px 124px 140px 112px auto;
+  grid-template-columns: minmax(340px, 1.35fr) minmax(260px, 0.9fr) 118px 118px 140px 108px auto;
   border-bottom: 1px solid rgba(222, 210, 194, 0.76);
+}
+
+.discover-filters .search-field {
+  min-width: 0;
+}
+
+.view-actions .random-action {
+  flex: 0 0 38px;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  border: 1px solid #dfc8bc;
+  border-radius: 7px;
+  background: #241d17;
+  color: #fffaf2;
+  padding: 0;
+  box-shadow: none;
 }
 
 .filter-menu {
@@ -2820,13 +2789,55 @@ kbd {
   position: absolute;
   z-index: 50;
   left: 0;
-  right: 0;
   top: calc(100% + 7px);
+  width: min(420px, calc(100vw - 48px));
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fffaf2;
   box-shadow: 0 20px 44px rgba(66, 49, 31, 0.16);
   padding: 8px;
+}
+
+.tag-picker-selected {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  border-bottom: 1px solid rgba(222, 210, 194, 0.78);
+  margin: 8px 0 0;
+  padding: 8px 0;
+}
+
+.tag-picker-selected > span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 26px;
+}
+
+.tag-picker-selected > div {
+  min-width: 0;
+  max-height: 62px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-picker-selected button {
+  min-height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.72);
+  color: var(--accent-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.tag-picker-selected .clear-tags {
+  color: var(--muted);
 }
 
 .tag-picker-search {
@@ -2861,7 +2872,7 @@ kbd {
 }
 
 .tag-picker-list button {
-  min-height: 36px;
+  min-height: 44px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -2871,6 +2882,25 @@ kbd {
   justify-content: space-between;
   gap: 14px;
   padding: 0 8px;
+}
+
+.tag-picker-labels {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.tag-picker-labels strong,
+.tag-picker-labels small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-picker-labels small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .tag-picker-list button:hover {
@@ -2894,11 +2924,14 @@ kbd {
 }
 
 .discover-card-grid {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 16px;
 }
 
 .discover-card {
+  width: 224px;
   background: rgba(255, 252, 246, 0.44);
   box-shadow: none;
 }
@@ -3060,10 +3093,6 @@ body {
   background: transparent;
 }
 
-.discover-toolbar .mode-tabs {
-  border-bottom: 1px solid var(--line);
-}
-
 .discover-filters.unified {
   border-bottom: 1px solid var(--line);
 }
@@ -3094,30 +3123,6 @@ body {
 .discover-card-grid {
   justify-content: center;
   overflow-x: clip;
-}
-
-.tag-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 7px;
-}
-
-.tag-filter-chips button {
-  min-height: 25px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(255, 252, 246, 0.72);
-  color: var(--accent-dark);
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  font-size: 12px;
-}
-
-.tag-filter-chips .clear-tags {
-  color: var(--muted);
 }
 
 .tag-picker-list button.active {
@@ -3240,19 +3245,6 @@ body {
 
   .sketch {
     display: none;
-  }
-
-  .discover-toolbar .mode-tabs {
-    overflow-x: auto;
-    gap: 8px;
-  }
-
-  .discover-toolbar .mode-tabs button {
-    flex: 0 0 auto;
-  }
-
-  .discover-toolbar .mode-tabs .random-action {
-    margin-left: 0;
   }
 
   .discover-filters.unified {
@@ -3931,11 +3923,11 @@ body {
   color: var(--ink);
 }
 
-.candidate-row:hover {
+button.candidate-row:hover {
   background: rgba(185, 45, 30, 0.03);
 }
 
-.candidate-row.active {
+button.candidate-row.active {
   background: rgba(185, 45, 30, 0.06);
   border-left-color: var(--accent);
 }

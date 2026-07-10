@@ -46,6 +46,9 @@ export function DictionaryPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const batchRemoteTagIds = candidates
+    .filter((candidate) => candidate.id != null && (candidate.type ?? "tag") === "tag" && !candidate.configured && !candidate.ignored)
+    .map((candidate) => Number(candidate.id));
 
   useEffect(() => {
     if (!bulkOpen) return;
@@ -134,16 +137,20 @@ export function DictionaryPage() {
   }
 
   async function suggestBatch() {
+    if (batchRemoteTagIds.length === 0) {
+      setMessage("当前候选池没有可机翻的未配置标签。");
+      return;
+    }
     setSuggesting(true);
     setMessage(null);
     try {
       const settings = await api.settings();
       const limit = settings.machine_translation?.batch_limit ?? 20;
-      const result = await api.dictionarySuggestBatch(limit);
+      const result = await api.dictionarySuggestBatch(limit, batchRemoteTagIds);
       setMessage(
         result.generated > 0
-          ? `已生成 ${result.generated} 条机翻建议，请在候选池按「机器建议」筛选并逐条复核。`
-          : "没有可生成建议的未配置远端 tag。"
+          ? `已为当前候选生成 ${result.generated} 条机翻建议，请按「机器建议」筛选并逐条复核。`
+          : "当前候选池没有可生成建议的未配置标签。"
       );
       if (result.generated > 0) {
         setStatus("suggested");
@@ -175,7 +182,7 @@ export function DictionaryPage() {
     setLoading(true);
     setMessage(null);
     try {
-      const result = await api.dictionaryApply(form);
+      const result = await api.dictionaryApply({ ...form, status: "configured", ignored: false });
       setDictionaryId(result.dictionary.id);
       setMessage(`已写入：${result.dictionary.zh_name}`);
       await refreshList();
@@ -192,18 +199,15 @@ export function DictionaryPage() {
     setLoading(true);
     setMessage(null);
     try {
-      let nextId = dictionaryId;
       if (dictionaryId) {
         await api.dictionaryIgnore(dictionaryId);
       } else {
         // Ignoring an unconfigured tag: create an ignored row that keeps the original.
-        const result = await api.dictionaryApply({ ...form, status: "ignored", ignored: true });
-        nextId = result.dictionary.id;
-        setDictionaryId(nextId);
+        await api.dictionaryApply({ ...form, status: "ignored", ignored: true });
       }
       setMessage("已忽略该标签，保留原文不翻译。");
+      newLocalTerm();
       await refreshList();
-      if (selected) await loadEvidence(selected, nextId ?? null);
     } catch (exc) {
       setMessage(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -259,11 +263,11 @@ export function DictionaryPage() {
       <DictionarySummaryStrip summary={summary} />
 
       <div className="dictionary-mt-bar">
-        <button type="button" onClick={() => void suggestBatch()} disabled={loading || suggesting}>
+        <button type="button" onClick={() => void suggestBatch()} disabled={loading || suggesting || batchRemoteTagIds.length === 0}>
           <Languages size={15} />
-          {suggesting ? "生成中…" : "批量机翻未配置项"}
+          {suggesting ? "生成中…" : "批量机翻当前候选"}
         </button>
-        <span>用设置里的机翻服务，为未配置的远端 tag 生成「机器建议」，逐条复核后再应用到作品。</span>
+        <span>只处理候选术语池当前展示的未配置标签，逐条复核后再应用到作品。</span>
       </div>
 
       {message ? <div className="notice slim dictionary-notice">{message}</div> : null}

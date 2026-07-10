@@ -2,14 +2,16 @@
 
 ## Current Version
 
-Phase 7 task center, built on the existing real `/api/jobs` import-job pipeline.
+Feature-complete local loop after Phase 7 task center and final governance/export closure.
 
 Current real slice:
 
-`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> real task center status/pause/resume/cancel/log/retry -> local CBZ/work_tags -> library summary/search/filter/shelves -> local reader -> progress save -> per-work governance queue/metadata save -> export preview/rename/download CBZ (single or .zip bundle) to the user`
+`NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> real task center status/pause/resume/cancel/log/retry -> local CBZ/work_tags -> library summary/search/filter/shelves/history -> local reader -> progress save -> per-work/bulk governance queue/metadata/dictionary confirmation -> export preview/rename/download CBZ (single, sync .zip, or temporary bulk-export task artifact) to the user`
 
 ## Completed
 
+- 发现 / 导入页筛选工作台 polish:移除 discover 顶部 `mode-tabs` 行,页面固定为真实 feed;随机改为图标按钮并放到 `.view-actions` 查询按钮左侧。标签筛选支持中文译名/别名输入触发 autocomplete,候选按真实 remote tag id 去重,已选标签只在绝对定位弹层内显示,触发器用 `首个 +N` 摘要,不再撑高工具栏。语言筛选走远端语言查询语义(`language:japanese` 等),空查询浏览不再伪造 `pages:>0`,避免“全部”被 search 兜底污染;作品卡语言显示走词典 `display`,并跳过 `translated` 泛标签。结果分页改为按可见列数动态取 4 行,卡片墙保持居中 flex 排列。设计/流程文档见 `docs/superpowers/specs/2026-06-28-discover-filter-workbench-polish-design.md` 与 `docs/superpowers/plans/2026-06-28-discover-filter-workbench-polish.md`。
+- 最终闭环收尾:治理批量新增「确认现有词典译名」动作,复用 `POST /api/governance/bulk/preview|apply`,只确认所选作品关联的 `review/conflict` 且未忽略/未锁定/有中文名的词典项,同一词条多作品引用时只更新一次,跳过项按真实原因回显。前端治理批量条新增对应复选项,预览/结果显示确认与跳过词条数。长时批量导出已闭环为 `ExportJobService` + `bulk_export` job:超过 `EXPORT_SYNC_THRESHOLD=5` 的选择进入任务中心后台打包,产物写入临时 export-jobs 目录,24h 过期、下载即删;导出页与库批量托盘共用该阈值和 `/api/exports/bulk-jobs`。验证覆盖治理批量确认、后台导出任务 API/下载/过期/重试/取消。
 - 机翻接入 + 设置页全量重构:新增 `TranslationService`(provider 适配器,stdlib `urllib` 无新依赖):`google_free`(谷歌免费翻译,无需 key)与 `deepl`(REST,key 存 `mt.deepl_api_key`),配置存 `settings` 表 `mt.*`,`public_config()` 不回显 key,`verify()` 跑样例翻译并记 `mt.last_verify`。词典接入:`DictionaryService.translate_text()`(单条按需)与 `generate_suggestions()`(批量译未配置远端 tag→可复核 `status='suggested'` 行,source `machine`;绝不覆盖人工/锁定项,确认前绝不关联 `work_tags`);新增 `POST /api/dictionary/translate`、`/suggest-batch`、`/api/settings/translation/verify`;`SettingsService` 暴露 `machine_translation` 配置块并处理 patch。前端:设置页拆分为 `useSettingsState` + 连接/机翻/隐私阅读/存储四分区组件(左栏导航真实切换、`Presence` 淡入),新增机翻配置卡(provider 卡片选择、DeepL key 保存/清除/套餐、测试机翻);词典编辑器「机器建议」改为真实「机翻填充中文名」按钮,候选区新增「批量机翻未配置项」按钮。验证:`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿(99 passed,新增 `test_translation.py` 9 项,覆盖 provider 解析/选择/无 key 报错/不泄漏 key/verify 与词典单条/批量/不覆盖人工/无服务报错);`cd frontend && npm run build` 通过;静态扫描 touched 文件无假数据、机器建议「未接入」占位已移除。沙箱无出网,真实机翻需用户在设置填 key 后自测。
 - 工作台聚合面板:`#workbench` 从占位边界页替换为真实每日仪表盘,通过 `GET /api/workbench/overview` 聚合 library/governance/jobs/files/exports 的真实摘要数据,无健康分、无虚假聚合数。页面由四部分构成:馆藏作品/待治理/失败任务/缺失源文件四格真实指标条(`WorkbenchMetricStrip`)、治理/任务/文件/导出四张跳转模块卡(`WorkbenchModuleCards`,分别跳至 `#governance`/`#tasks`/`#files`/`#export`)、复用 `ContinueReadingRow` 渲染的继续阅读书架、以及复用同组件的最近导入书架;两条书架均在无真实数据时自动折叠,`blurCovers` 隐私开关贯穿全页。新增 `WorkbenchService`(只读聚合器,从现有 `LibraryService`/`GovernanceService`/`JobService`/`FileService`/`ExportService` 取数,绝不调 NH API)与前端 `components/workbench/`(`WorkbenchPage`、`useWorkbenchState`、`WorkbenchMetricStrip`、`WorkbenchModuleCards`、`workbenchHelpers`)。新增 `backend/tests/test_workbench_service.py`(3 项)与 `backend/tests/test_workbench_api.py`(1 项)。验证:`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿(90 passed);`cd frontend && npm run build` 通过。
 - Phase 7 任务中心: `#tasks` 从边界页替换为真实 `TasksPage`,只读取和操作现有 `/api/jobs` 数据,不造假任务。后端新增 `job_logs` 表与真实控制 API:`GET /api/jobs/{id}/logs`、`POST /api/jobs/{id}/pause`、`POST /api/jobs/{id}/resume`、`POST /api/jobs/{id}/cancel`;`JobService` 记录创建/阶段/完成/失败/暂停/恢复/取消/重试日志,并提供 `checkpoint()` 让导入线程在安全阶段边界协作暂停/取消(下载阶段取消会在下个 checkpoint 停止并清理 tmp CBZ)。页面按 `design/任务中心.png` 的结构落地:hero + 5 张真实指标卡(`running/queued/failed/completed` 与今日更新吞吐量)、完整状态 tab(`all/running/paused/queued/failed/completed/cancelled`)、搜索、紧凑任务表、右侧任务详情检查器。失败的 `remote_import` 且带 `gallery_id` 的任务可重试;运行/等待任务可暂停;暂停任务可恢复;运行/等待/暂停任务可取消;日志区显示后端持久日志;复制任务 ID 为真实剪贴板操作。新增 `components/tasks/`(状态 hook、summary strip、列表、检查器、helper 标签/时间格式化),`Job` 前端类型补 `created_at` 与 `paused/cancelled`,新增 `JobLog` 类型;新增 `backend/tests/test_job_service.py` 和 `backend/tests/test_jobs_api.py` 覆盖状态机、日志、控制路由与 retry payload。验证:`cd frontend && npm run build` 通过;`PYTHONPATH=backend .venv/bin/pytest backend/tests -q` 全绿;静态扫描 touched task files 无假数据命中。
@@ -96,12 +98,11 @@ Current real slice:
 
 ## Not Implemented Yet
 
-- Long-running bulk export jobs through the task center（唯一悬而未决的大特性，需先单独设计「导出=下载给用户」与后台落盘产物的生命周期冲突）。
-- Governance 词典 review/冲突的批量解决（仍留单作品页人工；批量补全缺失元数据 + ComicInfo 回写 + 元数据机翻建议均已具备）。
+- 无已知功能闭环缺口。后续进入真实数据下的视觉 QA、性能/体验 polish、以及用户反馈驱动的小范围增强。
 
 ## Next Plan
 
-轻量收尾两轮（文件清单分页+排序+状态筛选 / 阅读历史页 / 治理批量+元数据机翻 / 库多选批量托盘）已落地。唯一剩余大方向：长时批量导出任务接入任务中心——需先单独设计「导出=下载给用户」与后台落盘的语义冲突（产物落盘策略/生命周期/清理），这是个产品取舍而非技术债，待与用户确认后再设计实现。
+功能闭环已落地。下一阶段只做真实数据验收:任务中心/治理/导出/文件管理的浏览器截图 QA、移动端细节、长列表性能与文案 polish。
 
 ## Risks And Decisions
 
@@ -110,9 +111,9 @@ Current real slice:
 - Decision: 删除健康作品的源 CBZ = 级联整体移除该作品(works 及全部引用表 + 封面文件)。
 - Decision: 删除是文件管理唯一会动盘的操作;CBZ 永不被修改,只能整体删除;受管目录(library/covers/tmp/exports)之外的任何路径一律拒绝(目录穿越防护)。
 - Decision: 治理 ComicInfo 回写是唯一受认可的源 CBZ 改写（仅 ComicInfo、原子替换、无备份、显式 opt-in、默认关）；导出仍永不写源（导出=下载给用户）；文件管理删除仍是另一条独立动盘操作。回写后必须同步 `work_files.sha256`/`size_bytes` 以维持去重/体积检测的真实性。
-- Decision: 治理批量只做「逐作品执行统一动作、取值各自解析」:批量补全缺失元数据(只填空、绝不覆盖人工/已有非空值,来源映射 comicinfo→comicinfo / remote→remote / json→remote)+ 批量回写 ComicInfo(沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离;单作品失败记录 error 并继续,不回滚已写 metadata)。词典 review/冲突不批量,留单作品页人工解决。
+- Decision: 治理批量只做「逐作品执行统一动作、取值各自解析」:批量补全缺失元数据(只填空、绝不覆盖人工/已有非空值,来源映射 comicinfo→comicinfo / remote→remote / json→remote)+ 批量回写 ComicInfo(沿用单作品 opt-in/原子/无备份/哈希同步/失败隔离;单作品失败记录 error 并继续,不回滚已写 metadata)+ 批量确认现有词典译名(仅 review/conflict 且未忽略/未锁定/有中文名;不批量编辑译名/别名)。
 - Decision: 阅读历史按 (作品, 日期) 聚合,前端按日期桶(今天/昨天/本周/更早)分组时间线;高频裸事件(每翻页一行)不展示。历史(完整可分页轨迹)与「继续阅读」(仅在读)、「最近阅读」(Top 12 书架)区分。
-- Decision: 文件清单分页为纯前端补翻页器;后端 `FileMaintenanceService.inventory` 早已支持分页,无需改动。批量导出接任务中心仍不在范围,需先单独设计落盘/生命周期语义。
+- Decision: 文件清单分页为纯前端补翻页器;后端 `FileMaintenanceService.inventory` 早已支持分页。批量导出超过 5 部时接入任务中心,产物为临时 `.zip`:24h 过期、下载即删,不恢复长期导出历史。
 - Decision: `work_files.path`/`works.cover_path` 绝对/相对混用,一律归一化为 `.resolve()` 绝对路径后再判定存在/删除/穿越。
 - Decision: API Key settings and discover correctness are higher priority than expanding modules.
 - Decision: language/type/sort controls must either call real APIs or be disabled; no inert clickable filters.
