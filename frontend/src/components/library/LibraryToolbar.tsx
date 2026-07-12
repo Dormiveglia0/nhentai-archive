@@ -1,8 +1,9 @@
-import { LayoutGrid, RotateCcw, Rows3, Search } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { Grid2X2, List, RotateCcw, Search, X } from "lucide-react";
+import { m } from "motion/react";
+import { type FormEvent, useEffect, useState } from "react";
 
-import { LibrarySummary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
-import { FilterMenu } from "../discover/FilterMenu";
+import type { LibrarySummary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
+import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { LibraryTagFilter } from "./LibraryTagFilter";
 import { READ_STATUS_OPTIONS, SORT_OPTIONS, SOURCE_OPTIONS } from "./libraryHelpers";
 
@@ -49,48 +50,74 @@ export function LibraryToolbar(props: Props) {
   ];
 
   return (
-    <div className="library-toolbar">
-      <form className="library-search" onSubmit={submit}>
-        <Search size={16} />
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="搜索标题、作者、标签或画廊 ID"
-        />
+    <section className="folio-library-toolbar" aria-label="馆藏搜索与筛选">
+      <form className="folio-library-search" onSubmit={submit}>
+        <label>
+          <Search size={17} />
+          <input
+            type="search"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="搜索标题、作者、标签或画廊 ID"
+            aria-label="搜索馆藏"
+          />
+          <i />
+        </label>
+        <button type="submit"><Search size={15} />检索</button>
       </form>
 
-      <div className="library-filters">
-        <FilterMenu value={props.language} options={languageOptions} onChange={props.onLanguage} />
-        <FilterMenu value={props.readStatus} options={READ_STATUS_OPTIONS} onChange={props.onReadStatus} />
-        <FilterMenu value={props.source} options={SOURCE_OPTIONS} onChange={props.onSource} />
-        <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
-        <FilterMenu value={props.sort} options={SORT_OPTIONS} onChange={props.onSort} />
-        {props.canReset ? (
-          <button type="button" className="library-reset" onClick={props.onReset}>
-            <RotateCcw size={15} />
-            重置
-          </button>
-        ) : null}
+      <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
+
+      <div className="folio-view-switch folio-library-view-switch" aria-label="馆藏视图方式">
+        <button
+          className={props.view === "grid" ? "is-active" : ""}
+          type="button"
+          aria-label="封面墙视图"
+          aria-pressed={props.view === "grid"}
+          onClick={() => props.onView("grid")}
+        >
+          {props.view === "grid" ? <m.span className="folio-control-active" layoutId="folio-library-view" /> : null}
+          <Grid2X2 size={16} />
+        </button>
+        <button
+          className={props.view === "list" ? "is-active" : ""}
+          type="button"
+          aria-label="列表视图"
+          aria-pressed={props.view === "list"}
+          onClick={() => props.onView("list")}
+        >
+          {props.view === "list" ? <m.span className="folio-control-active" layoutId="folio-library-view" /> : null}
+          <List size={17} />
+        </button>
       </div>
 
-      <div className="library-view-toggle">
+      <div className="folio-library-filter-row">
+        <FolioSelect label="语言" value={props.language} options={languageOptions} onChange={props.onLanguage} />
+        <FolioSelect label="阅读状态" value={props.readStatus} options={READ_STATUS_OPTIONS} onChange={props.onReadStatus} />
+        <FolioSelect label="来源" value={props.source} options={SOURCE_OPTIONS} onChange={props.onSource} />
+        <FolioSelect label="排序" value={props.sort} options={SORT_OPTIONS} onChange={props.onSort} />
         <button
           type="button"
-          className={props.view === "grid" ? "active" : ""}
-          onClick={() => props.onView("grid")}
-          aria-label="封面墙视图"
+          className="folio-library-reset"
+          onClick={props.onReset}
+          disabled={!props.canReset}
         >
-          <LayoutGrid size={16} />
-        </button>
-        <button
-          type="button"
-          className={props.view === "list" ? "active" : ""}
-          onClick={() => props.onView("list")}
-          aria-label="列表视图"
-        >
-          <Rows3 size={16} />
+          <RotateCcw size={15} />
+          重置筛选
         </button>
       </div>
-    </div>
+
+      {props.tags.length ? (
+        <div className="folio-library-active-tags" aria-label="已选标签">
+          <span>已选标签</span>
+          {props.tags.map((tag) => (
+            <button key={tag.id} type="button" onClick={() => props.onTags(props.tags.filter((item) => item.id !== tag.id))}>
+              {tag.display}<X size={12} />
+            </button>
+          ))}
+          <button type="button" className="is-clear" onClick={() => props.onTags([])}>全部清除</button>
+        </div>
+      ) : null}
+    </section>
   );
 }

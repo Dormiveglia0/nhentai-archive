@@ -1,7 +1,9 @@
-import { ChevronDown, Search, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, Search, Tags } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+import { useEffect, useId, useRef, useState } from "react";
 
-import { api, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
+import { api, type LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
+import { duration, ease } from "../../lib/motion";
 
 type Props = {
   selected: LibraryTagFilterItem[];
@@ -14,34 +16,50 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
   const [options, setOptions] = useState<LibraryTagFilterItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const latest = useRef("");
+  const panelId = useId();
 
   useEffect(() => {
-    function onPointerDown(event: PointerEvent) {
+    function closeOnOutsidePointer(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   useEffect(() => {
     if (!open) return;
-    const q = query.trim();
-    latest.current = q;
+    let cancelled = false;
+    const normalizedQuery = query.trim();
+    latest.current = normalizedQuery;
     setLoading(true);
     setError(null);
+
     const handle = window.setTimeout(async () => {
       try {
-        const payload = await api.libraryTagFilters(q, 40);
-        if (latest.current === q) setOptions(payload.result);
-      } catch (exc) {
-        if (latest.current === q) setError(exc instanceof Error ? exc.message : String(exc));
+        const payload = await api.libraryTagFilters(normalizedQuery, 40);
+        if (!cancelled && latest.current === normalizedQuery) setOptions(payload.result);
+      } catch (exception) {
+        if (!cancelled && latest.current === normalizedQuery) {
+          setError(exception instanceof Error ? exception.message : String(exception));
+        }
       } finally {
-        if (latest.current === q) setLoading(false);
+        if (!cancelled && latest.current === normalizedQuery) setLoading(false);
       }
     }, 200);
-    return () => window.clearTimeout(handle);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
   }, [open, query]);
 
   function toggle(tag: LibraryTagFilterItem) {
@@ -53,56 +71,62 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
   }
 
   return (
-    <div ref={rootRef} className={open ? "library-tag-filter open" : "library-tag-filter"}>
-      <button type="button" className="filter-trigger" onClick={() => setOpen((value) => !value)}>
-        <span>{selected.length ? `已选 ${selected.length} 个标签` : "标签筛选"}</span>
+    <div ref={rootRef} className={open ? "folio-library-tag-filter is-open" : "folio-library-tag-filter"}>
+      <span>标签</span>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Tags size={16} />
+        <strong>{selected.length ? `${selected.length} 个标签` : "选择本地标签"}</strong>
         <ChevronDown size={15} />
       </button>
-      {selected.length ? (
-        <div className="library-tag-chips">
-          {selected.map((tag) => (
-            <button key={tag.id} type="button" onClick={() => toggle(tag)}>
-              {tag.display}
-              <X size={12} />
-            </button>
-          ))}
-          <button className="clear-tags" type="button" onClick={() => onChange([])}>
-            清除
-          </button>
-        </div>
-      ) : null}
-      {open ? (
-        <div className="library-tag-picker">
-          <div className="library-tag-search">
-            <Search size={15} />
-            <input
-              autoFocus
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索本地标签 / 作者 / 社团"
-            />
-            {loading ? <span className="tag-filter-state">…</span> : null}
-          </div>
-          <div className="library-tag-list">
-            {error ? <div className="library-tag-empty">{error}</div> : null}
-            {!error &&
-              options.map((tag) => {
+
+      <AnimatePresence>
+        {open ? (
+          <m.div
+            id={panelId}
+            className="folio-library-tag-panel"
+            role="dialog"
+            aria-label="筛选本地标签"
+            initial={{ opacity: 0, y: -7, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -5, scale: 0.99 }}
+            transition={{ duration: duration.fast, ease: ease.standard }}
+          >
+            <label>
+              <Search size={15} />
+              <input
+                autoFocus
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="标签、作者、社团或中文译名"
+                aria-label="搜索本地标签"
+              />
+              {loading ? <span role="status">检索中</span> : null}
+            </label>
+
+            <div className="folio-library-tag-options">
+              {error ? <p role="alert">{error}</p> : null}
+              {!error && options.map((tag) => {
                 const active = selected.some((item) => item.id === tag.id);
                 return (
-                  <button key={tag.id} type="button" className={active ? "active" : ""} onClick={() => toggle(tag)}>
-                    <strong>{tag.display}</strong>
-                    <span>
-                      {tag.type || "tag"} · {tag.count}
-                    </span>
+                  <button key={tag.id} type="button" className={active ? "is-active" : ""} aria-pressed={active} onClick={() => toggle(tag)}>
+                    <span><strong>{tag.display}</strong><small>{tag.type || "tag"}</small></span>
+                    <em>{tag.count}</em>
+                    {active ? <Check size={15} /> : <i />}
                   </button>
                 );
               })}
-            {!error && !loading && options.length === 0 ? (
-              <div className="library-tag-empty">没有匹配的本地标签</div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+              {!error && !loading && options.length === 0 ? <p>没有匹配的本地标签</p> : null}
+            </div>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

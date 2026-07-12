@@ -28,12 +28,12 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
             >
               <div className="folio-shelf-cover">
                 {work.cover_path ? (
-                  <img className={blurCovers ? "blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
+                  <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
                 ) : (
-                  <span className="cover-fallback">NO COVER</span>
+                  <span className="folio-cover-fallback">NO COVER</span>
                 )}
                 {(work.progress_percent ?? 0) > 0 ? (
-                  <span className="folio-shelf-progress" style={{ width: `${work.progress_percent}%` }} />
+                  <span className="folio-shelf-progress" style={{ width: `${work.progress_percent ?? 0}%` }} />
                 ) : null}
               </div>
               <strong title={workTitle(work)}>{workTitle(work)}</strong>

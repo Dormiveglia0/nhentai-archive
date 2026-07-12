@@ -1,4 +1,20 @@
 /* Library, discover, query composer, filters, empty/result surfaces. */
+.folio-media-blurred {
+  filter: blur(11px) saturate(0.72);
+  transform: scale(1.06);
+}
+
+.folio-cover-fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--folio-muted);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
 .folio-shelf {
   min-width: 0;
   padding-bottom: 18px;
@@ -714,4 +730,3 @@
   font-family: Georgia, "Times New Roman", serif;
   font-size: 13px;
 }
-

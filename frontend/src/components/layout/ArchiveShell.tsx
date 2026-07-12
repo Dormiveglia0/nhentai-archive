@@ -49,11 +49,11 @@ export function ArchiveShell({
   onBlurCoversChange,
   children
 }: Props) {
-  if (activePage === "workbench") {
+  if (activePage === "workbench" || activePage === "library") {
     return (
       <>
         <FolioChrome
-          page="workbench"
+          page={activePage}
           privacy={privacyMode}
           onPrivacyChange={onPrivacyModeChange}
           onNavigate={(name: FolioPageId) => navigate({ name } as Parameters<typeof navigate>[0])}

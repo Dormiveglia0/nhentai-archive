@@ -6,9 +6,10 @@ type Props = {
   tags: RemoteTag[];
   onPickTag?: (tag: RemoteTag) => void;
   displayTag?: (tag: RemoteTag) => string;
+  className?: string;
 };
 
-export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag }: Props) {
+export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, className = "tag-scroll" }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const startScroll = useRef(0);
@@ -51,7 +52,7 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag }:
   return (
     <div
       ref={ref}
-      className={isDragging ? "tag-scroll dragging" : "tag-scroll"}
+      className={isDragging ? `${className} dragging is-dragging` : className}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={stopDrag}

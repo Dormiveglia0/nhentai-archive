@@ -286,17 +286,21 @@ Root: `frontend/src/`
 - `components/dictionary/BulkImportPanel.tsx`
   - Paste-based CSV/TSV/comma import with row-level preview before write.
 - `components/library/LibraryPage.tsx`
-  - Phase 3 private-archive workbench. Orchestration only: loads `/api/library/summary` + continue-reading + recent-added once, then re-runs `/api/library/search` on any filter/sort/page change with a request token to drop stale responses. Distinguishes empty library (`summary.total === 0`) from empty filtered result. Shelves only render when no filters are active.
+  - Direct Folio composition for `#library`: real summary, custom filter workbench, optional shelves, result index, batch tray, cards, pager, and inspector. It contains no API orchestration and imports no demo code.
+- `components/library/useLibraryState.ts`
+  - Owns the existing real summary/shelf/search flow, stale-request invalidation, filters, paging, focused work, and cross-page multi-selection. Independent overview requests still run in parallel.
+- `components/library/LibraryPage.css`
+  - Production-only library layout and responsive behavior. Mobile work details use an opaque bottom sheet with a backdrop; all replaced legacy library/inspector/batch rules were removed from `styles/app.css`.
 - `components/library/LibrarySummaryStrip.tsx`
   - Real summary strip: 总收藏 / 已读 / 阅读中 / 未读 / 待补标签 / 占用容量. No broad 待治理 fabrication; 待补标签 = works with zero `work_tags`, while detailed governance state lives in the governance page.
 - `components/library/LibraryToolbar.tsx`
-  - Search form (submit on Enter), language/status/source/sort `FilterMenu`s, `LibraryTagFilter`, grid/list view toggle, reset. Language options come from real summary facets.
+  - Search form (submit on Enter), custom Folio language/status/source/sort selects, `LibraryTagFilter`, animated grid/list view toggle, reset, and removable selected-tag chips. Language options come from real summary facets.
 - `components/library/LibraryTagFilter.tsx`
   - Multi-select tag picker backed by `/api/library/tag-filters` (local used tags only, debounced search, dictionary display names). Does not call NH API.
 - `components/library/WorkCard.tsx`
-  - Cover-first card: read-status pill/badge, source/language meta, author-or-group line, page/ID, progress bar, draggable tag row (reuses discover `TagScroller`), 继续/开始阅读. Single-click selects, double-click opens reader.
+  - Cover-first card with direct semantic controls: read status, source/language, author/group, page/ID, custom progress, draggable tag row, and reader action. Selection buttons are not nested; double-clicking the cover opens the reader.
 - `components/library/WorkInspector.tsx`
-  - Right inspector: real file size/pages, source/ID, language, reading progress, tags. 继续阅读 routes to local reader; 进入治理/导出 CBZ stay disabled (未接入).
+  - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress, tags, reader, governance, and export routes.
 - `components/library/ContinueReadingRow.tsx`
   - Horizontal shelf for 继续阅读 / 最近添加; renders nothing when no real rows.
 - `components/library/libraryHelpers.ts`
