@@ -91,7 +91,6 @@ export function FrontendDemo() {
   const [privacy, setPrivacy] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const scrollRef = useRef<HTMLElement>(null);
   const bindingRef = useRef<HTMLDivElement>(null);
   const current = PAGES.find((item) => item.id === page) ?? PAGES[0];
@@ -143,16 +142,6 @@ export function FrontendDemo() {
     setMenuOpen(false);
   }
 
-  function submitGlobalSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!searchQuery.trim()) {
-      setNotice("先输入标题、作者、标签或远端编号。");
-      return;
-    }
-    navigate("discover");
-    setNotice("检索条件已带入发现页；公开演示未发送远端请求。");
-  }
-
   function resetSettings() {
     setSettingsRevision((value) => value + 1);
     setSettingsSection("connection");
@@ -179,20 +168,7 @@ export function FrontendDemo() {
           </span>
         </button>
 
-        <form className="folio-demo-global-search" role="search" onSubmit={submitGlobalSearch}>
-          <Search size={18} aria-hidden="true" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="搜索馆藏、作者、标签或远端编号"
-            aria-label="全局搜索"
-          />
-          <button type="submit" aria-label="提交全局搜索">
-            <span>查找</span>
-            <ArrowRight size={15} />
-          </button>
-        </form>
+        <PageNavigation className="folio-demo-topnav" page={page} onNavigate={navigate} />
 
         <div className="folio-demo-top-actions">
           <button
@@ -220,8 +196,6 @@ export function FrontendDemo() {
           </button>
         </div>
       </header>
-
-      <PageNavigation className="folio-demo-topnav" page={page} onNavigate={navigate} />
 
       <div className="folio-demo-workspace">
         <AnimatePresence>
@@ -257,8 +231,6 @@ export function FrontendDemo() {
                 settingsRevision={settingsRevision}
                 onNavigate={navigate}
                 announce={setNotice}
-                searchQuery={searchQuery}
-                onSearchQuery={setSearchQuery}
               />
             </m.div>
           </AnimatePresence>
@@ -307,7 +279,15 @@ function ModuleBackdrop({ page, reduceMotion }: { page: PageId; reduceMotion: bo
         exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.985 }}
         transition={{ duration: duration.slow, ease: ease.standard }}
       >
-        {backdropIcons ? backdropIcons.map((Icon, index) => <Icon key={index} strokeWidth={1} />) : (
+        {backdropIcons ? backdropIcons.map((Icon, index) => <Icon key={index} strokeWidth={1} />) : page === "discover" ? (
+          <div className="folio-demo-radar">
+            <i className="folio-demo-radar-grid" />
+            <i className="folio-demo-radar-sweep" />
+            <span className="folio-demo-radar-hit folio-demo-radar-hit-a"><b /><em><b /><b /></em></span>
+            <span className="folio-demo-radar-hit folio-demo-radar-hit-b"><b /><em><b /><b /></em></span>
+            <span className="folio-demo-radar-hit folio-demo-radar-hit-c"><b /><em><b /><b /></em></span>
+          </div>
+        ) : (
           <>
             <i />
             <i />
@@ -327,22 +307,34 @@ function ModuleScene({ page }: { page: PageId }) {
       scene = (
         <>
           <g className="folio-scene-hub-orbits">
-            <ellipse cx="390" cy="112" rx="82" ry="50" />
-            <ellipse cx="390" cy="112" rx="82" ry="50" transform="rotate(58 390 112)" />
+            <ellipse cx="360" cy="116" rx="136" ry="78" />
+            <ellipse cx="360" cy="116" rx="136" ry="78" transform="rotate(54 360 116)" />
           </g>
           <g className="folio-scene-hub-links">
-            <path d="M390 112 390 35M390 112l72 37M390 112l-67 46M390 112l-59-54" />
+            <path d="M360 116 229 62M360 116l115-55M360 116 224 178M360 116l123 64" />
+          </g>
+          <g className="folio-scene-hub-panels">
+            <g><rect x="181" y="34" width="96" height="56" rx="3" /><circle cx="197" cy="50" r="4" /><path d="M209 49h49M197 68h61" /></g>
+            <g><rect x="432" y="33" width="86" height="56" rx="3" /><circle cx="448" cy="49" r="4" /><path d="M460 48h40M448 68h52" /></g>
+            <g><rect x="172" y="151" width="104" height="56" rx="3" /><circle cx="188" cy="167" r="4" /><path d="M200 166h57M188 186h69" /></g>
+            <g><rect x="440" y="152" width="86" height="56" rx="3" /><circle cx="456" cy="168" r="4" /><path d="M468 167h40M456 187h52" /></g>
           </g>
           <g className="folio-scene-hub-core">
-            <rect x="360" y="82" width="60" height="60" />
-            <circle cx="390" cy="112" r="13" />
-            <path d="M379 112h22M390 101v22" />
+            <rect x="314" y="70" width="92" height="92" rx="4" />
+            <rect x="329" y="85" width="62" height="62" rx="2" />
+            <circle cx="360" cy="116" r="16" />
+            <path d="M346 116h28M360 102v28" />
+            <path className="folio-scene-hub-core-scan" d="M326 93h68" />
           </g>
           <g className="folio-scene-hub-nodes">
-            <circle cx="390" cy="35" r="6" />
-            <circle cx="462" cy="149" r="6" />
-            <circle cx="323" cy="158" r="6" />
-            <circle cx="331" cy="58" r="6" />
+            <circle cx="294" cy="89" r="5" />
+            <circle cx="418" cy="88" r="5" />
+            <circle cx="291" cy="148" r="5" />
+            <circle cx="420" cy="149" r="5" />
+          </g>
+          <g className="folio-scene-hub-pulse">
+            <circle cx="360" cy="116" r="50" />
+            <circle cx="360" cy="116" r="50" />
           </g>
         </>
       );
@@ -371,21 +363,20 @@ function ModuleScene({ page }: { page: PageId }) {
     case "discover":
       scene = (
         <>
-          <g className="folio-scene-radar-rings">
-            <circle cx="384" cy="111" r="82" />
-            <circle cx="384" cy="111" r="54" />
-            <circle cx="384" cy="111" r="26" />
-            <path d="M384 21v180M294 111h180" />
-          </g>
-          <path className="folio-scene-radar-sweep" d="M384 111 384 29A82 82 0 0 1 455 70Z" />
-          <g className="folio-scene-radar-blips">
-            <circle cx="423" cy="67" r="5" />
-            <circle cx="337" cy="132" r="5" />
-            <circle cx="409" cy="157" r="5" />
+          <g className="folio-scene-discover-records">
+            <g><rect x="230" y="34" width="252" height="42" rx="3" /><circle cx="249" cy="55" r="5" /><path d="M265 50h92M265 61h157" /></g>
+            <g><rect x="230" y="94" width="252" height="42" rx="3" /><circle cx="249" cy="115" r="5" /><path d="M265 110h126M265 121h174" /></g>
+            <g><rect x="230" y="154" width="252" height="42" rx="3" /><circle cx="249" cy="175" r="5" /><path d="M265 170h106M265 181h146" /></g>
           </g>
           <g className="folio-scene-search-lens">
-            <circle cx="132" cy="102" r="43" />
-            <path d="m164 134 58 51" />
+            <circle cx="305" cy="110" r="66" />
+            <path d="m354 159 72 58" />
+            <g className="folio-scene-search-match">
+              <rect x="270" y="87" width="70" height="46" rx="3" />
+              <circle cx="284" cy="101" r="4" />
+              <path d="M296 99h31M281 117h46" />
+            </g>
+            <path className="folio-scene-search-scan" d="M250 91h110" />
           </g>
         </>
       );
@@ -570,9 +561,10 @@ function ModuleScene({ page }: { page: PageId }) {
             <LockKeyhole x={379} y={93} width={54} height={54} strokeWidth={1.15} />
           </g>
           <g className="folio-scene-settings-status">
-            <circle cx="108" cy="174" r="4" />
-            <path pathLength="100" d="M120 174h316" />
-            <Check x={438} y={163} width={22} height={22} strokeWidth={1.35} />
+            <path className="folio-scene-settings-status-track" d="M134 174h272" />
+            <path className="folio-scene-settings-status-value" pathLength="100" d="M134 174h272" />
+            <circle cx="134" cy="174" r="4" />
+            <Check x={424} y={163} width={22} height={22} strokeWidth={1.35} />
           </g>
         </>
       );
@@ -634,8 +626,6 @@ function DemoPage({
   settingsRevision,
   onNavigate,
   announce,
-  searchQuery,
-  onSearchQuery,
 }: {
   page: PageId;
   current: PageDefinition;
@@ -644,15 +634,13 @@ function DemoPage({
   settingsRevision: number;
   onNavigate: (page: PageId) => void;
   announce: (message: string) => void;
-  searchQuery: string;
-  onSearchQuery: (query: string) => void;
 }) {
   return (
     <>
       <PageHeading page={current} />
       {page === "workbench" ? <WorkbenchDemo onNavigate={onNavigate} /> : null}
       {page === "library" ? <LibraryDemo onNavigate={onNavigate} /> : null}
-      {page === "discover" ? <DiscoverDemo query={searchQuery} onQuery={onSearchQuery} announce={announce} /> : null}
+      {page === "discover" ? <DiscoverDemo announce={announce} /> : null}
       {page === "governance" ? <GovernanceDemo /> : null}
       {page === "dictionary" ? <DictionaryDemo announce={announce} /> : null}
       {page === "tasks" ? <TasksDemo /> : null}
@@ -792,15 +780,9 @@ function LibraryDemo({ onNavigate }: { onNavigate: (page: PageId) => void }) {
   );
 }
 
-function DiscoverDemo({
-  query,
-  onQuery,
-  announce,
-}: {
-  query: string;
-  onQuery: (query: string) => void;
-  announce: (message: string) => void;
-}) {
+function DiscoverDemo({ announce }: { announce: (message: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [language, setLanguage] = useState<"all" | "zh" | "ja">("all");
   const [kind, setKind] = useState<"all" | "doujinshi" | "manga">("all");
   const [sort, setSort] = useState<"popular" | "recent">("popular");
@@ -818,7 +800,7 @@ function DiscoverDemo({
       </section>
 
       <div className="folio-demo-toolbar folio-demo-toolbar-wide">
-        <SearchField value={query} onChange={onQuery} placeholder="搜索标题、社团、角色、标签；纯数字打开画廊" />
+        <DiscoveryQueryComposer query={query} onQuery={setQuery} tags={tags} onTags={setTags} />
         <DemoSelect label="语言" value={language} onChange={setLanguage} options={[
           { value: "all", label: "全部语言" },
           { value: "zh", label: "中文" },
@@ -833,18 +815,18 @@ function DiscoverDemo({
           { value: "popular", label: "热门" },
           { value: "recent", label: "最新" },
         ]} />
-        <button className={"folio-demo-filter-toggle" + (unimportedOnly ? " is-active" : "")} type="button" aria-pressed={unimportedOnly} onClick={() => setUnimportedOnly((value) => !value)}>
+        <button className={"folio-demo-filter-toggle folio-demo-discover-action" + (unimportedOnly ? " is-active" : "")} type="button" aria-pressed={unimportedOnly} onClick={() => setUnimportedOnly((value) => !value)}>
           <SlidersHorizontal size={15} />
           仅未导入
         </button>
-        <button className="folio-demo-ink-button" type="button" onClick={() => announce(query ? "演示环境未连接远端源，未发送搜索。" : "先输入标题、标签或画廊 ID。")}>
+        <button className="folio-demo-ink-button folio-demo-discover-action" type="button" onClick={() => announce(query || tags.length ? `已组合关键字与 ${tags.length} 个标签；演示环境未发送远端请求。` : "先输入关键字、画廊 ID 或添加标签。")}>
           <Search size={15} />
           搜索
         </button>
       </div>
 
       <section className="folio-demo-ruled-panel">
-        <PanelHeading title="检索结果" description="筛选、分页、网格与列表交互均已保留。" />
+        <PanelHeading title="检索结果" description={tags.length ? `当前组合 ${tags.length} 个标签与关键字条件。` : "可组合关键字、多个标签、筛选与排序条件。"} />
         <EmptyCanvas icon={Search} title="等待远端连接" copy="配置连接后，这里会显示真实检索结果、导入状态与分页控件。" />
         <div className="folio-demo-pager" aria-label="分页">
           <button type="button" disabled aria-label="上一页"><ChevronLeft size={16} /></button>
@@ -1362,6 +1344,106 @@ function EmptyCanvas({
       <strong>{title}</strong>
       <p>{copy}</p>
       {action && onAction ? <button type="button" onClick={onAction}>{action}<ArrowRight size={14} /></button> : null}
+    </div>
+  );
+}
+
+function DiscoveryQueryComposer({
+  query,
+  onQuery,
+  tags,
+  onTags,
+}: {
+  query: string;
+  onQuery: (value: string) => void;
+  tags: string[];
+  onTags: (tags: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const composerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  function addTag() {
+    const value = draft.trim();
+    if (!value || tags.some((tag) => tag.toLocaleLowerCase() === value.toLocaleLowerCase())) return;
+    onTags([...tags, value]);
+    setDraft("");
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        window.requestAnimationFrame(() => triggerRef.current?.focus());
+      }
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !composerRef.current?.contains(event.target)) setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={composerRef} className="folio-demo-query-composer">
+      <label className="folio-demo-query-keyword">
+        <Search size={16} />
+        <input type="search" value={query} onChange={(event) => onQuery(event.target.value)} placeholder="关键字或画廊 ID" aria-label="检索关键字或画廊 ID" />
+      </label>
+      {tags.length ? (
+        <div className="folio-demo-query-tags" aria-label="已选标签">
+          {tags.map((tag) => (
+            <span key={tag}>
+              {tag}
+              <button type="button" aria-label={`移除标签 ${tag}`} onClick={() => onTags(tags.filter((item) => item !== tag))}><X size={12} /></button>
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <button ref={triggerRef} className="folio-demo-query-add" type="button" aria-expanded={open} aria-controls="folio-demo-tag-picker" onClick={() => setOpen((value) => !value)}>
+        <Tag size={15} />
+        {tags.length ? `${tags.length} 个标签` : "添加标签"}
+        <ChevronDown size={14} />
+      </button>
+      <AnimatePresence>
+        {open ? (
+          <m.div
+            className="folio-demo-tag-picker"
+            id="folio-demo-tag-picker"
+            role="dialog"
+            aria-label="添加检索标签"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.985 }}
+            transition={{ duration: duration.fast, ease: ease.standard }}
+          >
+            <label>
+              <Tag size={15} />
+              <input
+                autoFocus
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                aria-label="添加检索标签"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addTag();
+                  }
+                }}
+                placeholder="输入标签后回车添加"
+              />
+            </label>
+            <button type="button" disabled={!draft.trim()} onClick={addTag}>添加</button>
+            <p>可连续添加多个标签；接入真实词典后这里显示匹配候选。</p>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
