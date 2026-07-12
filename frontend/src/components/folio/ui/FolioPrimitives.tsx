@@ -4,16 +4,16 @@ import { useId, useRef, useState } from "react";
 
 import { duration, ease } from "../../../lib/motion";
 
-export function PanelHeading({ title, description }: { title: string; description: string }) {
+export function FolioPanelHeading({ title, description }: { title: string; description: string }) {
   return (
-    <header className="folio-demo-panel-heading">
+    <header className="folio-panel-heading">
       <h2>{title}</h2>
       <p>{description}</p>
     </header>
   );
 }
 
-export function EmptyCanvas({
+export function FolioEmptyState({
   icon: Icon,
   title,
   copy,
@@ -27,8 +27,8 @@ export function EmptyCanvas({
   onAction?: () => void;
 }) {
   return (
-    <div className="folio-demo-empty">
-      <div className="folio-demo-empty-mark"><Icon size={23} /></div>
+    <div className="folio-empty">
+      <div className="folio-empty-mark"><Icon size={23} /></div>
       <strong>{title}</strong>
       <p>{copy}</p>
       {action && onAction ? <button type="button" onClick={onAction}>{action}<ArrowRight size={14} /></button> : null}
@@ -36,9 +36,9 @@ export function EmptyCanvas({
   );
 }
 
-export function SearchField({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
+export function FolioSearchField({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
   return (
-    <label className="folio-demo-search-field">
+    <label className="folio-search-field">
       <Search size={16} />
       <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
       <i />
@@ -46,7 +46,7 @@ export function SearchField({ value, onChange, placeholder }: { value: string; o
   );
 }
 
-export function DemoField({
+export function FolioField({
   label,
   value,
   onChange,
@@ -64,7 +64,7 @@ export function DemoField({
   type?: "text" | "number";
 }) {
   return (
-    <label className={"folio-demo-field" + (wide ? " folio-demo-field-wide" : "")}>
+    <label className={"folio-field" + (wide ? " folio-field-wide" : "")}>
       <span>{label}</span>
       <input
         type={type}
@@ -78,7 +78,7 @@ export function DemoField({
   );
 }
 
-export function DemoSelect<T extends string>({
+export function FolioSelect<T extends string>({
   label,
   value,
   options,
@@ -103,7 +103,7 @@ export function DemoSelect<T extends string>({
 
   return (
     <div
-      className={"folio-demo-select" + (open ? " is-open" : "")}
+      className={"folio-select" + (open ? " is-open" : "")}
       ref={rootRef}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
@@ -149,7 +149,7 @@ export function DemoSelect<T extends string>({
       <AnimatePresence>
         {open ? (
           <m.div
-            className="folio-demo-select-menu"
+            className="folio-select-menu"
             id={listId}
             role="listbox"
             initial={{ opacity: 0, y: -5 }}
@@ -186,7 +186,7 @@ export function DemoSelect<T extends string>({
   );
 }
 
-export function ToggleRow({
+export function FolioToggleRow({
   label,
   copy,
   checked,
@@ -198,11 +198,10 @@ export function ToggleRow({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className={"folio-demo-toggle-row" + (checked ? " is-active" : "")}>
+    <label className={"folio-toggle-row" + (checked ? " is-active" : "")}>
       <span><strong>{label}</strong><small>{copy}</small></span>
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <i aria-hidden="true"><span /></i>
     </label>
   );
 }
-

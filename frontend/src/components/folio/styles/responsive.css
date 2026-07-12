@@ -1,50 +1,50 @@
 /* Desktop compression, tablet/mobile layouts and reduced motion. */
 @media (max-width: 1260px) {
-  .folio-demo-toolbar-wide {
+  .folio-toolbar-wide {
     grid-template-columns: repeat(3, minmax(118px, 1fr)) 124px 124px;
   }
 
-  .folio-demo-query-composer {
+  .folio-query-composer {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-governance-layout {
+  .folio-governance-layout {
     grid-template-columns: minmax(190px, 0.28fr) minmax(420px, 1fr);
   }
 
-  .folio-demo-source-rail {
+  .folio-source-rail {
     display: none;
   }
 
-  .folio-demo-settings-nav {
+  .folio-settings-nav {
     grid-template-columns: repeat(6, minmax(122px, 1fr));
   }
 }
 
 @media (min-width: 981px) {
-  .folio-demo-page-tasks .folio-demo-toolbar-wide {
+  .folio-page-tasks .folio-toolbar-wide {
     grid-template-columns: minmax(420px, auto) minmax(320px, 430px);
     justify-content: space-between;
   }
 }
 
 @media (max-width: 1100px) {
-  .folio-demo-topbar {
+  .folio-topbar {
     grid-template-columns: 188px minmax(0, 1fr) auto;
     padding-right: 20px;
     gap: 0;
   }
 
-  .folio-demo-brand {
+  .folio-brand {
     padding-right: 12px;
   }
 
-  .folio-demo-brand small,
-  .folio-demo-privacy-copy {
+  .folio-brand small,
+  .folio-privacy-copy {
     display: none;
   }
 
-  .folio-demo-privacy {
+  .folio-privacy {
     width: 44px;
     min-width: 44px;
     padding: 5px 6px;
@@ -52,73 +52,77 @@
     justify-content: center;
   }
 
-  .folio-demo-topnav button {
+  .folio-topnav button {
     padding-right: 6px;
     padding-left: 6px;
     grid-template-columns: 20px auto;
     gap: 6px;
   }
 
-  .folio-demo-topnav button.is-active {
+  .folio-topnav button.is-active {
     padding-left: 6px;
   }
 }
 
 @media (min-width: 981px) and (max-width: 1100px) {
-  .folio-demo-settings-nav button {
+  .folio-settings-nav button {
     min-height: 64px;
   }
 
-  .folio-demo-settings-nav button small {
+  .folio-settings-nav button small {
     display: none;
   }
 }
 
 @media (max-width: 980px) {
-  .folio-demo {
+  .folio {
     grid-template-rows: 68px minmax(0, 1fr) 68px;
   }
 
-  .folio-demo-topbar {
+  .folio.folio-no-command {
+    grid-template-rows: 68px minmax(0, 1fr);
+  }
+
+  .folio-topbar {
     grid-template-columns: 1fr auto;
     padding: 0 20px 0 32px;
   }
 
-  .folio-demo-top-actions {
+  .folio-top-actions {
     grid-column: 2;
   }
 
-  .folio-demo-settings-nav {
+  .folio-settings-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     overflow: hidden;
   }
 
-  .folio-demo-settings-nav button:nth-child(3n) {
+  .folio-settings-nav button:nth-child(3n) {
     border-right: 0;
   }
 
-  .folio-demo-settings-nav button:nth-child(-n + 3) {
+  .folio-settings-nav button:nth-child(-n + 3) {
     border-bottom: 1px solid var(--folio-line);
   }
 
-  .folio-demo-atmosphere {
+  .folio-atmosphere {
     top: 68px;
   }
 
-  .folio-demo-radar {
+  .folio-radar {
     right: -18vw;
     bottom: -18%;
   }
 
-  .folio-demo-menu-button {
+  .folio-menu-button {
     display: inline-flex;
   }
 
-  .folio-demo-topnav {
+  .folio-topnav {
     display: none;
   }
 
-  .folio-demo-mobile-nav {
+  .folio-mobile-nav {
     width: 100%;
     padding: 14px 24px 18px 32px;
     display: block;
@@ -132,13 +136,13 @@
     z-index: 50;
   }
 
-  .folio-demo-mobile-nav .folio-demo-nav {
+  .folio-mobile-nav .folio-nav {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     border-top: 0;
   }
 
-  .folio-demo-mobile-nav .folio-demo-nav button {
+  .folio-mobile-nav .folio-nav button {
     min-height: 56px;
     padding: 0 12px;
     grid-template-columns: 20px minmax(0, 1fr);
@@ -146,159 +150,163 @@
     text-align: left;
   }
 
-  .folio-demo-mobile-nav .folio-demo-nav button:nth-child(3n) {
+  .folio-mobile-nav .folio-nav button:nth-child(3n) {
     border-right: 0;
   }
 
-  .folio-demo-mobile-nav .folio-demo-nav-arrow {
+  .folio-mobile-nav .folio-nav-arrow {
     display: none;
   }
 
-  .folio-demo-command-bar {
+  .folio-command-bar {
     padding-left: 32px;
   }
 
-  .folio-demo-command-bar::before {
+  .folio-command-bar::before {
     left: 32px;
   }
 
-  .folio-demo-page-copy {
+  .folio-page-copy {
     width: min(620px, 68%);
   }
 
-  .folio-demo-scene {
+  .folio-scene {
     right: 20px;
     opacity: 0.72;
   }
 
-  .folio-demo-workbench-grid,
-  .folio-demo-dictionary-layout,
-  .folio-demo-export-layout {
+  .folio-workbench-grid,
+  .folio-dictionary-layout,
+  .folio-export-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folio-demo-module-ledger {
+  .folio-module-ledger {
     margin-top: 12px;
   }
 
-  .folio-demo-toolbar,
-  .folio-demo-toolbar-wide {
+  .folio-toolbar,
+  .folio-toolbar-wide {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .folio-demo-page-discover .folio-demo-toolbar-wide {
+  .folio-page-discover .folio-toolbar-wide {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .folio-demo-page-discover .folio-demo-query-composer {
+  .folio-page-discover .folio-query-composer {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-page-discover .folio-demo-discover-action {
+  .folio-page-discover .folio-discover-action {
     width: 100%;
   }
 
-  .folio-demo-library-toolbar {
+  .folio-library-toolbar {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .folio-demo-toolbar > .folio-demo-search-field,
-  .folio-demo-toolbar-wide > .folio-demo-search-field,
-  .folio-demo-toolbar > .folio-demo-tabs {
+  .folio-toolbar > .folio-search-field,
+  .folio-toolbar-wide > .folio-search-field,
+  .folio-toolbar > .folio-tabs {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-popular-strip {
+  .folio-popular-strip {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
   }
 
-  .folio-demo-governance-layout {
+  .folio-governance-layout {
     grid-template-columns: minmax(180px, 0.32fr) minmax(0, 1fr);
   }
 
-  .folio-demo-evidence-strip {
+  .folio-evidence-strip {
     grid-template-columns: minmax(160px, 1fr) repeat(2, minmax(100px, 0.55fr));
   }
 
-  .folio-demo-evidence-strip > span:nth-last-child(-n + 2) {
+  .folio-evidence-strip > span:nth-last-child(-n + 2) {
     display: none;
   }
 }
 
 @media (max-width: 680px) {
-  .folio-demo {
+  .folio {
     grid-template-rows: 64px minmax(0, 1fr) 82px;
   }
 
-  .folio-demo::after {
+  .folio.folio-no-command {
+    grid-template-rows: 64px minmax(0, 1fr);
+  }
+
+  .folio::after {
     display: none;
   }
 
-  .folio-demo-binding {
+  .folio-binding {
     width: 4px;
   }
 
-  .folio-demo-binding::before {
+  .folio-binding::before {
     left: 0;
     background: rgba(173, 56, 46, 0.38);
   }
 
-  .folio-demo-binding::after {
+  .folio-binding::after {
     display: none;
   }
 
-  .folio-demo-binding-progress {
+  .folio-binding-progress {
     width: 2px;
     left: 0;
     box-shadow: 2px 0 6px rgba(173, 56, 46, 0.14);
   }
 
-  .folio-demo-atmosphere {
+  .folio-atmosphere {
     display: none;
   }
 
-  .folio-demo-topbar {
+  .folio-topbar {
     padding: 0 14px 0 18px;
   }
 
-  .folio-demo-topbar::after {
+  .folio-topbar::after {
     width: 126px;
     left: 18px;
   }
 
-  .folio-demo-brand {
+  .folio-brand {
     padding-right: 10px;
     gap: 9px;
   }
 
-  .folio-demo-brand-mark {
+  .folio-brand-mark {
     width: 44px;
     height: 44px;
   }
 
-  .folio-demo-brand-mark::before {
+  .folio-brand-mark::before {
     width: 29px;
     height: 29px;
   }
 
-  .folio-demo-brand-mark > i {
+  .folio-brand-mark > i {
     width: 38px;
   }
 
-  .folio-demo-monogram {
+  .folio-monogram {
     font-size: 29px;
   }
 
-  .folio-demo-brand strong {
+  .folio-brand strong {
     font-size: 15px;
   }
 
-  .folio-demo-brand small,
-  .folio-demo-privacy-copy {
+  .folio-brand small,
+  .folio-privacy-copy {
     display: none;
   }
 
-  .folio-demo-privacy {
+  .folio-privacy {
     width: 44px;
     min-width: 44px;
     padding: 5px 6px;
@@ -306,34 +314,34 @@
     justify-content: center;
   }
 
-  .folio-demo-mobile-nav {
+  .folio-mobile-nav {
     padding: 12px 14px 16px 18px;
   }
 
-  .folio-demo-page-head {
+  .folio-page-head {
     min-height: 168px;
     padding: 27px 20px 24px;
     align-items: center;
   }
 
-  .folio-demo-page-head::before {
+  .folio-page-head::before {
     left: 20px;
   }
 
-  .folio-demo-page-copy {
+  .folio-page-copy {
     width: 78%;
   }
 
-  .folio-demo-page-copy h1 {
+  .folio-page-copy h1 {
     font-size: 43px;
   }
 
-  .folio-demo-page-copy p {
+  .folio-page-copy p {
     margin-top: 11px;
     font-size: 13px;
   }
 
-  .folio-demo-scene {
+  .folio-scene {
     width: 72vw;
     height: 168px;
     right: -12px;
@@ -343,78 +351,78 @@
     mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, 0.25) 25%, #000 56%);
   }
 
-  .folio-demo-page-body {
+  .folio-page-body {
     padding: 22px 20px 38px;
   }
 
-  .folio-demo-settings-body {
+  .folio-settings-body {
     padding-top: 0;
   }
 
-  .folio-demo-status-band,
-  .folio-demo-task-summary {
+  .folio-status-band,
+  .folio-task-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .folio-demo-status-band article:nth-child(2),
-  .folio-demo-task-summary article:nth-child(2) {
+  .folio-status-band article:nth-child(2),
+  .folio-task-summary article:nth-child(2) {
     border-right: 0;
   }
 
-  .folio-demo-status-band article:nth-child(-n + 2),
-  .folio-demo-task-summary article:nth-child(-n + 2) {
+  .folio-status-band article:nth-child(-n + 2),
+  .folio-task-summary article:nth-child(-n + 2) {
     border-bottom: 1px solid var(--folio-line);
   }
 
-  .folio-demo-workbench-grid {
+  .folio-workbench-grid {
     margin-top: 24px;
     gap: 24px;
   }
 
-  .folio-demo-module-ledger > button {
+  .folio-module-ledger > button {
     grid-template-columns: 20px 52px minmax(0, 1fr);
   }
 
-  .folio-demo-module-ledger > button > svg:last-child {
+  .folio-module-ledger > button > svg:last-child {
     display: none;
   }
 
-  .folio-demo-toolbar,
-  .folio-demo-toolbar-wide {
+  .folio-toolbar,
+  .folio-toolbar-wide {
     padding: 12px 0;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
   }
 
-  .folio-demo-page-discover .folio-demo-toolbar-wide {
+  .folio-page-discover .folio-toolbar-wide {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .folio-demo-page-discover .folio-demo-query-composer {
+  .folio-page-discover .folio-query-composer {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-page-discover .folio-demo-discover-action {
+  .folio-page-discover .folio-discover-action {
     width: 100%;
     grid-column: auto;
   }
 
-  .folio-demo-page-discover .folio-demo-toolbar-wide > .folio-demo-select:nth-child(4) {
+  .folio-page-discover .folio-toolbar-wide > .folio-select:nth-child(4) {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-query-composer {
+  .folio-query-composer {
     height: auto;
     min-height: 48px;
     flex-wrap: wrap;
   }
 
-  .folio-demo-query-keyword,
-  .folio-demo-query-add {
+  .folio-query-keyword,
+  .folio-query-add {
     height: 46px;
   }
 
-  .folio-demo-query-tags {
+  .folio-query-tags {
     width: 100%;
     max-width: none;
     flex-basis: 100%;
@@ -422,136 +430,136 @@
     border-top: 1px solid var(--folio-line);
   }
 
-  .folio-demo-library-toolbar {
+  .folio-library-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .folio-demo-toolbar > .folio-demo-search-field,
-  .folio-demo-toolbar-wide > .folio-demo-search-field {
+  .folio-toolbar > .folio-search-field,
+  .folio-toolbar-wide > .folio-search-field {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-toolbar-wide .folio-demo-ink-button,
-  .folio-demo-toolbar-wide .folio-demo-filter-toggle {
+  .folio-toolbar-wide .folio-ink-button,
+  .folio-toolbar-wide .folio-filter-toggle {
     min-height: 48px;
   }
 
-  .folio-demo-toolbar-wide > .folio-demo-ink-button {
+  .folio-toolbar-wide > .folio-ink-button {
     grid-column: 1 / -1;
   }
 
-  .folio-demo-page-discover .folio-demo-toolbar-wide > .folio-demo-ink-button {
+  .folio-page-discover .folio-toolbar-wide > .folio-ink-button {
     grid-column: auto;
   }
 
-  .folio-demo-page-files .folio-demo-toolbar > .folio-demo-line-button {
+  .folio-page-files .folio-toolbar > .folio-line-button {
     width: 100%;
     grid-column: 1 / -1;
   }
 
-  .folio-demo-split-layout,
-  .folio-demo-governance-layout {
+  .folio-split-layout,
+  .folio-governance-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
 
-  .folio-demo-inspector,
-  .folio-demo-queue-rail {
+  .folio-inspector,
+  .folio-queue-rail {
     display: none;
   }
 
-  .folio-demo-popular-strip {
+  .folio-popular-strip {
     min-height: 118px;
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folio-demo-popular-lines {
+  .folio-popular-lines {
     display: none;
   }
 
-  .folio-demo-field-matrix {
+  .folio-field-matrix {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folio-demo-field-wide {
+  .folio-field-wide {
     grid-column: auto;
   }
 
-  .folio-demo-dictionary-layout,
-  .folio-demo-export-layout {
+  .folio-dictionary-layout,
+  .folio-export-layout {
     gap: 24px;
   }
 
-  .folio-demo-panel-toolbar {
+  .folio-panel-toolbar {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .folio-demo-inline-filters {
+  .folio-inline-filters {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folio-demo-evidence-strip {
+  .folio-evidence-strip {
     padding: 0 10px;
     grid-template-columns: minmax(130px, 1fr) minmax(100px, 0.7fr);
   }
 
-  .folio-demo-evidence-strip > span:nth-of-type(n + 2) {
+  .folio-evidence-strip > span:nth-of-type(n + 2) {
     display: none;
   }
 
-  .folio-demo-tabs {
+  .folio-tabs {
     max-width: 100%;
     overflow-x: auto;
   }
 
-  .folio-demo-tabs button {
+  .folio-tabs button {
     min-width: 68px;
   }
 
-  .folio-demo-table-head {
+  .folio-table-head {
     grid-template-columns: minmax(0, 1fr) 80px;
   }
 
-  .folio-demo-table-head span:nth-child(n + 3) {
+  .folio-table-head span:nth-child(n + 3) {
     display: none;
   }
 
-  .folio-demo-settings-nav {
+  .folio-settings-nav {
     margin: 0 -20px;
   }
 
-  .folio-demo-settings-nav button {
+  .folio-settings-nav button {
     min-height: 68px;
     padding: 9px 10px;
   }
 
-  .folio-demo-settings-nav button small {
+  .folio-settings-nav button small {
     display: none;
   }
 
-  .folio-demo-settings-stage {
+  .folio-settings-stage {
     min-height: 430px;
     padding-top: 26px;
   }
 
-  .folio-demo-settings-head {
+  .folio-settings-head {
     align-items: flex-start;
   }
 
-  .folio-demo-settings-state {
+  .folio-settings-state {
     white-space: nowrap;
   }
 
-  .folio-demo-choice-row {
+  .folio-choice-row {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folio-demo-choice-row button {
+  .folio-choice-row button {
     border-right: 0;
   }
 
-  .folio-demo-command-bar {
+  .folio-command-bar {
     min-width: 0;
     padding: 11px 14px 11px 20px;
     align-items: stretch;
@@ -560,28 +568,28 @@
     gap: 7px;
   }
 
-  .folio-demo-command-bar::before {
+  .folio-command-bar::before {
     left: 20px;
   }
 
-  .folio-demo-command-bar p {
+  .folio-command-bar p {
     display: none;
   }
 
-  .folio-demo-command-bar > div {
+  .folio-command-bar > div {
     width: 100%;
     display: grid;
     grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   }
 
-  .folio-demo-command-bar button,
-  .folio-demo-primary-button {
+  .folio-command-bar button,
+  .folio-primary-button {
     width: 100%;
     min-width: 0;
     white-space: nowrap;
   }
 
-  .folio-demo-notice {
+  .folio-notice {
     right: 16px;
     bottom: 98px;
     left: 16px;
@@ -589,8 +597,8 @@
 }
 
 @media (max-width: 350px) {
-  .folio-demo-command-bar button,
-  .folio-demo-primary-button {
+  .folio-command-bar button,
+  .folio-primary-button {
     padding-right: 8px;
     padding-left: 8px;
     gap: 5px;
@@ -598,12 +606,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .folio-demo *,
-  .folio-demo *::before,
-  .folio-demo *::after {
+  .folio *,
+  .folio *::before,
+  .folio *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation: none !important;
   }
 }
-

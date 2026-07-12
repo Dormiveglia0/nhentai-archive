@@ -26,7 +26,7 @@ const SCENES: Record<FolioPageId, ComponentType> = {
 export function ModuleScene({ page }: { page: FolioPageId }) {
   const Scene = SCENES[page];
   return (
-    <div className={`folio-demo-scene folio-demo-scene-${page}`} aria-hidden="true">
+    <div className={`folio-scene folio-scene-${page}`} aria-hidden="true">
       <svg viewBox="0 0 540 230"><Scene /></svg>
     </div>
   );

@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { ReactNode } from "react";
 
+import type { FolioPageId } from "../folio/config";
+import { FolioChrome } from "../folio/shell/FolioChrome";
 import { navigate } from "../../lib/navigation";
 import { TaskDock } from "./TaskDock";
 
@@ -47,6 +49,22 @@ export function ArchiveShell({
   onBlurCoversChange,
   children
 }: Props) {
+  if (activePage === "workbench") {
+    return (
+      <>
+        <FolioChrome
+          page="workbench"
+          privacy={privacyMode}
+          onPrivacyChange={onPrivacyModeChange}
+          onNavigate={(name: FolioPageId) => navigate({ name } as Parameters<typeof navigate>[0])}
+        >
+          {children}
+        </FolioChrome>
+        <TaskDock />
+      </>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">

@@ -7,6 +7,7 @@ import { FOLIO_PAGES, type FolioPageId } from "../config";
 import { ModuleBackdrop } from "./ModuleBackdrop";
 import { PageHeading } from "./PageHeading";
 import { PageNavigation } from "./PageNavigation";
+import "../Folio.css";
 
 export function FolioChrome({
   page,
@@ -63,38 +64,38 @@ export function FolioChrome({
   }
 
   return (
-    <div className={`folio-demo folio-app folio-demo-page-${page}${footer ? "" : " folio-demo-no-command"}`}>
+    <div className={`folio folio-app folio-page-${page}${footer ? "" : " folio-no-command"}`}>
       <ModuleBackdrop page={page} reduceMotion={reduceMotion} />
-      <div ref={bindingRef} className="folio-demo-binding" aria-hidden="true"><span className="folio-demo-binding-progress" /></div>
+      <div ref={bindingRef} className="folio-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
 
-      <header className="folio-demo-topbar">
-        <button className="folio-demo-brand" type="button" onClick={() => onNavigate("workbench")}>
-          <span className="folio-demo-brand-mark" aria-hidden="true"><span className="folio-demo-monogram">NH</span><i /></span>
-          <span className="folio-demo-brand-copy"><strong>Archive</strong><small>local collection</small></span>
+      <header className="folio-topbar">
+        <button className="folio-brand" type="button" onClick={() => onNavigate("workbench")}>
+          <span className="folio-brand-mark" aria-hidden="true"><span className="folio-monogram">NH</span><i /></span>
+          <span className="folio-brand-copy"><strong>Archive</strong><small>local collection</small></span>
         </button>
-        <PageNavigation className="folio-demo-topnav" page={page} onNavigate={onNavigate} />
-        <div className="folio-demo-top-actions">
-          <button className={`folio-demo-privacy${privacy ? " is-on" : ""}`} type="button" aria-pressed={privacy} onClick={() => onPrivacyChange(!privacy)}>
-            <span className="folio-demo-privacy-icon" aria-hidden="true"><LockKeyhole size={15} /></span>
-            <span className="folio-demo-privacy-copy"><span>隐私模式</span><strong>{privacy ? "开启" : "关闭"}</strong></span>
+        <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
+        <div className="folio-top-actions">
+          <button className={`folio-privacy${privacy ? " is-on" : ""}`} type="button" aria-pressed={privacy} onClick={() => onPrivacyChange(!privacy)}>
+            <span className="folio-privacy-icon" aria-hidden="true"><LockKeyhole size={15} /></span>
+            <span className="folio-privacy-copy"><span>隐私模式</span><strong>{privacy ? "开启" : "关闭"}</strong></span>
           </button>
-          <button className="folio-demo-menu-button" type="button" aria-label={menuOpen ? "关闭导航" : "打开导航"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
+          <button className="folio-menu-button" type="button" aria-label={menuOpen ? "关闭导航" : "打开导航"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </header>
 
-      <div className="folio-demo-workspace">
+      <div className="folio-workspace">
         <AnimatePresence>
           {menuOpen ? (
-            <m.div className="folio-demo-mobile-nav" initial={{ opacity: 0, y: reduceMotion ? 0 : -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -10 }} transition={{ duration: duration.fast, ease: ease.standard }}>
+            <m.div className="folio-mobile-nav" initial={{ opacity: 0, y: reduceMotion ? 0 : -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -10 }} transition={{ duration: duration.fast, ease: ease.standard }}>
               <PageNavigation page={page} onNavigate={onNavigate} />
             </m.div>
           ) : null}
         </AnimatePresence>
-        <main ref={scrollRef} className="folio-demo-scroll" onScroll={updateBindingProgress}>
+        <main ref={scrollRef} className="folio-scroll" onScroll={updateBindingProgress}>
           <AnimatePresence mode="wait" initial={false}>
-            <m.div key={page} className="folio-demo-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28, scale: reduceMotion ? 1 : 0.992 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18, scale: reduceMotion ? 1 : 1.006 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
+            <m.div key={page} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28, scale: reduceMotion ? 1 : 0.992 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18, scale: reduceMotion ? 1 : 1.006 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
               <PageHeading page={current} />
               {children}
             </m.div>

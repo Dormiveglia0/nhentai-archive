@@ -2,8 +2,13 @@ import { Grid2X2, Library, List } from "lucide-react";
 import { m } from "motion/react";
 import { useState } from "react";
 
-import type { FolioPageId } from "../config";
-import { DemoSelect, EmptyCanvas, PanelHeading, SearchField } from "../ui/DemoPrimitives";
+import type { FolioPageId } from "../../folio/config";
+import {
+  FolioEmptyState as EmptyCanvas,
+  FolioPanelHeading as PanelHeading,
+  FolioSearchField as SearchField,
+  FolioSelect as DemoSelect,
+} from "../../folio/ui/FolioPrimitives";
 
 export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) => void }) {
   const [query, setQuery] = useState("");
@@ -13,8 +18,8 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
   const [view, setView] = useState<"grid" | "list">("grid");
 
   return (
-    <div className="folio-demo-page-body">
-      <div className="folio-demo-toolbar folio-demo-library-toolbar">
+    <div className="folio-page-body">
+      <div className="folio-toolbar folio-library-toolbar">
         <SearchField value={query} onChange={setQuery} placeholder="搜索标题、作者、标签或画廊 ID" />
         <DemoSelect label="语言" value={language} onChange={setLanguage} options={[
           { value: "all", label: "全部语言" },
@@ -32,20 +37,20 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
           { value: "title", label: "标题" },
           { value: "progress", label: "阅读进度" },
         ]} />
-        <div className="folio-demo-view-switch" aria-label="视图方式">
+        <div className="folio-view-switch" aria-label="视图方式">
           <button className={view === "grid" ? "is-active" : ""} type="button" aria-label="封面墙视图" onClick={() => setView("grid")}>
-            {view === "grid" ? <m.span className="folio-demo-control-active" layoutId="folio-demo-view-active" /> : null}
+            {view === "grid" ? <m.span className="folio-control-active" layoutId="folio-view-active" /> : null}
             <Grid2X2 size={16} />
           </button>
           <button className={view === "list" ? "is-active" : ""} type="button" aria-label="列表视图" onClick={() => setView("list")}>
-            {view === "list" ? <m.span className="folio-demo-control-active" layoutId="folio-demo-view-active" /> : null}
+            {view === "list" ? <m.span className="folio-control-active" layoutId="folio-view-active" /> : null}
             <List size={17} />
           </button>
         </div>
       </div>
 
-      <div className="folio-demo-split-layout">
-        <section className="folio-demo-ruled-panel">
+      <div className="folio-split-layout">
+        <section className="folio-ruled-panel">
           <PanelHeading title="馆藏" description={query ? "当前搜索不会发送到服务器。" : "全部真实入库作品会显示在这里。"} />
           <EmptyCanvas
             icon={Library}
@@ -55,15 +60,14 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
             onAction={() => onNavigate("discover")}
           />
         </section>
-        <aside className="folio-demo-inspector">
+        <aside className="folio-inspector">
           <span>Inspector</span>
           <h2>作品详情</h2>
           <p>选择一部真实作品后，这里显示封面、阅读进度、来源与标签。</p>
-          <div className="folio-demo-inspector-lines"><i /><i /><i /><i /></div>
+          <div className="folio-inspector-lines"><i /><i /><i /><i /></div>
         </aside>
       </div>
     </div>
   );
 }
-
 

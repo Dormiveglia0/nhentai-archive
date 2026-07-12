@@ -1,7 +1,7 @@
 import { ArrowRight, BookOpen, HardDrive, Library, PenLine, Workflow } from "lucide-react";
 
-import { FOLIO_PAGES, type FolioPageId } from "../config";
-import { EmptyCanvas, PanelHeading } from "../ui/DemoPrimitives";
+import { FOLIO_PAGES, type FolioPageId } from "../../folio/config";
+import { FolioEmptyState as EmptyCanvas, FolioPanelHeading as PanelHeading } from "../../folio/ui/FolioPrimitives";
 
 export function WorkbenchDemo({ onNavigate }: { onNavigate: (page: FolioPageId) => void }) {
   const states = [
@@ -12,8 +12,8 @@ export function WorkbenchDemo({ onNavigate }: { onNavigate: (page: FolioPageId) 
   ];
 
   return (
-    <div className="folio-demo-page-body">
-      <section className="folio-demo-status-band" aria-label="工作台状态">
+    <div className="folio-page-body">
+      <section className="folio-status-band" aria-label="工作台状态">
         {states.map((item) => {
           const Icon = item.icon;
           return (
@@ -27,13 +27,13 @@ export function WorkbenchDemo({ onNavigate }: { onNavigate: (page: FolioPageId) 
         })}
       </section>
 
-      <div className="folio-demo-workbench-grid">
-        <section className="folio-demo-ruled-panel folio-demo-reading-panel">
+      <div className="folio-workbench-grid">
+        <section className="folio-ruled-panel folio-reading-panel">
           <PanelHeading title="继续阅读" description="阅读进度会在接入真实馆藏后出现在这里。" />
           <EmptyCanvas icon={BookOpen} title="还没有可继续的阅读" copy="导入真实 CBZ 并打开阅读器后，进度会自动回到工作台。" />
         </section>
 
-        <section className="folio-demo-module-ledger">
+        <section className="folio-module-ledger">
           <PanelHeading title="模块索引" description="从一个工作面进入完整流程。" />
           {FOLIO_PAGES.filter((item) => item.id !== "workbench" && item.id !== "settings").map((item) => {
             const Icon = item.icon;
@@ -51,5 +51,4 @@ export function WorkbenchDemo({ onNavigate }: { onNavigate: (page: FolioPageId) 
     </div>
   );
 }
-
 

@@ -201,8 +201,11 @@ Root: `frontend/src/`
 
 - `docs/AGENT_MAP.md`
   - Fast locator for the active demo visual contract, nine module bodies/scenes, ordered CSS layers, formal page owners, and real API entry points. Read this before loading frontend files.
+- `components/folio/`
+  - Production-neutral full-screen visual system: page configuration, shell, navigation, animated module scenes/backdrops, shared controls, and ordered CSS layers.
+  - Dependency direction is `demo -> folio` and `formal feature -> folio`; this directory must never import `components/demo/`.
 - `components/demo/`
-  - Active full-screen visual baseline at `/demo`, now split into `config`, `shell`, `scenes`, `modules`, `ui`, and ordered `styles` layers. `FrontendDemo.tsx` is orchestration only; do not rebuild a monolith there.
+  - Public `/demo` content only: preview navigation/state, nine demo page bodies, and the demo command bar. Formal routes must not import this directory.
 
 - `App.tsx`
   - Hash route composition.
@@ -338,12 +341,13 @@ Root: `frontend/src/`
   - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
   - Only failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel.
 - `components/workbench/` — daily workbench dashboard:
-  - `WorkbenchPage.tsx` — thin container for `#workbench`; takes `blurCovers` and composes the metric strip, two shelves, and four module cards.
+  - `WorkbenchPage.tsx` — first directly migrated Folio route. Keeps the real overview hook/API flow while owning new semantic page structure; it does not wrap the legacy dashboard or import demo content.
+  - `WorkbenchPage.css` — production-only toolbar, metric, shelf-grid, and module-ledger layout. The replaced `.workbench-*` rules were removed from `styles/app.css`.
   - `useWorkbenchState.ts` — fetches `GET /api/workbench/overview`; manages loading/error/refresh state.
   - `WorkbenchMetricStrip.tsx` — hairline thin-number strip showing real metrics: 馆藏作品 / 待治理 / 失败任务 / 缺失源文件.
-  - `WorkbenchModuleCards.tsx` — four jump cards (治理 / 任务 / 文件 / 导出) linking to `#governance` / `#tasks` / `#files` / `#export`.
+  - `WorkbenchModuleCards.tsx` — ruled module ledger (治理 / 任务 / 文件 / 导出) linking to `#governance` / `#tasks` / `#files` / `#export`.
   - `workbenchHelpers.ts` — shared label/formatting utilities.
-  - Reuses `ContinueReadingRow` (from library) for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
+  - Reuses `ContinueReadingRow` (from library) with direct shared Folio shelf markup for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
 

@@ -1,5 +1,5 @@
 /* All module header scene styling; scene TSX is split per module. */
-.folio-demo-scene {
+.folio-scene {
   width: min(48vw, 620px);
   height: 228px;
   color: rgba(23, 24, 21, 0.31);
@@ -8,7 +8,7 @@
   top: 0;
 }
 
-.folio-demo-scene > svg {
+.folio-scene > svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -20,11 +20,11 @@
   stroke-linejoin: round;
 }
 
-.folio-demo-scene g,
-.folio-demo-scene path,
-.folio-demo-scene circle,
-.folio-demo-scene rect,
-.folio-demo-scene ellipse {
+.folio-scene g,
+.folio-scene path,
+.folio-scene circle,
+.folio-scene rect,
+.folio-scene ellipse {
   vector-effect: non-scaling-stroke;
 }
 

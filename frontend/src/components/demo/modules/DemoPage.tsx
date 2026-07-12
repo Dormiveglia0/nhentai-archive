@@ -1,4 +1,4 @@
-import type { FolioPageId, SettingsSection } from "../config";
+import type { FolioPageId, SettingsSection } from "../../folio/config";
 import { DictionaryDemo } from "./DictionaryDemo";
 import { DiscoverDemo } from "./DiscoverDemo";
 import { ExportDemo } from "./ExportDemo";

@@ -13,27 +13,27 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
   if (!works.length) return null;
 
   return (
-    <section className="library-shelf">
-      <div className="library-shelf-head">
+    <section className="folio-shelf">
+      <div className="folio-shelf-head">
         <h2>{title}</h2>
         <span>{works.length}</span>
       </div>
-      <Stagger className="library-shelf-track">
+      <Stagger className="folio-shelf-track">
         {works.map((work) => (
-          <StaggerItem key={work.id} className="shelf-cell">
+          <StaggerItem key={work.id} className="folio-shelf-cell">
             <button
               type="button"
-              className="shelf-item"
+              className="folio-shelf-item"
               onClick={() => navigate({ name: "reader", workId: work.id })}
             >
-              <div className="shelf-cover">
+              <div className="folio-shelf-cover">
                 {work.cover_path ? (
                   <img className={blurCovers ? "blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
                 ) : (
                   <span className="cover-fallback">NO COVER</span>
                 )}
                 {(work.progress_percent ?? 0) > 0 ? (
-                  <span className="shelf-progress" style={{ width: `${work.progress_percent}%` }} />
+                  <span className="folio-shelf-progress" style={{ width: `${work.progress_percent}%` }} />
                 ) : null}
               </div>
               <strong title={workTitle(work)}>{workTitle(work)}</strong>

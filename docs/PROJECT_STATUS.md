@@ -10,6 +10,7 @@ Current real slice:
 
 ## Completed
 
+- 正式前端重构基线：将 `/demo` 的可复用视觉能力提炼为生产中立的 `components/folio/`（配置、全屏外壳、导航、九个语义场景/背景、共享控件、十层 CSS），依赖严格单向为 `demo -> folio`、`formal feature -> folio`，正式页面禁止导入 demo 内容或用覆盖 CSS 给旧 DOM 套皮。`#workbench` 已作为首个模块直接重写 JSX 与 feature-local CSS，保留 `useWorkbenchState` 和真实 `GET /api/workbench/overview` 数据流，删除被替代的旧 `.workbench-*` 与书架样式。`/demo` 完成 5 个视口 × 9 个模块共 45 项回归（含设置场景采样与发现雷达命中），工作台完成 1440×1000 / 390×844 的真实 API 数值、刷新、无旧 DOM、无横向溢出和控制台检查。
 - 前端重构准备：`/demo` 从 1600 行 TSX + 4200 行 CSS 单体拆为配置、共享外壳、九个页面模块、九个语义场景、共享控件与十层有序 CSS；`docs/AGENT_MAP.md` 记录 demo→正式组件→真实 API 的定位关系。拆分前后 Vite 产物哈希一致，未改变视觉与交互。
 - 发现 / 导入页筛选工作台 polish:移除 discover 顶部 `mode-tabs` 行,页面固定为真实 feed;随机改为图标按钮并放到 `.view-actions` 查询按钮左侧。标签筛选支持中文译名/别名输入触发 autocomplete,候选按真实 remote tag id 去重,已选标签只在绝对定位弹层内显示,触发器用 `首个 +N` 摘要,不再撑高工具栏。语言筛选走远端语言查询语义(`language:japanese` 等),空查询浏览不再伪造 `pages:>0`,避免“全部”被 search 兜底污染;作品卡语言显示走词典 `display`,并跳过 `translated` 泛标签。结果分页改为按可见列数动态取 4 行,卡片墙保持居中 flex 排列。设计/流程文档见 `docs/superpowers/specs/2026-06-28-discover-filter-workbench-polish-design.md` 与 `docs/superpowers/plans/2026-06-28-discover-filter-workbench-polish.md`。
 - 最终闭环收尾:治理批量新增「确认现有词典译名」动作,复用 `POST /api/governance/bulk/preview|apply`,只确认所选作品关联的 `review/conflict` 且未忽略/未锁定/有中文名的词典项,同一词条多作品引用时只更新一次,跳过项按真实原因回显。前端治理批量条新增对应复选项,预览/结果显示确认与跳过词条数。长时批量导出已闭环为 `ExportJobService` + `bulk_export` job:超过 `EXPORT_SYNC_THRESHOLD=5` 的选择进入任务中心后台打包,产物写入临时 export-jobs 目录,24h 过期、下载即删;导出页与库批量托盘共用该阈值和 `/api/exports/bulk-jobs`。验证覆盖治理批量确认、后台导出任务 API/下载/过期/重试/取消。

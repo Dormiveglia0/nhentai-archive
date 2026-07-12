@@ -1,5 +1,5 @@
 /* Top bar, navigation, scroll container and shared page heading. */
-.folio-demo-topbar {
+.folio-topbar {
   min-width: 0;
   padding: 0 28px 0 38px;
   display: grid;
@@ -15,7 +15,7 @@
   isolation: isolate;
 }
 
-.folio-demo-topbar::after {
+.folio-topbar::after {
   content: "";
   width: 212px;
   height: 1px;
@@ -25,7 +25,7 @@
   bottom: -1px;
 }
 
-.folio-demo-brand {
+.folio-brand {
   width: 100%;
   height: 100%;
   padding: 0 24px 0 0;
@@ -39,13 +39,13 @@
   text-align: left;
 }
 
-.folio-demo-brand-copy,
-.folio-demo-brand strong,
-.folio-demo-brand small {
+.folio-brand-copy,
+.folio-brand strong,
+.folio-brand small {
   display: block;
 }
 
-.folio-demo-brand-mark {
+.folio-brand-mark {
   width: 52px;
   height: 52px;
   flex: 0 0 auto;
@@ -55,7 +55,7 @@
   overflow: hidden;
 }
 
-.folio-demo-brand-mark::before {
+.folio-brand-mark::before {
   content: "";
   width: 34px;
   height: 34px;
@@ -64,7 +64,7 @@
   transform: rotate(45deg);
 }
 
-.folio-demo-brand-mark::after {
+.folio-brand-mark::after {
   content: "";
   width: 4px;
   height: 4px;
@@ -75,7 +75,7 @@
   top: 3px;
 }
 
-.folio-demo-brand-mark > i {
+.folio-brand-mark > i {
   width: 44px;
   height: 1px;
   background: var(--folio-red);
@@ -85,7 +85,7 @@
   animation: folio-brand-scan 5.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
-.folio-demo-monogram {
+.folio-monogram {
   position: relative;
   z-index: 1;
   font-family: Georgia, "Times New Roman", serif;
@@ -95,14 +95,14 @@
   line-height: 1;
 }
 
-.folio-demo-brand strong {
+.folio-brand strong {
   font-family: Georgia, "Times New Roman", serif;
   font-size: 17px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.folio-demo-brand small {
+.folio-brand small {
   margin-top: 3px;
   color: var(--folio-muted);
   font-size: 13px;
@@ -110,7 +110,7 @@
   text-transform: uppercase;
 }
 
-.folio-demo-top-actions {
+.folio-top-actions {
   grid-column: 3;
   margin-left: 16px;
   justify-self: end;
@@ -119,15 +119,15 @@
   gap: 8px;
 }
 
-.folio-demo-privacy,
-.folio-demo-menu-button {
+.folio-privacy,
+.folio-menu-button {
   min-height: 44px;
   border: 1px solid var(--folio-line);
   background: rgba(250, 247, 239, 0.56);
   color: var(--folio-muted);
 }
 
-.folio-demo-privacy {
+.folio-privacy {
   min-width: 138px;
   padding: 5px 13px 5px 7px;
   display: grid;
@@ -138,7 +138,7 @@
   font-size: 13px;
 }
 
-.folio-demo-privacy-icon {
+.folio-privacy-icon {
   width: 30px;
   height: 30px;
   display: grid;
@@ -147,7 +147,7 @@
   position: relative;
 }
 
-.folio-demo-privacy-icon::after {
+.folio-privacy-icon::after {
   content: "";
   width: 5px;
   height: 5px;
@@ -159,33 +159,33 @@
   opacity: 0.35;
 }
 
-.folio-demo-privacy-copy,
-.folio-demo-privacy-copy span,
-.folio-demo-privacy-copy strong {
+.folio-privacy-copy,
+.folio-privacy-copy span,
+.folio-privacy-copy strong {
   display: block;
 }
 
-.folio-demo-privacy-copy span {
+.folio-privacy-copy span {
   font-size: 13px;
   letter-spacing: 0.08em;
 }
 
-.folio-demo-privacy-copy strong {
+.folio-privacy-copy strong {
   margin-top: 2px;
   color: var(--folio-ink);
   font-size: 13px;
 }
 
-.folio-demo-privacy.is-on .folio-demo-privacy-icon {
+.folio-privacy.is-on .folio-privacy-icon {
   color: var(--folio-red);
 }
 
-.folio-demo-privacy.is-on .folio-demo-privacy-icon::after {
+.folio-privacy.is-on .folio-privacy-icon::after {
   opacity: 1;
   animation: folio-quiet-pulse 2.6s ease-in-out infinite;
 }
 
-.folio-demo-menu-button {
+.folio-menu-button {
   width: 44px;
   padding: 0;
   display: none;
@@ -193,7 +193,7 @@
   justify-content: center;
 }
 
-.folio-demo-workspace {
+.folio-workspace {
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -201,13 +201,13 @@
   position: relative;
 }
 
-.folio-demo-nav {
+.folio-nav {
   border-top: 1px solid var(--folio-line);
   position: relative;
   z-index: 2;
 }
 
-.folio-demo-nav button {
+.folio-nav button {
   width: 100%;
   min-height: 54px;
   padding: 0 2px;
@@ -226,7 +226,7 @@
   transition: color 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.folio-demo-nav-active {
+.folio-nav-active {
   border-bottom: 2px solid var(--folio-red);
   background: var(--folio-red-soft);
   position: absolute;
@@ -235,42 +235,42 @@
   pointer-events: none;
 }
 
-.folio-demo-nav button > svg,
-.folio-demo-nav button > strong,
-.folio-demo-nav-arrow {
+.folio-nav button > svg,
+.folio-nav button > strong,
+.folio-nav-arrow {
   position: relative;
   z-index: 1;
 }
 
-.folio-demo-nav button strong {
+.folio-nav button strong {
   color: inherit;
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 14px;
   font-weight: 600;
 }
 
-.folio-demo-nav-arrow {
+.folio-nav-arrow {
   opacity: 0;
   transform: translateX(-5px);
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-.folio-demo-nav button:hover,
-.folio-demo-nav button.is-active {
+.folio-nav button:hover,
+.folio-nav button.is-active {
   color: var(--folio-ink);
 }
 
-.folio-demo-nav button:hover {
+.folio-nav button:hover {
   transform: translateY(-2px);
 }
 
-.folio-demo-nav button:hover .folio-demo-nav-arrow,
-.folio-demo-nav button.is-active .folio-demo-nav-arrow {
+.folio-nav button:hover .folio-nav-arrow,
+.folio-nav button.is-active .folio-nav-arrow {
   opacity: 1;
   transform: translateX(0);
 }
 
-.folio-demo-topnav {
+.folio-topnav {
   min-width: 0;
   height: 100%;
   padding: 0;
@@ -284,7 +284,7 @@
   overflow: hidden;
 }
 
-.folio-demo-topnav button {
+.folio-topnav button {
   min-width: 0;
   min-height: 78px;
   padding: 0 6px;
@@ -296,38 +296,38 @@
   text-align: center;
 }
 
-.folio-demo-topnav button:first-child {
+.folio-topnav button:first-child {
   border-left: 0;
 }
 
-.folio-demo-topnav button:last-child {
+.folio-topnav button:last-child {
   border-right: 0;
 }
 
-.folio-demo-topnav button strong {
+.folio-topnav button strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
 }
 
-.folio-demo-topnav button.is-active {
+.folio-topnav button.is-active {
   padding-left: 6px;
 }
 
-.folio-demo-topnav button:hover {
+.folio-topnav button:hover {
   transform: none;
 }
 
-.folio-demo-topnav .folio-demo-nav-arrow {
+.folio-topnav .folio-nav-arrow {
   display: none;
 }
 
-.folio-demo-mobile-nav {
+.folio-mobile-nav {
   display: none;
 }
 
-.folio-demo-scroll {
+.folio-scroll {
   min-width: 0;
   min-height: 0;
   overflow-x: hidden;
@@ -338,18 +338,18 @@
   position: relative;
 }
 
-.folio-demo-scroll::-webkit-scrollbar {
+.folio-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;
 }
 
-.folio-demo-page {
+.folio-page {
   min-width: 0;
   min-height: 100%;
 }
 
-.folio-demo-page-head {
+.folio-page-head {
   min-height: 228px;
   padding: 38px clamp(34px, 4vw, 70px) 32px;
   display: flex;
@@ -359,7 +359,7 @@
   overflow: hidden;
 }
 
-.folio-demo-page-head::before {
+.folio-page-head::before {
   content: "";
   width: 64px;
   height: 1px;
@@ -369,13 +369,13 @@
   bottom: -1px;
 }
 
-.folio-demo-page-copy {
+.folio-page-copy {
   width: min(590px, 55%);
   position: relative;
   z-index: 2;
 }
 
-.folio-demo-page-copy h1 {
+.folio-page-copy h1 {
   margin: 0;
   font-family: "Noto Serif SC", "Songti SC", STSong, Georgia, serif;
   font-size: clamp(52px, 5.4vw, 82px);
@@ -384,7 +384,7 @@
   line-height: 0.95;
 }
 
-.folio-demo-page-copy p {
+.folio-page-copy p {
   margin: 17px 0 0;
   color: var(--folio-muted);
   font-size: 13px;

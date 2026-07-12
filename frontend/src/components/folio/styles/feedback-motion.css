@@ -1,5 +1,5 @@
 /* Fixed command bar, notices and animation keyframes. */
-.folio-demo-command-bar {
+.folio-command-bar {
   min-width: 0;
   padding: 0 28px 0 clamp(34px, 4vw, 70px);
   display: flex;
@@ -12,7 +12,7 @@
   z-index: 45;
 }
 
-.folio-demo-command-bar::before {
+.folio-command-bar::before {
   content: "";
   width: 58px;
   height: 1px;
@@ -22,7 +22,7 @@
   top: -1px;
 }
 
-.folio-demo-command-bar p {
+.folio-command-bar p {
   margin: 0;
   display: flex;
   align-items: center;
@@ -31,7 +31,7 @@
   font-size: 13px;
 }
 
-.folio-demo-command-bar p span {
+.folio-command-bar p span {
   width: 5px;
   height: 5px;
   border-radius: 50%;
@@ -39,23 +39,23 @@
   animation: folio-quiet-pulse 3.2s ease-in-out infinite;
 }
 
-.folio-demo-command-bar > div {
+.folio-command-bar > div {
   display: flex;
   gap: 9px;
 }
 
-.folio-demo-command-bar button {
+.folio-command-bar button {
   min-height: 44px;
 }
 
-.folio-demo-primary-button {
+.folio-primary-button {
   min-width: 148px;
   border-color: var(--folio-red);
   background: var(--folio-red);
   color: var(--folio-paper-bright);
 }
 
-.folio-demo-notice {
+.folio-notice {
   width: min(430px, calc(100vw - 32px));
   min-height: 46px;
   padding: 12px 16px;

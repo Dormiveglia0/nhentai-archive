@@ -1,6 +1,6 @@
 import { Folder, PackageOpen, Plus, RefreshCw, RotateCcw, Save, Search, Settings } from "lucide-react";
 
-import type { FolioPageId } from "../config";
+import type { FolioPageId } from "../../folio/config";
 
 export function DemoCommandBar({
   page,
@@ -27,15 +27,15 @@ export function DemoCommandBar({
   const PrimaryIcon = primary.icon;
 
   return (
-    <footer className="folio-demo-command-bar">
+    <footer className="folio-command-bar">
       <p><span />演示模式 · 未连接真实业务数据</p>
       <div>
         {page === "settings" ? (
-          <button className="folio-demo-line-button" type="button" onClick={onResetSettings}><RotateCcw size={15} />重新读取</button>
+          <button className="folio-line-button" type="button" onClick={onResetSettings}><RotateCcw size={15} />重新读取</button>
         ) : (
-          <button className="folio-demo-line-button" type="button" onClick={() => onNavigate("settings")}><Settings size={15} />设置</button>
+          <button className="folio-line-button" type="button" onClick={() => onNavigate("settings")}><Settings size={15} />设置</button>
         )}
-        <button className="folio-demo-primary-button" type="button" onClick={primary.action}>
+        <button className="folio-primary-button" type="button" onClick={primary.action}>
           <PrimaryIcon size={15} />
           {primary.label}
         </button>
@@ -43,5 +43,4 @@ export function DemoCommandBar({
     </footer>
   );
 }
-
 

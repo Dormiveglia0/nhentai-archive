@@ -1,18 +1,18 @@
 /* Shared page body primitives and workbench layout. */
-.folio-demo-page-body {
+.folio-page-body {
   min-width: 0;
   padding: clamp(28px, 3.4vw, 52px) clamp(26px, 4vw, 70px) 54px;
 }
 
-.folio-demo-settings-body {
+.folio-settings-body {
   padding-top: 0;
 }
 
-.folio-demo-panel-heading {
+.folio-panel-heading {
   min-width: 0;
 }
 
-.folio-demo-panel-heading h2 {
+.folio-panel-heading h2 {
   margin: 0;
   font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
   font-size: 22px;
@@ -20,23 +20,23 @@
   letter-spacing: -0.025em;
 }
 
-.folio-demo-panel-heading p {
+.folio-panel-heading p {
   margin: 8px 0 0;
   color: var(--folio-muted);
   font-size: 13px;
   line-height: 1.6;
 }
 
-.folio-demo-status-band,
-.folio-demo-task-summary {
+.folio-status-band,
+.folio-task-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--folio-line-strong);
   border-bottom: 1px solid var(--folio-line-strong);
 }
 
-.folio-demo-status-band article,
-.folio-demo-task-summary article {
+.folio-status-band article,
+.folio-task-summary article {
   min-width: 0;
   min-height: 94px;
   padding: 16px 18px;
@@ -46,69 +46,69 @@
   border-right: 1px solid var(--folio-line);
 }
 
-.folio-demo-status-band article:last-child,
-.folio-demo-task-summary article:last-child {
+.folio-status-band article:last-child,
+.folio-task-summary article:last-child {
   border-right: 0;
 }
 
-.folio-demo-status-band svg {
+.folio-status-band svg {
   color: var(--folio-red);
 }
 
-.folio-demo-status-band article > span,
-.folio-demo-task-summary article > span {
+.folio-status-band article > span,
+.folio-task-summary article > span {
   color: var(--folio-muted);
   font-size: 13px;
 }
 
-.folio-demo-status-band strong,
-.folio-demo-task-summary strong {
+.folio-status-band strong,
+.folio-task-summary strong {
   grid-column: 1 / -1;
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 17px;
   font-weight: 600;
 }
 
-.folio-demo-status-band small,
-.folio-demo-task-summary small {
+.folio-status-band small,
+.folio-task-summary small {
   grid-column: 1 / -1;
   color: var(--folio-faint);
   font-size: 13px;
 }
 
-.folio-demo-workbench-grid {
+.folio-workbench-grid {
   margin-top: 32px;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
   gap: clamp(28px, 4vw, 62px);
 }
 
-.folio-demo-ruled-panel {
+.folio-ruled-panel {
   min-width: 0;
   border-top: 1px solid var(--folio-line-strong);
   border-bottom: 1px solid var(--folio-line-strong);
   position: relative;
 }
 
-.folio-demo-ruled-panel > .folio-demo-panel-heading {
+.folio-ruled-panel > .folio-panel-heading {
   padding: 22px 0 18px;
   border-bottom: 1px solid var(--folio-line);
 }
 
-.folio-demo-reading-panel {
+.folio-reading-panel {
   min-height: 388px;
 }
 
-.folio-demo-module-ledger {
+.folio-module-ledger {
   border-top: 1px solid var(--folio-line-strong);
 }
 
-.folio-demo-module-ledger > .folio-demo-panel-heading {
+.folio-module-ledger > .folio-panel-heading {
   padding: 22px 0 18px;
   border-bottom: 1px solid var(--folio-line);
 }
 
-.folio-demo-module-ledger > button {
+.folio-module-ledger > button {
   width: 100%;
   min-height: 62px;
   padding: 10px 4px;
@@ -124,25 +124,25 @@
   transition: color 180ms ease, padding-left 220ms ease, background-color 180ms ease;
 }
 
-.folio-demo-module-ledger > button:hover {
+.folio-module-ledger > button:hover {
   padding-left: 10px;
   color: var(--folio-ink);
   background: rgba(255, 255, 255, 0.16);
 }
 
-.folio-demo-module-ledger > button strong {
+.folio-module-ledger > button strong {
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 13px;
 }
 
-.folio-demo-module-ledger > button small {
+.folio-module-ledger > button small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
 }
 
-.folio-demo-empty {
+.folio-empty {
   min-height: 270px;
   padding: 44px 26px;
   display: flex;
@@ -154,8 +154,8 @@
   overflow: hidden;
 }
 
-.folio-demo-empty::before,
-.folio-demo-empty::after {
+.folio-empty::before,
+.folio-empty::after {
   content: "";
   width: min(18%, 110px);
   height: 1px;
@@ -164,15 +164,15 @@
   top: calc(50% - 56px);
 }
 
-.folio-demo-empty::before {
+.folio-empty::before {
   left: 16%;
 }
 
-.folio-demo-empty::after {
+.folio-empty::after {
   right: 16%;
 }
 
-.folio-demo-empty-mark {
+.folio-empty-mark {
   width: 48px;
   height: 48px;
   display: grid;
@@ -184,7 +184,7 @@
   z-index: 1;
 }
 
-.folio-demo-empty strong {
+.folio-empty strong {
   margin-top: 18px;
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 19px;
@@ -192,7 +192,7 @@
   z-index: 1;
 }
 
-.folio-demo-empty p {
+.folio-empty p {
   max-width: 430px;
   margin: 9px 0 0;
   color: var(--folio-muted);
@@ -202,7 +202,7 @@
   z-index: 1;
 }
 
-.folio-demo-empty > button {
+.folio-empty > button {
   margin-top: 19px;
   min-height: 44px;
   padding: 0 3px;
@@ -218,7 +218,7 @@
   z-index: 1;
 }
 
-.folio-demo-toolbar {
+.folio-toolbar {
   min-width: 0;
   margin-bottom: 28px;
   padding: 14px 0;
@@ -232,7 +232,7 @@
   z-index: 8;
 }
 
-.folio-demo-toolbar-wide {
+.folio-toolbar-wide {
   grid-template-columns: minmax(420px, 1.8fr) repeat(3, minmax(118px, 0.5fr)) 124px 124px;
 }
 

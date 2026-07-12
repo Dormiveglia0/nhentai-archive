@@ -3,11 +3,10 @@ import { AnimatePresence, m } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { duration, ease } from "../../lib/motion";
-import { type FolioPageId, type SettingsSection } from "./config";
+import { type FolioPageId, type SettingsSection } from "../folio/config";
+import { FolioChrome } from "../folio/shell/FolioChrome";
 import { DemoPage } from "./modules/DemoPage";
-import { FolioChrome } from "./shell/FolioChrome";
 import { DemoCommandBar } from "./ui/DemoCommandBar";
-import "./FrontendDemo.css";
 
 export function FrontendDemo() {
   const [page, setPage] = useState<FolioPageId>("workbench");
@@ -47,7 +46,7 @@ export function FrontendDemo() {
       overlay={
         <AnimatePresence>
           {notice ? (
-            <m.div className="folio-demo-notice" role="status" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: duration.fast, ease: ease.standard }}>
+            <m.div className="folio-notice" role="status" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: duration.fast, ease: ease.standard }}>
               <Check size={16} />
               {notice}
             </m.div>

@@ -3,8 +3,13 @@ import { AnimatePresence, m } from "motion/react";
 import { useState } from "react";
 
 import { duration, ease } from "../../../lib/motion";
-import { SETTINGS_SECTIONS, type SettingsSection } from "../config";
-import { DemoField, DemoSelect, EmptyCanvas, ToggleRow } from "../ui/DemoPrimitives";
+import { SETTINGS_SECTIONS, type SettingsSection } from "../../folio/config";
+import {
+  FolioEmptyState as EmptyCanvas,
+  FolioField as DemoField,
+  FolioSelect as DemoSelect,
+  FolioToggleRow as ToggleRow,
+} from "../../folio/ui/FolioPrimitives";
 
 export function SettingsDemo({
   section,
@@ -29,14 +34,14 @@ export function SettingsDemo({
   const current = SETTINGS_SECTIONS.find((item) => item.id === section) ?? SETTINGS_SECTIONS[0];
 
   return (
-    <div className="folio-demo-page-body folio-demo-settings-body">
-      <nav className="folio-demo-settings-nav" aria-label="设置章节">
+    <div className="folio-page-body folio-settings-body">
+      <nav className="folio-settings-nav" aria-label="设置章节">
         {SETTINGS_SECTIONS.map((item) => {
           const Icon = item.icon;
           return (
             <button key={item.id} type="button" className={section === item.id ? "is-active" : ""} aria-current={section === item.id ? "page" : undefined} onClick={() => onSection(item.id)}>
               {section === item.id ? (
-                <m.span className="folio-demo-settings-nav-active" layoutId="folio-demo-settings-nav-active" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                <m.span className="folio-settings-nav-active" layoutId="folio-settings-nav-active" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
               ) : null}
               <Icon size={16} />
               <strong>{item.label}</strong>
@@ -49,26 +54,26 @@ export function SettingsDemo({
       <AnimatePresence mode="wait" initial={false}>
         <m.section
           key={section}
-          className="folio-demo-settings-stage"
+          className="folio-settings-stage"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: duration.fast, ease: ease.standard }}
         >
-          <div className="folio-demo-settings-head">
+          <div className="folio-settings-head">
             <div>
               <h2>{current.label}</h2>
               <p>{current.description}</p>
             </div>
-            <div className="folio-demo-settings-state"><i />演示配置</div>
+            <div className="folio-settings-state"><i />演示配置</div>
           </div>
 
           {section === "connection" ? (
             <>
-              <div className="folio-demo-field-matrix">
-                <label className="folio-demo-field folio-demo-field-wide">
+              <div className="folio-field-matrix">
+                <label className="folio-field folio-field-wide">
                   <span>NH API Key</span>
-                  <div className="folio-demo-secret">
+                  <div className="folio-secret">
                     <input type={keyVisible ? "text" : "password"} value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="公开演示不会发送或保存密钥" autoComplete="off" />
                     <button type="button" aria-label={keyVisible ? "隐藏密钥" : "显示密钥"} onClick={() => setKeyVisible((value) => !value)}>
                       {keyVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -79,26 +84,26 @@ export function SettingsDemo({
                 <DemoField label="请求超时（秒）" placeholder="—" readOnly />
                 <DemoField label="User-Agent" placeholder="—" readOnly wide />
               </div>
-              <div className="folio-demo-editor-actions">
-                <button className="folio-demo-line-button" type="button" onClick={() => announce("演示环境未连接后端，未执行远端验证。")}>验证连接</button>
-                <button className="folio-demo-line-button" type="button" onClick={() => setApiKey("")} disabled={!apiKey}>清除 Key</button>
+              <div className="folio-editor-actions">
+                <button className="folio-line-button" type="button" onClick={() => announce("演示环境未连接后端，未执行远端验证。")}>验证连接</button>
+                <button className="folio-line-button" type="button" onClick={() => setApiKey("")} disabled={!apiKey}>清除 Key</button>
               </div>
             </>
           ) : null}
 
           {section === "translation" ? (
             <>
-              <div className="folio-demo-choice-row">
+              <div className="folio-choice-row">
                 <button className={provider === "google" ? "is-active" : ""} type="button" onClick={() => setProvider("google")}>
-                  {provider === "google" ? <m.i className="folio-demo-choice-active" layoutId="folio-demo-provider-active" /> : null}
+                  {provider === "google" ? <m.i className="folio-choice-active" layoutId="folio-provider-active" /> : null}
                   <span>Google 免费翻译</span><small>无需 API Key</small><Check size={16} />
                 </button>
                 <button className={provider === "deepl" ? "is-active" : ""} type="button" onClick={() => setProvider("deepl")}>
-                  {provider === "deepl" ? <m.i className="folio-demo-choice-active" layoutId="folio-demo-provider-active" /> : null}
+                  {provider === "deepl" ? <m.i className="folio-choice-active" layoutId="folio-provider-active" /> : null}
                   <span>DeepL API</span><small>需要独立 Key</small><Check size={16} />
                 </button>
               </div>
-              <div className="folio-demo-field-matrix">
+              <div className="folio-field-matrix">
                 <DemoSelect label="目标语言" value={language} onChange={setLanguage} options={[
                   { value: "zh-CN", label: "简体中文" },
                   { value: "zh-TW", label: "繁体中文" },
@@ -111,18 +116,18 @@ export function SettingsDemo({
 
           {section === "privacy" ? (
             <>
-              <div className="folio-demo-toggle-list">
+              <div className="folio-toggle-list">
                 <ToggleRow label="隐私模式默认开启" copy="页面切换时保持敏感信息收敛。" checked={privacy} onChange={setPrivacy} />
                 <ToggleRow label="封面模糊默认开启" copy="媒体内容在主动操作前保持模糊。" checked={blur} onChange={setBlur} />
               </div>
-              <div className="folio-demo-segment-field">
+              <div className="folio-segment-field">
                 <span>默认阅读模式</span>
                 <div>
                   <button className={reader === "single" ? "is-active" : ""} type="button" onClick={() => setReader("single")}>
-                    {reader === "single" ? <m.span className="folio-demo-control-active" layoutId="folio-demo-reader-active" /> : null}<span>单页</span>
+                    {reader === "single" ? <m.span className="folio-control-active" layoutId="folio-reader-active" /> : null}<span>单页</span>
                   </button>
                   <button className={reader === "scroll" ? "is-active" : ""} type="button" onClick={() => setReader("scroll")}>
-                    {reader === "scroll" ? <m.span className="folio-demo-control-active" layoutId="folio-demo-reader-active" /> : null}<span>连续滚动</span>
+                    {reader === "scroll" ? <m.span className="folio-control-active" layoutId="folio-reader-active" /> : null}<span>连续滚动</span>
                   </button>
                 </div>
               </div>
@@ -130,7 +135,7 @@ export function SettingsDemo({
           ) : null}
 
           {section === "export" ? (
-            <div className="folio-demo-toggle-list">
+            <div className="folio-toggle-list">
               <ToggleRow label="写入 ComicInfo.xml" copy="导出时生成标准漫画元数据。" checked={comicInfo} onChange={setComicInfo} />
               <ToggleRow label="保留原始 JSON" copy="保留源归档中已有的 JSON 元数据。" checked={json} onChange={setJson} />
               <ToggleRow label="标准压缩" copy="以较小体积生成新的 CBZ 文件。" checked={compress} onChange={setCompress} />
@@ -143,7 +148,7 @@ export function SettingsDemo({
 
           {section === "storage" ? (
             <>
-              <div className="folio-demo-field-matrix">
+              <div className="folio-field-matrix">
                 <DemoField label="数据目录" placeholder="公开演示不读取本机路径" readOnly wide />
                 <DemoField label="源文件占用" placeholder="—" readOnly />
                 <DemoField label="可回收空间" placeholder="—" readOnly />
@@ -156,5 +161,4 @@ export function SettingsDemo({
     </div>
   );
 }
-
 
