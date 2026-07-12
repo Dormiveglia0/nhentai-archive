@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
-import { FrontendDemo } from "./components/demo/FrontendDemo";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { DictionaryPage } from "./components/dictionary/DictionaryPage";
 import { DiscoverPage } from "./components/discover/DiscoverPage";
@@ -17,9 +16,19 @@ import { WorkbenchPage } from "./components/workbench/WorkbenchPage";
 import { api } from "./lib/api";
 import { Page, pageFromLocation } from "./lib/navigation";
 
+const FrontendDemo = lazy(() =>
+  import("./components/demo/FrontendDemo").then((module) => ({ default: module.FrontendDemo })),
+);
+
 export default function App() {
   const isDemo = window.location.pathname === "/demo" || window.location.hash === "#demo";
-  return isDemo ? <FrontendDemo /> : <ArchiveApp />;
+  return isDemo ? (
+    <Suspense fallback={<div role="status" aria-label="正在载入前端演示" style={{ minHeight: "100vh", background: "#f3efe5" }} />}>
+      <FrontendDemo />
+    </Suspense>
+  ) : (
+    <ArchiveApp />
+  );
 }
 
 function ArchiveApp() {
