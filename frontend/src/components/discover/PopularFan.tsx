@@ -1,6 +1,6 @@
 import { Download, Flame } from "lucide-react";
 import type { CSSProperties, PointerEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { GallerySummary } from "../../lib/api";
 
@@ -15,13 +15,13 @@ type Props = {
 
 export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen, onImport }: Props) {
   const rootRef = useRef<HTMLElement | null>(null);
-  const dragRef = useRef({ active: false, startX: 0, moved: false });
+  const dragRef = useRef({ active: false, startX: 0, moved: false, delta: 0 });
   const skipClickRef = useRef(false);
   const [progress, setProgress] = useState(0);
   const [viewportWidth, setViewportWidth] = useState(() => (typeof window === "undefined" ? 1280 : window.innerWidth));
   const [activeMobileIndex, setActiveMobileIndex] = useState(0);
   const [mobileDrag, setMobileDrag] = useState(0);
-  const visibleItems = items.slice(0, 5);
+  const visibleItems = useMemo(() => items.slice(0, 5), [items]);
   const compact = viewportWidth < 860;
   const easedProgress = compact ? 0 : easeInOut(progress);
 
@@ -33,12 +33,13 @@ export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen,
     [activeMobileIndex, compact, easedProgress, mobileDrag, viewportWidth, visibleItems]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let frame = 0;
 
     function writeProgress() {
       frame = 0;
-      const progress = Math.min(1, Math.max(0, window.scrollY / 220));
+      const scrollTop = scrollElement?.scrollTop ?? window.scrollY;
+      const progress = Math.min(1, Math.max(0, scrollTop / 220));
       setProgress((current) => (Math.abs(current - progress) > 0.006 ? progress : current));
       setViewportWidth((current) => (Math.abs(current - window.innerWidth) > 4 ? window.innerWidth : current));
       rootRef.current?.style.setProperty("--popular-progress", progress.toFixed(3));
@@ -54,21 +55,23 @@ export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen,
       frame = window.requestAnimationFrame(writeProgress);
     }
 
+    const scrollElement = rootRef.current?.closest<HTMLElement>(".folio-scroll") ?? null;
+    const scrollTarget = scrollElement ?? window;
     writeProgress();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    scrollTarget.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", onScroll);
+      scrollTarget.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
     };
-  }, [collapseSignal]);
+  }, [collapseSignal, loading, visibleItems.length]);
 
   if (!loading && visibleItems.length === 0) return null;
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     if (!compact || visibleItems.length < 2) return;
-    dragRef.current = { active: true, startX: event.clientX, moved: false };
+    dragRef.current = { active: true, startX: event.clientX, moved: false, delta: 0 };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
@@ -76,13 +79,16 @@ export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen,
     if (!compact || !dragRef.current.active) return;
     const delta = event.clientX - dragRef.current.startX;
     if (Math.abs(delta) > 4) dragRef.current.moved = true;
-    setMobileDrag(Math.max(-1.35, Math.min(1.35, delta / 116)));
+    const normalizedDelta = Math.max(-1.35, Math.min(1.35, delta / 116));
+    dragRef.current.delta = normalizedDelta;
+    setMobileDrag(normalizedDelta);
   }
 
   function handlePointerEnd(event: PointerEvent<HTMLDivElement>) {
     if (!compact || !dragRef.current.active) return;
     if (dragRef.current.moved) skipClickRef.current = true;
-    const direction = mobileDrag < -0.35 ? 1 : mobileDrag > 0.35 ? -1 : 0;
+    const drag = dragRef.current.delta;
+    const direction = drag < -0.35 ? 1 : drag > 0.35 ? -1 : 0;
     if (direction && visibleItems.length) {
       setActiveMobileIndex((current) => (current + direction + visibleItems.length) % visibleItems.length);
     }
@@ -96,27 +102,28 @@ export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen,
   }
 
   return (
-    <section ref={rootRef} className="popular-fan suntrack" aria-label="今日热门">
-      <div className="fan-title">
+    <section ref={rootRef} className="folio-discover-popular" aria-label="今日热门">
+      <div className="folio-discover-popular-title">
         <Flame size={16} />
+        <span>Trending</span>
         <strong>今日热门</strong>
         <span>{loading ? "读取中" : `${visibleItems.length || 5} 项`}</span>
       </div>
       {loading && !visibleItems.length ? (
-        <div className="fan-empty">正在读取真实热门作品...</div>
+        <div className="folio-discover-popular-loading" role="status">正在读取真实热门作品…</div>
       ) : (
         <div
-          className={compact ? "fan-cards mobile-loop" : "fan-cards"}
+          className={compact ? "folio-discover-fan is-compact" : "folio-discover-fan"}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
           {visibleItems.map((item, index) => (
-            <article key={item.gallery_id} className="fan-card" style={cardStyles[index]}>
+            <article key={item.gallery_id} className="folio-discover-fan-card" style={cardStyles[index]}>
               <button
                 type="button"
-                className="fan-cover"
+                className="folio-discover-fan-cover"
                 onClick={() => {
                   if (skipClickRef.current) {
                     skipClickRef.current = false;
@@ -126,14 +133,15 @@ export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen,
                 }}
               >
                 {item.thumbnail.url ? (
-                  <img className={blurCovers ? "blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
+                  <img className={blurCovers ? "folio-media-blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" draggable={false} />
                 ) : (
-                  <span className="cover-fallback">NO COVER</span>
+                  <span className="folio-cover-fallback">NO COVER</span>
                 )}
               </button>
               <button
                 type="button"
-                className="fan-import"
+                className="folio-discover-fan-import"
+                onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation();
                   onImport(item.gallery_id);

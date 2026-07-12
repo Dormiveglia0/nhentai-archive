@@ -231,40 +231,38 @@ Root: `frontend/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Global topbar, full secondary nav, privacy/blur switches, bottom `TaskDock`.
+  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
   - Failed-job retry remains available for existing import jobs.
 - `components/discover/DiscoverPage.tsx`
-  - Target design baseline is documented in `docs/superpowers/specs/2026-06-14-discover-popular-fan-design.md`.
-  - Stable structure is title area + discover controls/results.
-  - Popular is a title-side image-first sunset fan driven by scroll progress, not a permanent page section.
-  - Single feed with keyword/Gallery ID input, filters, grid/list, title-side popular fan, random/gallery/detail modal, import action.
-  - Card title uses Japanese title first; author/language/tags come from real cached remote tags.
+  - Direct Folio composition for `#discover`: real popular band, combined keyword/tag query, custom filters, animated grid/list results, notices and pager. It imports no demo code and contains no API orchestration.
+  - Card/random/popular selection navigates to the real gallery detail route; import actions enqueue the existing real import flow.
+- `components/discover/useDiscoverState.ts`
+  - Owns restored query/filter/page/scroll state, current `.folio-scroll` persistence, responsive page sizing, stale feed-request invalidation, one-shot StrictMode-safe popular loading, remote search, random navigation and import actions.
+  - Multiple tags retain their original remote names/ids; a single tag-only query uses `tag_id`, while combined keyword/tag filters use remote query tokens. A missing remote `total` remains explicit instead of being fabricated.
+- `components/discover/DiscoverPage.css`
+  - Production-only popular fan, query composer, custom filter row, result/card/list/pager and four-viewport responsive layout. Replaced legacy discover/tag-picker/popular-fan selectors were removed from `styles/app.css`.
 - `components/discover/DiscoverToolbar.tsx`
-  - Icon-only random action immediately left of the `.view-actions` query submit button, keyword/Gallery ID input, remote tag selector, custom language/type/sort menus, unimported toggle, and grid/list controls. Upload/scan are not discover toolbar modes.
+  - Keyword/Gallery ID input plus visible multi-tag chips, icon-only random action, animated grid/list controls, equal-height query action, custom Folio language/type/sort menus and unimported toggle. Upload/scan are not discover toolbar modes.
 - `components/discover/FilterMenu.tsx`
-  - Custom compact menu used instead of native select controls on discover filters.
+  - Legacy compact custom menu still shared by the not-yet-migrated dictionary candidate pool. The migrated discover page uses `FolioSelect` instead.
 - `components/discover/DiscoverFeed.tsx`
   - Result count, empty/error/notice states, dynamic current-page cards, icon pager.
 - `components/discover/DiscoverCard.tsx`
   - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
 - `components/discover/TagFilterSelector.tsx`
-  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, and selected tags are shown inside the popover so toolbar height stays fixed.
+  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected chips remain visible in the query composer, and the panel stays open for consecutive selection.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.
 - `components/discover/TagScroller.tsx`
   - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support.
   - Uses `tag.display || tag.name || tag.slug || id`, so dictionary display names flow without rewriting card logic.
 - `components/discover/PopularFan.tsx`
-  - Real `/api/discover/popular` title-side sunset fan UI.
-  - Initial state shows an unframed image-first cover fan integrated into the `发现 / 导入` title area.
+  - Real `/api/discover/popular` editorial cover fan between the Folio heading and search workbench.
   - Scroll progress drives the animation: covers follow a rightward semicircle arc, rotate, clip out through the right/bottom edge on down-scroll, and reverse on up-scroll.
   - `cardStyle()` uses trigonometric semicircle coordinates; do not replace it with linear scale/translate interpolation.
-  - Mobile uses a touch-driven circular fan carousel: horizontal drag changes the center work and wraps cards from one side to the other.
+  - It binds to the actual `.folio-scroll` container. Mobile uses a touch-driven circular fan carousel; native image drag is disabled so pointer capture remains stable.
   - Do not restore bordered/shadowed window styling, popover/floating mode, close buttons, or large metadata/action blocks inside the fan.
-- `components/discover/GalleryPreviewModal.tsx`
-  - Random, Gallery ID, and card detail modal; backdrop click/Escape close.
-  - Shows metadata, tags, related works, `阅读`, and `加入导入队列` only. It does not contain an embedded reader.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
 - `components/settings/` — refactored settings module:

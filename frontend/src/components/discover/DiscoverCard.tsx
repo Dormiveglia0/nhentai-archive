@@ -1,8 +1,8 @@
 import { BookOpen, Download } from "lucide-react";
 
-import { GallerySummary, RemoteTag } from "../../lib/api";
+import type { GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
-import { DiscoverViewMode, TagFilter } from "./discoverTypes";
+import type { DiscoverViewMode, TagFilter } from "./discoverTypes";
 import { defaultDisplayTag, TagScroller } from "./TagScroller";
 
 type Props = {
@@ -18,48 +18,39 @@ export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onP
   const tags = item.tags ?? [];
   const author = tagName(tags, "artist") || tagName(tags, "group") || "作者未缓存";
   const language = languageLabel(tags);
-  // The card already surfaces author/language/category elsewhere; the tag row should only
-  // carry real content tags, not meta types like category (doujinshi) or parody (original).
+  const category = tagName(tags, "category") || "远端作品";
   const contentTags = tags.filter((tag) => tag.type === "tag" || tag.type === "character");
   const title = item.title_japanese || item.pretty_title || item.title || `Gallery ${item.gallery_id}`;
 
   return (
-    <article className={viewMode === "grid" ? "discover-card" : "discover-card list-card"}>
-      <button type="button" className="discover-cover" onClick={onOpen}>
+    <article className={viewMode === "grid" ? "folio-discover-card" : "folio-discover-card is-list"}>
+      <button type="button" className="folio-discover-cover" onClick={onOpen} aria-label={`打开作品详情：${title}`}>
         {item.thumbnail.url ? (
-          <img className={blurCovers ? "blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
+          <img className={blurCovers ? "folio-media-blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
         ) : (
-          <span className="cover-fallback">NO COVER</span>
+          <span className="folio-cover-fallback">NO COVER</span>
         )}
-        <span className={item.imported ? "status-pill imported" : "status-pill"}>{item.imported ? "已入库" : "未入库"}</span>
+        <span className={item.imported ? "folio-discover-status is-imported" : "folio-discover-status"}>
+          {item.imported ? "已入库" : "未入库"}
+        </span>
       </button>
-      <div className="discover-card-body" role="button" tabIndex={0} onClick={onOpen} onKeyDown={(event) => event.key === "Enter" && onOpen()}>
-        <div className="card-meta">
-          <span>R-18</span>
-          <em>{language}</em>
-        </div>
-        <h3 title={title}>{title}</h3>
+
+      <div className="folio-discover-card-body">
+        <div className="folio-discover-card-meta"><span>{category}</span><em>{language}</em></div>
+        <button type="button" className="folio-discover-card-title" onClick={onOpen}>{title}</button>
         <p title={author}>{author}</p>
-        <small>
-          {item.page_count} 页 · ID {item.gallery_id}
-        </small>
-        <TagScroller tags={contentTags} onPickTag={(tag) => onPickTag(tag)} />
-        <div className="card-actions">
-          {item.imported && item.work_id ? (
-            <button type="button" onClick={() => navigate({ name: "reader", workId: item.work_id! })}>
-              <BookOpen size={15} />
-              打开本地
-            </button>
-          ) : (
-            <button type="button" onClick={(event) => {
-              event.stopPropagation();
-              onImport();
-            }}>
-              <Download size={15} />
-              加入队列
-            </button>
-          )}
-        </div>
+        <small>{item.page_count} 页 · Gallery {item.gallery_id}</small>
+        <TagScroller className="folio-discover-card-tags" tags={contentTags} onPickTag={(tag) => onPickTag(tag)} />
+
+        {item.imported && item.work_id ? (
+          <button type="button" className="folio-discover-card-action" onClick={() => navigate({ name: "reader", workId: item.work_id! })}>
+            <BookOpen size={15} />打开本地
+          </button>
+        ) : (
+          <button type="button" className="folio-discover-card-action" onClick={onImport}>
+            <Download size={15} />加入队列
+          </button>
+        )}
       </div>
     </article>
   );
@@ -76,6 +67,5 @@ function languageLabel(tags: RemoteTag[]) {
 }
 
 function isTranslatedTag(tag: RemoteTag) {
-  const value = `${tag.name ?? ""} ${tag.slug ?? ""}`.toLowerCase();
-  return value.includes("translated");
+  return `${tag.name ?? ""} ${tag.slug ?? ""}`.toLowerCase().includes("translated");
 }

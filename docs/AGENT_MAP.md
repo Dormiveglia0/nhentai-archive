@@ -33,7 +33,7 @@ FrontendDemo.tsx
 | --- | --- | --- | --- | --- | --- |
 | 工作台 | `demo/modules/WorkbenchDemo.tsx` | `folio/scenes/WorkbenchScene.tsx` | `folio/styles/workbench.css`, `scenes.css` prefix `folio-scene-hub-*` | `workbench/WorkbenchPage.tsx`, `useWorkbenchState.ts` | `api.workbenchOverview()` |
 | 我的库 | `demo/modules/LibraryDemo.tsx` | `folio/scenes/LibraryScene.tsx` | `library/LibraryPage.css`, shared shelf/control rules in `folio/styles/library-discover.css`, scene prefix `folio-scene-library-*` | `library/LibraryPage.tsx`, `useLibraryState.ts` and feature components | `api.librarySummary/search/continueReading/recentAdded/tagFilters` |
-| 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `folio/styles/library-discover.css`, `scenes.css` prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `DiscoverToolbar.tsx`, `TagFilterSelector.tsx` | `api.feed/search/tagged/popular/gallery/tagAutocomplete/importGallery` |
+| 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `discover/DiscoverPage.css`, shared controls in `folio/styles/library-discover.css`, scene prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `useDiscoverState.ts` and feature components | `api.feed/popular/random/dictionaryCandidates/dictionaryAutocomplete/importGallery` |
 | 治理 | `demo/modules/GovernanceDemo.tsx` | `folio/scenes/GovernanceScene.tsx` | `folio/styles/governance-dictionary.css`, `scenes.css` prefix `folio-scene-governance-*` | `governance/GovernancePage.tsx`, `useGovernanceState.ts` | `api.governanceQueue/workGovernance/apply/bulk*` |
 | 词典 | `demo/modules/DictionaryDemo.tsx` | `folio/scenes/DictionaryScene.tsx` | `folio/styles/governance-dictionary.css`, `scenes.css` prefix `folio-scene-dictionary-*` | `dictionary/DictionaryPage.tsx` and feature components | `api.dictionarySummary/candidates/evidence/preview/apply/*` |
 | 队列 | `demo/modules/TasksDemo.tsx` | `folio/scenes/TasksScene.tsx` | `folio/styles/tasks-export-files.css`, `scenes.css` prefix `folio-scene-task-*` | `tasks/TasksPage.tsx`, `useTasksState.ts` | `api.jobs/jobLogs/pause/resume/cancel/retry/delete/clear` |
@@ -80,7 +80,7 @@ Preserve this order. Shared Folio structure goes here; production-only feature l
 | --- | --- | --- | --- | --- |
 | 1 | `#workbench` | `workbench/WorkbenchPage.tsx` + `WorkbenchPage.css` | old `.workbench-*` and shelf selectors removed after direct Folio rewrite | migrated |
 | 2 | `#library` | `library/LibraryPage.tsx` + `useLibraryState.ts` + `LibraryPage.css` | old `.library-*`, inspector and batch selectors removed after direct Folio rewrite | migrated |
-| 3 | `#discover` | `discover/DiscoverPage.tsx` + children | old discover toolbar/feed/page chrome selectors replaced by the new page | pending |
+| 3 | `#discover` | `discover/DiscoverPage.tsx` + `useDiscoverState.ts` + `DiscoverPage.css` | old discover toolbar/feed/page/tag-picker/popular-fan selectors removed after direct Folio rewrite | migrated |
 | 4 | `#governance`, `#dictionary` | feature-local components | old governance/dictionary layout selectors replaced per component | pending |
 | 5 | `#tasks`, `#export`, `#files` | feature-local components | old operational layout selectors replaced per component | pending |
 | 6 | `#settings` | `settings/SettingsPage.tsx` + sections | old settings deck/rail selectors and native selects replaced | pending |

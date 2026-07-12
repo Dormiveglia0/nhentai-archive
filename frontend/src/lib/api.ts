@@ -845,7 +845,7 @@ export const api = {
     query.set("unimported_only", String(Boolean(params.unimported_only)));
     return cachedDiscoverRequest<{
       result: GallerySummary[];
-      total: number;
+      total: number | null;
       num_pages: number;
       per_page: number;
       reason?: string;

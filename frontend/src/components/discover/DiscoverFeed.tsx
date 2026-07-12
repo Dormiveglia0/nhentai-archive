@@ -1,14 +1,15 @@
-import { Info } from "lucide-react";
+import { AlertTriangle, Info, Search } from "lucide-react";
 
-import { GallerySummary } from "../../lib/api";
+import type { GallerySummary } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { DiscoverViewMode, TagFilter } from "./discoverTypes";
+import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { DiscoverCard } from "./DiscoverCard";
+import type { DiscoverViewMode, TagFilter } from "./discoverTypes";
 import { IconPager } from "./IconPager";
 
 type Props = {
   items: GallerySummary[];
-  total: number;
+  total: number | null;
   page: number;
   totalPages: number;
   loading: boolean;
@@ -22,53 +23,62 @@ type Props = {
   onPage: (page: number) => void;
 };
 
-export function DiscoverFeed({
-  items,
-  total,
-  page,
-  totalPages,
-  loading,
-  error,
-  notice,
-  viewMode,
-  blurCovers,
-  onOpen,
-  onImport,
-  onPickTag,
-  onPage,
-}: Props) {
+export function DiscoverFeed(props: Props) {
   return (
-    <section className="result-panel discover-feed-panel">
-      <div className="section-title">
-        <span>{loading ? "读取中" : `当前页 ${items.length} 项 / 远端 ${total}`}</span>
-      </div>
-      {error ? <div className="notice error">{error}</div> : null}
-      {notice ? <div className="notice slim">{notice}</div> : null}
-      {!loading && !error && items.length === 0 ? (
-        <div className="empty-state">
-          <Info size={22} />
-          <strong>暂无结果</strong>
-          <p>这里不会填充样例作品；调整筛选或配置 NH API Key 后重试。</p>
+    <section className="folio-discover-feed" aria-busy={props.loading}>
+      <header className="folio-discover-feed-head">
+        <FolioPanelHeading title="远端索引" description="结果、标签和导入状态均来自当前远端响应与本地索引。" />
+        <span>{props.loading ? "读取中…" : discoverCount(props.items.length, props.total)}</span>
+      </header>
+
+      {props.error ? (
+        <div className="folio-discover-message is-error" role="alert"><AlertTriangle size={16} /><span>{props.error}</span></div>
+      ) : null}
+      {props.notice ? (
+        <div className="folio-discover-message" role="status"><Info size={16} /><span>{props.notice}</span></div>
+      ) : null}
+
+      {props.loading && !props.items.length ? (
+        <div className="folio-discover-loading" role="status">正在读取真实远端结果…</div>
+      ) : null}
+
+      {!props.loading && !props.error && props.items.length === 0 ? (
+        <FolioEmptyState
+          icon={Search}
+          title="暂无结果"
+          copy="这里不会填充样例作品；调整关键词、标签或筛选条件，或者先在设置中配置远端连接。"
+        />
+      ) : null}
+
+      {props.items.length ? (
+        <div className={props.loading ? "folio-discover-results is-loading" : "folio-discover-results"}>
+          <Stagger
+            key={`${props.viewMode}:${props.page}:${props.items.length}:${props.items[0]?.gallery_id ?? "none"}`}
+            className={props.viewMode === "grid" ? "folio-discover-grid" : "folio-discover-list"}
+          >
+            {props.items.map((item) => (
+              <StaggerItem key={item.gallery_id} className="folio-discover-card-cell">
+                <DiscoverCard
+                  item={item}
+                  blurCovers={props.blurCovers}
+                  viewMode={props.viewMode}
+                  onOpen={() => props.onOpen(item.gallery_id)}
+                  onImport={() => props.onImport(item.gallery_id)}
+                  onPickTag={props.onPickTag}
+                />
+              </StaggerItem>
+            ))}
+          </Stagger>
         </div>
       ) : null}
-      <Stagger
-        key={`${viewMode}:${page}:${items.length}:${items[0]?.gallery_id ?? "none"}`}
-        className={`${viewMode === "grid" ? "discover-card-grid" : "discover-card-list"}${loading && items.length ? " is-loading" : ""}`}
-      >
-        {items.map((item) => (
-          <StaggerItem key={item.gallery_id} className="discover-card-cell">
-            <DiscoverCard
-              item={item}
-              blurCovers={blurCovers}
-              viewMode={viewMode}
-              onOpen={() => onOpen(item.gallery_id)}
-              onImport={() => onImport(item.gallery_id)}
-              onPickTag={onPickTag}
-            />
-          </StaggerItem>
-        ))}
-      </Stagger>
-      <IconPager page={page} totalPages={totalPages} loading={loading} onPage={onPage} />
+
+      <IconPager className="folio-discover-pager" page={props.page} totalPages={props.totalPages} loading={props.loading} onPage={props.onPage} />
     </section>
   );
+}
+
+function discoverCount(pageCount: number, total: number | null) {
+  return total === null
+    ? `本页 ${pageCount} 项 · 远端未返回总量`
+    : `本页 ${pageCount} 项 · 远端 ${total.toLocaleString()}`;
 }
