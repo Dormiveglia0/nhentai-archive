@@ -4,11 +4,11 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 ## Required Reading Order
 
-1. `docs/PROJECT_STATUS.md`
-2. `docs/PROJECT_MAP.md`
-3. `docs/DEVELOPMENT_RULES.md`
-4. `design/nh_archive_product_design_flow.md`
-5. The relevant `design/*.png` for the page being polished.
+1. `docs/AGENT_MAP.md`
+2. `docs/PROJECT_STATUS.md`
+3. `docs/PROJECT_MAP.md`
+4. `docs/DEVELOPMENT_RULES.md`
+5. The relevant active demo module and formal component listed by the agent map.
 
 ## What Already Exists
 
@@ -21,6 +21,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 ## Next Work
 
+- Use the modular `/demo` surface as the active visual contract and migrate it onto existing real page state/API flows module by module.
 - Browser QA against real or user-provided data: `#tasks`, `#governance`, `#export`, `#files`, and `#workbench`.
 - Discover QA should include Chinese tag search, selected-tag popover stability, language filters, language label display, and responsive grid row filling.
 - Mobile layout polish only where screenshots show concrete overlap, wrapping, or density problems.

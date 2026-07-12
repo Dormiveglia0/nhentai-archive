@@ -4,6 +4,8 @@
 
 NH Archive is a local-first React + FastAPI + SQLite application.
 
+For frontend work, read `docs/AGENT_MAP.md` first. It maps each demo module, scene animation, CSS layer, formal component, and real API entry so agents can load only the files relevant to the change.
+
 - `backend/app/`: FastAPI entrypoint, SQLite schema, config, and service modules.
 - `backend/app/services/`: domain services such as discovery, import, archive parsing, reader state, settings, jobs, and dictionary logic.
 - `backend/tests/`: focused pytest coverage for backend services and API behavior.

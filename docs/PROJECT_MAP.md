@@ -199,6 +199,11 @@ Implemented:
 
 Root: `frontend/src/`
 
+- `docs/AGENT_MAP.md`
+  - Fast locator for the active demo visual contract, nine module bodies/scenes, ordered CSS layers, formal page owners, and real API entry points. Read this before loading frontend files.
+- `components/demo/`
+  - Active full-screen visual baseline at `/demo`, now split into `config`, `shell`, `scenes`, `modules`, `ui`, and ordered `styles` layers. `FrontendDemo.tsx` is orchestration only; do not rebuild a monolith there.
+
 - `App.tsx`
   - Hash route composition.
   - All main modules are now real pages: discover/library/reader/governance/dictionary/export/files/tasks/settings/workbench. No module remains a boundary screen.

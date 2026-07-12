@@ -1,0 +1,14 @@
+import type { PageDefinition } from "../config";
+import { ModuleScene } from "../scenes/ModuleScene";
+
+export function PageHeading({ page }: { page: PageDefinition }) {
+  return (
+    <header className="folio-demo-page-head">
+      <div className="folio-demo-page-copy">
+        <h1>{page.title}</h1>
+        <p>{page.description}</p>
+      </div>
+      <ModuleScene page={page.id} />
+    </header>
+  );
+}
