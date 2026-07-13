@@ -209,7 +209,8 @@ Root: `frontend/src/`
 
 - `App.tsx`
   - Hash route composition.
-  - All main modules are now real pages: discover/library/reader/governance/dictionary/export/files/tasks/settings/workbench. No module remains a boundary screen.
+  - All primary and secondary routes are real pages: discover/gallery/library/history/readers/governance/dictionary/export/files/tasks/settings/workbench. No route remains a boundary screen.
+  - Local and remote readers render directly as immersive viewports; all other routes render through `ArchiveShell`.
 - `lib/navigation.ts`
   - Hash route parser and `navigate()`.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
@@ -231,7 +232,7 @@ Root: `frontend/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`, `tasks`, `export`, `files`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
+  - Folio-only shell for every non-reader route. History reuses the library module context with its own heading; gallery detail reuses discover context while suppressing the repeated page heading. `scrollKey` resets each route/detail scroll position. `TaskDock` remains outside the chrome.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
   - Failed-job retry remains available for existing import jobs.
@@ -261,6 +262,9 @@ Root: `frontend/src/`
   - `cardStyle()` uses trigonometric semicircle coordinates; do not replace it with linear scale/translate interpolation.
   - It binds to the actual `.folio-scroll` container. Mobile uses a touch-driven circular fan carousel; native image drag is disabled so pointer capture remains stable.
   - Do not restore bordered/shadowed window styling, popover/floating mode, close buttons, or large metadata/action blocks inside the fan.
+- `components/discover/GalleryDetailPage.tsx` + `components/discover/gallery/`
+  - Direct route-local gallery composition split into real data/model, fixed-slot hero, full-width tag ledger, initial page preview, keyboard/focus-restoring lightbox, and related works. It imports no demo state.
+  - Cover geometry is stable and uses `object-fit: contain`; variable tag counts never share the cover column. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
 - `components/settings/` — refactored settings module:
@@ -306,11 +310,15 @@ Root: `frontend/src/`
   - Horizontal shelf for 继续阅读 / 最近添加; renders nothing when no real rows.
 - `components/library/libraryHelpers.ts`
   - `formatBytes`, title/author/language/read-status derivation, and shared sort/status/source option lists.
+- `components/history/`
+  - `HistoryPage.tsx` directly composes the real date-bucket timeline, summary, pager and reader links inside the library Folio context; `useHistoryState.ts` owns request invalidation and pagination, while `HistoryPage.css` owns responsive timeline geometry.
+  - History shows only aggregated real events from `/api/library/reading-history`; it never expands or invents per-page events.
 - `components/reader/ReaderPage.tsx`
-  - Discriminated source reader:
+  - Immersive fixed-viewport reader outside `ArchiveShell`, with discriminated sources:
     - local `workId`: reads indexed CBZ pages and persists progress;
     - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
-  - Local reader exposes a real `进入治理` route to `#governance/{work_id}`.
+  - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. Local reader exposes a real `进入治理` route to `#governance/{work_id}`.
+  - `ReaderToolbar`/`ReaderScrubber` provide keyboard and touch controls without native sliders; `ThumbnailOverlay` and `ReaderJumpDialog` are focus-restoring, focus-trapped modal surfaces. Component-local CSS replaces all former global reader rules and includes custom scrollbars/reduced-motion fallbacks.
 - `components/governance/GovernancePage.tsx`
   - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
   - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance` through `useGovernanceState`.

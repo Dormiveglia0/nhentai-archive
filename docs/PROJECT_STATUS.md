@@ -10,6 +10,8 @@ Current real slice:
 
 ## Completed
 
+- 正式前端重构 · 阅读器：`#reader/{workId}` 与 `#reader/remote/{galleryId}` 已脱离旧应用壳，改为沉浸式固定视口；工具栏、页码跳转、定制进度滑块、缩略图索引、作品设置抽屉、遮罩、单页/连续模式均拆到 `components/reader/` 并由三份局部 CSS 直接负责。修复按键在按钮/滑块上仍触发全局翻页、连续阅读点击无法收栏、面板开启时误解除固定、远端缺页页码空档、导入错误覆盖整个阅读器和异步旧响应等问题；模态弹层首焦点、Tab 闭环和焦点归还完整。远端真实 41 页在 1440×1000/390×844 通过，最小文字 11px、控件 40/42px、零溢出/console warning/error，导入请求被拦截且后端写入为 0；本地真实 34 页另做纯 GET 验收，10 次 API 请求无 PATCH/POST。旧全局 reader CSS 已删除，Vite 构建通过；主包约 537 kB 的分包警告保留给统一路由拆包处理。
+- 正式前端重构 · 作品详情与阅读历史：`#gallery/{id}` 已拆为 gallery model/state、固定封面 hero、整宽标签、页面预览、焦点归还 lightbox 与相关作品；真实 20 页初始预览、19 标签、5 相关作品在 1440/1024/390px 无溢出、无写入和 console 问题。`#history` 已改为真实日期桶时间线并复用 library Folio 上下文，桌面/390px 验收 11 条真实聚合记录，无写入/溢出/console 问题。`ArchiveShell` 现只负责 Folio 路由；reader 直接渲染，gallery/history 通过显式 heading/scrollKey 消除重复标题与旧壳残留。
 - 正式前端重构 · 设置：`#settings` 已直接迁移为 Folio 的六章横向设置工作区，不再保留左侧导航、重复模块标题或旧卡片融合层。连接、机器翻译、隐私阅读、CBZ 默认配方、真实馆藏数据和本机存储均保留既有 API；数据/存储只在进入章节时请求，未返回前显示 `—`，不伪装成 0。新增完整脏状态比较、重新读取放弃确认与密钥草稿清空；保存栏固定在视口底部，验证只针对已保存配置，清除 Key 增加确认。修复即时翻译回车同时提交整个设置表单的问题，按钮标签在忙碌时保持稳定；导出包结构改为“页面图像保留原名 / 原始 JSON 如有”，不再写死虚构文件名。所有原生 select/checkbox 外观由 `FolioSelect`、分段控件和语义 toggle 替代，输入聚焦不会改变标题颜色，六章动效显式尊重 reduced-motion。新增 `SettingsPage.css`，删除 `app.css` 中 1159 行旧设置 deck/rail/form/配方规则。Playwright 以真实本机数据通过 1440×1000、1024×900、390×844、320×568：六章切换、密钥显隐、重新读取丢弃草稿、定制下拉/开关、真实 10 项数据指标、5 个只读路径、移动章节边框、固定保存栏、底部内容避让、可见文字不小于 11px、document/body 零溢出、零控制台 warning/error；44 次 API 请求中没有设置写入、清密钥、验证、翻译或扫描操作。设置/翻译后端 27 项测试、`/demo` 45 项回归（14 帧设置场景与 4 次雷达采样）、Vite 构建和 `git diff --check` 均通过。
 - 正式前端重构 · 文件管理：`#files` 已直接迁移为 Folio 的真实文件概览、动画分类索引、自定义状态/排序、语义化整行文件清单、详情与维护轨道；保留删除前强制预览、受管目录边界和扫描预览后才可入队的既有安全语义。搜索请求做 180ms 防抖，概览/清单/删除预览/扫描预览均增加最新响应保护；筛选会清理旧焦点与选择，`size_mismatch` flag 会诚实显示为“体积不符”。删除旧 `.files-*` 全局规则，新增 `FilesPage.css`，原生 select 与滚动条外观均被 Folio 控件和定制滚动替代。Playwright 使用真实 23 项文件通过 1440×1000、1024×900、390×844、320×568：分类/状态/排序、逐键搜索单请求、整行右侧点击、批量删除只读预览、目录扫描只读预览、移动单栏、可见文字不小于 10px、零溢出、零控制台 warning/error；验收没有发送文件删除或扫描入队请求。文件服务/API 21 项测试、`/demo` 45 项回归和 Vite 构建均通过。
 - 正式前端重构 · 导出中心：`#export` 已直接迁移为 Folio 的真实队列摘要、搜索/状态索引、批量选择、作品清单和 CBZ 配方检查器；保留“浏览器下载、不写服务器目录、不保留导出历史”的既有语义，单项 CBZ、阈值内同步 ZIP、超阈值真实 `bulk_export` 任务分流均未改。队列加载与配方预览增加最新响应保护，输出名/选项预览做 160ms 防抖，避免逐键请求和旧响应覆盖；三个选项保留语义 checkbox 但完全隐藏原生外观，作品行改为语义按钮。删除旧 `.export-*` 全局规则，新增 `ExportPage.css`。Playwright 使用真实 23 项队列通过 1440×1000、1024×900、390×844、320×568：真实摘要、状态筛选、ComicInfo 只读预览联动、批量选择/全选/清空、移动单栏、可见文字不小于 10px、零原生 select/progress、零溢出、零控制台 warning/error；验收没有触发下载或创建批量任务，Vite 构建通过。
@@ -74,7 +76,7 @@ Current real slice:
   - backend request-key TTL cache for cacheable NH API calls;
   - backend 429 cooldown that stops repeated remote forwarding and can serve stale cached data;
   - frontend discover-session cache and in-flight reuse for feed/popular/detail/tag GET calls.
-- Full navigation is visible and all primary modules are backed by real pages; the Folio visual migration is still proceeding route by route.
+- Full navigation and every primary/secondary route are backed by real pages; the direct Folio migration is complete, with both immersive reader routes intentionally rendered outside the shared chrome.
 - Implemented and refit Phase 2 dictionary foundation:
   - tables: `local_tag_dictionary`, `tag_aliases`, `work_tags`
   - APIs: `/api/dictionary/summary`, `/api/dictionary/candidates`, `/api/dictionary/evidence`, `/api/dictionary/autocomplete`, `/api/dictionary/preview-apply`, `/api/dictionary/apply`, `/api/dictionary/preview-bulk-import`, `/api/dictionary/bulk-import`, `/api/dictionary/{id}/ignore`, `/api/dictionary/{id}/review`, `DELETE /api/dictionary/{id}`
@@ -112,7 +114,7 @@ Current real slice:
 
 ## Next Plan
 
-功能闭环已落地。下一阶段只做真实数据验收:任务中心/治理/导出/文件管理的浏览器截图 QA、移动端细节、长列表性能与文案 polish。
+正式路由迁移已落地。下一阶段清理全局孤立旧壳 CSS、按路由拆分主包、执行全站真实数据浏览器回归与后端全量测试，再处理长列表性能和最终文案/动效 polish。
 
 ## Risks And Decisions
 
@@ -154,6 +156,7 @@ Current real slice:
 
 ## Verification Record
 
+- Gallery/history/readers migration: gallery at 1440/1024/390px, history at 1440/390px, remote reader at 1440/390px, and local reader at 1024px all passed Playwright Chromium with real API metadata and redacted/intercepted neutral images. Remote reader import was intercepted; local reader QA was deliberately read-only. No unintended backend writes, native select/progress/number controls, horizontal overflow, console warnings, or page errors were observed. `npm run build` and `git diff --check` passed; the existing route-splitting warning remains explicit.
 - Folio 词典迁移：`cd frontend && npm run build` 通过；Playwright Chromium 使用真实本地数据完成 4 视口交互/响应式/固定命令栏/只读预览验收；`/demo` 45 项回归、14 个设置场景帧和 4 次 4.4s 雷达动效采样全部通过。主 JS 仍有约 511 kB 的既有 Vite 分包警告，未通过调高阈值隐藏，留待统一路由拆包阶段处理。
 - `PYTHONPATH=backend pytest backend/tests -q`: passed, 28 tests (5 new in `test_library_service.py` covering summary, search filters/pagination, read-status, recent/continue shelves, and dictionary-aware tag filters).
 - `npm run build`: passed (`tsc -b && vite build`).

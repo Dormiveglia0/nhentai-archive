@@ -1,8 +1,11 @@
+import { X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { m } from "motion/react";
 
 import { duration, ease, Presence, usePrefersReducedMotion } from "../../lib/motion";
+import { trapDialogFocus } from "./readerDialogFocus";
 import { ReaderPageItem } from "./readerHelpers";
+import "./ReaderPanels.css";
 
 type ThumbnailOverlayProps = {
   open: boolean;
@@ -116,7 +119,18 @@ function useThrottledThumbs(srcs: string[], active: boolean) {
 export function ThumbnailOverlay({ open, pages, pageIndex, onJump, onClose }: ThumbnailOverlayProps) {
   const reduce = usePrefersReducedMotion();
   const fieldRef = useRef<HTMLDivElement | null>(null);
+  const closeButton = useRef<HTMLButtonElement | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const frame = window.requestAnimationFrame(() => closeButton.current?.focus());
+    return () => {
+      window.cancelAnimationFrame(frame);
+      previous?.focus();
+    };
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -147,64 +161,73 @@ export function ThumbnailOverlay({ open, pages, pageIndex, onJump, onClose }: Th
     <Presence>
       {open ? (
         <m.div
-          ref={fieldRef}
           className="reader-chrome reader-thumb-field"
+          role="dialog"
+          aria-modal="true"
+          aria-label="页面索引"
           onClick={onClose}
+          onKeyDown={trapDialogFocus}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: duration.fast, ease: ease.standard }}
         >
-          <m.div
-            className="reader-thumb-stage"
-            style={{
-              gridTemplateColumns: `repeat(${layout.cols}, ${layout.tileW}px)`,
-              gap: `${GAP}px`,
-              ...(layout.scroll ? { maxHeight: size.h, overflowY: "auto", alignContent: "start" } : {}),
-            }}
-            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: duration.base, ease: ease.standard }}
-          >
-            {pages.map((page, index) => {
-              const thumbSrc = page.thumbSrc ?? page.src;
-              const isReady = ready.has(thumbSrc);
-              const isFailed = failed.has(thumbSrc);
-              const row = Math.floor(index / layout.cols);
-              const col = index % layout.cols;
-              const dist = Math.hypot(row - centerRow, col - centerCol);
-              return (
-                <m.button
-                  key={page.key}
-                  type="button"
-                  className={page.pageIndex === pageIndex ? "reader-thumb-tile active" : "reader-thumb-tile"}
-                  style={{ width: layout.tileW, height: layout.tileH }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onJump(page.pageIndex);
-                    onClose();
-                  }}
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.84 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  whileHover={reduce ? undefined : { scale: 1.06 }}
-                  transition={
-                    reduce
-                      ? { duration: duration.fast }
-                      : { type: "spring", stiffness: 300, damping: 22, delay: Math.min(dist * 0.03, 0.45) }
-                  }
-                >
-                  {isReady ? (
-                    <img src={thumbSrc} alt={`第 ${page.pageIndex} 页`} draggable={false} />
-                  ) : isFailed ? (
-                    <div className="reader-thumb-fail">{page.pageIndex}</div>
-                  ) : (
-                    <div className="reader-thumb-skeleton" />
-                  )}
-                  {showLabel ? <span>{page.pageIndex}</span> : null}
-                </m.button>
-              );
-            })}
-          </m.div>
+          <div ref={fieldRef} className="reader-thumb-layout">
+            <header className="reader-thumb-head" onClick={(event) => event.stopPropagation()}>
+              <span><small>PAGE INDEX</small><strong>页面索引 · {pages.length} 页</strong></span>
+              <button ref={closeButton} type="button" onClick={onClose} aria-label="关闭页面索引"><X size={18} /></button>
+            </header>
+            {layout.tileW > 0 ? <m.div
+              className="reader-thumb-stage"
+              style={{
+                gridTemplateColumns: `repeat(${layout.cols}, ${layout.tileW}px)`,
+                gap: `${GAP}px`,
+                ...(layout.scroll ? { maxHeight: size.h, overflowY: "auto", alignContent: "start" } : {}),
+              }}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: duration.base, ease: ease.standard }}
+            >
+              {pages.map((page, index) => {
+                const thumbSrc = page.thumbSrc ?? page.src;
+                const isReady = ready.has(thumbSrc);
+                const isFailed = failed.has(thumbSrc);
+                const row = Math.floor(index / layout.cols);
+                const col = index % layout.cols;
+                const dist = Math.hypot(row - centerRow, col - centerCol);
+                return (
+                  <m.button
+                    key={page.key}
+                    type="button"
+                    className={page.pageIndex === pageIndex ? "reader-thumb-tile active" : "reader-thumb-tile"}
+                    style={{ width: layout.tileW, height: layout.tileH }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onJump(page.pageIndex);
+                      onClose();
+                    }}
+                    initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.84 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={reduce ? undefined : { scale: 1.06 }}
+                    transition={
+                      reduce
+                        ? { duration: duration.fast }
+                        : { type: "spring", stiffness: 300, damping: 22, delay: Math.min(dist * 0.03, 0.45) }
+                    }
+                  >
+                    {isReady ? (
+                      <img src={thumbSrc} alt={`第 ${page.pageIndex} 页`} draggable={false} />
+                    ) : isFailed ? (
+                      <div className="reader-thumb-fail">{page.pageIndex}</div>
+                    ) : (
+                      <div className="reader-thumb-skeleton" />
+                    )}
+                    {showLabel ? <span>{page.pageIndex}</span> : null}
+                  </m.button>
+                );
+              })}
+            </m.div> : <div className="reader-thumb-measuring" role="status" aria-label="正在计算页面布局"><i /><i /><i /></div>}
+          </div>
         </m.div>
       ) : null}
     </Presence>

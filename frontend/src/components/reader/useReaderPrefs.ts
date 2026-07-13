@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   DEFAULT_PREFS,
-  Direction,
-  Fit,
-  Mode,
   PREFS_KEY,
   parsePrefs,
-  ReaderPrefs,
   serializePrefs,
+  type Direction,
+  type Fit,
+  type Mode,
+  type ReaderPrefs,
 } from "./readerHelpers";
 
 export function useReaderPrefs() {
