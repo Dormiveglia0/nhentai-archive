@@ -231,7 +231,7 @@ Root: `frontend/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`, `tasks`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
+  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`, `tasks`, `export`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
   - Failed-job retry remains available for existing import jobs.
@@ -324,11 +324,12 @@ Root: `frontend/src/`
 - `components/governance/GovernanceQueueRail.tsx` / `GovernanceBulkBar.tsx`
   - Queue reasons/completeness and real bulk preview/apply. Custom checkbox visuals preserve semantic inputs; preview remains read-only and apply retains all current mutation safeguards.
 - `components/export/` — export center (browser-download model), split into focused modules:
-  - `ExportPage.tsx` — thin compositional container for toolbar, work list, and inspector.
-  - `useExportState.ts` — all state and data-fetching logic; single selected `Set`, separate `focusId`, search/status filters, output-name overrides, export option switches, and download orchestration. `downloadSelected()` downloads one CBZ (single target) or a `.zip` bundle (multi), and `downloadOne(id)` downloads the focused work.
-  - `ExportToolbar.tsx` — page title, search, status chips, select-ready, and clear actions.
-  - `ExportWorkList.tsx` — compact selectable work list with cover, title, remote ID/source, selected state, focus state, and ready/warning/blocked status.
-  - `ExportInspector.tsx` — focused-work detail: output rename, ComicInfo preview, blockers/warnings, selected cover strip, option switches (`ComicInfo` / `保留JSON` / `压缩`), refresh, selected download, and current-work download.
+  - `ExportPage.tsx` — direct Folio composition for real queue summary, toolbar, local-work list and CBZ recipe inspector. It imports no demo code.
+  - `ExportPage.css` — production-only responsive source/recipe layout, custom selection/status controls, metadata ledger and sticky action recipe. Replaced global `.export-*` rules were removed from `styles/app.css`.
+  - `useExportState.ts` — all state and data-fetching logic; queue loads and debounced preview requests have latest-response guards, so rapid rename/option/focus changes cannot restore stale previews. `downloadSelected()` still downloads one CBZ, a synchronous `.zip`, or enqueues a real bulk-export job over the existing threshold.
+  - `ExportToolbar.tsx` — Folio search, animated status index, batch mode, select-ready, and clear actions.
+  - `ExportWorkList.tsx` — semantic selectable work buttons with cover, title, remote ID/source, selection/focus state, and ready/warning/blocked status.
+  - `ExportInspector.tsx` — focused-work output rename, ComicInfo preview, blockers/warnings, selected cover strip, semantic hidden-checkbox option switches, refresh, selected download, and current-work download.
   - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `components/files/` — file maintenance module:

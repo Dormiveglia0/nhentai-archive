@@ -35,11 +35,11 @@ export function ExportWorkList({ items, selectedIds, focusId, multiSelect, blurC
   }
 
   return (
-    <section className="export-work-list">
+    <section className="folio-export-work-list">
       {items.length > STAGGER_CAP ? (
-        <div className="export-work-list-body">{rows}</div>
+        <div className="folio-export-work-list-body">{rows}</div>
       ) : (
-        <Stagger key={items.map((i) => i.work.id).join("-")} className="export-work-list-body">
+        <Stagger key={items.map((i) => i.work.id).join("-")} className="folio-export-work-list-body">
           {items.map((item) => (
             <StaggerItem key={item.work.id}>
               <Row
@@ -76,31 +76,25 @@ function Row({
   const blocked = status === "blocked";
 
   return (
-    <div
-      className={`export-work-item ${focused ? "focused" : ""} ${selected ? "selected" : ""} ${blocked ? "blocked" : ""}`}
+    <button
+      type="button"
+      className={`folio-export-work-item${focused ? " is-focused" : ""}${selected ? " is-selected" : ""}${blocked ? " is-blocked" : ""}`}
       onClick={() => onPick(item.work.id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onPick(item.work.id);
-        }
-      }}
+      aria-pressed={selected}
     >
-      <span className="export-item-cover-wrapper">
+      <span className="folio-export-item-cover">
         <Cover workId={item.work.id} coverPath={item.work.cover_path} blurCovers={blurCovers} />
         {selected && !blocked && (
-          <span className="export-item-check-badge">
+          <span className="folio-export-item-check">
             <CheckSquare size={16} />
           </span>
         )}
       </span>
-      <span className="export-item-info">
+      <span className="folio-export-item-info">
         <strong>{workTitle(item.work)}</strong>
         <small>{item.work.remote_gallery_id ? `ID ${item.work.remote_gallery_id}` : item.work.source}</small>
       </span>
-      <span className={`export-item-status ${status}`}>{STATUS_LABEL[status]}</span>
-    </div>
+      <span className={`folio-export-item-status is-${status}`}>{STATUS_LABEL[status]}</span>
+    </button>
   );
 }

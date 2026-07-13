@@ -73,6 +73,8 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const defaultsApplied = useRef(false);
+  const loadRequestRef = useRef(0);
+  const previewRequestRef = useRef(0);
   const [query, setQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "warning" | "blocked">("all");
   const [multiSelect, setMultiSelect] = useState(false);
@@ -120,6 +122,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   }, [items, statusFilter, query]);
 
   const load = useCallback(async (nextFocusId: number | null) => {
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -128,6 +131,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
         api.exportSummary(),
         api.settings(),
       ]);
+      if (requestId !== loadRequestRef.current) return;
       setQueue(queuePayload);
       setSummary(summaryPayload);
       setSettings(settingsPayload);
@@ -157,43 +161,53 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
         return fallback?.work.id ?? null;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === loadRequestRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load(initialWorkId ?? null);
+    return () => {
+      loadRequestRef.current += 1;
+      previewRequestRef.current += 1;
+    };
   }, [initialWorkId, load]);
 
   useEffect(() => {
     if (!focusId) {
+      previewRequestRef.current += 1;
       setPreview(null);
       return;
     }
-    let alive = true;
+    const requestId = ++previewRequestRef.current;
     setPreviewLoading(true);
-    api
-      .exportPreview(focusId, { output_name: outputNames[focusId], ...exportOptions })
-      .then((payload) => alive && setPreview(payload))
-      .catch((err: Error) => alive && setError(err.message))
-      .finally(() => alive && setPreviewLoading(false));
+    const timer = window.setTimeout(() => {
+      api
+        .exportPreview(focusId, { output_name: outputNames[focusId], ...exportOptions })
+        .then((payload) => requestId === previewRequestRef.current && setPreview(payload))
+        .catch((err: Error) => requestId === previewRequestRef.current && setError(err.message))
+        .finally(() => requestId === previewRequestRef.current && setPreviewLoading(false));
+    }, 160);
     return () => {
-      alive = false;
+      window.clearTimeout(timer);
+      if (previewRequestRef.current === requestId) previewRequestRef.current += 1;
     };
   }, [focusId, outputNames[focusId ?? -1], exportOptions]);
 
   const refreshPreview = useCallback(async () => {
     if (!focusId) return;
+    const requestId = ++previewRequestRef.current;
     setPreviewLoading(true);
     setError(null);
     try {
-      setPreview(await api.exportPreview(focusId, { output_name: outputNames[focusId], ...exportOptions }));
+      const payload = await api.exportPreview(focusId, { output_name: outputNames[focusId], ...exportOptions });
+      if (requestId === previewRequestRef.current) setPreview(payload);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === previewRequestRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setPreviewLoading(false);
+      if (requestId === previewRequestRef.current) setPreviewLoading(false);
     }
   }, [focusId, outputNames, exportOptions]);
 

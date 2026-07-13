@@ -37,7 +37,7 @@ FrontendDemo.tsx
 | 治理 | `demo/modules/GovernanceDemo.tsx` | `folio/scenes/GovernanceScene.tsx` | `governance/GovernancePage.css`, `GovernanceEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-governance-*` | `governance/GovernancePage.tsx`, `useGovernanceState.ts` and feature components | `api.governanceQueue/workGovernance/apply/bulk*` |
 | 词典 | `demo/modules/DictionaryDemo.tsx` | `folio/scenes/DictionaryScene.tsx` | `dictionary/DictionaryPage.css`, `DictionaryEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-dictionary-*` | `dictionary/DictionaryPage.tsx`, `useDictionaryState.ts` and feature components | `api.dictionarySummary/candidates/evidence/preview/apply/*` |
 | 队列 | `demo/modules/TasksDemo.tsx` | `folio/scenes/TasksScene.tsx` | `tasks/TasksPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-task-*` | `tasks/TasksPage.tsx`, `useTasksState.ts` and feature components | `api.jobs/jobLogs/pause/resume/cancel/retry/delete/clear` |
-| 导出 | `demo/modules/ExportDemo.tsx` | `folio/scenes/ExportScene.tsx` | `folio/styles/tasks-export-files.css`, `scenes.css` prefix `folio-scene-export-*` | `export/ExportPage.tsx`, `useExportState.ts` | `api.exportQueue/preview/download/bundle/enqueueBulkExport` |
+| 导出 | `demo/modules/ExportDemo.tsx` | `folio/scenes/ExportScene.tsx` | `export/ExportPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-export-*` | `export/ExportPage.tsx`, `useExportState.ts` and feature components | `api.exportQueue/preview/download/bundle/enqueueBulkExport` |
 | 文件 | `demo/modules/FilesDemo.tsx` | `folio/scenes/FilesScene.tsx` | `folio/styles/tasks-export-files.css`, `scenes.css` prefix `folio-scene-files-*` | `files/FilesPage.tsx`, `useFilesState.ts` | `api.filesOverview/inventory/duplicates/previewDelete/deleteFiles` |
 | 设置 | `demo/modules/SettingsDemo.tsx` | `folio/scenes/SettingsScene.tsx` | `folio/styles/settings.css`, `scenes.css` prefix `folio-scene-settings-*` | `settings/SettingsPage.tsx`, `useSettingsState.ts`, section components | `api.settings/updateSettings/verify*/runtime/scan*` |
 
@@ -82,7 +82,7 @@ Preserve this order. Shared Folio structure goes here; production-only feature l
 | 2 | `#library` | `library/LibraryPage.tsx` + `useLibraryState.ts` + `LibraryPage.css` | old `.library-*`, inspector and batch selectors removed after direct Folio rewrite | migrated |
 | 3 | `#discover` | `discover/DiscoverPage.tsx` + `useDiscoverState.ts` + `DiscoverPage.css` | old discover toolbar/feed/page/tag-picker/popular-fan selectors removed after direct Folio rewrite | migrated |
 | 4 | `#governance`, `#dictionary` | feature-local components + state hooks | old governance/dictionary layout selectors and orphaned `FilterMenu` removed | migrated |
-| 5 | `#tasks`, `#export`, `#files` | feature-local components | old operational layout selectors replaced per component | tasks migrated / export and files pending |
+| 5 | `#tasks`, `#export`, `#files` | feature-local components | old operational layout selectors replaced per component | tasks and export migrated / files pending |
 | 6 | `#settings` | `settings/SettingsPage.tsx` + sections | old settings deck/rail selectors and native selects replaced | pending |
 | 7 | detail/history/readers | route-local components | old exception selectors replaced only after route QA | pending |
 

@@ -38,9 +38,9 @@ export function Cover({
   blurCovers: boolean;
 }) {
   return (
-    <span className="export-cover">
+    <span className="folio-export-cover">
       {coverPath ? (
-        <img className={blurCovers ? "blurred" : ""} src={`/api/works/${workId}/cover`} alt="" />
+        <img className={blurCovers ? "is-blurred" : ""} src={`/api/works/${workId}/cover`} alt="" loading="lazy" decoding="async" />
       ) : (
         <em>NO COVER</em>
       )}

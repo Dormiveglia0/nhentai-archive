@@ -55,46 +55,46 @@ export function ExportInspector({
   };
 
   return (
-    <aside className="export-inspector">
+    <aside className="folio-export-inspector">
       {currentPreview && focusItem ? (
         <FadeIn
           key={`focus-${currentPreview.work.id}-${writesComicInfo}-${keepsJson}-${compresses}`}
           y={8}
-          className="export-inspector-detail"
+          className="folio-export-inspector-detail"
         >
           {/* Focus head */}
-          <div className="export-inspector-head">
+          <div className="folio-export-inspector-head">
             <Cover workId={currentPreview.work.id} coverPath={currentPreview.work.cover_path} blurCovers={blurCovers} />
-            <div className="export-inspector-head-text">
+            <div className="folio-export-inspector-head-text">
               <strong>{workTitle(currentPreview.work)}</strong>
-              <label className="export-inspector-name-label">
+              <label className="folio-export-name-field">
                 <span>输出名</span>
                 <input
-                  className="export-inspector-name-input"
+                  className="folio-export-name-input"
                   type="text"
                   value={outputNames[focusItem.work.id] ?? focusItem.output_name}
                   onChange={(e) => onRename(focusItem.work.id, e.target.value)}
                   aria-label="输出名称"
                 />
               </label>
-              <span className={`export-item-status ${itemStatus(focusItem)}`}>
+              <span className={`folio-export-item-status is-${itemStatus(focusItem)}`}>
                 {STATUS_LABEL[itemStatus(focusItem)]}
               </span>
             </div>
           </div>
 
           {/* ComicInfo.xml preview card */}
-          <div className={`export-comicinfo-card ${writesComicInfo ? "" : "off"}`}>
-            <div className="export-comicinfo-title">
+          <div className={`folio-export-comicinfo${writesComicInfo ? "" : " is-off"}`}>
+            <div className="folio-export-comicinfo-title">
               <FileCheck2 size={16} />
               <h3>ComicInfo.xml</h3>
-              <span className={`export-tag ${writesComicInfo ? "ok" : "muted"}`}>
+              <span className={`folio-export-tag ${writesComicInfo ? "is-ok" : "is-muted"}`}>
                 {writesComicInfo ? "将写入" : "不写入"}
               </span>
             </div>
             {writesComicInfo ? (
               comicEntries.length ? (
-                <dl className="export-comicinfo-rows">
+                <dl className="folio-export-comicinfo-rows">
                   {comicEntries.map(([key, value]) => (
                     <div key={key}>
                       <dt>{key}</dt>
@@ -112,7 +112,7 @@ export function ExportInspector({
 
           {/* Issues area */}
           {issues.length ? (
-            <div className="export-issues">
+            <div className="folio-export-issues">
               {issues.map((issue) => (
                 <p
                   key={`${issue.code}-${issue.message}`}
@@ -127,23 +127,23 @@ export function ExportInspector({
 
           {/* Selected covers strip */}
           {count > 1 ? (
-            <FadeIn y={6} className="export-selected-strip" aria-label="已选作品">
+            <FadeIn y={6} className="folio-export-selected-strip" aria-label="已选作品">
               {selectedItems.slice(0, 6).map((item) => (
                 <Cover key={item.work.id} workId={item.work.id} coverPath={item.work.cover_path} blurCovers={blurCovers} />
               ))}
-              {count > 6 ? <span className="export-selected-more">+{count - 6}</span> : null}
+              {count > 6 ? <span className="folio-export-selected-more">+{count - 6}</span> : null}
             </FadeIn>
           ) : null}
         </FadeIn>
       ) : (
-        <p className="export-inspector-empty">{previewLoading ? "正在读取预览..." : "点击左侧任一作品查看详情。"}</p>
+        <p className="folio-export-inspector-empty">{previewLoading ? "正在读取预览..." : "点击左侧任一作品查看详情。"}</p>
       )}
 
       {/* Sticky action zone */}
-      <div className="export-action-zone">
+      <div className="folio-export-action-zone">
         {/* Global option switches */}
-        <div className="export-options-compact">
-          <label className={`export-option-compact ${exportOptions.write_comicinfo ? "on" : ""}`}>
+        <div className="folio-export-options">
+          <label className={exportOptions.write_comicinfo ? "is-on" : ""}>
             <input
               type="checkbox"
               checked={exportOptions.write_comicinfo}
@@ -153,7 +153,7 @@ export function ExportInspector({
             <FileCode2 size={16} />
             <span>ComicInfo</span>
           </label>
-          <label className={`export-option-compact ${exportOptions.keep_json ? "on" : ""}`}>
+          <label className={exportOptions.keep_json ? "is-on" : ""}>
             <input
               type="checkbox"
               checked={exportOptions.keep_json}
@@ -163,7 +163,7 @@ export function ExportInspector({
             <FileJson size={16} />
             <span>保留JSON</span>
           </label>
-          <label className={`export-option-compact ${exportOptions.compress ? "on" : ""}`}>
+          <label className={exportOptions.compress ? "is-on" : ""}>
             <input
               type="checkbox"
               checked={exportOptions.compress}
@@ -173,21 +173,21 @@ export function ExportInspector({
             <Package size={16} />
             <span>压缩</span>
           </label>
-          <button type="button" onClick={onRefresh} className="export-refresh-button" aria-label="刷新预览">
+          <button type="button" onClick={onRefresh} className="folio-export-refresh" aria-label="刷新预览">
             <RefreshCw size={16} className={previewLoading ? "spin" : ""} />
           </button>
         </div>
 
         {/* Selection summary + actions */}
-        <div className="export-action-cta">
-          <span className="export-summary-line">
+        <div className="folio-export-action-cta">
+          <span className="folio-export-summary-line">
             已选 {count} 项 · {formatBytes(selectedSize)}
           </span>
 
-          <div className="export-action-buttons">
+          <div className="folio-export-action-buttons">
             <button
               type="button"
-              className="export-primary-button"
+              className="folio-export-primary"
               disabled={primaryDisabled}
               onClick={primaryDownload}
             >
@@ -199,7 +199,7 @@ export function ExportInspector({
             {count > 1 && currentPreview && currentPreview.blockers.length === 0 ? (
               <button
                 type="button"
-                className="export-secondary-button"
+                className="folio-export-secondary"
                 disabled={downloading || previewLoading}
                 onClick={() => onDownloadOne(currentPreview.work.id)}
               >
