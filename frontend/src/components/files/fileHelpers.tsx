@@ -25,8 +25,8 @@ export function statusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
 }
 
-export function targetKey(entry: FileEntry): string {
-  return entry.id;
+export function entryStatusLabel(entry: Pick<FileEntry, "flags" | "status">): string {
+  return entry.flags.includes("size_mismatch") ? "体积不符" : statusLabel(entry.status);
 }
 
 export function kindLabel(kind: string): string {
@@ -36,9 +36,9 @@ export function kindLabel(kind: string): string {
   return kind;
 }
 
-export function statusTone(status: string): "ok" | "warn" | "loose" {
-  if (status === "missing_source" || status === "missing_cover") return "warn";
-  if (status === "orphan" || status === "stale") return "loose";
+export function entryStatusTone(entry: Pick<FileEntry, "flags" | "status">): "ok" | "warn" | "loose" {
+  if (entry.flags.includes("size_mismatch") || entry.status === "missing_source" || entry.status === "missing_cover") return "warn";
+  if (entry.status === "orphan" || entry.status === "stale") return "loose";
   return "ok";
 }
 

@@ -23,7 +23,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 - Use `components/folio/` as the production-neutral visual system and `/demo` as its visual regression surface. Never import `components/demo/` from a formal route.
 - Continue direct structural migration module by module: retain the existing real hook/API flow, rewrite JSX and feature-local CSS, then delete the replaced legacy selectors. Do not wrap old pages in Folio chrome plus adapter CSS.
-- `#workbench`, `#library`, `#discover`, `#governance`, `#dictionary`, `#tasks`, and `#export` are directly migrated and browser-verified. Continue with files, followed by settings and detail/history/readers as tracked in `docs/AGENT_MAP.md`.
+- `#workbench`, `#library`, `#discover`, `#governance`, `#dictionary`, `#tasks`, `#export`, and `#files` are directly migrated and browser-verified. Continue with settings, followed by detail/history/readers as tracked in `docs/AGENT_MAP.md`.
 - Browser QA against real or user-provided data after each route migration; compare the formal route with `/demo` at desktop and mobile sizes.
 - Operational-page migration must preserve task state-machine controls, export download semantics, file-deletion previews/confirmations, and current real-data empty states.
 - Mobile layout polish only where screenshots show concrete overlap, wrapping, or density problems.

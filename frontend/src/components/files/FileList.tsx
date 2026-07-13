@@ -1,6 +1,9 @@
+import { Check, FolderOpen, LoaderCircle } from "lucide-react";
+
 import type { FileEntry } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { formatBytes, kindLabel, statusLabel, statusTone } from "./fileHelpers";
+import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
+import { entryStatusLabel, entryStatusTone, formatBytes, kindLabel } from "./fileHelpers";
 
 type Props = {
   entries: FileEntry[];
@@ -12,52 +15,56 @@ type Props = {
 };
 
 export function FileList({ entries, selected, focusId, multiSelect, onPick, loading }: Props) {
-  if (loading && entries.length === 0) {
-    return <div className="files-empty">读取文件清单…</div>;
-  }
-  if (entries.length === 0) {
-    return <div className="files-empty">没有匹配的文件。</div>;
-  }
   return (
-    <div className="files-table" role="table">
-      <div className="files-thead" role="row">
-        <span aria-hidden="true" />
-        <span>文件名</span>
-        <span>路径</span>
+    <section className={"folio-files-inventory" + (loading ? " is-loading" : "")} aria-busy={loading}>
+      <header className="folio-files-list-head" aria-hidden="true">
+        <span />
+        <span>文件 / 受管路径</span>
         <span>类型</span>
-        <span className="num">大小</span>
+        <span>体积</span>
         <span>状态</span>
-      </div>
-      <Stagger key={entries.map((e) => e.id).join("-")} className="files-tbody">
-        {entries.map((entry) => {
-          const name = entry.kind === "work" ? entry.title ?? "(无标题)" : entry.name ?? "(未命名)";
-          const path = (entry.kind === "work" ? entry.source_path : entry.path) ?? "—";
-          const isSelected = selected.has(entry.id);
-          const tone = statusTone(entry.status);
-          return (
-            <StaggerItem key={entry.id}>
-              <div
-                role="row"
-                className={`files-trow${isSelected ? " is-selected" : ""}${focusId === entry.id ? " is-focused" : ""}`}
-                onClick={() => onPick(entry.id)}
-              >
-                <span className="files-mark">
-                  {multiSelect && isSelected ? (
-                    <span className="files-mark-check" aria-hidden="true" />
-                  ) : (
-                    <span className={`files-dot files-dot-${tone}`} aria-hidden="true" />
-                  )}
-                </span>
-                <span className="files-name" title={name}>{name}</span>
-                <span className="files-cell-path" title={path}>{path}</span>
-                <span className="files-kind">{kindLabel(entry.kind)}</span>
-                <span className="num">{formatBytes(entry.size_bytes)}</span>
-                <span className={`files-st files-st-${tone}`}>{statusLabel(entry.status)}</span>
-              </div>
-            </StaggerItem>
-          );
-        })}
-      </Stagger>
-    </div>
+      </header>
+
+      {loading && entries.length === 0 ? (
+        <FolioEmptyState icon={LoaderCircle} title="正在读取文件清单" copy="正在核对数据库索引与受管目录。" />
+      ) : entries.length === 0 ? (
+        <FolioEmptyState icon={FolderOpen} title="没有匹配的文件" copy="调整分类、状态或搜索条件后重试。" />
+      ) : (
+        <Stagger key={entries.map((entry) => entry.id).join("-")} className="folio-files-list">
+          {entries.map((entry) => {
+            const name = entry.kind === "work" ? entry.title ?? "(无标题)" : entry.name ?? "(未命名)";
+            const path = (entry.kind === "work" ? entry.source_path : entry.path) ?? "—";
+            const isSelected = selected.has(entry.id);
+            const tone = entryStatusTone(entry);
+
+            return (
+              <StaggerItem key={entry.id} className="folio-files-row-wrap">
+                <button
+                  type="button"
+                  className={
+                    "folio-files-row" +
+                    (isSelected ? " is-selected" : "") +
+                    (focusId === entry.id ? " is-focused" : "")
+                  }
+                  aria-pressed={multiSelect ? isSelected : undefined}
+                  onClick={() => onPick(entry.id)}
+                >
+                  <span className={"folio-files-mark is-" + tone} aria-hidden="true">
+                    {multiSelect ? <span className="folio-files-check">{isSelected ? <Check size={11} /> : null}</span> : <i />}
+                  </span>
+                  <span className="folio-files-file">
+                    <strong title={name}>{name}</strong>
+                    <small title={path}>{path}</small>
+                  </span>
+                  <span className="folio-files-kind">{kindLabel(entry.kind)}</span>
+                  <span className="folio-files-size">{formatBytes(entry.size_bytes)}</span>
+                  <span className={"folio-files-status is-" + tone}>{entryStatusLabel(entry)}</span>
+                </button>
+              </StaggerItem>
+            );
+          })}
+        </Stagger>
+      )}
+    </section>
   );
 }

@@ -30,11 +30,24 @@ export function useFilesState() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const overviewToken = useRef(0);
   const requestToken = useRef(0);
+  const previewToken = useRef(0);
+  const previewBusy = useRef(false);
 
-  const loadOverview = useCallback(() => {
-    api.filesOverview().then(setOverview).catch((e) => setError(String(e)));
-    api.filesDuplicates().then(setDuplicates).catch(() => setDuplicates(null));
+  const loadOverview = useCallback(async () => {
+    const token = ++overviewToken.current;
+    const [overviewResult, duplicatesResult] = await Promise.allSettled([
+      api.filesOverview(),
+      api.filesDuplicates(),
+    ]);
+    if (token !== overviewToken.current) return;
+    if (overviewResult.status === "fulfilled") {
+      setOverview(overviewResult.value);
+    } else {
+      setError(String(overviewResult.reason));
+    }
+    setDuplicates(duplicatesResult.status === "fulfilled" ? duplicatesResult.value : null);
   }, []);
 
   const loadInventory = useCallback(() => {
@@ -45,6 +58,9 @@ export function useFilesState() {
       .then((data) => {
         if (token !== requestToken.current) return;
         setInventory(data);
+        setFocusId((current) =>
+          current && data.result.some((entry) => entry.id === current) ? current : null,
+        );
         setError(null);
       })
       .catch((e) => {
@@ -57,26 +73,41 @@ export function useFilesState() {
   }, [category, query, statusFilter, sort, page]);
 
   useEffect(() => {
-    loadOverview();
+    void loadOverview();
+    return () => {
+      overviewToken.current += 1;
+      previewToken.current += 1;
+    };
   }, [loadOverview]);
 
   useEffect(() => {
-    loadInventory();
+    const timer = window.setTimeout(loadInventory, 180);
+    return () => {
+      window.clearTimeout(timer);
+      requestToken.current += 1;
+    };
   }, [loadInventory]);
 
   const clearPending = useCallback(() => {
+    previewToken.current += 1;
+    if (previewBusy.current) {
+      previewBusy.current = false;
+      setBusy(false);
+    }
     setPreview(null);
     setPendingTargets([]);
     setPendingLabel(null);
   }, []);
 
   const reload = useCallback(() => {
-    loadOverview();
+    void loadOverview();
     loadInventory();
   }, [loadOverview, loadInventory]);
 
   const resetFilterExtras = useCallback(() => {
     setPage(1);
+    setSelected(new Set());
+    setFocusId(null);
     clearPending();
     setActionNotice(null);
   }, [clearPending]);
@@ -162,17 +193,23 @@ export function useFilesState() {
         clearPending();
         return;
       }
+      const token = ++previewToken.current;
+      previewBusy.current = true;
       setBusy(true);
       setActionNotice(null);
       try {
         const result = await api.previewFileDelete(targets);
+        if (token !== previewToken.current) return;
         setPreview(result);
         setPendingTargets(targets);
         setPendingLabel(label);
       } catch (e) {
-        setError(String(e));
+        if (token === previewToken.current) setError(String(e));
       } finally {
-        setBusy(false);
+        if (token === previewToken.current) {
+          previewBusy.current = false;
+          setBusy(false);
+        }
       }
     },
     [clearPending],

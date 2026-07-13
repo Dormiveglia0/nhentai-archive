@@ -1,35 +1,41 @@
+import { ListChecks, SearchCheck, X } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+
+import { duration, ease } from "../../lib/motion";
+import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
+
 const CATEGORIES = [
-  { key: "all", label: "全部" },
-  { key: "work", label: "作品" },
-  { key: "orphan", label: "孤立" },
-  { key: "stale", label: "临时" },
-];
+  { value: "all", label: "全部" },
+  { value: "work", label: "作品" },
+  { value: "orphan", label: "孤立" },
+  { value: "stale", label: "临时" },
+] as const;
 
 const STATUSES = [
-  { key: "", label: "全部状态" },
-  { key: "ok", label: "正常" },
-  { key: "missing_source", label: "缺失源" },
-  { key: "missing_cover", label: "缺失封面" },
-  { key: "size_mismatch", label: "体积不符" },
-  { key: "orphan", label: "孤立" },
-  { key: "stale", label: "临时" },
-];
+  { value: "", label: "全部状态" },
+  { value: "ok", label: "正常" },
+  { value: "missing_source", label: "缺失源" },
+  { value: "missing_cover", label: "缺失封面" },
+  { value: "size_mismatch", label: "体积不符" },
+  { value: "orphan", label: "孤立" },
+  { value: "stale", label: "临时" },
+] as const;
 
 const SORTS = [
-  { key: "default", label: "默认排序" },
-  { key: "size_desc", label: "体积 ↓" },
-  { key: "size_asc", label: "体积 ↑" },
-];
+  { value: "default", label: "默认排序" },
+  { value: "size_desc", label: "体积从大到小" },
+  { value: "size_asc", label: "体积从小到大" },
+] as const;
 
 type Props = {
   category: string;
-  onCategory: (c: string) => void;
+  onCategory: (category: string) => void;
   query: string;
-  onQuery: (q: string) => void;
+  onQuery: (query: string) => void;
   statusFilter: string;
-  onStatus: (s: string) => void;
+  onStatus: (status: string) => void;
   sort: string;
-  onSort: (s: string) => void;
+  onSort: (sort: string) => void;
   total: number;
   multiSelect: boolean;
   onToggleMultiSelect: () => void;
@@ -55,61 +61,78 @@ export function FileToolbar({
   onClearSelection,
 }: Props) {
   return (
-    <div className="files-toolbar">
-      <div className="files-tabs">
-        {CATEGORIES.map((c) => (
+    <section className="folio-files-toolbar" aria-label="文件筛选与批量操作">
+      <div className="folio-files-tabs" role="tablist" aria-label="文件类型">
+        {CATEGORIES.map((item) => (
           <button
-            key={c.key}
+            key={item.value}
             type="button"
-            className={`files-tab${category === c.key ? " is-active" : ""}`}
-            onClick={() => onCategory(c.key)}
+            role="tab"
+            aria-selected={category === item.value}
+            className={category === item.value ? "is-active" : ""}
+            onClick={() => onCategory(item.value)}
           >
-            {c.label}
+            {category === item.value ? <m.span layoutId="folio-files-category" className="folio-files-tab-active" /> : null}
+            <span>{item.label}</span>
           </button>
         ))}
       </div>
-      <input
-        className="files-search"
-        type="search"
-        placeholder="搜索标题或路径"
-        value={query}
-        onChange={(e) => onQuery(e.target.value)}
-      />
-      <select className="files-status" value={statusFilter} onChange={(e) => onStatus(e.target.value)}>
-        {STATUSES.map((s) => (
-          <option key={s.key} value={s.key}>
-            {s.label}
-          </option>
-        ))}
-      </select>
-      <select className="files-status" value={sort} onChange={(e) => onSort(e.target.value)}>
-        {SORTS.map((s) => (
-          <option key={s.key} value={s.key}>
-            {s.label}
-          </option>
-        ))}
-      </select>
-      <button
-        type="button"
-        className={`files-multi-toggle${multiSelect ? " is-on" : ""}`}
-        onClick={onToggleMultiSelect}
-        aria-pressed={multiSelect}
-      >
-        多选{multiSelect ? "中" : ""}
-      </button>
-      {multiSelect ? (
-        <span className="files-selbar">
-          <span className="files-count">已选 {selectedCount}</span>
-          <button type="button" className="files-link" onClick={onPreviewSelected} disabled={selectedCount === 0}>
-            预览删除
+
+      <div className="folio-files-controls">
+        <div className="folio-files-control folio-files-search-control">
+          <span>快速定位</span>
+          <FolioSearchField value={query} onChange={onQuery} placeholder="搜索标题或受管路径" />
+        </div>
+        <FolioSelect label="文件状态" value={statusFilter} options={STATUSES} onChange={onStatus} />
+        <FolioSelect label="排序方式" value={sort} options={SORTS} onChange={onSort} />
+        <div className="folio-files-control">
+          <span>选择方式</span>
+          <button
+            type="button"
+            className={"folio-files-multi" + (multiSelect ? " is-active" : "")}
+            aria-pressed={multiSelect}
+            onClick={onToggleMultiSelect}
+          >
+            <ListChecks size={15} />
+            {multiSelect ? "退出多选" : "批量选择"}
           </button>
-          <button type="button" className="files-link" onClick={onClearSelection} disabled={selectedCount === 0}>
-            清空
-          </button>
-        </span>
-      ) : (
-        <span className="files-count">{total} 项</span>
-      )}
-    </div>
+        </div>
+      </div>
+
+      <div className={"folio-files-batch" + (multiSelect ? " is-active" : "")}>
+        <p>
+          <strong>{multiSelect ? selectedCount : total}</strong>
+          <span>{multiSelect ? "项已选择" : "项匹配当前条件"}</span>
+        </p>
+        <AnimatePresence mode="wait" initial={false}>
+          {multiSelect ? (
+            <m.div
+              key="actions"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: duration.fast, ease: ease.standard }}
+            >
+              <button type="button" onClick={onPreviewSelected} disabled={selectedCount === 0}>
+                <SearchCheck size={15} />预览删除影响
+              </button>
+              <button type="button" onClick={onClearSelection} disabled={selectedCount === 0}>
+                <X size={15} />清空选择
+              </button>
+            </m.div>
+          ) : (
+            <m.span
+              key="hint"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: duration.fast }}
+            >
+              先预览，再执行任何清理操作
+            </m.span>
+          )}
+        </AnimatePresence>
+      </div>
+    </section>
   );
 }

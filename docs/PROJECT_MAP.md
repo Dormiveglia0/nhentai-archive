@@ -231,7 +231,7 @@ Root: `frontend/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`, `tasks`, `export`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
+  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`, `tasks`, `export`, `files`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
   - Failed-job retry remains available for existing import jobs.
@@ -333,16 +333,14 @@ Root: `frontend/src/`
   - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `components/files/` — file maintenance module:
-  - Visual layout follows `design/文件管理.png`: hairline thin-number metric strip + multi-column file table + bottom cover-detail panel + right health/cleanup rail.
-  - `FilesPage.tsx` — thin container (takes `blurCovers`): overview strip + toolbar + file table + detail panel + health rail.
-  - `useFilesState.ts` — overview/inventory fetch, category/q/status filters with request token, selected Set, focus, delete preview + confirm orchestration; `actionNotice` surfaces delete success/errors; preview cleared on selection/filter change.
-  - `FileOverviewStrip.tsx` — hairline thin-number metric grid (dict-metric idiom).
-  - `FileToolbar.tsx` — category tabs + search + status filter + count.
-  - `FileList.tsx` — multi-column selectable table (文件名/路径/类型/大小/状态) with selected highlight + focus bar.
-  - `FileDetailPanel.tsx` — focused-item detail: real cover thumbnail (respects `blurCovers`) + 4 stat blocks.
-  - `FileHealthRail.tsx` — right rail: 健康度 (real overview), 重复检测 (honest 未接入 boundary — no fake dedupe), 清理工具 (preview → confirm delete + result notice).
-  - `fileHelpers.tsx` — `formatBytes`, `statusLabel`, `kindLabel`, `statusTone`, `targetKey`, `entryToTarget`.
-  - `App.tsx` renders `FilesPage` for `#files` with `blurCovers` (replaced the boundary screen).
+  - `FilesPage.tsx` — direct Folio composition for real overview, filters, semantic file list, pager, focused detail, cleanup preview and directory-scan preview. It imports no demo code.
+  - `FilesPage.css` — production-only metric, toolbar, custom scrollbar, list/detail/maintenance rail and four-viewport responsive layout. Replaced global `.files-*` rules were removed from `styles/app.css`.
+  - `useFilesState.ts` — latest-response guards for overview/inventory/delete preview, 180ms inventory debounce, filter-safe focus/selection reset, real delete confirmation orchestration and result notices.
+  - `FileToolbar.tsx` — animated category index, Folio search/custom status and sort selects, stable batch-selection bar.
+  - `FileList.tsx` — full-row semantic buttons with real path/type/size/status, custom selection state, size-mismatch flag display and styled internal scrolling.
+  - `FileDetailPanel.tsx` — focused real cover/path/metadata/tags and governance/export routes; cover respects `blurCovers`.
+  - `FileHealthRail.tsx` — real index and duplicate counts, cleanup preview→confirm boundary, read-only library-scan preview and guarded scan-task enqueue.
+  - `fileHelpers.tsx` — byte/kind/status formatting and delete-target conversion.
 - `components/tasks/` — task center:
   - `TasksPage.tsx` — direct Folio composition for `#tasks`: real status metrics, animated status index, search/refresh/confirmed clear, semantic task list, and source-of-truth inspector. It imports no demo code.
   - `TasksPage.css` — production-only responsive table/card layout, custom progress visuals, inspector progress ring and logs. The replaced global `.tasks-*` rules were removed from `styles/app.css`; visible operational text stays at 10px or above.
