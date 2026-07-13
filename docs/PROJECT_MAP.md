@@ -231,7 +231,7 @@ Root: `frontend/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
+  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`, `tasks`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
   - Failed-job retry remains available for existing import jobs.
@@ -343,14 +343,14 @@ Root: `frontend/src/`
   - `fileHelpers.tsx` — `formatBytes`, `statusLabel`, `kindLabel`, `statusTone`, `targetKey`, `entryToTarget`.
   - `App.tsx` renders `FilesPage` for `#files` with `blurCovers` (replaced the boundary screen).
 - `components/tasks/` — task center:
-  - Visual layout follows `design/任务中心.png`: real status metrics + tabbed task table + right inspector.
-  - `TasksPage.tsx` — route container for `#tasks`, replacing the previous boundary page.
-  - `useTasksState.ts` — polls `/api/jobs` every 2.5s, filters by status/query, tracks focus, loads logs, calls pause/resume/cancel/retry.
-  - `TaskSummaryStrip.tsx` — counts real queued/running/paused/failed/completed jobs and today's updated jobs.
-  - `TaskList.tsx` — compact table for task type, target, stage, progress, updated time, and retry/view action.
-  - `TaskInspector.tsx` — focused job detail, progress, error/retry-after, real pause/resume/cancel/retry/copy actions, and durable job log timeline.
+  - `TasksPage.tsx` — direct Folio composition for `#tasks`: real status metrics, animated status index, search/refresh/confirmed clear, semantic task list, and source-of-truth inspector. It imports no demo code.
+  - `TasksPage.css` — production-only responsive table/card layout, custom progress visuals, inspector progress ring and logs. The replaced global `.tasks-*` rules were removed from `styles/app.css`; visible operational text stays at 10px or above.
+  - `useTasksState.ts` — polls `/api/jobs` every 2.5s only while the document is visible, filters by status/query, tracks focus, loads logs, and calls pause/resume/cancel/retry/delete. Job/log request tokens prevent stale poll or fast-focus responses from overwriting current state; single-record deletion now confirms before mutation.
+  - `TaskSummaryStrip.tsx` — counts real queued/running/failed/completed jobs and today's updated jobs in the Folio hairline metric strip.
+  - `TaskList.tsx` — semantic task rows with an independent focus button and action region, custom ARIA progress, target/stage/time, real download/retry/pause/resume/cancel/log/delete capabilities; no nested interactive controls or native progress chrome.
+  - `TaskInspector.tsx` — focused job target, circular progress, errors/retry-after, bulk-export or scan facts, real controls, copy feedback, and durable job log timeline.
   - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
-  - Only failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel.
+  - Failed bulk exports and failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel. Browser visual QA never triggers these mutations.
 - `components/workbench/` — daily workbench dashboard:
   - `WorkbenchPage.tsx` — first directly migrated Folio route. Keeps the real overview hook/API flow while owning new semantic page structure; it does not wrap the legacy dashboard or import demo content.
   - `WorkbenchPage.css` — production-only toolbar, metric, shelf-grid, and module-ledger layout. The replaced `.workbench-*` rules were removed from `styles/app.css`.

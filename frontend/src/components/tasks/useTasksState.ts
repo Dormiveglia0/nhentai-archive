@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
 import type { Job, JobLog } from "../../lib/api";
@@ -57,12 +57,16 @@ export function useTasksState(): TasksViewModel {
   const [actingId, setActingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const jobsRequestRef = useRef(0);
+  const logsRequestRef = useRef(0);
 
   const load = useCallback(async (preferredFocusId?: number | null, initial = false) => {
+    const requestId = ++jobsRequestRef.current;
     if (initial) setLoading(true);
     else setRefreshing(true);
     try {
       const payload = await api.jobs();
+      if (requestId !== jobsRequestRef.current) return;
       setJobs(payload.result);
       setError(null);
       setFocusId((current) => {
@@ -72,14 +76,17 @@ export function useTasksState(): TasksViewModel {
         return payload.result[0]?.id ?? null;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === jobsRequestRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === jobsRequestRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
   const loadLogs = useCallback(async (jobId: number | null) => {
+    const requestId = ++logsRequestRef.current;
     if (!jobId) {
       setLogs([]);
       return;
@@ -87,24 +94,26 @@ export function useTasksState(): TasksViewModel {
     setLogsLoading(true);
     try {
       const payload = await api.jobLogs(jobId);
-      setLogs(payload.result);
+      if (requestId === logsRequestRef.current) setLogs(payload.result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === logsRequestRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLogsLoading(false);
+      if (requestId === logsRequestRef.current) setLogsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     let alive = true;
     const loadIfAlive = async (initial = false) => {
-      if (!alive) return;
+      if (!alive || (!initial && document.visibilityState !== "visible")) return;
       await load(undefined, initial);
     };
     void loadIfAlive(true);
     const timer = window.setInterval(() => void loadIfAlive(), 2500);
     return () => {
       alive = false;
+      jobsRequestRef.current += 1;
+      logsRequestRef.current += 1;
       window.clearInterval(timer);
     };
   }, [load]);
@@ -211,6 +220,7 @@ export function useTasksState(): TasksViewModel {
 
   const deleteJob = useCallback(
     async (id: number) => {
+      if (!window.confirm(`确定删除任务 #${id} 的记录吗？此操作不可撤销。`)) return;
       setActingId(id);
       setError(null);
       setNotice(null);

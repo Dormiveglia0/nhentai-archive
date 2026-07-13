@@ -1,7 +1,7 @@
-import { AlertTriangle, Copy, Download, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 
-import { api } from "../../lib/api";
-import type { Job, JobLog } from "../../lib/api";
+import { api, type Job, type JobLog } from "../../lib/api";
 import {
   bulkExportExpired,
   bulkExportSkipped,
@@ -35,209 +35,107 @@ type Props = {
   onDelete: (id: number) => void;
 };
 
-export function TaskInspector({
-  job,
-  logs,
-  logsLoading,
-  retryingId,
-  actingId,
-  onRetry,
-  onPause,
-  onResume,
-  onCancel,
-  onDelete,
-}: Props) {
-  if (!job) {
-    return (
-      <aside className="tasks-inspector">
-        <div className="tasks-inspector-empty">选择一个真实任务查看详情。</div>
-      </aside>
-    );
-  }
+export function TaskInspector(props: Props) {
+  const [copied, setCopied] = useState(false);
+  const { job } = props;
+
+  useEffect(() => setCopied(false), [job?.id]);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  if (!job) return <aside className="folio-tasks-inspector"><div className="folio-tasks-inspector-empty">选择一个真实任务查看阶段、进度与日志。</div></aside>;
 
   const galleryId = numberTarget(job, "gallery_id");
   const workId = numberTarget(job, "work_id");
-  const retryable = canRetry(job);
-  const busy = retryingId === job.id || actingId === job.id;
+  const busy = props.retryingId === job.id || props.actingId === job.id;
+
+  async function copyId() {
+    try {
+      if (!navigator.clipboard) return;
+      await navigator.clipboard.writeText(String(job?.id));
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   return (
-    <aside className="tasks-inspector">
-      <div className="tasks-inspector-head">
-        <div>
-          <h3>{jobTypeLabel(job.type)}</h3>
-          <p className={`tasks-inspector-state tone-${statusTone(job.status)}`}>
-            <span className="tasks-state-dot" aria-hidden="true" />
-            {statusLabel(job.status)}
-          </p>
-        </div>
-        <span>#{job.id}</span>
-      </div>
+    <aside className="folio-tasks-inspector" aria-label={`任务 ${job.id} 详情`}>
+      <header className="folio-tasks-inspector-head">
+        <div><span>Task log</span><h2>{jobTypeLabel(job.type)}</h2><p className={`is-${statusTone(job.status)}`}><i aria-hidden="true" />{statusLabel(job.status)}</p></div>
+        <strong>#{job.id}</strong>
+      </header>
 
-      <section className="tasks-inspector-section">
-        <h4>目标信息</h4>
+      <section className="folio-tasks-progress-detail">
+        <div className="folio-tasks-progress-ring" style={{ "--task-progress": `${job.progress.percent * 3.6}deg` } as CSSProperties}>
+          <span><strong>{job.progress.percent}%</strong><small>{statusLabel(job.status)}</small></span>
+        </div>
+        <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{job.progress.current} / {job.progress.total || "未知"} · {formatDurationHint(job)}</small></div>
+      </section>
+
+      <InspectorSection title="目标信息">
         {job.meta?.title ? (
-          <div className="tasks-inspector-work">
-            {job.meta.cover_url ? (
-              <img className="tasks-inspector-cover" src={job.meta.cover_url} alt="" loading="lazy" />
-            ) : (
-              <span className="tasks-inspector-cover is-empty" aria-hidden="true" />
-            )}
-            <div className="tasks-inspector-work-text">
-              <strong>{job.meta.title}</strong>
-              {job.meta.page_count ? <span>{job.meta.page_count}P</span> : null}
-            </div>
+          <div className="folio-tasks-inspector-work">
+            {job.meta.cover_url ? <img src={job.meta.cover_url} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true" />}
+            <div><strong>{job.meta.title}</strong>{job.meta.page_count ? <small>{job.meta.page_count}P</small> : null}</div>
           </div>
         ) : null}
-        <dl className="tasks-kv">
-          <div>
-            <dt>目标</dt>
-            <dd>{targetLabel(job)}</dd>
-          </div>
-          <div>
-            <dt>Gallery ID</dt>
-            <dd>{galleryId ?? "无"}</dd>
-          </div>
-          <div>
-            <dt>Work ID</dt>
-            <dd>{workId ?? "未生成"}</dd>
-          </div>
-          <div>
-            <dt>创建时间</dt>
-            <dd>{formatTime(job.created_at)}</dd>
-          </div>
-          <div>
-            <dt>更新时间</dt>
-            <dd>{formatTime(job.updated_at)}</dd>
-          </div>
+        <dl className="folio-tasks-kv">
+          <div><dt>目标</dt><dd>{targetLabel(job)}</dd></div>
+          <div><dt>Gallery ID</dt><dd>{galleryId ?? "无"}</dd></div>
+          <div><dt>Work ID</dt><dd>{workId ?? "未生成"}</dd></div>
+          <div><dt>创建时间</dt><dd>{formatTime(job.created_at)}</dd></div>
+          <div><dt>更新时间</dt><dd>{formatTime(job.updated_at)}</dd></div>
         </dl>
-      </section>
-
-      <section className="tasks-inspector-section">
-        <h4>进度详情</h4>
-        <div className="tasks-progress-detail">
-          <div>
-            <strong>{job.progress.percent}%</strong>
-            <span>{stageLabel(job.stage)}</span>
-          </div>
-          <progress max="100" value={job.progress.percent} />
-          <dl className="tasks-kv">
-            <div>
-              <dt>完成</dt>
-              <dd>{job.progress.current} / {job.progress.total || "未知"}</dd>
-            </div>
-            <div>
-              <dt>提示</dt>
-              <dd>{formatDurationHint(job)}</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
+      </InspectorSection>
 
       {job.type === "bulk_export" ? (
-        <section className="tasks-inspector-section">
-          <h4>导出产物</h4>
+        <InspectorSection title="导出产物">
           {canDownloadBulkExport(job) ? (
-            <a className="tasks-row-action" href={api.bulkExportDownloadUrl(job.id)} download>
-              <Download size={15} />
-              下载 .zip（{job.target.output_name ?? "合集"}）
-            </a>
+            <a className="folio-tasks-inspector-link" href={api.bulkExportDownloadUrl(job.id)} download><Download size={15} />下载 .zip（{job.target.output_name ?? "合集"}）</a>
           ) : job.status === "completed" ? (
-            <p className="tasks-boundary">
-              {job.target.downloaded ? "产物已下载并清除。" : bulkExportExpired(job) ? "产物已过期清除。" : "产物已就绪。"}
-            </p>
-          ) : (
-            <p className="tasks-boundary">完成后可下载临时产物（下载即删，24h 后自动清理）。</p>
-          )}
-          {bulkExportSkipped(job).length > 0 ? (
-            <p className="tasks-boundary">
-              已跳过 {bulkExportSkipped(job).length} 部存在阻塞的作品。
-            </p>
-          ) : null}
-        </section>
+            <p className="folio-tasks-boundary">{job.target.downloaded ? "产物已下载并清除。" : bulkExportExpired(job) ? "产物已过期清除。" : "产物已就绪。"}</p>
+          ) : <p className="folio-tasks-boundary">完成后可下载临时产物；下载即删，24 小时后自动清理。</p>}
+          {bulkExportSkipped(job).length ? <p className="folio-tasks-boundary">已跳过 {bulkExportSkipped(job).length} 部存在阻塞的作品。</p> : null}
+        </InspectorSection>
       ) : null}
 
       {job.type === "library_scan" ? (
-        <section className="tasks-inspector-section">
-          <h4>入库详情</h4>
-          <dl className="tasks-kv">
-            <div>
-              <dt>已入库</dt>
-              <dd>{numberTarget(job, "ingested") ?? 0} / {numberTarget(job, "total") ?? 0} 个</dd>
-            </div>
-          </dl>
-          {libraryScanSkipped(job).length > 0 ? (
-            <p className="tasks-boundary">
-              跳过 {libraryScanSkipped(job).length} 个（不可读/失败）。
-            </p>
-          ) : null}
-        </section>
+        <InspectorSection title="入库详情">
+          <dl className="folio-tasks-kv"><div><dt>已入库</dt><dd>{numberTarget(job, "ingested") ?? 0} / {numberTarget(job, "total") ?? 0} 个</dd></div></dl>
+          {libraryScanSkipped(job).length ? <p className="folio-tasks-boundary">跳过 {libraryScanSkipped(job).length} 个不可读或失败文件。</p> : null}
+        </InspectorSection>
       ) : null}
 
-      <section className="tasks-inspector-section">
-        <h4>错误 / 提示</h4>
-        {job.error ? (
-          <div className="tasks-error-card">
-            <AlertTriangle size={16} />
-            <p>{job.error}</p>
-            {job.retry_after ? <small>远端建议等待 {job.retry_after} 秒后再重试。</small> : null}
-          </div>
-        ) : (
-          <p className="tasks-boundary">当前任务没有错误记录。</p>
-        )}
-      </section>
+      <InspectorSection title="错误 / 提示">
+        {job.error ? <div className="folio-tasks-error-card"><AlertTriangle size={16} /><p>{job.error}</p>{job.retry_after ? <small>远端建议等待 {job.retry_after} 秒后重试。</small> : null}</div> : <p className="folio-tasks-boundary">当前任务没有错误记录。</p>}
+      </InspectorSection>
 
-      <section className="tasks-inspector-section">
-        <h4>操作</h4>
-        <div className="tasks-inspector-actions">
-          <button type="button" disabled={!retryable || busy} onClick={() => onRetry(job.id)}>
-            <RotateCcw size={15} />
-            {retryingId === job.id ? "重试中" : "重试任务"}
-          </button>
-          <button type="button" disabled={!canPause(job) || busy} onClick={() => onPause(job.id)}>
-            <Pause size={15} />
-            暂停任务
-          </button>
-          <button type="button" disabled={!canResume(job) || busy} onClick={() => onResume(job.id)}>
-            <Play size={15} />
-            恢复任务
-          </button>
-          <button type="button" disabled={!canCancel(job) || busy} onClick={() => onCancel(job.id)}>
-            <X size={15} />
-            取消任务
-          </button>
-          <button type="button" onClick={() => void navigator.clipboard?.writeText(String(job.id))}>
-            <Copy size={15} />
-            复制任务 ID
-          </button>
-          <button
-            type="button"
-            className="tasks-action-danger"
-            disabled={!canDelete(job) || busy}
-            onClick={() => onDelete(job.id)}
-          >
-            <Trash2 size={15} />
-            删除记录
-          </button>
+      <InspectorSection title="操作">
+        <div className="folio-tasks-inspector-actions">
+          <button type="button" disabled={!canRetry(job) || busy} onClick={() => props.onRetry(job.id)}><RotateCcw size={15} />{props.retryingId === job.id ? "重试中" : "重试"}</button>
+          <button type="button" disabled={!canPause(job) || busy} onClick={() => props.onPause(job.id)}><Pause size={15} />暂停</button>
+          <button type="button" disabled={!canResume(job) || busy} onClick={() => props.onResume(job.id)}><Play size={15} />恢复</button>
+          <button type="button" disabled={!canCancel(job) || busy} onClick={() => props.onCancel(job.id)}><X size={15} />取消</button>
+          <button type="button" onClick={() => void copyId()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "已复制" : "复制 ID"}</button>
+          <button className="is-danger" type="button" disabled={!canDelete(job) || busy} onClick={() => props.onDelete(job.id)}><Trash2 size={15} />删除</button>
         </div>
-      </section>
+      </InspectorSection>
 
-      <section className="tasks-inspector-section">
-        <h4>任务日志</h4>
-        {logsLoading ? (
-          <p className="tasks-boundary">正在读取日志...</p>
-        ) : logs.length > 0 ? (
-          <ol className="tasks-log">
-            {logs.map((entry) => (
-              <li key={entry.id} className={entry.level === "error" ? "is-error" : undefined}>
-                <time>{formatTime(entry.created_at)}</time>
-                <span>{entry.message}</span>
-              </li>
-            ))}
+      <InspectorSection title="任务日志">
+        {props.logsLoading ? <p className="folio-tasks-boundary">正在读取日志…</p> : props.logs.length ? (
+          <ol className="folio-tasks-log">
+            {props.logs.map((entry) => <li key={entry.id} className={entry.level === "error" ? "is-error" : ""}><time>{formatTime(entry.created_at)}</time><span>{entry.message}</span></li>)}
           </ol>
-        ) : (
-          <p className="tasks-boundary">该任务暂无日志。</p>
-        )}
-      </section>
+        ) : <p className="folio-tasks-boundary">该任务暂无日志。</p>}
+      </InspectorSection>
     </aside>
   );
+}
+
+function InspectorSection({ title, children }: { title: string; children: ReactNode }) {
+  return <section className="folio-tasks-inspector-section"><h3>{title}</h3>{children}</section>;
 }

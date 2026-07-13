@@ -54,7 +54,8 @@ export function ArchiveShell({
     activePage === "library" ||
     activePage === "discover" ||
     activePage === "governance" ||
-    activePage === "dictionary"
+    activePage === "dictionary" ||
+    activePage === "tasks"
   ) {
     return (
       <>
