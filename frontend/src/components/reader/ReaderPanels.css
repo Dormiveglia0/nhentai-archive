@@ -157,26 +157,51 @@
   line-height: 1.7;
 }
 
-.reader-info-tags {
+.reader-info-tag-groups {
   max-height: 164px;
   margin: 17px 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  list-style: none;
+  display: grid;
+  gap: 10px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--reader-red) transparent;
 }
 
-.reader-info-tags li {
-  min-height: 29px;
-  padding: 5px 8px;
-  border: 1px solid var(--reader-line);
+.reader-info-tag-groups section > small {
+  margin-bottom: 6px;
+  display: block;
   color: var(--reader-muted);
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.reader-info-tag-groups ul {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+}
+
+.reader-info-tag-groups li {
+  min-height: 29px;
+  border: 1px solid var(--reader-line);
   font-size: 11px;
   line-height: 1.5;
+}
+
+.reader-info-tag-groups a {
+  min-height: 27px;
+  padding: 5px 8px;
+  display: block;
+  color: var(--reader-muted);
+  text-decoration: none;
+}
+
+.reader-info-tag-groups a:hover {
+  background: var(--reader-red);
+  color: var(--reader-paper);
 }
 
 .reader-info-actions {
@@ -251,8 +276,10 @@
 .reader-thumb-head strong { margin-top: 3px; font-family: "Noto Serif SC", serif; font-size: 15px; }
 
 .reader-thumb-stage {
+  max-width: 100%;
   display: grid;
   place-content: center;
+  overflow-x: clip;
   overscroll-behavior: contain;
   scrollbar-color: rgba(199,75,62,.72) rgba(238,232,218,.06);
   scrollbar-width: thin;

@@ -1,6 +1,6 @@
 # Next Stage Prompt: Post-Closure QA And Polish
 
-Use this prompt after the feature-complete local loop remains green (`pytest` + `npm run build`). The latest closure baseline is 183 backend tests plus the route-split frontend build and four-viewport browser regression.
+Use this prompt after the feature-complete local loop remains green (`pytest` + `npm run build`). The latest closure baseline is 184 backend tests plus the route-split frontend build and four-viewport browser regression.
 
 ## Required Reading Order
 
@@ -27,7 +27,8 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 - Browser QA against real or user-provided data after each route migration; compare the formal route with `/demo` at desktop and mobile sizes.
 - Operational-page migration must preserve task state-machine controls, export download semantics, file-deletion previews/confirmations, and current real-data empty states.
 - File operations have one owner: keep delete/cleanup/scan async state in `files/useFilesState.ts`; deletion must remain preview → viewport-level confirmation, and scan enqueue must submit the exact paths from the visible preview rather than recomputing targets.
-- Preserve the simplified flows now verified in production: discover is grid-only, selected discover tags stay first with one clear-all action, continuous reader progress is derived from the actual reader scroller, saved cover blur updates `ArchiveApp` immediately, and file rows are directly selectable with desktop-side/mobile-drawer actions.
+- Preserve the simplified flows now verified in production: discover is grid-only, its tag picker defaults to content tags with author/work metadata in a separate scope, selected tags stay first with one clear-all action, continuous reader progress is derived from the actual reader scroller, reader info retains grouped local metadata tags and the gallery link, saved cover blur updates `ArchiveApp` immediately, and file rows are directly selectable with desktop-side/mobile-drawer actions.
+- Preserve native link semantics for every formal tag surface through `tagSearchHref()`: ordinary left click may filter in place, but middle/modifier click must open discover search in a new tab. Keep shared library/workbench shelves press-draggable, the reader page index horizontally clipped, the gallery lightbox ratio-constrained, and the fixed five related works free of orphan rows.
 - Mobile layout polish only where screenshots show concrete overlap, wrapping, density, or touch-reachability problems.
 - Long-list performance checks for library/export/governance queues; route splitting is complete, so optimize measured render/fetch bottlenecks rather than reorganizing chunks speculatively.
 - Small user-feedback fixes. Keep them scoped and covered by the smallest relevant test.

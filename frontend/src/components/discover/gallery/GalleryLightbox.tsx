@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { m } from "motion/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
 import type { PreviewPageItem } from "./galleryDetailModel";
@@ -24,6 +24,7 @@ export function GalleryLightbox({
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const page = pages[activeIndex];
+  const [measuredPage, setMeasuredPage] = useState<{ src: string; ratio: number } | null>(null);
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -54,6 +55,12 @@ export function GalleryLightbox({
   }, [activeIndex, onSelect, pages.length]);
 
   if (!page) return null;
+  const sourceRatio = page.width && page.height
+    ? page.width / page.height
+    : measuredPage?.src === page.src
+      ? measuredPage.ratio
+      : null;
+  const pageRatio = Math.max(0.42, Math.min(1.9, sourceRatio || 0.72));
 
   return (
     <m.div
@@ -70,6 +77,7 @@ export function GalleryLightbox({
       <button className="folio-gallery-lightbox-backdrop" type="button" aria-label="关闭预览" onClick={onClose} />
       <m.div
         className="folio-gallery-lightbox-stage"
+        style={{ "--folio-gallery-page-ratio": pageRatio } as CSSProperties}
         initial={{ opacity: 0, y: reduceMotion ? 0 : 22, scale: reduceMotion ? 1 : 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: reduceMotion ? 0 : 12, scale: reduceMotion ? 1 : 0.98 }}
@@ -81,7 +89,15 @@ export function GalleryLightbox({
           <button ref={closeButton} type="button" onClick={onClose} aria-label="关闭预览"><X size={18} /></button>
         </header>
         <div className="folio-gallery-lightbox-media">
-          <img className={blurCovers ? "is-blurred" : ""} src={page.src} alt={`第 ${page.pageIndex} 页`} />
+          <img
+            className={blurCovers ? "is-blurred" : ""}
+            src={page.src}
+            alt={`第 ${page.pageIndex} 页`}
+            onLoad={(event) => setMeasuredPage({
+              src: page.src,
+              ratio: event.currentTarget.naturalWidth / event.currentTarget.naturalHeight,
+            })}
+          />
         </div>
         <footer>
           <button type="button" disabled={activeIndex <= 0} onClick={() => onSelect(activeIndex - 1)}>

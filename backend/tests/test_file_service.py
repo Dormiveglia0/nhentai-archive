@@ -331,6 +331,7 @@ def test_inventory_work_entry_has_tags_and_modified_time(tmp_path):
 
     entry = next(e for e in files.inventory(category="work")["result"] if e["work_id"] == work_id)
     assert "巨乳" in entry["tags"]
+    assert any(tag["display"] == "巨乳" and tag["id"] == 30 for tag in entry["tag_items"])
     assert entry["updated_at"]
 
 

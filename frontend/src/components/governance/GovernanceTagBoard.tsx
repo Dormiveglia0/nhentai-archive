@@ -1,5 +1,5 @@
 import type { GovernanceAggregate, GovernanceTag } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { navigate, tagSearchHref } from "../../lib/navigation";
 
 export function GovernanceTagBoard({
   aggregate,
@@ -29,7 +29,7 @@ export function GovernanceTagBoard({
               <div className="folio-governance-tag-list">
                 {group.tags.map((tag) => (
                   <span key={tag.id} className={`folio-governance-tag is-${tag.state}`}>
-                    {tag.display}
+                    <a href={tagSearchHref({ id: tag.remote_tag_id, type: tag.type, name: tag.name, slug: tag.slug, display: tag.display })}>{tag.display}</a>
                     {tag.state === "conflict" ? (
                       <button type="button" onClick={() => navigate({ name: "dictionary" })}>
                         去词典

@@ -2,6 +2,7 @@ import { ArrowRight, BookOpen, Link2, ShieldAlert, Tags } from "lucide-react";
 
 import type { DictionaryApplyPayload, DictionaryEvidence, DictionaryPreview } from "../../lib/api";
 import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
+import { tagSearchHref } from "../../lib/navigation";
 
 type Props = {
   evidence: DictionaryEvidence | null;
@@ -51,7 +52,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
               <header><Tags size={15} /><h3>常见搭配</h3></header>
               {coTags.length ? (
                 <div className="folio-dictionary-co-tags">
-                  {coTags.map((tag) => <span key={tag.id}>{tag.display}<b>{tag.count}</b></span>)}
+                  {coTags.map((tag) => <a key={tag.id} href={tagSearchHref(tag)}>{tag.display}<b>{tag.count}</b></a>)}
                 </div>
               ) : <em>暂无真实搭配标签。</em>}
             </article>

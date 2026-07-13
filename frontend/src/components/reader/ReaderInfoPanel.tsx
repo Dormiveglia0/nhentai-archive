@@ -2,14 +2,14 @@ import { ArrowUpRight, Check, Download, LoaderCircle, Star, X } from "lucide-rea
 import { useEffect, useRef } from "react";
 
 import { FadeInOut, Presence } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
+import { navigate, tagSearchHref } from "../../lib/navigation";
 import "./ReaderPanels.css";
 
 type ReaderInfoPanelProps = {
   open: boolean;
   title: string;
   coverSrc: string | null;
-  tags: { id: number; type: string; display: string }[];
+  tags: { id: number; type: string; name?: string; slug?: string; display: string }[];
   progressPercent: number;
   isRemote: boolean;
   importing: boolean;
@@ -43,6 +43,10 @@ export function ReaderInfoPanel({
   onHoverChange,
 }: ReaderInfoPanelProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
+  const tagGroups = READER_TAG_GROUPS.map((group) => ({
+    ...group,
+    tags: tags.filter((tag) => group.types.includes(tag.type)),
+  })).filter((group) => group.tags.length);
 
   useEffect(() => {
     if (!open) return;
@@ -78,10 +82,21 @@ export function ReaderInfoPanel({
               <i><span style={{ width: `${progressPercent}%` }} /></i>
             </div>
             {isRemote ? <p>远端预览不会保存阅读位置；入库后可持续记录进度。</p> : null}
-            {tags.length > 0 ? (
-              <ul className="reader-info-tags">
-                {tags.map((tag) => <li key={tag.id} data-type={tag.type}>{tag.display}</li>)}
-              </ul>
+            {tagGroups.length ? (
+              <div className="reader-info-tag-groups">
+                {tagGroups.map((group) => (
+                  <section key={group.label}>
+                    <small>{group.label}</small>
+                    <ul>
+                      {group.tags.map((tag) => (
+                        <li key={`${tag.type}-${tag.id}-${tag.display}`} data-type={tag.type}>
+                          <a href={tagSearchHref(tag)}>{tag.display}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             ) : null}
           </div>
 
@@ -109,3 +124,10 @@ export function ReaderInfoPanel({
     </Presence>
   );
 }
+
+const READER_TAG_GROUPS = [
+  { label: "作者 / 社团", types: ["artist", "group"] },
+  { label: "原作 / 角色", types: ["parody", "character"] },
+  { label: "内容标签", types: ["tag"] },
+  { label: "分类 / 语言", types: ["category", "language"] },
+];

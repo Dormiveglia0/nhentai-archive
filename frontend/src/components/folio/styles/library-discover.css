@@ -48,9 +48,12 @@
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
+  cursor: grab;
+  touch-action: pan-y;
 }
 
 .folio-shelf-track::-webkit-scrollbar { display: none; }
+.folio-shelf-track.is-dragging { cursor: grabbing; user-select: none; }
 .folio-shelf-cell { flex: 0 0 auto; }
 
 .folio-shelf-item {

@@ -1,6 +1,7 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 
 import type { RemoteTag } from "../../lib/api";
+import { tagSearchHref } from "../../lib/navigation";
 
 type Props = {
   tags: RemoteTag[];
@@ -18,7 +19,7 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
   const [isDragging, setIsDragging] = useState(false);
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (!ref.current) return;
+    if (!ref.current || event.button !== 0) return;
     pointerId.current = event.pointerId;
     startX.current = event.clientX;
     startScroll.current = ref.current.scrollLeft;
@@ -45,8 +46,14 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
   function pick(event: ReactMouseEvent, tag: RemoteTag) {
     // Tags live inside a clickable card body; never let a tag click bubble up to open the work.
     event.stopPropagation();
-    if (dragged.current) return;
-    onPickTag?.(tag);
+    if (dragged.current) {
+      event.preventDefault();
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    if (!onPickTag) return;
+    event.preventDefault();
+    onPickTag(tag);
   }
 
   return (
@@ -64,9 +71,9 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
         <span>标签未缓存</span>
       ) : (
         tags.slice(0, 22).map((tag) => (
-          <button key={tag.id} type="button" onClick={(event) => pick(event, tag)}>
+          <a key={tag.id} href={tagSearchHref(tag)} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
             {displayTag(tag)}
-          </button>
+          </a>
         ))
       )}
     </div>

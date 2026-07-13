@@ -788,7 +788,7 @@
   scrollbar-width: thin;
 }
 
-.folio-files-tags i {
+.folio-files-tags a {
   min-height: 27px;
   padding: 0 8px;
   display: inline-flex;
@@ -796,8 +796,10 @@
   border: 1px solid var(--folio-line);
   color: var(--folio-muted);
   font-size: 11px;
-  font-style: normal;
+  text-decoration: none;
 }
+
+.folio-files-tags a:hover { border-color: var(--folio-red); color: var(--folio-red); }
 
 .folio-files-tags small {
   padding-top: 5px;

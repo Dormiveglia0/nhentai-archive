@@ -209,13 +209,17 @@ class FileMaintenanceService:
         result = entries[start : start + per_page]
         for entry in result:
             if entry["kind"] == "work":
-                entry["tags"] = self._work_tags_display(int(entry["work_id"]))
+                tag_items = self._work_tags(int(entry["work_id"]))
+                entry["tag_items"] = tag_items
+                entry["tags"] = [tag["display"] for tag in tag_items]
         return {"result": result, "total": total, "page": page, "per_page": per_page}
 
-    def _work_tags_display(self, work_id: int, limit: int = 12) -> list[str]:
+    def _work_tags(self, work_id: int, limit: int = 12) -> list[dict[str, Any]]:
         rows = self.db.fetchall(
             """
-            SELECT COALESCE(d.zh_name, wt.remote_name, wt.remote_slug) AS display
+            SELECT wt.remote_tag_id AS id, wt.tag_type AS type, wt.remote_name AS name,
+                   wt.remote_slug AS slug,
+                   COALESCE(d.zh_name, wt.remote_name, wt.remote_slug) AS display
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
             WHERE wt.work_id = ?
@@ -224,7 +228,7 @@ class FileMaintenanceService:
             """,
             (work_id, limit),
         )
-        return [str(r["display"]) for r in rows if r.get("display")]
+        return [row for row in rows if row.get("display")]
 
     def duplicates(self) -> dict[str, Any]:
         """Real duplicate detection over stored source files and gallery ids.

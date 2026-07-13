@@ -469,6 +469,7 @@ export type FileEntry = {
   remote_gallery_id?: number | null;
   updated_at?: string | null;
   tags?: string[];
+  tag_items?: LibraryTag[];
   // loose entries
   path?: string;
   name?: string;
@@ -1038,7 +1039,7 @@ export const api = {
     }),
   filesDuplicates: () => request<FileDuplicates>("/api/files/duplicates"),
   works: () => request<{ result: Work[] }>("/api/works"),
-  work: (id: number) => request<Work>(`/api/works/${id}`),
+  work: (id: number) => request<LibraryWork>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
   readerState: (id: number) => request<ReaderState>(`/api/works/${id}/reader-state`),
   updateReaderState: (id: number, pageIndex: number, completed = false) =>

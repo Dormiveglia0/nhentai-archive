@@ -4,6 +4,7 @@ import { duration, ease, stagger } from "./tokens";
 import { usePrefersReducedMotion } from "./useReducedMotion";
 
 type DivMotionProps = PropsWithChildren<{ className?: string; delay?: number }>;
+type StaggerProps = Omit<HTMLMotionProps<"div">, "animate" | "initial" | "variants">;
 
 /** 进场淡入,可选位移。reduced-motion 下退化为纯淡入。 */
 export function FadeIn({
@@ -66,9 +67,10 @@ const staggerParent: Variants = {
 };
 
 /** 列表/网格容器,子项用 <StaggerItem> 逐项进场。 */
-export function Stagger({ children, className }: DivMotionProps) {
+export function Stagger({ children, className, ...rest }: StaggerProps) {
   return (
     <m.div
+      {...rest}
       className={className}
       variants={staggerParent}
       initial="hidden"

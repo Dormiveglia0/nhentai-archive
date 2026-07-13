@@ -607,7 +607,7 @@ def list_works():
 
 @app.get("/api/works/{work_id}")
 def get_work(work_id: int):
-    work = archive.get_work(work_id)
+    work = library.work(work_id)
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
     return work

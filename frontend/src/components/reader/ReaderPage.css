@@ -47,6 +47,7 @@
 
 .reader-shell button:focus-visible,
 .reader-shell input:focus-visible,
+.reader-shell a:focus-visible,
 .reader-scrubber-track:focus-visible {
   outline: 2px solid var(--reader-red);
   outline-offset: 3px;

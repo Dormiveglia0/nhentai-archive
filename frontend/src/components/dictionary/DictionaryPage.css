@@ -637,15 +637,19 @@
   gap: 5px;
 }
 
-.folio-dictionary-co-tags span {
+.folio-dictionary-co-tags a {
   min-height: 24px;
   padding: 3px 6px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   border: 1px solid var(--folio-line);
+  color: var(--folio-ink);
   font-size: 11px;
+  text-decoration: none;
 }
+
+.folio-dictionary-co-tags a:hover { border-color: var(--folio-red); color: var(--folio-red); }
 
 .folio-dictionary-co-tags b {
   color: var(--folio-red);

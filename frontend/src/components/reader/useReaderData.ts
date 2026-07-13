@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api, type GalleryDetail, type PageInfo, type ReaderState, type Work } from "../../lib/api";
+import { api, type GalleryDetail, type LibraryWork, type PageInfo, type ReaderState } from "../../lib/api";
 import { clamp, PERSIST_DEBOUNCE_MS, type ReaderPageItem } from "./readerHelpers";
 
 export type ReaderSource =
   | { kind: "local"; workId: number }
   | { kind: "remote"; galleryId: number };
 
-export type ReaderTag = { id: number; type: string; display: string };
+export type ReaderTag = { id: number; type: string; name?: string; slug?: string; display: string };
 
 export function useReaderData(source: ReaderSource) {
   const localWorkId = source.kind === "local" ? source.workId : null;
@@ -18,7 +18,7 @@ export function useReaderData(source: ReaderSource) {
   );
   const sourceKey = stableSource.kind === "local" ? `local:${stableSource.workId}` : `remote:${stableSource.galleryId}`;
 
-  const [work, setWork] = useState<Work | null>(null);
+  const [work, setWork] = useState<LibraryWork | null>(null);
   const [gallery, setGallery] = useState<GalleryDetail | null>(null);
   const [localPages, setLocalPages] = useState<PageInfo[]>([]);
   const [state, setState] = useState<ReaderState | null>(null);
@@ -139,9 +139,15 @@ export function useReaderData(source: ReaderSource) {
     : work?.title || "NH Archive";
   const coverSrc = isRemote ? gallery?.thumbnail?.url || gallery?.cover?.url || null : work ? `/api/works/${work.id}/cover` : null;
   const tags = useMemo<ReaderTag[]>(() => {
-    if (!isRemote || !gallery) return [];
-    return gallery.tags.map((tag) => ({ id: tag.id, type: tag.type, display: tag.display || tag.name }));
-  }, [gallery, isRemote]);
+    const sourceTags = isRemote ? gallery?.tags : work?.tags;
+    return (sourceTags ?? []).map((tag) => ({
+      id: tag.id,
+      type: tag.type || "tag",
+      name: tag.name,
+      slug: tag.slug,
+      display: tag.display || tag.name || tag.slug || String(tag.id),
+    }));
+  }, [gallery?.tags, isRemote, work?.tags]);
   const progressPercent = pageCount ? Math.round((clamp(pageIndex, 1, pageCount) / pageCount) * 100) : 0;
 
   const persistLocal = useCallback((next: number, done: boolean) => {

@@ -3,7 +3,7 @@ import { m } from "motion/react";
 
 import type { GalleryDetail } from "../../../lib/api";
 import { Stagger, StaggerItem } from "../../../lib/motion";
-import { navigate } from "../../../lib/navigation";
+import { tagSearchHref } from "../../../lib/navigation";
 import { defaultDisplayTag } from "../TagScroller";
 import { TAG_GROUPS } from "./galleryDetailModel";
 import "./GalleryTags.css";
@@ -28,16 +28,15 @@ export function GalleryTags({ detail }: { detail: GalleryDetail }) {
             <h3>{group.label}</h3>
             <div>
               {group.tags.map((tag) => (
-                <m.button
+                <m.a
                   layout
                   key={tag.id}
-                  type="button"
-                  onClick={() => navigate({ name: "discover", tag })}
+                  href={tagSearchHref(tag)}
                   whileTap={{ scale: 0.97 }}
                 >
                   <span>{defaultDisplayTag(tag)}</span>
                   <ArrowUpRight size={12} />
-                </m.button>
+                </m.a>
               ))}
             </div>
           </StaggerItem>

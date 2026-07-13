@@ -4,6 +4,7 @@ import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
 import { api, type RemoteTag } from "../../lib/api";
 import { duration, ease } from "../../lib/motion";
+import { tagSearchHref } from "../../lib/navigation";
 import type { TagFilter } from "./discoverTypes";
 import { defaultDisplayTag } from "./TagScroller";
 
@@ -19,6 +20,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   const [suggestions, setSuggestions] = useState<RemoteTag[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<"tag" | "meta">("tag");
   const cachedRequested = useRef(false);
   const latestQuery = useRef("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   }, [open, query]);
 
   function chooseFirst() {
-    const first = (canSearchTag(query.trim()) ? suggestions : cached)[0];
+    const first = (canSearchTag(query.trim()) ? suggestions : cached).find((tag) => matchesScope(tag, scope));
     if (first) toggle(first);
   }
 
@@ -127,7 +129,8 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   }
 
   const normalizedQuery = query.trim();
-  const visible = uniqueRemoteTags([...selected, ...(canSearchTag(normalizedQuery) ? suggestions : cached)]);
+  const visible = uniqueRemoteTags([...selected, ...(canSearchTag(normalizedQuery) ? suggestions : cached)])
+    .filter((tag) => matchesScope(tag, scope));
 
   return (
     <div ref={rootRef} className={open ? "folio-discover-tags is-open" : "folio-discover-tags"}>
@@ -136,7 +139,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
           <div className="folio-discover-tag-chips" aria-label="已选远端标签">
             {selected.map((tag) => (
               <span key={tag.id}>
-                {defaultDisplayTag(tag)}
+                <a href={tagSearchHref(tag)}>{defaultDisplayTag(tag)}</a>
                 <button type="button" aria-label={`移除标签 ${defaultDisplayTag(tag)}`} onClick={() => remove(tag)}><X size={12} /></button>
               </span>
             ))}
@@ -185,16 +188,31 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
               {loading ? <span role="status">检索中</span> : null}
             </label>
 
+            <div className="folio-discover-tag-scope" role="tablist" aria-label="标签候选分类">
+              <button type="button" role="tab" aria-selected={scope === "tag"} className={scope === "tag" ? "is-active" : ""} onClick={() => setScope("tag")}>内容标签</button>
+              <button type="button" role="tab" aria-selected={scope === "meta"} className={scope === "meta" ? "is-active" : ""} onClick={() => setScope("meta")}>作者与作品信息</button>
+            </div>
+
             <div className="folio-discover-tag-options">
               {error ? <p role="alert">{error}</p> : null}
               {!error && visible.map((tag) => {
                 const active = selected.some((item) => item.id === tag.id);
                 return (
-                  <button key={tag.id} type="button" className={active ? "is-active" : ""} aria-pressed={active} onClick={() => toggle(tag)}>
+                  <a
+                    key={tag.id}
+                    href={tagSearchHref(tag)}
+                    className={active ? "is-active" : ""}
+                    aria-current={active ? "true" : undefined}
+                    onClick={(event) => {
+                      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                      event.preventDefault();
+                      toggle(tag);
+                    }}
+                  >
                     <span><strong>{defaultDisplayTag(tag)}</strong><small>{tag.name || tag.slug || `#${tag.id}`}</small></span>
-                    <em>{tag.type || "tag"}</em>
+                    <em>{tagTypeLabel(tag.type)}</em>
                     {active ? <Check size={15} /> : <i />}
-                  </button>
+                  </a>
                 );
               })}
               {!error && !loading && !visible.length ? (
@@ -219,4 +237,12 @@ function uniqueRemoteTags(tags: RemoteTag[]) {
     seen.add(tag.id);
     return true;
   });
+}
+
+function matchesScope(tag: RemoteTag, scope: "tag" | "meta") {
+  return scope === "tag" ? (tag.type || "tag") === "tag" : (tag.type || "tag") !== "tag";
+}
+
+function tagTypeLabel(type?: string) {
+  return ({ artist: "作者", group: "社团", parody: "原作", character: "角色", category: "分类", language: "语言", tag: "标签" } as Record<string, string>)[type || "tag"] || type || "标签";
 }

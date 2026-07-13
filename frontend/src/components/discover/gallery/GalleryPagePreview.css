@@ -168,7 +168,7 @@
 }
 
 .folio-gallery-lightbox-stage {
-  width: min(1120px, 96vw);
+  width: min(1120px, 96vw, calc((94vh - 112px) * var(--folio-gallery-page-ratio, .72) + 24px));
   height: min(920px, 94vh);
   display: grid;
   grid-template-rows: 54px minmax(0, 1fr) 58px;

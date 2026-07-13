@@ -2,50 +2,54 @@ import { ArrowUpRight, Layers3 } from "lucide-react";
 
 import type { GalleryDetail } from "../../../lib/api";
 import { Stagger, StaggerItem } from "../../../lib/motion";
-import { navigate } from "../../../lib/navigation";
+import { navigate, tagSearchHref } from "../../../lib/navigation";
 import { defaultDisplayTag } from "../TagScroller";
 import "./GalleryRelated.css";
 
 export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; blurCovers: boolean }) {
-  if (!detail.related.length) return null;
+  const related = detail.related.slice(0, 5);
+  if (!related.length) return null;
+
+  function openGallery(galleryId: number) {
+    navigate({
+      name: "gallery",
+      galleryId,
+      returnTo: window.location.hash.replace(/^#/, ""),
+    });
+  }
 
   return (
     <section className="folio-gallery-related">
       <header className="folio-gallery-section-head">
         <div><Layers3 size={18} /><span><h2>相关作品</h2><p>由远端来源返回的真实关联结果。</p></span></div>
-        <small>{detail.related.length} 项</small>
+        <small>{related.length} 项</small>
       </header>
       <Stagger className="folio-gallery-related-list">
-        {detail.related.map((item) => {
+        {related.map((item) => {
           const relatedTitle = item.title_japanese || item.pretty_title || item.title;
           const contentTags = (item.tags ?? []).filter((tag) => tag.type === "tag" || tag.type === "character").slice(0, 4);
           return (
             <StaggerItem key={item.gallery_id} className="folio-gallery-related-cell">
-              <button
-                type="button"
-                onClick={() => navigate({
-                  name: "gallery",
-                  galleryId: item.gallery_id,
-                  returnTo: window.location.hash.replace(/^#/, ""),
-                })}
-              >
-                <span className="folio-gallery-related-media">
+              <article className="folio-gallery-related-card">
+                <button className="folio-gallery-related-media" type="button" onClick={() => openGallery(item.gallery_id)} aria-label={`打开作品详情：${relatedTitle}`}>
                   {item.thumbnail.url ? (
                     <img className={blurCovers ? "is-blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
                   ) : <span className="folio-gallery-related-empty">NO COVER</span>}
                   <small>{item.imported ? "已入库" : `ID ${item.gallery_id}`}</small>
-                </span>
-                <span className="folio-gallery-related-copy">
-                  <strong title={relatedTitle}>{relatedTitle}</strong>
+                </button>
+                <div className="folio-gallery-related-copy">
+                  <button type="button" onClick={() => openGallery(item.gallery_id)}>
+                    <strong title={relatedTitle}>{relatedTitle}</strong>
+                    <ArrowUpRight size={15} />
+                  </button>
                   <small>{item.page_count} 页</small>
                   {contentTags.length ? (
                     <span className="folio-gallery-related-tags">
-                      {contentTags.map((tag) => <span key={tag.id}>{defaultDisplayTag(tag)}</span>)}
+                      {contentTags.map((tag) => <a key={tag.id} href={tagSearchHref(tag)}>{defaultDisplayTag(tag)}</a>)}
                     </span>
                   ) : null}
-                </span>
-                <ArrowUpRight className="folio-gallery-related-open" size={16} />
-              </button>
+                </div>
+              </article>
             </StaggerItem>
           );
         })}

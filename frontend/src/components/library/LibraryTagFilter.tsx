@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { api, type LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
 import { duration, ease } from "../../lib/motion";
+import { tagSearchHref } from "../../lib/navigation";
 
 type Props = {
   selected: LibraryTagFilterItem[];
@@ -115,11 +116,21 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
               {!error && options.map((tag) => {
                 const active = selected.some((item) => item.id === tag.id);
                 return (
-                  <button key={tag.id} type="button" className={active ? "is-active" : ""} aria-pressed={active} onClick={() => toggle(tag)}>
+                  <a
+                    key={tag.id}
+                    href={tagSearchHref(tag)}
+                    className={active ? "is-active" : ""}
+                    aria-current={active ? "true" : undefined}
+                    onClick={(event) => {
+                      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                      event.preventDefault();
+                      toggle(tag);
+                    }}
+                  >
                     <span><strong>{tag.display}</strong><small>{tag.type || "tag"}</small></span>
                     <em>{tag.count}</em>
                     {active ? <Check size={15} /> : <i />}
-                  </button>
+                  </a>
                 );
               })}
               {!error && !loading && options.length === 0 ? <p>没有匹配的本地标签</p> : null}

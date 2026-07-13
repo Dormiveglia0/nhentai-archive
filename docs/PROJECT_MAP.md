@@ -76,6 +76,7 @@ Root: `backend/app/`
   - `get_state()`, `update_state()`.
 - `services/library_service.py`
   - Local-only library reads; queries only `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`. Never calls NH API.
+  - `work(work_id)`: one full local work record through the same `WORK_COLUMNS`/`WORK_JOINS` and `_attach_tags()` path as library search. The reader therefore receives real author/group/parody/character/content/category/language tags without a remote lookup.
   - `summary()`: real total/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped).
   - `search(q, page, per_page, sort, read_status, source, language, tag_ids)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`.
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
@@ -100,7 +101,7 @@ Root: `backend/app/`
 - `services/file_service.py`
   - Local-only file inventory + deletion over the managed data dir; never calls the NH API.
   - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
-  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
+  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Work entries expose structured `tag_items` for real search links while retaining the legacy display-only `tags` list. Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
   - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
   - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
@@ -174,7 +175,7 @@ Implemented:
 - `POST /api/files/preview-delete`
 - `POST /api/files/delete`
 - `GET /api/works`
-- `GET /api/works/{work_id}`
+- `GET /api/works/{work_id}` (full local library work, progress, file facts, and structured real tags)
 - `GET /api/works/{work_id}/cover`
 - `GET /api/works/{work_id}/pages`
 - `GET /api/works/{work_id}/pages/{page_index}`
@@ -212,8 +213,9 @@ Root: `frontend/src/`
   - All primary and secondary routes are real pages: discover/gallery/library/history/readers/governance/dictionary/export/files/tasks/settings/workbench. No route remains a boundary screen.
   - Local and remote readers render directly as immersive viewports; all other routes render through `ArchiveShell`.
 - `lib/navigation.ts`
-  - Hash route parser and `navigate()`.
+  - Hash route parser, `navigate()`, and `tagSearchHref()` as the single URL builder for tag-search anchors.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
+  - Formal tag surfaces use native anchors built by `tagSearchHref()`: primary click may keep the current in-app filtering behavior, while middle/modifier click opens the corresponding discover search in a new tab.
 - `lib/motion/`
   - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。后续页面动画一律从此取用,禁止写魔法数。
 - `components/effects/`
@@ -255,10 +257,10 @@ Root: `frontend/src/`
 - `components/discover/DiscoverCard.tsx`
   - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
 - `components/discover/TagFilterSelector.tsx`
-  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected options stay at the top, and one fixed clear action removes all selected tags. Mobile gives selected chips their own full-width row so the first chip cannot sit under the trigger.
+  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected options stay at the top, and one fixed clear action removes all selected tags. It opens on content `tag` results only; author/group/parody/character/category/language live in a separate “作者与作品信息” scope. Mobile gives selected chips their own full-width row so the first chip cannot sit under the trigger.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.
 - `components/discover/TagScroller.tsx`
-  - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support.
+  - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support. Tags are native search anchors; drag suppression applies only to the primary pointer so middle/modifier navigation remains intact.
   - Uses `tag.display || tag.name || tag.slug || id`, so dictionary display names flow without rewriting card logic.
 - `components/discover/PopularFan.tsx`
   - Real `/api/discover/popular` editorial cover fan between the Folio heading and search workbench.
@@ -268,7 +270,7 @@ Root: `frontend/src/`
   - Do not restore bordered/shadowed window styling, popover/floating mode, close buttons, or large metadata/action blocks inside the fan.
 - `components/discover/GalleryDetailPage.tsx` + `components/discover/gallery/`
   - Direct route-local gallery composition split into real data/model, fixed-slot hero, full-width tag ledger, initial page preview, keyboard/focus-restoring lightbox, and related works. It imports no demo state.
-  - Cover and lightbox geometry use `object-fit: contain`; the lightbox image is absolutely bounded to its media stage so intrinsic image height cannot overflow. Variable tag counts never share the cover column. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
+  - Cover and lightbox geometry use `object-fit: contain`; the lightbox stage derives a clamped width from the active page ratio instead of leaving a wide black viewport around portrait pages. Variable tag counts never share the cover column. Related results are capped at five and render as one five-column desktop row / five compact mobile rows, so the fixed five-item payload cannot orphan its last card. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
 - `components/settings/` — refactored settings module:
@@ -311,7 +313,7 @@ Root: `frontend/src/`
 - `components/library/WorkInspector.tsx`
   - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress, tags, reader, governance, and export routes.
 - `components/library/ContinueReadingRow.tsx`
-  - Horizontal shelf for 继续阅读 / 最近添加; renders nothing when no real rows.
+  - Horizontal shelf for 继续阅读 / 最近添加; renders nothing when no real rows. The shared primary-pointer capture/threshold logic provides press-drag scrolling without accidental card activation in both library and workbench.
 - `components/library/libraryHelpers.ts`
   - `formatBytes`, title/author/language/read-status derivation, and shared sort/status/source option lists.
 - `components/history/`
@@ -322,7 +324,7 @@ Root: `frontend/src/`
     - local `workId`: reads indexed CBZ pages and persists progress;
     - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
   - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. `WebtoonView` observes the actual reader scroller through a center band, so tall continuous pages update current-page progress reliably.
-  - `ReaderToolbar` hides single-page direction controls in continuous mode; `ReaderScrubber` provides keyboard/touch progress without a native slider. `ReaderInfoPanel` contains only work/progress actions, links to the real gallery display, and no duplicate reader settings. `ThumbnailOverlay` and `ReaderJumpDialog` remain focus-restoring modal surfaces.
+  - `ReaderToolbar` hides single-page direction controls in continuous mode; `ReaderScrubber` provides keyboard/touch progress without a native slider. `ReaderInfoPanel` groups real author/group, parody/character, content, category and language tags, retains the real gallery-display link, and contains no duplicate reader settings. `ThumbnailOverlay` clips its own width so large page counts cannot create a document-level horizontal scrollbar. `ThumbnailOverlay` and `ReaderJumpDialog` remain focus-restoring modal surfaces.
 - `components/governance/GovernancePage.tsx`
   - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
   - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance` through `useGovernanceState`.
@@ -352,7 +354,7 @@ Root: `frontend/src/`
   - `FileDeleteDialog.tsx` — native modal confirmation shared by single, batch and cleanup deletion; it stays viewport-visible, defaults focus to cancel, restores the triggering control, and shows warnings or execution failures in place.
   - `FileToolbar.tsx` — animated category index, Folio search/custom status and sort selects, and an always-present selection summary; there is no prerequisite “batch mode”.
   - `FileList.tsx` — separate always-visible checkbox and full-row focus button with real path/type/size/status, size-mismatch display and styled internal scrolling.
-  - `FileDetailPanel.tsx` — focused real cover/path/metadata/tags plus reader, gallery display, governance, export, native path-copy and delete-preview actions; cover respects `blurCovers`.
+  - `FileDetailPanel.tsx` — focused real cover/path/metadata/structured tag links plus reader, gallery display, governance, export, native path-copy and delete-preview actions; cover respects `blurCovers`.
   - `FileHealthRail.tsx` — presentation-only real index and duplicate counts, cleanup launchers, read-only library-scan preview and guarded scan-task enqueue controls; async ownership stays in `useFilesState.ts`.
   - `fileHelpers.tsx` — byte/kind/status formatting and delete-target conversion.
 - `components/tasks/` — task center:

@@ -2,7 +2,7 @@ import { BookOpen, Download, Info, PenTool, X } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
+import { navigate, tagSearchHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
 
@@ -64,7 +64,15 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
               <span>标签 · {work.tag_count ?? tags.length}</span>
               <div>
                 {tags.slice(0, 18).map((tag) => (
-                  <button key={tag.id} type="button" onClick={() => onPickTag(tag)}>{tag.display}</button>
+                  <a
+                    key={tag.id}
+                    href={tagSearchHref(tag)}
+                    onClick={(event) => {
+                      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                      event.preventDefault();
+                      onPickTag(tag);
+                    }}
+                  >{tag.display}</a>
                 ))}
               </div>
             </section>

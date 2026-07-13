@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import type { FileEntry } from "../../lib/api";
 import { duration, ease } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
+import { navigate, tagSearchHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { entryStatusLabel, entryStatusTone, formatBytes, kindLabel } from "./fileHelpers";
 
@@ -144,7 +144,13 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
       {isWork ? (
         <div className="folio-files-tags">
           <span>标签</span>
-          <div>{focus.tags?.length ? focus.tags.map((tag) => <i key={tag}>{tag}</i>) : <small>无标签</small>}</div>
+          <div>
+            {focus.tag_items?.length
+              ? focus.tag_items.map((tag) => <a key={`${tag.type}-${tag.id}-${tag.display}`} href={tagSearchHref(tag)}>{tag.display}</a>)
+              : focus.tags?.length
+                ? focus.tags.map((tag) => <a key={tag} href={tagSearchHref({ display: tag })}>{tag}</a>)
+                : <small>无标签</small>}
+          </div>
         </div>
       ) : null}
     </m.div>
