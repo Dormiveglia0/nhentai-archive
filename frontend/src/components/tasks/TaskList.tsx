@@ -3,9 +3,9 @@ import {
   CheckCircle2,
   Clock3,
   Download,
+  Eye,
   FileText,
   Loader2,
-  MoreHorizontal,
   Pause,
   Play,
   RotateCcw,
@@ -80,23 +80,23 @@ export function TaskList(props: Props) {
               </button>
               <div className="folio-tasks-row-actions">
                 {canDownloadBulkExport(job) ? (
-                  <a href={api.bulkExportDownloadUrl(job.id)} download><Download size={14} /><span>下载</span></a>
+                  <a href={api.bulkExportDownloadUrl(job.id)} download aria-label="下载"><Download size={14} /><span>下载</span></a>
                 ) : null}
                 {canRetry(job) ? (
-                  <button type="button" disabled={props.retryingId === job.id} onClick={() => props.onRetry(job.id)}><RotateCcw size={14} /><span>{props.retryingId === job.id ? "重试中" : "重试"}</span></button>
+                  <button type="button" aria-label="重试" disabled={props.retryingId === job.id} onClick={() => props.onRetry(job.id)}><RotateCcw size={14} /><span>{props.retryingId === job.id ? "重试中" : "重试"}</span></button>
                 ) : canPause(job) ? (
-                  <button type="button" disabled={props.actingId === job.id} onClick={() => props.onPause(job.id)}><Pause size={14} /><span>暂停</span></button>
+                  <button type="button" aria-label="暂停" disabled={props.actingId === job.id} onClick={() => props.onPause(job.id)}><Pause size={14} /><span>暂停</span></button>
                 ) : canResume(job) ? (
-                  <button type="button" disabled={props.actingId === job.id} onClick={() => props.onResume(job.id)}><Play size={14} /><span>恢复</span></button>
+                  <button type="button" aria-label="恢复" disabled={props.actingId === job.id} onClick={() => props.onResume(job.id)}><Play size={14} /><span>恢复</span></button>
                 ) : (
-                  <span className="folio-tasks-row-muted"><MoreHorizontal size={15} /><span>查看</span></span>
+                  <button type="button" aria-label="查看" onClick={() => props.onOpenLogs(job.id)}><Eye size={14} /><span>查看</span></button>
                 )}
                 {canCancel(job) ? (
-                  <button className="is-danger" type="button" disabled={props.actingId === job.id} onClick={() => props.onCancel(job.id)}><X size={14} /><span>取消</span></button>
+                  <button className="is-danger" type="button" aria-label="取消" disabled={props.actingId === job.id} onClick={() => props.onCancel(job.id)}><X size={14} /><span>取消</span></button>
                 ) : null}
-                <button type="button" onClick={() => props.onOpenLogs(job.id)}><FileText size={14} /><span>日志</span></button>
+                <button type="button" aria-label="日志" onClick={() => props.onOpenLogs(job.id)}><FileText size={14} /><span>日志</span></button>
                 {canDelete(job) ? (
-                  <button className="is-danger" type="button" disabled={props.actingId === job.id} onClick={() => props.onDelete(job.id)}><Trash2 size={14} /><span>删除</span></button>
+                  <button className="is-danger" type="button" aria-label="删除" disabled={props.actingId === job.id} onClick={() => props.onDelete(job.id)}><Trash2 size={14} /><span>删除</span></button>
                 ) : null}
               </div>
             </article>

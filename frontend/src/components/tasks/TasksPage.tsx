@@ -42,7 +42,7 @@ export function TasksPage() {
         </div>
         <FolioSearchField value={tasks.query} onChange={tasks.setQuery} placeholder="搜索任务 ID、Gallery ID、阶段或错误" />
         <div className="folio-tasks-toolbar-actions">
-          <button type="button" onClick={() => void tasks.refresh()} disabled={tasks.refreshing}><RefreshCw size={15} className={tasks.refreshing ? "spin" : ""} />{tasks.refreshing ? "刷新中" : "刷新"}</button>
+          <button type="button" onClick={() => void tasks.refresh()} disabled={tasks.refreshing} aria-busy={tasks.refreshing}><RefreshCw size={15} className={tasks.refreshing ? "spin" : ""} />刷新</button>
           <button className="is-danger" type="button" onClick={clearFinished} disabled={!tasks.finishedCount}><Trash2 size={15} />清空已结束{tasks.finishedCount ? ` (${tasks.finishedCount})` : ""}</button>
         </div>
       </section>

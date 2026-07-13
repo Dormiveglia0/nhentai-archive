@@ -68,7 +68,7 @@ export function ArchiveShell({
         >
           {children}
         </FolioChrome>
-        <TaskDock />
+        {activePage === "tasks" ? null : <TaskDock />}
       </>
     );
   }

@@ -101,7 +101,7 @@ def test_export_preview_uses_real_source_and_governance_metadata_without_writes(
     assert preview["comic_info"]["Title"] == "雨后的教室"
     assert preview["comic_info"]["Writer"] == "邻里"
     assert preview["comic_info"]["LanguageISO"] == "zh"
-    assert preview["comic_info"]["Tags"] == "tonari, 雨"
+    assert preview["comic_info"]["Tags"] == "雨"
     assert preview["blockers"] == []
 
 

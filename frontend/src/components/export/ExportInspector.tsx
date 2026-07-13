@@ -56,6 +56,11 @@ export function ExportInspector({
 
   return (
     <aside className="folio-export-inspector">
+      <header className="folio-export-column-head">
+        <span>Export manifest</span>
+        <h2>作品信息</h2>
+        <p>预览最终写入字段与打包选项</p>
+      </header>
       {currentPreview && focusItem ? (
         <FadeIn
           key={`focus-${currentPreview.work.id}-${writesComicInfo}-${keepsJson}-${compresses}`}

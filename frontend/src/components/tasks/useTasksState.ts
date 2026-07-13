@@ -60,10 +60,10 @@ export function useTasksState(): TasksViewModel {
   const jobsRequestRef = useRef(0);
   const logsRequestRef = useRef(0);
 
-  const load = useCallback(async (preferredFocusId?: number | null, initial = false) => {
+  const load = useCallback(async (preferredFocusId?: number | null, initial = false, showRefreshing = false) => {
     const requestId = ++jobsRequestRef.current;
     if (initial) setLoading(true);
-    else setRefreshing(true);
+    else if (showRefreshing) setRefreshing(true);
     try {
       const payload = await api.jobs();
       if (requestId !== jobsRequestRef.current) return;
@@ -80,8 +80,8 @@ export function useTasksState(): TasksViewModel {
     } finally {
       if (requestId === jobsRequestRef.current) {
         setLoading(false);
-        setRefreshing(false);
       }
+      if (showRefreshing) setRefreshing(false);
     }
   }, []);
 
@@ -103,20 +103,22 @@ export function useTasksState(): TasksViewModel {
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    const loadIfAlive = async (initial = false) => {
-      if (!alive || (!initial && document.visibilityState !== "visible")) return;
-      await load(undefined, initial);
-    };
-    void loadIfAlive(true);
-    const timer = window.setInterval(() => void loadIfAlive(), 2500);
+    void load(undefined, true);
     return () => {
-      alive = false;
       jobsRequestRef.current += 1;
       logsRequestRef.current += 1;
-      window.clearInterval(timer);
     };
   }, [load]);
+
+  const hasActiveJobs = jobs.some((job) => job.status === "queued" || job.status === "running" || job.status === "cancelling");
+
+  useEffect(() => {
+    if (!hasActiveJobs) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [hasActiveJobs, load]);
 
   const visibleJobs = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -249,7 +251,7 @@ export function useTasksState(): TasksViewModel {
     }
   }, [load]);
 
-  const refresh = useCallback(() => load(focusId), [focusId, load]);
+  const refresh = useCallback(() => load(focusId, false, true), [focusId, load]);
 
   return {
     jobs,
