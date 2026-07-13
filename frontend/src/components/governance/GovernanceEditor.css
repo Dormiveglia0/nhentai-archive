@@ -1,0 +1,357 @@
+.folio-governance-fields,
+.folio-governance-tags {
+  min-width: 0;
+  margin-top: 30px;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line-strong);
+}
+
+.folio-governance-section-head {
+  min-height: 82px;
+  padding: 14px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-governance-section-head > div:first-child > span {
+  color: var(--folio-red);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.folio-governance-section-head h2 {
+  margin: 6px 0 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 20px;
+}
+
+.folio-governance-section-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folio-governance-section-tools > button,
+.folio-governance-section-head > button {
+  min-height: 42px;
+}
+
+.folio-governance-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+
+.folio-governance-field-cell {
+  min-width: 0;
+  display: flex;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-governance-field-cell:nth-child(odd) {
+  border-right: 1px solid var(--folio-line);
+}
+
+.folio-governance-field-card {
+  width: 100%;
+  min-width: 0;
+  padding: 18px;
+  background: rgba(250, 247, 239, 0.2);
+  position: relative;
+  transition: background-color 200ms ease;
+}
+
+.folio-governance-field-card::before {
+  content: "";
+  width: 2px;
+  background: var(--folio-red);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-governance-field-card.is-diff {
+  background: linear-gradient(135deg, var(--folio-red-soft), transparent 56%);
+}
+
+.folio-governance-field-card.is-diff::before {
+  transform: scaleY(1);
+}
+
+.folio-governance-field-head {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.folio-governance-field-head strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+}
+
+.folio-governance-field-head > span,
+.folio-governance-field-head > em {
+  min-height: 21px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--folio-line);
+  color: var(--folio-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.folio-governance-field-head > em {
+  border-color: rgba(173, 56, 46, 0.32);
+  color: var(--folio-red);
+}
+
+.folio-governance-field-compare {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.folio-governance-field-column {
+  min-width: 0;
+}
+
+.folio-governance-field-label {
+  margin-bottom: 7px;
+  display: block;
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+
+.folio-governance-value-chips {
+  min-height: 46px;
+  max-height: 96px;
+  padding: 8px;
+  display: flex;
+  align-content: flex-start;
+  flex-wrap: wrap;
+  gap: 5px;
+  overflow-y: auto;
+  border: 1px solid var(--folio-line);
+  background: rgba(243, 239, 229, 0.42);
+  scrollbar-width: none;
+}
+
+.folio-governance-value-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.folio-governance-value-chips > span {
+  min-height: 22px;
+  padding: 3px 6px;
+  display: inline-flex;
+  align-items: center;
+  border-bottom: 1px solid var(--folio-line-strong);
+  color: var(--folio-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.folio-governance-value-chips > span.accent {
+  border-bottom-color: rgba(173, 56, 46, 0.6);
+  color: var(--folio-ink);
+}
+
+.folio-governance-field-empty {
+  min-height: 46px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--folio-line);
+  color: var(--folio-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.folio-governance-field-final {
+  margin-top: 14px;
+}
+
+.folio-governance-field-input {
+  width: 100%;
+  min-height: 46px;
+  max-height: 160px;
+  padding: 10px;
+  overflow-y: auto;
+  border: 1px solid var(--folio-line-strong);
+  outline: 0;
+  resize: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--folio-ink);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.55;
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.folio-governance-field-input:focus {
+  border-color: rgba(173, 56, 46, 0.68);
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 4px 4px 0 var(--folio-red-soft);
+}
+
+.folio-governance-field-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 7px;
+}
+
+.folio-governance-field-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 10px;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.folio-governance-field-actions button:hover:not(:disabled) {
+  border-color: var(--folio-ink);
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+}
+
+.folio-governance-field-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.32;
+}
+
+.folio-governance-inline-empty {
+  min-height: 120px;
+  margin: 0;
+  padding: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--folio-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.folio-governance-field-grid > .folio-governance-inline-empty {
+  grid-column: 1 / -1;
+}
+
+.folio-governance-tag-groups {
+  padding-bottom: 10px;
+}
+
+.folio-governance-tag-groups > article {
+  min-height: 64px;
+  padding: 12px 0;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-governance-tag-groups h3 {
+  margin: 5px 0 0;
+  color: var(--folio-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.folio-governance-tag-list {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.folio-governance-tag {
+  min-height: 30px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--folio-line);
+  color: var(--folio-ink);
+  font-size: 11px;
+}
+
+.folio-governance-tag.is-pending {
+  border-color: rgba(183, 125, 39, 0.48);
+  background: rgba(183, 125, 39, 0.07);
+}
+
+.folio-governance-tag.is-conflict {
+  border-color: rgba(173, 56, 46, 0.46);
+  background: var(--folio-red-soft);
+}
+
+.folio-governance-tag button {
+  min-height: 24px;
+  padding: 0 5px;
+  border: 0;
+  border-left: 1px solid currentColor;
+  background: transparent;
+  color: var(--folio-red);
+  font-size: 10px;
+}
+
+.folio-governance-tag button:disabled {
+  opacity: 0.42;
+}
+
+@media (max-width: 700px) {
+  .folio-governance-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .folio-governance-section-tools {
+    width: 100%;
+  }
+
+  .folio-governance-section-tools > button {
+    flex: 1 1 0;
+  }
+
+  .folio-governance-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .folio-governance-field-cell:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .folio-governance-field-card {
+    padding: 16px 0;
+  }
+
+  .folio-governance-tag-groups > article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .folio-governance-tag-groups h3 {
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-governance-field-card,
+  .folio-governance-field-card::before,
+  .folio-governance-field-input {
+    transition: none;
+  }
+}

@@ -30,34 +30,25 @@ export function GovernanceBulkBar({
   onApply,
 }: Props) {
   return (
-    <div className="governance-bulk-bar">
-      <div className="governance-bulk-head">
+    <section className="folio-governance-bulk">
+      <div className="folio-governance-bulk-head">
         <strong>已选 {selectedCount} 部</strong>
-        <label>
-          <input type="checkbox" checked={fill} onChange={(e) => onFillChange(e.target.checked)} />
-          补全缺失元数据
-        </label>
-        <label>
-          <input type="checkbox" checked={writeBack} onChange={(e) => onWriteBackChange(e.target.checked)} />
-          回写源文件（ComicInfo）
-        </label>
-        <label>
-          <input type="checkbox" checked={confirmTerms} onChange={(e) => onConfirmTermsChange(e.target.checked)} />
-          确认现有词典译名
-        </label>
-        <button type="button" disabled={busy || !selectedCount} onClick={onPreview}>
+        <BulkOption label="补全缺失元数据" checked={fill} onChange={onFillChange} />
+        <BulkOption label="回写源文件（ComicInfo）" checked={writeBack} onChange={onWriteBackChange} />
+        <BulkOption label="确认现有词典译名" checked={confirmTerms} onChange={onConfirmTermsChange} />
+        <button className="folio-line-button" type="button" disabled={busy || !selectedCount} onClick={onPreview}>
           预览
         </button>
-        <button type="button" className="primary" disabled={busy || !selectedCount} onClick={onApply}>
+        <button type="button" className="folio-ink-button" disabled={busy || !selectedCount} onClick={onApply}>
           应用
         </button>
       </div>
       {writeBack ? (
-        <p className="governance-bulk-hint">回写会就地改写所选作品源 CBZ 的 ComicInfo，不可撤销；单个失败不影响其余。</p>
+        <p className="folio-governance-bulk-hint">回写会就地改写所选作品源 CBZ 的 ComicInfo，不可撤销；单个失败不影响其余。</p>
       ) : null}
 
       {preview ? (
-        <div className="governance-bulk-preview">
+        <div className="folio-governance-bulk-report">
           <p>
             将补全 {preview.summary.fields_to_fill} 个字段
             {confirmTerms ? `，确认 ${preview.summary.dictionary_terms_to_confirm} 个词条` : ""}
@@ -81,7 +72,7 @@ export function GovernanceBulkBar({
       ) : null}
 
       {result ? (
-        <div className="governance-bulk-result">
+        <div className="folio-governance-bulk-report is-result">
           <p>
             完成：补全 {result.summary.filled_fields} 字段、确认 {result.summary.dictionary_terms_confirmed} 个词条、回写 {result.summary.written} 个
             {result.summary.errors ? `、失败 ${result.summary.errors} 个` : ""}。
@@ -105,6 +96,24 @@ export function GovernanceBulkBar({
           </ul>
         </div>
       ) : null}
-    </div>
+    </section>
+  );
+}
+
+function BulkOption({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="folio-governance-bulk-option">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <i aria-hidden="true" />
+      <span>{label}</span>
+    </label>
   );
 }

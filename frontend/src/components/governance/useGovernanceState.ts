@@ -25,6 +25,7 @@ export function useGovernanceState(initialWorkId?: number) {
   const [onlyDiff, setOnlyDiff] = useState(false);
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [dictionaryApplyingId, setDictionaryApplyingId] = useState<number | null>(null);
   const [writeBack, setWriteBack] = useState(false);
 
   const [bulkMode, setBulkMode] = useState(false);
@@ -101,12 +102,19 @@ export function useGovernanceState(initialWorkId?: number) {
   const reload = async () => {
     setNotice(null);
     setError(null);
-    const [queuePayload, aggregatePayload] = await Promise.all([
-      api.governanceQueue(),
-      selectedId ? api.workGovernance(selectedId) : Promise.resolve(null),
-    ]);
-    setQueue(queuePayload);
-    setAggregate(aggregatePayload);
+    setAggregateLoading(Boolean(selectedId));
+    try {
+      const [queuePayload, aggregatePayload] = await Promise.all([
+        api.governanceQueue(),
+        selectedId ? api.workGovernance(selectedId) : Promise.resolve(null),
+      ]);
+      setQueue(queuePayload);
+      setAggregate(aggregatePayload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAggregateLoading(false);
+    }
   };
 
   const saveMetadata = async () => {
@@ -174,7 +182,7 @@ export function useGovernanceState(initialWorkId?: number) {
   };
 
   const applyDictionaryTag = async (tag: GovernanceTag) => {
-    if (!aggregate || !tag.remote_tag_id) return;
+    if (!aggregate || !tag.remote_tag_id || dictionaryApplyingId !== null) return;
     const original = tag.name || tag.slug || tag.display;
     const payload: DictionaryApplyPayload = {
       original_text: original,
@@ -183,17 +191,24 @@ export function useGovernanceState(initialWorkId?: number) {
       remote_tag_id: tag.remote_tag_id,
       status: "configured",
     };
+    setDictionaryApplyingId(tag.id);
     setNotice(null);
     setError(null);
-    const preview = await api.dictionaryPreviewApply(payload);
-    if (preview.conflicts.length) {
-      setError(`词典预览发现 ${preview.conflicts.length} 个冲突，请到词典页处理。`);
-      return;
+    try {
+      const preview = await api.dictionaryPreviewApply(payload);
+      if (preview.conflicts.length) {
+        setError(`词典预览发现 ${preview.conflicts.length} 个冲突，请到词典页处理。`);
+        return;
+      }
+      const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: [], dictionary_apply: [payload] });
+      setAggregate(result.governance);
+      setQueue(await api.governanceQueue());
+      setNotice(`已应用词典映射：${tag.display}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDictionaryApplyingId(null);
     }
-    const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: [], dictionary_apply: [payload] });
-    setAggregate(result.governance);
-    setQueue(await api.governanceQueue());
-    setNotice(`已应用词典映射：${tag.display}`);
   };
 
   const selectWork = (id: number) => {
@@ -316,6 +331,7 @@ export function useGovernanceState(initialWorkId?: number) {
     reload,
     saveMetadata,
     translating,
+    dictionaryApplyingId,
     translateMetadata,
     applyDictionaryTag,
     selectWork,

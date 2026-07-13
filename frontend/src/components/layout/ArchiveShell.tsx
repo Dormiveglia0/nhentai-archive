@@ -49,7 +49,7 @@ export function ArchiveShell({
   onBlurCoversChange,
   children
 }: Props) {
-  if (activePage === "workbench" || activePage === "library" || activePage === "discover") {
+  if (activePage === "workbench" || activePage === "library" || activePage === "discover" || activePage === "governance") {
     return (
       <>
         <FolioChrome

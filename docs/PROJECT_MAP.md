@@ -309,11 +309,18 @@ Root: `frontend/src/`
     - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
   - Local reader exposes a real `进入治理` route to `#governance/{work_id}`.
 - `components/governance/GovernancePage.tsx`
-  - Phase 4 single-work governance center against `design/元数据.png`.
-  - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance`.
-  - Renders queue reason counts, work header, metadata diff editor with adopt-source/revert/save, tag governance groups, dictionary coverage summary, and right-side recommended actions.
+  - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
+  - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance` through `useGovernanceState`.
   - Empty library/empty queue is an honest empty state; no sample works, fake conflicts, or fake recommendations.
-  - Bottom action bar includes a real `#export/{work_id}` route for exporting the selected work after governance decisions are saved.
+  - Fixed viewport action bar keeps save/write-back visible at every document length and includes real dictionary/export/reload routes. ComicInfo write-back and bulk write-back still require the existing irreversible-action confirmations.
+- `components/governance/GovernancePage.css` / `GovernanceEditor.css`
+  - Production-only three-column workspace, animated queue progress, work header, source rail, fixed command bar, bulk reports, field provenance ledger and tag groups. Mobile keeps the real queue as a horizontal track and moves source evidence below the editor; no native checkbox chrome is visible.
+- `components/governance/GovernanceSourceRail.tsx`
+  - Real source type, Gallery ID, page/file facts, tag/dictionary counts and backend-recommended actions. It does not calculate or invent a health score.
+- `components/governance/MetadataEditor.tsx`
+  - Source/current/final field comparison with auto-growing textareas, adopt/revert actions, machine-translation prefill and animated difference filtering. “仅看差异” is an `aria-pressed` custom control, not a native checkbox.
+- `components/governance/GovernanceQueueRail.tsx` / `GovernanceBulkBar.tsx`
+  - Queue reasons/completeness and real bulk preview/apply. Custom checkbox visuals preserve semantic inputs; preview remains read-only and apply retains all current mutation safeguards.
 - `components/export/` — export center (browser-download model), split into focused modules:
   - `ExportPage.tsx` — thin compositional container for toolbar, work list, and inspector.
   - `useExportState.ts` — all state and data-fetching logic; single selected `Set`, separate `focusId`, search/status filters, output-name overrides, export option switches, and download orchestration. `downloadSelected()` downloads one CBZ (single target) or a `.zip` bundle (multi), and `downloadOne(id)` downloads the focused work.
