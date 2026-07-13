@@ -116,7 +116,7 @@ Current real slice:
 
 ## Next Plan
 
-正式路由迁移、旧壳清理、路由拆包与四视口只读浏览器回归均已落地。下一阶段执行后端全量测试并收口最终文档，再以真实长列表数据继续做性能抽样与用户反馈驱动的小范围 polish。
+正式路由迁移、旧壳清理、路由拆包、四视口只读浏览器回归与后端全量测试均已落地。后续只在真实长列表数据出现可测瓶颈时做针对性性能优化，并继续处理用户反馈驱动的小范围 polish；不再重开旧壳融合或无证据的架构改造。
 
 ## Risks And Decisions
 
@@ -158,6 +158,7 @@ Current real slice:
 
 ## Verification Record
 
+- Final closure baseline: `PYTHONPATH=backend .venv/bin/pytest backend/tests -q` passed all 183 tests in 24.63s. The single warning is intentionally produced by `test_reseal_cbz_preserves_duplicate_member_bytes`, which constructs a duplicate `001.png` ZIP member to verify byte preservation; it is not a runtime regression. Frontend production build and `git diff --check` also pass.
 - Legacy-shell cleanup: `/demo` full regression passed 45 route/viewport checks plus 14 settings frames and 4.4s radar timing; formal read-only smoke passed 26 desktop/mobile route checks across all primary, secondary and reader routes. The formal run issued 229 API requests with no mutation beyond the whitelisted read-only export preview, and reported zero overflow, legacy-shell nodes, console warnings or errors.
 - Route split/readability closure: 13 formal routes passed 52 checks at 1440×1000, 1024×900, 390×844 and 320×568; 448 API requests contained only GET and the explicitly read-only export preview POST. Lazy Folio/reader fallback timing, five operational-page interaction suites, minimum 11px visible text, no legacy shell, no horizontal overflow and no console warning/error all passed. Production build emits a 280.92 kB entry plus independent 5.75–30.94 kB route chunks with no large-chunk warning.
 - Gallery/history/readers migration: gallery at 1440/1024/390px, history at 1440/390px, remote reader at 1440/390px, and local reader at 1024px all passed Playwright Chromium with real API metadata and redacted/intercepted neutral images. Remote reader import was intercepted; local reader QA was deliberately read-only. No unintended backend writes, native select/progress/number controls, horizontal overflow, console warnings, or page errors were observed. `npm run build` and `git diff --check` passed; the former route-splitting warning was resolved by the later route-level split.

@@ -1,6 +1,6 @@
 # Next Stage Prompt: Post-Closure QA And Polish
 
-Use this prompt after the feature-complete local loop remains green (`pytest` + `npm run build`).
+Use this prompt after the feature-complete local loop remains green (`pytest` + `npm run build`). The latest closure baseline is 183 backend tests plus the route-split frontend build and four-viewport browser regression.
 
 ## Required Reading Order
 
