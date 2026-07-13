@@ -1,0 +1,121 @@
+.folio-gallery-related-list {
+  padding: 18px 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.folio-gallery-related-cell {
+  min-width: 0;
+}
+
+.folio-gallery-related-cell > button {
+  width: 100%;
+  min-height: 126px;
+  padding: 9px;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--folio-line);
+  background: rgba(250, 247, 239, 0.4);
+  color: var(--folio-ink);
+  text-align: left;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-gallery-related-cell > button:hover {
+  border-color: var(--folio-line-strong);
+  background: rgba(255,255,255,.3);
+  transform: translateX(4px);
+}
+
+.folio-gallery-related-media {
+  width: 78px;
+  height: 106px;
+  display: block;
+  overflow: hidden;
+  background: var(--folio-paper-deep);
+  position: relative;
+}
+
+.folio-gallery-related-media img,
+.folio-gallery-related-empty {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.folio-gallery-related-empty {
+  display: grid;
+  place-items: center;
+  color: var(--folio-muted);
+  font: 11px Georgia, "Times New Roman", serif;
+}
+
+.folio-gallery-related-media > small {
+  padding: 3px 5px;
+  background: rgba(250,247,239,.88);
+  color: var(--folio-ink);
+  font: 11px Georgia, "Times New Roman", serif;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.folio-gallery-related-copy {
+  min-width: 0;
+  display: block;
+}
+
+.folio-gallery-related-copy > strong,
+.folio-gallery-related-copy > small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-gallery-related-copy > strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.folio-gallery-related-copy > small {
+  margin-top: 7px;
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+
+.folio-gallery-related-tags {
+  margin-top: 12px;
+  display: flex;
+  gap: 5px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, #000 82%, transparent);
+}
+
+.folio-gallery-related-tags > span {
+  min-height: 25px;
+  padding: 4px 7px;
+  flex: 0 0 auto;
+  border: 1px solid var(--folio-line);
+  color: var(--folio-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.folio-gallery-related-open {
+  color: var(--folio-red);
+  opacity: 0.34;
+  transition: opacity 180ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-gallery-related-cell > button:hover .folio-gallery-related-open {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}

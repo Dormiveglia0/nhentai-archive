@@ -1,0 +1,263 @@
+.folio-gallery-preview-frame {
+  padding: 18px 0 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.folio-gallery-preview-frame.is-collapsed {
+  padding-bottom: 50px;
+}
+
+.folio-gallery-preview-frame.is-collapsed::after {
+  content: "";
+  height: 104px;
+  background: linear-gradient(180deg, transparent, var(--folio-paper) 86%);
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.folio-gallery-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+  gap: 12px;
+}
+
+.folio-gallery-preview-cell {
+  min-width: 0;
+}
+
+.folio-gallery-preview-cell button {
+  width: 100%;
+  padding: 0;
+  display: grid;
+  border: 1px solid var(--folio-line);
+  background: var(--folio-paper-deep);
+  color: var(--folio-ink);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 180ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease;
+}
+
+.folio-gallery-preview-cell button:hover {
+  border-color: var(--folio-red);
+  box-shadow: 8px 10px 0 rgba(23, 24, 21, 0.07);
+  transform: translateY(-5px);
+}
+
+.folio-gallery-preview-cell img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  display: block;
+  object-fit: cover;
+  transition: filter 200ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-gallery-preview-cell button:hover img:not(.is-blurred) {
+  transform: scale(1.035);
+}
+
+.folio-gallery-preview-cell img.is-blurred,
+.folio-gallery-related-media img.is-blurred,
+.folio-gallery-lightbox-media img.is-blurred {
+  filter: blur(18px) saturate(0.48);
+  transform: scale(1.12);
+}
+
+.folio-gallery-preview-cell button > span {
+  padding: 5px 7px;
+  border-top: 1px solid rgba(23,24,21,.22);
+  background: rgba(250,247,239,.88);
+  font: 11px Georgia, "Times New Roman", serif;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+}
+
+.folio-gallery-preview-cell button > svg {
+  width: 30px;
+  height: 30px;
+  padding: 7px;
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transform: scale(0.7) rotate(-18deg);
+  transition: opacity 180ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-gallery-preview-cell button:hover > svg,
+.folio-gallery-preview-cell button:focus-visible > svg {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+.folio-gallery-preview-actions {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-top: 1px solid var(--folio-line);
+}
+
+.folio-gallery-preview-actions button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 12px;
+}
+
+.folio-gallery-preview-actions button:hover {
+  border-color: var(--folio-ink);
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+}
+
+.folio-gallery-preview-state {
+  min-height: 120px;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--folio-muted);
+  font-size: 13px;
+}
+
+.folio-gallery-preview-state.is-error { color: var(--folio-red); }
+
+.folio-gallery-preview-loading {
+  padding: 18px 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.folio-gallery-preview-loading i {
+  aspect-ratio: 3 / 4;
+  display: block;
+  border: 1px solid var(--folio-line);
+  background: linear-gradient(105deg, var(--folio-paper-deep) 24%, rgba(255,255,255,.42) 43%, var(--folio-paper-deep) 62%) 130% 0 / 220% 100%;
+  animation: folio-gallery-shimmer 1.4s ease-in-out infinite;
+}
+
+.folio-gallery-preview-loading i:nth-child(2) { animation-delay: -1.05s; }
+.folio-gallery-preview-loading i:nth-child(3) { animation-delay: -0.7s; }
+.folio-gallery-preview-loading i:nth-child(4) { animation-delay: -0.35s; }
+
+.folio-gallery-lightbox {
+  padding: 22px;
+  display: grid;
+  place-items: center;
+  position: fixed;
+  z-index: 140;
+  inset: 0;
+}
+
+.folio-gallery-lightbox-backdrop {
+  border: 0;
+  background: rgba(14, 14, 12, 0.78);
+  backdrop-filter: blur(18px) saturate(0.66);
+  position: absolute;
+  inset: 0;
+}
+
+.folio-gallery-lightbox-stage {
+  width: min(1120px, 96vw);
+  height: min(920px, 94vh);
+  display: grid;
+  grid-template-rows: 54px minmax(0, 1fr) 58px;
+  border: 1px solid rgba(250,247,239,.34);
+  background: #11110f;
+  color: #f3efe5;
+  box-shadow: 18px 22px 0 rgba(173,56,46,.28), 0 30px 90px rgba(0,0,0,.45);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.folio-gallery-lightbox-stage > header,
+.folio-gallery-lightbox-stage > footer {
+  padding: 0 16px;
+  display: grid;
+  align-items: center;
+  border-color: rgba(250,247,239,.16);
+}
+
+.folio-gallery-lightbox-stage > header {
+  grid-template-columns: minmax(0, 1fr) auto 42px;
+  gap: 16px;
+  border-bottom: 1px solid rgba(250,247,239,.16);
+}
+
+.folio-gallery-lightbox-stage > header > span {
+  color: #d65a4e;
+  font: 12px Georgia, "Times New Roman", serif;
+  letter-spacing: .12em;
+}
+
+.folio-gallery-lightbox-stage > header small,
+.folio-gallery-lightbox-stage > footer > span {
+  color: rgba(243,239,229,.62);
+  font-size: 11px;
+}
+
+.folio-gallery-lightbox-stage > header button {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(250,247,239,.2);
+  background: transparent;
+  color: inherit;
+}
+
+.folio-gallery-lightbox-media {
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.folio-gallery-lightbox-media img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.folio-gallery-lightbox-stage > footer {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  border-top: 1px solid rgba(250,247,239,.16);
+  text-align: center;
+}
+
+.folio-gallery-lightbox-stage > footer button {
+  min-width: 104px;
+  min-height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(250,247,239,.2);
+  background: transparent;
+  color: inherit;
+}
+
+.folio-gallery-lightbox-stage button:hover:not(:disabled) {
+  border-color: #d65a4e;
+  background: #d65a4e;
+}
+
+.folio-gallery-lightbox-stage button:disabled {
+  opacity: .26;
+}
