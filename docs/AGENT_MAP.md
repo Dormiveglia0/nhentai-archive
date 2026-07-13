@@ -66,6 +66,9 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
 | Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |
 | Demo page dispatch | `demo/modules/DemoPage.tsx` |
+| Live task overlay outside reader routes | `layout/TaskDock.tsx` + `layout/TaskDock.css` |
+
+`frontend/src/styles/app.css` is now a base-only file (root tokens, reset, form inheritance, shared spin utility, reduced-motion override). Do not put feature or shell selectors back into it.
 
 ## CSS Load Order
 

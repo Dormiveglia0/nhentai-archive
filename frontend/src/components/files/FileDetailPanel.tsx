@@ -73,7 +73,7 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
         <div className="folio-files-detail-cover">
           {isWork && focus.cover_path && focus.work_id ? (
             <img
-              className={blurCovers ? "blurred" : ""}
+              className={blurCovers ? "folio-media-blurred" : ""}
               src={"/api/works/" + focus.work_id + "/cover"}
               alt=""
               loading="lazy"

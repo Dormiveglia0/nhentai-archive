@@ -23,7 +23,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 - Use `components/folio/` as the production-neutral visual system and `/demo` as its visual regression surface. Never import `components/demo/` from a formal route.
 - All formal routes, including gallery detail, history, and both readers, are directly migrated and browser-verified. Keep feature-local structure/CSS; do not restore legacy-shell adapters or import demo state.
-- Remove only globally orphaned legacy shell/page selectors after an `rg` ownership check, then perform route-level lazy loading and a full application regression. Do not hide bundle warnings by raising thresholds.
+- The globally orphaned legacy shell/page selectors are already removed and `app.css` is base-only. Perform route-level lazy loading and a full application regression; do not hide bundle warnings by raising thresholds.
 - Browser QA against real or user-provided data after each route migration; compare the formal route with `/demo` at desktop and mobile sizes.
 - Operational-page migration must preserve task state-machine controls, export download semantics, file-deletion previews/confirmations, and current real-data empty states.
 - Mobile layout polish only where screenshots show concrete overlap, wrapping, density, or touch-reachability problems.

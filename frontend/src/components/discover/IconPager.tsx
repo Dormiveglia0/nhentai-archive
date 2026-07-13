@@ -1,15 +1,15 @@
 import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 type Props = {
-  className?: string;
+  className: string;
   page: number;
   totalPages: number;
   loading: boolean;
   onPage: (page: number) => void;
 };
 
-export function IconPager({ className = "icon-pager", page, totalPages, loading, onPage }: Props) {
+export function IconPager({ className, page, totalPages, loading, onPage }: Props) {
   const [draft, setDraft] = useState(String(page));
 
   useEffect(() => {

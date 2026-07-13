@@ -1,0 +1,249 @@
+.folio-task-dock {
+  --dock-paper: #f3efe5;
+  --dock-paper-bright: #faf7ef;
+  --dock-ink: #171815;
+  --dock-muted: #6d695f;
+  --dock-line: rgba(23, 24, 21, 0.2);
+  --dock-line-strong: rgba(23, 24, 21, 0.56);
+  --dock-red: #ad382e;
+  width: min(510px, calc(100vw - 36px));
+  padding: 8px 12px 11px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--dock-line-strong);
+  border-left: 3px solid var(--dock-red);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(23,24,21,.014) 5px 6px),
+    rgba(243, 239, 229, 0.97);
+  color: var(--dock-ink);
+  box-shadow: 8px 9px 0 rgba(250,247,239,.72), 0 22px 52px rgba(23,24,21,.18);
+  font-family: Inter, "Noto Sans SC", "PingFang SC", sans-serif;
+  position: fixed;
+  z-index: 140;
+  right: 20px;
+  bottom: 96px;
+}
+
+.folio-task-dock button {
+  font: inherit;
+}
+
+.folio-task-dock button:focus-visible {
+  outline: 2px solid var(--dock-red);
+  outline-offset: 3px;
+}
+
+.folio-task-dock-head {
+  width: 100%;
+  min-height: 46px;
+  padding: 4px 2px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--dock-line);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.folio-task-dock-mark {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--dock-line-strong);
+  position: relative;
+}
+
+.folio-task-dock-mark i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--dock-red);
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  animation: folio-task-dock-pulse 1.8s ease-out infinite;
+}
+
+.folio-task-dock-head > span:nth-child(2),
+.folio-task-dock-head small,
+.folio-task-dock-head strong {
+  min-width: 0;
+  display: block;
+}
+
+.folio-task-dock-head small {
+  color: var(--dock-red);
+  font: 11px Georgia, "Times New Roman", serif;
+  letter-spacing: .13em;
+}
+
+.folio-task-dock-head strong {
+  margin-top: 3px;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+}
+
+.folio-task-dock-head em {
+  min-width: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--dock-line);
+  color: var(--dock-red);
+  font: normal 12px Georgia, serif;
+  text-align: center;
+}
+
+.folio-task-dock-head > svg {
+  color: var(--dock-muted);
+  transition: color 180ms ease, transform 220ms cubic-bezier(.22,1,.36,1);
+}
+
+.folio-task-dock-head:hover > svg {
+  color: var(--dock-red);
+  transform: translate(2px, -2px);
+}
+
+.folio-task-dock-list {
+  display: grid;
+  gap: 6px;
+}
+
+.folio-task-dock-list article {
+  min-height: 52px;
+  padding: 7px 2px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--dock-line);
+}
+
+.folio-task-dock-list article:last-child {
+  border-bottom: 0;
+}
+
+.folio-task-dock-status {
+  color: var(--dock-red);
+}
+
+.folio-task-dock-status .is-spinning {
+  animation: folio-task-dock-spin .9s linear infinite;
+}
+
+.folio-task-dock-copy,
+.folio-task-dock-copy strong,
+.folio-task-dock-copy small {
+  min-width: 0;
+  display: block;
+}
+
+.folio-task-dock-copy strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-task-dock-copy small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--dock-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-task-dock-percent {
+  min-width: 42px;
+  color: var(--dock-red);
+  font: 12px Georgia, serif;
+  text-align: right;
+}
+
+.folio-task-dock-progress {
+  height: 3px;
+  grid-column: 2 / -1;
+  display: block;
+  background: rgba(23,24,21,.12);
+  overflow: hidden;
+}
+
+.folio-task-dock-progress i {
+  height: 100%;
+  display: block;
+  background: var(--dock-red);
+  transition: width 360ms cubic-bezier(.22,1,.36,1);
+}
+
+.folio-task-dock-list article > button {
+  min-width: 82px;
+  min-height: 38px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--dock-red);
+  background: transparent;
+  color: var(--dock-red);
+  font-size: 11px;
+}
+
+.folio-task-dock-list article > button:hover:not(:disabled) {
+  background: var(--dock-red);
+  color: var(--dock-paper-bright);
+}
+
+.folio-task-dock-error {
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--dock-red);
+  color: var(--dock-red);
+  font-size: 11px;
+}
+
+.folio-task-dock-error span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes folio-task-dock-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes folio-task-dock-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(173,56,46,.34); }
+  72%, 100% { box-shadow: 0 0 0 8px rgba(173,56,46,0); }
+}
+
+@media (max-width: 680px) {
+  .folio-task-dock {
+    width: calc(100vw - 24px);
+    padding: 7px 10px 9px;
+    right: 12px;
+    bottom: 126px;
+  }
+
+  .folio-task-dock-list article:nth-child(n + 2) {
+    display: none;
+  }
+
+  .folio-task-dock-head {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-task-dock-mark i,
+  .folio-task-dock-status .is-spinning {
+    animation: none;
+  }
+}

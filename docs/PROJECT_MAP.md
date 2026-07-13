@@ -234,8 +234,10 @@ Root: `frontend/src/`
 - `components/layout/ArchiveShell.tsx`
   - Folio-only shell for every non-reader route. History reuses the library module context with its own heading; gallery detail reuses discover context while suppressing the repeated page heading. `scrollKey` resets each route/detail scroll position. `TaskDock` remains outside the chrome.
 - `components/layout/TaskDock.tsx`
-  - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
-  - Failed-job retry remains available for existing import jobs.
+  - Polls real `/api/jobs` only while the document is visible; renders only when jobs are running/queued/failed or an error exists.
+  - `TaskDock.css` owns its compact Folio live ledger, custom ARIA progress, responsive position above fixed action bars, and reduced-motion behavior. Retriable failures reuse the same `canRetry` boundary as the task center and expose guarded busy/error state.
+- `styles/app.css`
+  - Base-only root tokens/reset/form inheritance/shared spin/reduced-motion layer. The former legacy topbar, navigation, page, card, drawer, preview-modal, default pager/tag scroller, TaskDock and reader selectors have been removed or moved to direct component owners.
 - `components/discover/DiscoverPage.tsx`
   - Direct Folio composition for `#discover`: real popular band, combined keyword/tag query, custom filters, animated grid/list results, notices and pager. It imports no demo code and contains no API orchestration.
   - Card/random/popular selection navigates to the real gallery detail route; import actions enqueue the existing real import flow.

@@ -1,15 +1,15 @@
-import { MouseEvent as ReactMouseEvent, PointerEvent, useRef, useState } from "react";
+import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 
-import { RemoteTag } from "../../lib/api";
+import type { RemoteTag } from "../../lib/api";
 
 type Props = {
   tags: RemoteTag[];
   onPickTag?: (tag: RemoteTag) => void;
   displayTag?: (tag: RemoteTag) => string;
-  className?: string;
+  className: string;
 };
 
-export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, className = "tag-scroll" }: Props) {
+export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, className }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const startScroll = useRef(0);
