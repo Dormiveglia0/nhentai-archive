@@ -125,7 +125,7 @@ export function TaskInspector(props: Props) {
         </div>
       </InspectorSection>
 
-      <InspectorSection title="任务日志">
+      <InspectorSection title="任务日志" className="folio-tasks-log-section">
         {props.logsLoading ? <p className="folio-tasks-boundary">正在读取日志…</p> : props.logs.length ? (
           <ol className="folio-tasks-log">
             {props.logs.map((entry) => <li key={entry.id} className={entry.level === "error" ? "is-error" : ""}><time>{formatTime(entry.created_at)}</time><span>{entry.message}</span></li>)}
@@ -136,6 +136,6 @@ export function TaskInspector(props: Props) {
   );
 }
 
-function InspectorSection({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="folio-tasks-inspector-section"><h3>{title}</h3>{children}</section>;
+function InspectorSection({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+  return <section className={`folio-tasks-inspector-section${className ? ` ${className}` : ""}`}><h3>{title}</h3>{children}</section>;
 }

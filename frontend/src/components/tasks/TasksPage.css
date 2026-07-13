@@ -292,6 +292,10 @@
   letter-spacing: 0.08em;
 }
 
+.folio-tasks-table-head > span:last-child {
+  text-align: center;
+}
+
 .folio-tasks-row-list,
 .folio-tasks-row-motion {
   min-width: 0;
@@ -468,7 +472,7 @@
 .folio-tasks-row-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 5px;
 }

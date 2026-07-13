@@ -3,7 +3,6 @@ import {
   CheckCircle2,
   Clock3,
   Download,
-  Eye,
   FileText,
   Loader2,
   Pause,
@@ -88,9 +87,7 @@ export function TaskList(props: Props) {
                   <button type="button" aria-label="暂停" disabled={props.actingId === job.id} onClick={() => props.onPause(job.id)}><Pause size={14} /><span>暂停</span></button>
                 ) : canResume(job) ? (
                   <button type="button" aria-label="恢复" disabled={props.actingId === job.id} onClick={() => props.onResume(job.id)}><Play size={14} /><span>恢复</span></button>
-                ) : (
-                  <button type="button" aria-label="查看" onClick={() => props.onOpenLogs(job.id)}><Eye size={14} /><span>查看</span></button>
-                )}
+                ) : null}
                 {canCancel(job) ? (
                   <button className="is-danger" type="button" aria-label="取消" disabled={props.actingId === job.id} onClick={() => props.onCancel(job.id)}><X size={14} /><span>取消</span></button>
                 ) : null}

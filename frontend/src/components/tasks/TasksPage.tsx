@@ -15,7 +15,7 @@ export function TasksPage() {
 
   function openLogs(id: number) {
     tasks.focusJob(id);
-    window.requestAnimationFrame(() => document.querySelector(".folio-tasks-inspector")?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    window.requestAnimationFrame(() => document.querySelector(".folio-tasks-log-section")?.scrollIntoView({ block: "start", behavior: "smooth" }));
   }
 
   function clearFinished() {
