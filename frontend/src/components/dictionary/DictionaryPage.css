@@ -124,7 +124,7 @@
 .folio-dictionary-modal > header > span {
   color: var(--folio-red);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -213,7 +213,7 @@
 
 .folio-dictionary-suggest small {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-dictionary-suggest:hover:not(:disabled) {
@@ -263,7 +263,7 @@
   padding: 0 8px;
   border-bottom: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   position: sticky;
   top: 0;
@@ -331,7 +331,7 @@
   justify-content: center;
   border: 1px solid rgba(173, 56, 46, 0.3);
   color: var(--folio-red);
-  font-size: 9px;
+  font-size: 11px;
   font-style: normal;
 }
 
@@ -369,7 +369,7 @@
   justify-content: center;
   border-bottom: 1px solid var(--folio-line-strong);
   color: var(--folio-muted);
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -408,7 +408,7 @@
 
 .folio-dictionary-pager > span {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -423,7 +423,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-dictionary-pager button:hover:not(:disabled) {
@@ -542,7 +542,7 @@
 
 .folio-dictionary-preview-metrics span {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-dictionary-preview-metrics strong {
@@ -593,7 +593,7 @@
 .folio-dictionary-evidence-grid dl {
   margin: 18px 0 0;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
   line-height: 1.6;
 }
@@ -644,7 +644,7 @@
   align-items: center;
   gap: 5px;
   border: 1px solid var(--folio-line);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .folio-dictionary-co-tags b {
@@ -693,7 +693,7 @@
 
 .folio-dictionary-related > header span {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-dictionary-work-grid {
@@ -738,7 +738,7 @@
 .folio-dictionary-work-cell strong {
   overflow: hidden;
   font-family: "Noto Serif SC", "Songti SC", serif;
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -746,7 +746,7 @@
 .folio-dictionary-work-cell small {
   margin-top: 7px;
   color: var(--folio-muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .folio-dictionary-related-empty {
@@ -813,7 +813,7 @@
 .folio-dictionary-action-state small {
   margin-top: 3px;
   color: var(--folio-muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .folio-dictionary-action {
@@ -948,7 +948,7 @@
 .folio-dictionary-bulk-compose aside > p {
   margin: 4px 0;
   color: var(--folio-red);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -967,7 +967,7 @@
 
 .folio-dictionary-bulk-compose dt {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-dictionary-bulk-compose dd {
@@ -993,7 +993,7 @@
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--folio-line);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 @keyframes folio-dictionary-metric-line {
@@ -1108,7 +1108,7 @@
   }
 
   .folio-dictionary-metric span {
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0;
   }
 

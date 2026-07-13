@@ -67,6 +67,8 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |
 | Demo page dispatch | `demo/modules/DemoPage.tsx` |
 | Live task overlay outside reader routes | `layout/TaskDock.tsx` + `layout/TaskDock.css` |
+| Hash dispatch and route-level code splitting | `App.tsx` |
+| Folio/immersive-reader loading states | `layout/RouteFallback.tsx` + `layout/RouteFallback.css` |
 
 `frontend/src/styles/app.css` is now a base-only file (root tokens, reset, form inheritance, shared spin utility, reduced-motion override). Do not put feature or shell selectors back into it.
 
@@ -98,6 +100,7 @@ Preserve this order. Shared Folio structure goes here; production-only feature l
 | 5 | `#tasks`, `#export`, `#files` | feature-local components | old operational layout selectors replaced per component | migrated |
 | 6 | `#settings` | `settings/SettingsPage.tsx` + `useSettingsState.ts` + section components + `SettingsPage.css` | old settings deck/rail/form/export-recipe selectors and native selects removed | migrated |
 | 7 | detail/history/readers | `discover/gallery/*`, `history/*`, `reader/*` | old gallery and reader global selectors removed after route QA | migrated |
+| 8 | all routes | `App.tsx` + `layout/RouteFallback.*` | orphaned global shell CSS removed; each formal page/CSS loads on demand | migrated |
 
 Update one row to `migrated` only when its real page renders Folio structure directly, its old selectors are removed, and desktop/mobile browser QA passes.
 
@@ -108,6 +111,7 @@ Update one row to `migrated` only when its real page renders Folio structure dir
 - Change top navigation: `folio/config.ts`, `folio/shell/PageNavigation.tsx`, then responsive nav rules.
 - Change page background: `folio/shell/ModuleBackdrop.tsx` + matching atmosphere rules in `folio/styles/base.css`.
 - Change a select/input/toggle everywhere: `folio/ui/FolioPrimitives.tsx` + the owning shared CSS layer.
+- Change route loading or split boundaries: `App.tsx` + `layout/RouteFallback.*`; keep `ArchiveShell` eager and readers outside it.
 - Migrate one real page: keep its existing hook/service, rewrite its JSX with Folio structure, add feature-local CSS, delete only the old selectors that page no longer uses, and never fetch in scene components.
 
 ## Verification

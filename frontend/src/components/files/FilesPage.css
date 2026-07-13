@@ -390,7 +390,7 @@
   padding: 0 10px;
   border-bottom: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
 }
 
@@ -527,13 +527,13 @@
 .folio-files-file small {
   margin-top: 6px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-kind,
 .folio-files-size,
 .folio-files-status {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-kind {
@@ -672,7 +672,7 @@
   padding: 5px;
   background: var(--folio-paper);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
 }
 
@@ -686,7 +686,7 @@
   align-items: center;
   gap: 9px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-detail-copy h3 {
@@ -700,7 +700,7 @@
   display: -webkit-box;
   overflow: hidden;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.55;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
@@ -728,7 +728,7 @@
 .folio-files-detail-grid dd {
   min-width: 0;
   margin: 0;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-detail-grid dt {
@@ -753,7 +753,7 @@
 .folio-files-tags > span {
   padding-top: 5px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-tags > div {
@@ -773,14 +773,14 @@
   align-items: center;
   border: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
 }
 
 .folio-files-tags small {
   padding-top: 5px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-detail-actions {
@@ -799,7 +799,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
@@ -946,7 +946,7 @@
 .folio-files-scan-action small {
   margin-top: 5px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-cleanup-list button,
@@ -959,7 +959,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-cleanup-list button:hover:not(:disabled),
@@ -984,12 +984,12 @@
   margin-top: 12px;
   display: block;
   color: var(--folio-red);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-preview > p {
   margin: 10px 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.65;
 }
 
@@ -1010,7 +1010,7 @@
   gap: 5px;
   background: rgba(154, 103, 31, 0.08);
   color: #80601f;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -1031,7 +1031,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-files-confirm button.is-danger {
@@ -1049,7 +1049,7 @@
 .folio-files-notice {
   margin: 10px 0 0;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.65;
 }
 

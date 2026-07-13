@@ -71,7 +71,7 @@
 .folio-tasks-metric div > span {
   margin-top: 6px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.05em;
 }
 
@@ -173,7 +173,7 @@
   border-bottom: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   position: relative;
 }
 
@@ -195,7 +195,7 @@
   border: 1px solid var(--folio-line);
   border-radius: 50%;
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-tab-active {
@@ -227,7 +227,7 @@
   border: 1px solid var(--folio-line-strong);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
   transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
@@ -288,7 +288,7 @@
   gap: 10px;
   border-bottom: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
 }
 
@@ -418,7 +418,7 @@
   margin-top: 5px;
   overflow: hidden;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -465,7 +465,7 @@
 .folio-tasks-progress em {
   color: var(--folio-muted);
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
 }
 
@@ -488,7 +488,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   text-decoration: none;
   white-space: nowrap;
   transition: background-color 180ms ease, color 180ms ease;
@@ -551,7 +551,7 @@
 .folio-tasks-inspector-head > div > span {
   color: var(--folio-red);
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -568,7 +568,7 @@
   align-items: center;
   gap: 7px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-inspector-head p i {
@@ -638,7 +638,7 @@
 
 .folio-tasks-progress-ring small {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-progress-detail > div:last-child > span,
@@ -649,7 +649,7 @@
 
 .folio-tasks-progress-detail > div:last-child > span {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-progress-detail > div:last-child > strong {
@@ -661,7 +661,7 @@
 .folio-tasks-progress-detail > div:last-child > small {
   margin-top: 7px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -677,7 +677,7 @@
 .folio-tasks-inspector-section > h3 {
   margin: 0 0 13px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.12em;
 }
@@ -713,7 +713,7 @@
 
 .folio-tasks-inspector-work strong {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -721,7 +721,7 @@
 .folio-tasks-inspector-work small {
   margin-top: 7px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-kv {
@@ -740,21 +740,21 @@
 
 .folio-tasks-kv dt {
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-kv dd {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 10px;
+  font-size: 11px;
   text-align: right;
 }
 
 .folio-tasks-boundary {
   margin: 0;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 
@@ -771,7 +771,7 @@
   border: 1px solid var(--folio-red);
   background: var(--folio-red);
   color: var(--folio-paper-bright);
-  font-size: 10px;
+  font-size: 11px;
   text-decoration: none;
 }
 
@@ -787,13 +787,13 @@
 
 .folio-tasks-error-card p {
   margin: 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
 .folio-tasks-error-card small {
   grid-column: 2;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-inspector-actions {
@@ -812,7 +812,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -854,11 +854,11 @@
 .folio-tasks-log time {
   color: var(--folio-muted);
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-tasks-log span {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.55;
 }
 
@@ -971,7 +971,7 @@
 
   .folio-tasks-metric div > span {
     margin-top: 4px;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0;
     white-space: nowrap;
   }

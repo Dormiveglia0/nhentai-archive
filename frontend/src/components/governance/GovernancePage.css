@@ -262,7 +262,7 @@
   align-items: center;
   border: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
 }
 
@@ -682,7 +682,7 @@
 .folio-governance-writeback small {
   margin-top: 3px;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-governance-bulk {

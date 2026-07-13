@@ -126,7 +126,7 @@
   border: 1px solid rgba(173, 56, 46, 0.25);
   background: var(--folio-red-soft);
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-dictionary-chip-field > div > button:hover {
@@ -164,7 +164,7 @@
   border: 1px solid var(--folio-line-strong);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 10px;
+  font-size: 11px;
   white-space: nowrap;
   transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
@@ -183,7 +183,7 @@
 .folio-dictionary-translate-row p {
   margin: 0;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.65;
 }
 
@@ -192,7 +192,7 @@
   padding-left: 10px;
   border-left: 2px solid var(--folio-red);
   color: var(--folio-red);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 

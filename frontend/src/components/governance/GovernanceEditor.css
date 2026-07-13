@@ -108,7 +108,7 @@
   align-items: center;
   border: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
 }
 
@@ -160,7 +160,7 @@
   align-items: center;
   border-bottom: 1px solid var(--folio-line-strong);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.35;
 }
 
@@ -176,7 +176,7 @@
   align-items: center;
   border: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-style: normal;
 }
 
@@ -219,7 +219,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 10px;
+  font-size: 11px;
   transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
 }
 
@@ -305,7 +305,7 @@
   border-left: 1px solid currentColor;
   background: transparent;
   color: var(--folio-red);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .folio-governance-tag button:disabled {

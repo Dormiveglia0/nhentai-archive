@@ -1,0 +1,76 @@
+.folio-route-loading,
+.reader-route-loading {
+  min-height: min(480px, calc(100dvh - 220px));
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.folio-route-loading {
+  color: var(--folio-ink);
+}
+
+.reader-route-loading {
+  width: 100vw;
+  height: 100dvh;
+  color: #eee8da;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(238,232,218,.018) 5px 6px),
+    #0d0e0c;
+  font-family: Inter, "Noto Sans SC", "PingFang SC", sans-serif;
+  position: fixed;
+  inset: 0;
+}
+
+.folio-route-loading > span:last-child,
+.folio-route-loading strong,
+.folio-route-loading small,
+.reader-route-loading > span:last-child,
+.reader-route-loading strong,
+.reader-route-loading small {
+  display: block;
+}
+
+.folio-route-loading strong,
+.reader-route-loading strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 15px;
+}
+
+.folio-route-loading small,
+.reader-route-loading small {
+  margin-top: 6px;
+  color: var(--folio-muted, #aaa596);
+  font-size: 11px;
+}
+
+.route-loading-sheets {
+  width: 86px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.route-loading-sheets i {
+  width: 62px;
+  height: 88px;
+  border: 1px solid currentColor;
+  position: absolute;
+  opacity: .22;
+  animation: route-loading-sheet 1.7s cubic-bezier(.22,1,.36,1) infinite;
+}
+
+.route-loading-sheets i:nth-child(2) { animation-delay: -.56s; }
+.route-loading-sheets i:nth-child(3) { animation-delay: -1.12s; }
+
+@keyframes route-loading-sheet {
+  0%, 100% { opacity: .12; transform: translate(-9px, 6px); }
+  50% { opacity: .58; transform: translate(9px, -6px); border-color: #ad382e; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-sheets i { animation: none; }
+}

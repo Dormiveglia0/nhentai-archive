@@ -1,23 +1,48 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 
 import { ArchiveShell } from "./components/layout/ArchiveShell";
-import { DictionaryPage } from "./components/dictionary/DictionaryPage";
-import { DiscoverPage } from "./components/discover/DiscoverPage";
-import { ExportPage } from "./components/export/ExportPage";
-import { FilesPage } from "./components/files/FilesPage";
-import { GalleryDetailPage } from "./components/discover/GalleryDetailPage";
-import { GovernancePage } from "./components/governance/GovernancePage";
-import { HistoryPage } from "./components/history/HistoryPage";
-import { LibraryPage } from "./components/library/LibraryPage";
-import { ReaderPage } from "./components/reader/ReaderPage";
-import { SettingsPage } from "./components/settings/SettingsPage";
-import { TasksPage } from "./components/tasks/TasksPage";
-import { WorkbenchPage } from "./components/workbench/WorkbenchPage";
+import { FolioRouteFallback, ReaderRouteFallback } from "./components/layout/RouteFallback";
 import { api } from "./lib/api";
-import { Page, pageFromLocation } from "./lib/navigation";
+import { pageFromLocation, type Page } from "./lib/navigation";
 
 const FrontendDemo = lazy(() =>
   import("./components/demo/FrontendDemo").then((module) => ({ default: module.FrontendDemo })),
+);
+const WorkbenchPage = lazy(() =>
+  import("./components/workbench/WorkbenchPage").then((module) => ({ default: module.WorkbenchPage })),
+);
+const LibraryPage = lazy(() =>
+  import("./components/library/LibraryPage").then((module) => ({ default: module.LibraryPage })),
+);
+const HistoryPage = lazy(() =>
+  import("./components/history/HistoryPage").then((module) => ({ default: module.HistoryPage })),
+);
+const DiscoverPage = lazy(() =>
+  import("./components/discover/DiscoverPage").then((module) => ({ default: module.DiscoverPage })),
+);
+const GalleryDetailPage = lazy(() =>
+  import("./components/discover/GalleryDetailPage").then((module) => ({ default: module.GalleryDetailPage })),
+);
+const GovernancePage = lazy(() =>
+  import("./components/governance/GovernancePage").then((module) => ({ default: module.GovernancePage })),
+);
+const DictionaryPage = lazy(() =>
+  import("./components/dictionary/DictionaryPage").then((module) => ({ default: module.DictionaryPage })),
+);
+const TasksPage = lazy(() =>
+  import("./components/tasks/TasksPage").then((module) => ({ default: module.TasksPage })),
+);
+const ExportPage = lazy(() =>
+  import("./components/export/ExportPage").then((module) => ({ default: module.ExportPage })),
+);
+const FilesPage = lazy(() =>
+  import("./components/files/FilesPage").then((module) => ({ default: module.FilesPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./components/settings/SettingsPage").then((module) => ({ default: module.SettingsPage })),
+);
+const ReaderPage = lazy(() =>
+  import("./components/reader/ReaderPage").then((module) => ({ default: module.ReaderPage })),
 );
 
 export default function App() {
@@ -58,11 +83,19 @@ function ArchiveApp() {
   }, []);
 
   if (page.name === "reader") {
-    return <ReaderPage source={{ kind: "local", workId: page.workId }} privacyMode={privacyMode} />;
+    return (
+      <Suspense fallback={<ReaderRouteFallback />}>
+        <ReaderPage source={{ kind: "local", workId: page.workId }} privacyMode={privacyMode} />
+      </Suspense>
+    );
   }
 
   if (page.name === "readerRemote") {
-    return <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} />;
+    return (
+      <Suspense fallback={<ReaderRouteFallback />}>
+        <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} />
+      </Suspense>
+    );
   }
 
   const shellScrollKey = page.name === "gallery" ? `gallery:${page.galleryId}` : page.name;
@@ -74,19 +107,19 @@ function ArchiveApp() {
       privacyMode={privacyMode}
       onPrivacyModeChange={setPrivacyMode}
     >
-      {page.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}
-      {page.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={page.tag} /> : null}
-      {page.name === "gallery" ? <GalleryDetailPage galleryId={page.galleryId} returnTo={page.returnTo} blurCovers={blurCovers} /> : null}
-      {page.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
-      {page.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
-      {page.name === "governance" ? <GovernancePage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
-      {page.name === "dictionary" ? <DictionaryPage /> : null}
-      {page.name === "tasks" ? <TasksPage /> : null}
-      {page.name === "export" ? <ExportPage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
-      {page.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
-      {page.name === "settings" ? (
-        <SettingsPage />
-      ) : null}
+      <Suspense fallback={<FolioRouteFallback />}>
+        {page.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}
+        {page.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={page.tag} /> : null}
+        {page.name === "gallery" ? <GalleryDetailPage galleryId={page.galleryId} returnTo={page.returnTo} blurCovers={blurCovers} /> : null}
+        {page.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
+        {page.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
+        {page.name === "governance" ? <GovernancePage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
+        {page.name === "dictionary" ? <DictionaryPage /> : null}
+        {page.name === "tasks" ? <TasksPage /> : null}
+        {page.name === "export" ? <ExportPage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
+        {page.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
+        {page.name === "settings" ? <SettingsPage /> : null}
+      </Suspense>
     </ArchiveShell>
   );
 }
