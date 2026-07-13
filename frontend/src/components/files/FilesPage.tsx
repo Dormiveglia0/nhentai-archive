@@ -1,7 +1,8 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CircleCheck } from "lucide-react";
 
 import { FadeIn } from "../../lib/motion";
 import { IconPager } from "../discover/IconPager";
+import { FileDeleteDialog } from "./FileDeleteDialog";
 import { FileDetailPanel } from "./FileDetailPanel";
 import { FileHealthRail } from "./FileHealthRail";
 import { FileList } from "./FileList";
@@ -22,6 +23,16 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
     <section className="folio-page-body folio-files-page">
       <FileOverviewStrip overview={files.overview} />
       {files.error ? <FadeIn key={files.error} className="folio-files-message is-error" y={6}><AlertCircle size={15} /><p>{files.error}</p></FadeIn> : null}
+      {files.actionNotice ? (
+        <FadeIn
+          key={files.actionNotice.message}
+          className={`folio-files-message${files.actionNotice.error ? " is-error" : ""}`}
+          y={6}
+        >
+          {files.actionNotice.error ? <AlertCircle size={15} /> : <CircleCheck size={15} />}
+          <p>{files.actionNotice.message}</p>
+        </FadeIn>
+      ) : null}
 
       <FileToolbar
         category={files.category}
@@ -33,11 +44,10 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
         sort={files.sort}
         onSort={files.setSort}
         total={total}
-        multiSelect={files.multiSelect}
-        onToggleMultiSelect={files.toggleMultiSelect}
         selectedCount={files.selected.size}
         onPreviewSelected={files.previewSelected}
         onClearSelection={files.clearSelection}
+        busy={files.busy}
       />
 
       <FadeIn className="folio-files-layout" y={8}>
@@ -51,25 +61,45 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             entries={entries}
             selected={files.selected}
             focusId={files.focusId}
-            multiSelect={files.multiSelect}
             onPick={files.pickRow}
+            onToggle={files.toggleSelected}
             loading={files.loading}
           />
           <IconPager className="folio-files-pager" page={files.page} totalPages={totalPages} loading={files.loading} onPage={files.setPage} />
-          <FileDetailPanel focus={focus} blurCovers={blurCovers} busy={files.busy} onDelete={files.previewEntry} />
         </main>
-        <FileHealthRail
-          overview={files.overview}
-          duplicates={files.duplicates}
-          preview={files.preview}
-          pendingLabel={files.pendingLabel}
-          busy={files.busy}
-          actionNotice={files.actionNotice}
-          onCleanup={files.cleanupCategory}
-          onConfirm={files.confirmDelete}
-          onCancel={files.cancelDelete}
-        />
+        <div className="folio-files-side">
+          <FileDetailPanel
+            focus={focus}
+            blurCovers={blurCovers}
+            busy={files.busy}
+            onClose={files.closeFocus}
+            onDelete={files.previewEntry}
+          />
+          <FileHealthRail
+            overview={files.overview}
+            duplicates={files.duplicates}
+            busy={files.busy}
+            scanBusy={files.scanBusy}
+            scanPreview={files.scanPreview}
+            scanNotice={files.scanNotice}
+            scanError={files.scanError}
+            onCleanup={files.cleanupCategory}
+            onScanPreview={files.previewScan}
+            onScanStart={files.startScan}
+            onScanCancel={files.cancelScan}
+          />
+        </div>
       </FadeIn>
+
+      <FileDeleteDialog
+        preview={files.preview}
+        label={files.pendingLabel}
+        returnFocus={files.deleteTrigger}
+        error={files.error}
+        busy={files.busy}
+        onConfirm={files.confirmDelete}
+        onCancel={files.cancelDelete}
+      />
     </section>
   );
 }

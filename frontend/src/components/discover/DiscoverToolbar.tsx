@@ -1,9 +1,8 @@
-import { Grid2X2, List, Search, Shuffle, SlidersHorizontal } from "lucide-react";
-import { m } from "motion/react";
+import { Search, Shuffle, SlidersHorizontal } from "lucide-react";
 import type { FormEvent } from "react";
 
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
-import type { DiscoverViewMode, TagFilter } from "./discoverTypes";
+import type { TagFilter } from "./discoverTypes";
 import { TagFilterSelector } from "./TagFilterSelector";
 
 type Props = {
@@ -12,14 +11,12 @@ type Props = {
   kind: string;
   sort: string;
   unimportedOnly: boolean;
-  viewMode: DiscoverViewMode;
   selectedTags: TagFilter[];
   onQuery: (value: string) => void;
   onLanguage: (value: string) => void;
   onKind: (value: string) => void;
   onSort: (value: string) => void;
   onUnimportedOnly: (value: boolean) => void;
-  onViewMode: (value: DiscoverViewMode) => void;
   onTags: (tags: TagFilter[]) => void;
   onSubmit: () => void;
   onRandom: () => void;
@@ -70,16 +67,6 @@ export function DiscoverToolbar(props: Props) {
         </div>
 
         <div className="folio-discover-query-actions">
-          <div className="folio-view-switch folio-discover-view-switch" aria-label="结果视图">
-            <button type="button" className={props.viewMode === "grid" ? "is-active" : ""} aria-label="网格视图" aria-pressed={props.viewMode === "grid"} onClick={() => props.onViewMode("grid")}>
-              {props.viewMode === "grid" ? <m.span className="folio-control-active" layoutId="folio-discover-view" /> : null}
-              <Grid2X2 size={16} />
-            </button>
-            <button type="button" className={props.viewMode === "list" ? "is-active" : ""} aria-label="列表视图" aria-pressed={props.viewMode === "list"} onClick={() => props.onViewMode("list")}>
-              {props.viewMode === "list" ? <m.span className="folio-control-active" layoutId="folio-discover-view" /> : null}
-              <List size={17} />
-            </button>
-          </div>
           <button className="folio-discover-random" type="button" onClick={props.onRandom} aria-label="随机作品" title="随机作品">
             <Shuffle size={17} />
           </button>

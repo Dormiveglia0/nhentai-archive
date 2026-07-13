@@ -9,16 +9,16 @@ type Props = {
   entries: FileEntry[];
   selected: Set<string>;
   focusId: string | null;
-  multiSelect: boolean;
   onPick: (id: string) => void;
+  onToggle: (id: string) => void;
   loading: boolean;
 };
 
-export function FileList({ entries, selected, focusId, multiSelect, onPick, loading }: Props) {
+export function FileList({ entries, selected, focusId, onPick, onToggle, loading }: Props) {
   return (
     <section className={"folio-files-inventory" + (loading ? " is-loading" : "")} aria-busy={loading}>
       <header className="folio-files-list-head" aria-hidden="true">
-        <span />
+        <span>选择</span>
         <span>文件 / 受管路径</span>
         <span>类型</span>
         <span>体积</span>
@@ -39,27 +39,34 @@ export function FileList({ entries, selected, focusId, multiSelect, onPick, load
 
             return (
               <StaggerItem key={entry.id} className="folio-files-row-wrap">
-                <button
-                  type="button"
+                <div
                   className={
                     "folio-files-row" +
                     (isSelected ? " is-selected" : "") +
                     (focusId === entry.id ? " is-focused" : "")
                   }
-                  aria-pressed={multiSelect ? isSelected : undefined}
-                  onClick={() => onPick(entry.id)}
                 >
-                  <span className={"folio-files-mark is-" + tone} aria-hidden="true">
-                    {multiSelect ? <span className="folio-files-check">{isSelected ? <Check size={11} /> : null}</span> : <i />}
-                  </span>
-                  <span className="folio-files-file">
-                    <strong title={name}>{name}</strong>
-                    <small title={path}>{path}</small>
-                  </span>
-                  <span className="folio-files-kind">{kindLabel(entry.kind)}</span>
-                  <span className="folio-files-size">{formatBytes(entry.size_bytes)}</span>
-                  <span className={"folio-files-status is-" + tone}>{entryStatusLabel(entry)}</span>
-                </button>
+                  <button
+                    type="button"
+                    className="folio-files-select"
+                    aria-label={`${isSelected ? "取消选择" : "选择"} ${name}`}
+                    aria-pressed={isSelected}
+                    onClick={() => onToggle(entry.id)}
+                  >
+                    <span className={"folio-files-mark is-" + tone} aria-hidden="true">
+                      <span className="folio-files-check">{isSelected ? <Check size={11} /> : null}</span>
+                    </span>
+                  </button>
+                  <button type="button" className="folio-files-row-main" onClick={() => onPick(entry.id)}>
+                    <span className="folio-files-file">
+                      <strong title={name}>{name}</strong>
+                      <small title={path}>{path}</small>
+                    </span>
+                    <span className="folio-files-kind">{kindLabel(entry.kind)}</span>
+                    <span className="folio-files-size">{formatBytes(entry.size_bytes)}</span>
+                    <span className={"folio-files-status is-" + tone}>{entryStatusLabel(entry)}</span>
+                  </button>
+                </div>
               </StaggerItem>
             );
           })}

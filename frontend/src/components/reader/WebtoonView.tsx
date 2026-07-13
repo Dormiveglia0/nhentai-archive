@@ -21,6 +21,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   // 观测视口中部的页面，回写当前页
   useEffect(() => {
     if (pages.length === 0) return;
+    const root = itemRefs.current.values().next().value?.closest<HTMLElement>(".reader-viewport") ?? null;
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -33,7 +34,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
           onReachPage(idx);
         }
       },
-      { root: null, threshold: [0.5], rootMargin: "-20% 0px -20% 0px" }
+      { root, threshold: 0, rootMargin: "-45% 0px -45% 0px" }
     );
     itemRefs.current.forEach((node) => observer.observe(node));
     return () => observer.disconnect();

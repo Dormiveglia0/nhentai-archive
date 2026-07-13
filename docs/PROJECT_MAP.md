@@ -241,21 +241,21 @@ Root: `frontend/src/`
 - `styles/app.css`
   - Base-only root tokens/reset/form inheritance/shared spin/reduced-motion layer. The former legacy topbar, navigation, page, card, drawer, preview-modal, default pager/tag scroller, TaskDock and reader selectors have been removed or moved to direct component owners.
 - `components/discover/DiscoverPage.tsx`
-  - Direct Folio composition for `#discover`: real popular band, combined keyword/tag query, custom filters, animated grid/list results, notices and pager. It imports no demo code and contains no API orchestration.
+  - Direct Folio composition for `#discover`: real popular band, combined keyword/tag query, custom filters, one responsive card grid, notices and pager. It imports no demo code and contains no API orchestration.
   - Card/random/popular selection navigates to the real gallery detail route; import actions enqueue the existing real import flow.
 - `components/discover/useDiscoverState.ts`
   - Owns restored query/filter/page/scroll state, current `.folio-scroll` persistence, responsive page sizing, stale feed-request invalidation, one-shot StrictMode-safe popular loading, remote search, random navigation and import actions.
   - Multiple tags retain their original remote names/ids; a single tag-only query uses `tag_id`, while combined keyword/tag filters use remote query tokens. A missing remote `total` remains explicit instead of being fabricated.
 - `components/discover/DiscoverPage.css`
-  - Production-only popular fan, query composer, custom filter row, result/card/list/pager and four-viewport responsive layout. Replaced legacy discover/tag-picker/popular-fan selectors were removed from `styles/app.css`.
+  - Production-only popular fan, query composer, custom filter row, result card grid/pager and four-viewport responsive layout. Replaced legacy discover/tag-picker/popular-fan selectors were removed from `styles/app.css`.
 - `components/discover/DiscoverToolbar.tsx`
-  - Keyword/Gallery ID input plus visible multi-tag chips, icon-only random action, animated grid/list controls, equal-height query action, custom Folio language/type/sort menus and unimported toggle. Upload/scan are not discover toolbar modes.
+  - Keyword/Gallery ID input plus visible multi-tag chips, icon-only random action, equal-height query action, custom Folio language/type/sort menus and unimported toggle. Discover has no duplicate list-view mode; upload/scan are not toolbar modes.
 - `components/discover/DiscoverFeed.tsx`
   - Result count, empty/error/notice states, dynamic current-page cards, icon pager.
 - `components/discover/DiscoverCard.tsx`
   - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
 - `components/discover/TagFilterSelector.tsx`
-  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected chips remain visible in the query composer, and the panel stays open for consecutive selection.
+  - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected options stay at the top, and one fixed clear action removes all selected tags. Mobile gives selected chips their own full-width row so the first chip cannot sit under the trigger.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.
 - `components/discover/TagScroller.tsx`
   - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support.
@@ -268,13 +268,13 @@ Root: `frontend/src/`
   - Do not restore bordered/shadowed window styling, popover/floating mode, close buttons, or large metadata/action blocks inside the fan.
 - `components/discover/GalleryDetailPage.tsx` + `components/discover/gallery/`
   - Direct route-local gallery composition split into real data/model, fixed-slot hero, full-width tag ledger, initial page preview, keyboard/focus-restoring lightbox, and related works. It imports no demo state.
-  - Cover geometry is stable and uses `object-fit: contain`; variable tag counts never share the cover column. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
+  - Cover and lightbox geometry use `object-fit: contain`; the lightbox image is absolutely bounded to its media stage so intrinsic image height cannot overflow. Variable tag counts never share the cover column. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
 - `components/settings/` — refactored settings module:
   - `SettingsPage.tsx` — direct Folio composition with six horizontal chapters, unique section headings, animated chapter transitions, real sync/dirty state, inline feedback, and a viewport-fixed reload/save rail. It imports no demo state and has no left navigation.
   - `SettingsPage.css` — production-only settings layout, metrics, manifests, storage paths, fixed action rail, 1024/390/320 responsive rules, and reduced-motion fallback. Replaced settings deck/rail/form/export-recipe rules were removed from `styles/app.css`.
-  - `useSettingsState.ts` — all real config state/actions, latest-request and unmount protection, complete dirty comparison, secret-draft reset, and load/save/verify/clear flows. Validation actions only run against saved config.
+  - `useSettingsState.ts` — all real config state/actions, latest-request and unmount protection, complete dirty comparison, secret-draft reset, and load/save/verify/clear flows. Hydration also synchronizes saved privacy/cover defaults into `ArchiveApp`, so cover blur changes apply to other routes without a reload. Validation actions only run against saved config.
   - `ConnectionSection` / `TranslationSection` / `PreferencesSection` / `ExportDefaultsSection` / `DataSection` / `StorageSection` — shared Folio fields/selects/toggles over real settings, runtime, library, and file APIs. Data/storage fetch only when their chapter is active; unresolved values render as `—`, never fabricated zeroes. `settingsHelpers` owns only `StatusDot`.
 - `components/dictionary/DictionaryPage.tsx`
   - Direct Folio composition for `#dictionary`: real summary, candidate pool, editor, evidence/preview ledger, fixed viewport command bar, and accessible bulk-import modal. It imports no demo code and contains no API orchestration.
@@ -321,8 +321,8 @@ Root: `frontend/src/`
   - Immersive fixed-viewport reader outside `ArchiveShell`, with discriminated sources:
     - local `workId`: reads indexed CBZ pages and persists progress;
     - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
-  - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. Local reader exposes a real `进入治理` route to `#governance/{work_id}`.
-  - `ReaderToolbar`/`ReaderScrubber` provide keyboard and touch controls without native sliders; `ThumbnailOverlay` and `ReaderJumpDialog` are focus-restoring, focus-trapped modal surfaces. Component-local CSS replaces all former global reader rules and includes custom scrollbars/reduced-motion fallbacks.
+  - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. `WebtoonView` observes the actual reader scroller through a center band, so tall continuous pages update current-page progress reliably.
+  - `ReaderToolbar` hides single-page direction controls in continuous mode; `ReaderScrubber` provides keyboard/touch progress without a native slider. `ReaderInfoPanel` contains only work/progress actions, links to the real gallery display, and no duplicate reader settings. `ThumbnailOverlay` and `ReaderJumpDialog` remain focus-restoring modal surfaces.
 - `components/governance/GovernancePage.tsx`
   - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
   - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance` through `useGovernanceState`.
@@ -346,13 +346,14 @@ Root: `frontend/src/`
   - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `components/files/` — file maintenance module:
-  - `FilesPage.tsx` — direct Folio composition for real overview, filters, semantic file list, pager, focused detail, cleanup preview and directory-scan preview. It imports no demo code.
-  - `FilesPage.css` — production-only metric, toolbar, custom scrollbar, list/detail/maintenance rail and four-viewport responsive layout. Replaced global `.files-*` rules were removed from `styles/app.css`.
-  - `useFilesState.ts` — latest-response guards for overview/inventory/delete preview, 180ms inventory debounce, filter-safe focus/selection reset, real delete confirmation orchestration and result notices.
-  - `FileToolbar.tsx` — animated category index, Folio search/custom status and sort selects, stable batch-selection bar.
-  - `FileList.tsx` — full-row semantic buttons with real path/type/size/status, custom selection state, size-mismatch flag display and styled internal scrolling.
-  - `FileDetailPanel.tsx` — focused real cover/path/metadata/tags and governance/export routes; cover respects `blurCovers`.
-  - `FileHealthRail.tsx` — real index and duplicate counts, cleanup preview→confirm boundary, read-only library-scan preview and guarded scan-task enqueue.
+  - `FilesPage.tsx` — direct Folio composition for real overview, filters, semantic file list, pager, focused detail, cleanup preview, delete confirmation dialog and directory-scan preview. It imports no demo code.
+  - `FilesPage.css` — production-only metric, toolbar, custom scrollbar, list/detail/maintenance rail and four-viewport responsive layout. Desktop keeps detail beside the inventory; 900px and below open focused detail as a bounded bottom operation drawer. Replaced global `.files-*` rules were removed from `styles/app.css`.
+  - `useFilesState.ts` — owns one guarded file-operation state for delete preview/cleanup/delete/scan preview/scan enqueue; inventory requests retain latest-filter semantics and clamp invalid pages after deletion. Scan enqueue submits the exact paths from the visible preview instead of recalculating them.
+  - `FileDeleteDialog.tsx` — native modal confirmation shared by single, batch and cleanup deletion; it stays viewport-visible, defaults focus to cancel, restores the triggering control, and shows warnings or execution failures in place.
+  - `FileToolbar.tsx` — animated category index, Folio search/custom status and sort selects, and an always-present selection summary; there is no prerequisite “batch mode”.
+  - `FileList.tsx` — separate always-visible checkbox and full-row focus button with real path/type/size/status, size-mismatch display and styled internal scrolling.
+  - `FileDetailPanel.tsx` — focused real cover/path/metadata/tags plus reader, gallery display, governance, export, native path-copy and delete-preview actions; cover respects `blurCovers`.
+  - `FileHealthRail.tsx` — presentation-only real index and duplicate counts, cleanup launchers, read-only library-scan preview and guarded scan-task enqueue controls; async ownership stays in `useFilesState.ts`.
   - `fileHelpers.tsx` — byte/kind/status formatting and delete-target conversion.
 - `components/tasks/` — task center:
   - `TasksPage.tsx` — direct Folio composition for `#tasks`: real status metrics, animated status index, search/refresh/confirmed clear, semantic task list, and source-of-truth inspector. It imports no demo code.

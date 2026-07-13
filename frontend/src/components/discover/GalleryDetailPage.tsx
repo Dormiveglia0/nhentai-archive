@@ -17,13 +17,20 @@ type Props = {
 
 export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
   const gallery = useGalleryDetail(galleryId, returnTo);
+  const backLabel = returnTo?.startsWith("reader/")
+    ? "返回阅读器"
+    : returnTo === "files"
+      ? "返回文件管理"
+      : returnTo
+        ? "返回搜索结果"
+        : "返回发现";
 
   return (
     <section className="folio-page-body folio-gallery-page">
       <header className="folio-gallery-context">
         <button type="button" onClick={gallery.goBack}>
           <ArrowLeft size={15} />
-          {returnTo ? "返回搜索结果" : "返回发现"}
+          {backLabel}
         </button>
         <span>作品档案 · 真实来源</span>
       </header>

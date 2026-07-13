@@ -25,14 +25,12 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
         kind={discover.kind}
         sort={discover.sort}
         unimportedOnly={discover.unimportedOnly}
-        viewMode={discover.viewMode}
         selectedTags={discover.selectedTags}
         onQuery={discover.setQuery}
         onLanguage={discover.setLanguage}
         onKind={discover.setKind}
         onSort={discover.setSort}
         onUnimportedOnly={discover.setUnimportedOnly}
-        onViewMode={discover.setViewMode}
         onTags={discover.setSelectedTags}
         onSubmit={discover.submitToolbar}
         onRandom={discover.openRandom}
@@ -46,7 +44,6 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
         loading={discover.loading}
         error={discover.error}
         notice={discover.notice}
-        viewMode={discover.viewMode}
         blurCovers={blurCovers}
         onOpen={discover.openDetail}
         onImport={discover.enqueueGalleryId}

@@ -40,8 +40,14 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
   },
 };
 
-export function SettingsPage() {
-  const vm = useSettingsState();
+export function SettingsPage({
+  onPrivacyModeChange,
+  onBlurCoversChange,
+}: {
+  onPrivacyModeChange: (value: boolean) => void;
+  onBlurCoversChange: (value: boolean) => void;
+}) {
+  const vm = useSettingsState(onPrivacyModeChange, onBlurCoversChange);
   const reduceMotion = usePrefersReducedMotion();
   const current = SECTION_COPY[vm.section];
 

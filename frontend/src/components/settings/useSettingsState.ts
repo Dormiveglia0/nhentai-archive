@@ -3,7 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type SettingsSummary } from "../../lib/api";
 import type { SettingsSection } from "../folio/config";
 
-export function useSettingsState() {
+export function useSettingsState(
+  onPrivacyModeChange: (value: boolean) => void,
+  onBlurCoversChange: (value: boolean) => void,
+) {
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
   const [section, setSection] = useState<SettingsSection>("connection");
 
@@ -30,13 +33,15 @@ export function useSettingsState() {
     setSettings(payload);
     setPrivacyDefault(payload.privacy.privacy_mode_default);
     setBlurDefault(payload.privacy.blur_covers_default);
+    onPrivacyModeChange(payload.privacy.privacy_mode_default);
+    onBlurCoversChange(payload.privacy.blur_covers_default);
     setReaderMode(payload.reader.default_mode);
     setMtProvider(mt?.provider ?? "google_free");
     setDeeplPlan(mt?.deepl_plan ?? "free");
     setMtTargetLang(mt?.target_lang === "zh-TW" ? "zh-TW" : "zh-CN");
     setMtBatchLimit(mt?.batch_limit ?? 20);
     setExportDefaults(payload.export.default_options);
-  }, []);
+  }, [onBlurCoversChange, onPrivacyModeChange]);
 
   const execute = useCallback(async <T,>(action: () => Promise<T>, onSuccess: (result: T) => void) => {
     const requestId = ++requestRef.current;

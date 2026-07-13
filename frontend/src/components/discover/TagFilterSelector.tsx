@@ -127,18 +127,21 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   }
 
   const normalizedQuery = query.trim();
-  const visible = canSearchTag(normalizedQuery) ? suggestions : cached;
+  const visible = uniqueRemoteTags([...selected, ...(canSearchTag(normalizedQuery) ? suggestions : cached)]);
 
   return (
     <div ref={rootRef} className={open ? "folio-discover-tags is-open" : "folio-discover-tags"}>
       {selected.length ? (
-        <div className="folio-discover-tag-chips" aria-label="已选远端标签">
-          {selected.map((tag) => (
-            <span key={tag.id}>
-              {defaultDisplayTag(tag)}
-              <button type="button" aria-label={`移除标签 ${defaultDisplayTag(tag)}`} onClick={() => remove(tag)}><X size={12} /></button>
-            </span>
-          ))}
+        <div className="folio-discover-tag-selection">
+          <div className="folio-discover-tag-chips" aria-label="已选远端标签">
+            {selected.map((tag) => (
+              <span key={tag.id}>
+                {defaultDisplayTag(tag)}
+                <button type="button" aria-label={`移除标签 ${defaultDisplayTag(tag)}`} onClick={() => remove(tag)}><X size={12} /></button>
+              </span>
+            ))}
+          </div>
+          <button className="folio-discover-tag-clear" type="button" onClick={() => onSelect([])}><X size={13} />清空</button>
         </div>
       ) : null}
 

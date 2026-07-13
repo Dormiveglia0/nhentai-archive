@@ -4,7 +4,7 @@ import type { GallerySummary } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { DiscoverCard } from "./DiscoverCard";
-import type { DiscoverViewMode, TagFilter } from "./discoverTypes";
+import type { TagFilter } from "./discoverTypes";
 import { IconPager } from "./IconPager";
 
 type Props = {
@@ -15,7 +15,6 @@ type Props = {
   loading: boolean;
   error: string | null;
   notice: string | null;
-  viewMode: DiscoverViewMode;
   blurCovers: boolean;
   onOpen: (id: number) => void;
   onImport: (id: number) => void;
@@ -53,15 +52,14 @@ export function DiscoverFeed(props: Props) {
       {props.items.length ? (
         <div className={props.loading ? "folio-discover-results is-loading" : "folio-discover-results"}>
           <Stagger
-            key={`${props.viewMode}:${props.page}:${props.items.length}:${props.items[0]?.gallery_id ?? "none"}`}
-            className={props.viewMode === "grid" ? "folio-discover-grid" : "folio-discover-list"}
+            key={`${props.page}:${props.items.length}:${props.items[0]?.gallery_id ?? "none"}`}
+            className="folio-discover-grid"
           >
             {props.items.map((item) => (
               <StaggerItem key={item.gallery_id} className="folio-discover-card-cell">
                 <DiscoverCard
                   item={item}
                   blurCovers={props.blurCovers}
-                  viewMode={props.viewMode}
                   onOpen={() => props.onOpen(item.gallery_id)}
                   onImport={() => props.onImport(item.gallery_id)}
                   onPickTag={props.onPickTag}

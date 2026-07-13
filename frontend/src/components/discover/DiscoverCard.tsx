@@ -2,19 +2,18 @@ import { BookOpen, Download } from "lucide-react";
 
 import type { GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
-import type { DiscoverViewMode, TagFilter } from "./discoverTypes";
+import type { TagFilter } from "./discoverTypes";
 import { defaultDisplayTag, TagScroller } from "./TagScroller";
 
 type Props = {
   item: GallerySummary;
   blurCovers: boolean;
-  viewMode: DiscoverViewMode;
   onOpen: () => void;
   onImport: () => void;
   onPickTag: (tag: TagFilter) => void;
 };
 
-export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onPickTag }: Props) {
+export function DiscoverCard({ item, blurCovers, onOpen, onImport, onPickTag }: Props) {
   const tags = item.tags ?? [];
   const author = tagName(tags, "artist") || tagName(tags, "group") || "作者未缓存";
   const language = languageLabel(tags);
@@ -23,7 +22,7 @@ export function DiscoverCard({ item, blurCovers, viewMode, onOpen, onImport, onP
   const title = item.title_japanese || item.pretty_title || item.title || `Gallery ${item.gallery_id}`;
 
   return (
-    <article className={viewMode === "grid" ? "folio-discover-card" : "folio-discover-card is-list"}>
+    <article className="folio-discover-card">
       <button type="button" className="folio-discover-cover" onClick={onOpen} aria-label={`打开作品详情：${title}`}>
         {item.thumbnail.url ? (
           <img className={blurCovers ? "folio-media-blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />

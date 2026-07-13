@@ -1,6 +1,5 @@
 import { GallerySummary, RemoteTag } from "../../lib/api";
 
-export type DiscoverViewMode = "grid" | "list";
 export type DiscoverSurface = "feed" | "upload" | "scan";
 
 export type TagFilter = RemoteTag & {

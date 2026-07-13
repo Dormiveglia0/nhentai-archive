@@ -249,12 +249,8 @@ export function ReaderPage({ source, privacyMode }: Props) {
         queued={data.queued}
         completed={data.completed}
         workId={data.work?.id ?? null}
-        mode={prefs.mode}
-        direction={prefs.direction}
-        fit={prefs.fit}
-        onSetMode={setModeAndReset}
-        onToggleDirection={toggleDirection}
-        onCycleFit={cycleFit}
+        galleryId={data.isRemote ? data.gallery?.gallery_id ?? null : data.work?.remote_gallery_id ?? null}
+        returnTo={source.kind === "local" ? `reader/${source.workId}` : `reader/remote/${source.galleryId}`}
         onMarkCompleted={data.markCompleted}
         onImport={() => void data.importRemote()}
         onClose={() => setActivePanel("none")}

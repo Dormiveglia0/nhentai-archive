@@ -118,7 +118,9 @@ function ArchiveApp() {
         {page.name === "tasks" ? <TasksPage /> : null}
         {page.name === "export" ? <ExportPage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
         {page.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
-        {page.name === "settings" ? <SettingsPage /> : null}
+        {page.name === "settings" ? (
+          <SettingsPage onPrivacyModeChange={setPrivacyMode} onBlurCoversChange={setBlurCovers} />
+        ) : null}
       </Suspense>
     </ArchiveShell>
   );

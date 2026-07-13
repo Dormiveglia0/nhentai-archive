@@ -1,7 +1,6 @@
-import { ListChecks, SearchCheck, X } from "lucide-react";
-import { AnimatePresence, m } from "motion/react";
+import { SearchCheck, X } from "lucide-react";
+import { m } from "motion/react";
 
-import { duration, ease } from "../../lib/motion";
 import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
 
 const CATEGORIES = [
@@ -37,11 +36,10 @@ type Props = {
   sort: string;
   onSort: (sort: string) => void;
   total: number;
-  multiSelect: boolean;
-  onToggleMultiSelect: () => void;
   selectedCount: number;
   onPreviewSelected: () => void;
   onClearSelection: () => void;
+  busy: boolean;
 };
 
 export function FileToolbar({
@@ -54,14 +52,13 @@ export function FileToolbar({
   sort,
   onSort,
   total,
-  multiSelect,
-  onToggleMultiSelect,
   selectedCount,
   onPreviewSelected,
   onClearSelection,
+  busy,
 }: Props) {
   return (
-    <section className="folio-files-toolbar" aria-label="文件筛选与批量操作">
+    <section className="folio-files-toolbar" aria-label="文件筛选与批量操作" aria-busy={busy}>
       <div className="folio-files-tabs" role="tablist" aria-label="文件类型">
         {CATEGORIES.map((item) => (
           <button
@@ -85,53 +82,21 @@ export function FileToolbar({
         </div>
         <FolioSelect label="文件状态" value={statusFilter} options={STATUSES} onChange={onStatus} />
         <FolioSelect label="排序方式" value={sort} options={SORTS} onChange={onSort} />
-        <div className="folio-files-control">
-          <span>选择方式</span>
-          <button
-            type="button"
-            className={"folio-files-multi" + (multiSelect ? " is-active" : "")}
-            aria-pressed={multiSelect}
-            onClick={onToggleMultiSelect}
-          >
-            <ListChecks size={15} />
-            {multiSelect ? "退出多选" : "批量选择"}
-          </button>
-        </div>
       </div>
 
-      <div className={"folio-files-batch" + (multiSelect ? " is-active" : "")}>
+      <div className={"folio-files-batch" + (selectedCount ? " is-active" : "")}>
         <p>
-          <strong>{multiSelect ? selectedCount : total}</strong>
-          <span>{multiSelect ? "项已选择" : "项匹配当前条件"}</span>
+          <strong>{selectedCount || total}</strong>
+          <span>{selectedCount ? "项已选择" : "项匹配当前条件 · 可直接勾选"}</span>
         </p>
-        <AnimatePresence mode="wait" initial={false}>
-          {multiSelect ? (
-            <m.div
-              key="actions"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: duration.fast, ease: ease.standard }}
-            >
-              <button type="button" onClick={onPreviewSelected} disabled={selectedCount === 0}>
-                <SearchCheck size={15} />预览删除影响
-              </button>
-              <button type="button" onClick={onClearSelection} disabled={selectedCount === 0}>
-                <X size={15} />清空选择
-              </button>
-            </m.div>
-          ) : (
-            <m.span
-              key="hint"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: duration.fast }}
-            >
-              先预览，再执行任何清理操作
-            </m.span>
-          )}
-        </AnimatePresence>
+        <div>
+          <button type="button" onClick={onPreviewSelected} disabled={busy || selectedCount === 0}>
+            <SearchCheck size={15} />预览删除影响
+          </button>
+          <button type="button" onClick={onClearSelection} disabled={busy || selectedCount === 0}>
+            <X size={15} />清空选择
+          </button>
+        </div>
       </div>
     </section>
   );

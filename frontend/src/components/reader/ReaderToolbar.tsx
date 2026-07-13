@@ -117,7 +117,7 @@ export function ReaderToolbar({
               >
                 <ScrollText size={16} /><span>{mode === "webtoon" ? "连续" : "单页"}</span>
               </button>
-              <button type="button" onClick={onToggleDirection} title="切换阅读方向"><span>{direction === "rtl" ? "右 → 左" : "左 → 右"}</span></button>
+              {mode === "single" ? <button type="button" onClick={onToggleDirection} title="切换阅读方向"><span>{direction === "rtl" ? "右 → 左" : "左 → 右"}</span></button> : null}
               <button type="button" onClick={onCycleFit} title="切换适配模式"><span>{FIT_LABEL[fit]}</span></button>
             </div>
 

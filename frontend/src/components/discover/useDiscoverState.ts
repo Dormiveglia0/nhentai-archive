@@ -10,13 +10,12 @@ import {
   readDiscoverStateFrom,
   serializeDiscoverHash,
 } from "./discoverState";
-import type { DiscoverViewMode, TagFilter } from "./discoverTypes";
+import type { TagFilter } from "./discoverTypes";
 
 const SURFACE = "feed" as const;
 
 export function useDiscoverState(initialTag?: RemoteTag) {
   const restored = useMemo(readDiscoverState, []);
-  const [viewMode, setViewMode] = useState<DiscoverViewMode>(restored.viewMode);
   const [query, setQuery] = useState(restored.query);
   const [submittedQuery, setSubmittedQuery] = useState(restored.submittedQuery);
   const [language, setLanguage] = useState(restored.language);
@@ -140,7 +139,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   useEffect(() => {
     persistDiscoverState(currentDiscoverState({
       surface: SURFACE,
-      viewMode,
       query,
       submittedQuery,
       language,
@@ -150,7 +148,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
       selectedTags,
       page,
     }), true);
-  }, [kind, language, page, query, selectedTags, sort, submittedQuery, unimportedOnly, viewMode]);
+  }, [kind, language, page, query, selectedTags, sort, submittedQuery, unimportedOnly]);
 
   useEffect(() => {
     let timer = 0;
@@ -158,7 +156,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
       timer = 0;
       persistDiscoverState({
         surface: SURFACE,
-        viewMode,
         query,
         submittedQuery,
         language,
@@ -179,7 +176,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
       target.removeEventListener("scroll", handleScroll);
       if (timer) window.clearTimeout(timer);
     };
-  }, [kind, language, page, query, selectedTags, sort, submittedQuery, unimportedOnly, viewMode]);
+  }, [kind, language, page, query, selectedTags, sort, submittedQuery, unimportedOnly]);
 
   useEffect(() => {
     if (loading || !items.length || !restoreScrollRef.current) return;
@@ -288,7 +285,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   function snapshot(): PersistedDiscoverState {
     return {
       surface: SURFACE,
-      viewMode,
       query,
       submittedQuery,
       language,
@@ -302,7 +298,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   }
 
   return {
-    viewMode,
     query,
     language,
     kind,
@@ -330,7 +325,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
     setKind: (value: string) => { collapsePopular(); setKind(value); },
     setSort: (value: string) => { collapsePopular(); setSort(value); },
     setUnimportedOnly: (value: boolean) => { collapsePopular(); setUnimportedOnly(value); },
-    setViewMode: (value: DiscoverViewMode) => { collapsePopular(); setViewMode(value); },
     setSelectedTags: (tags: TagFilter[]) => { collapsePopular(); setSelectedTags(tags); },
   };
 }

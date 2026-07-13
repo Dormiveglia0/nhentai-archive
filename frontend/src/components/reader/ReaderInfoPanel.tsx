@@ -1,9 +1,8 @@
-import { Check, Download, LoaderCircle, Settings2, Star, X } from "lucide-react";
+import { ArrowUpRight, Check, Download, LoaderCircle, Star, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { FadeInOut, Presence } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
-import type { Direction, Fit, Mode } from "./readerHelpers";
 import "./ReaderPanels.css";
 
 type ReaderInfoPanelProps = {
@@ -17,19 +16,13 @@ type ReaderInfoPanelProps = {
   queued: boolean;
   completed: boolean;
   workId: number | null;
-  mode: Mode;
-  direction: Direction;
-  fit: Fit;
-  onSetMode: (mode: Mode) => void;
-  onToggleDirection: () => void;
-  onCycleFit: () => void;
+  galleryId: number | null;
+  returnTo: string;
   onMarkCompleted: () => void;
   onImport: () => void;
   onClose: () => void;
   onHoverChange: (hovering: boolean) => void;
 };
-
-const FIT_LABEL = { width: "适配宽度", height: "适配高度", original: "原始尺寸" } as const;
 
 export function ReaderInfoPanel({
   open,
@@ -42,12 +35,8 @@ export function ReaderInfoPanel({
   queued,
   completed,
   workId,
-  mode,
-  direction,
-  fit,
-  onSetMode,
-  onToggleDirection,
-  onCycleFit,
+  galleryId,
+  returnTo,
   onMarkCompleted,
   onImport,
   onClose,
@@ -72,12 +61,12 @@ export function ReaderInfoPanel({
           x={22}
           className="reader-chrome reader-panel reader-info-panel"
           role="dialog"
-          aria-label="作品信息与阅读设置"
+          aria-label="作品信息"
           onMouseEnter={() => onHoverChange(true)}
           onMouseLeave={() => onHoverChange(false)}
         >
           <header className="reader-panel-head">
-            <span><small>READER INDEX</small><strong>作品与设置</strong></span>
+            <span><small>READER INDEX</small><strong>作品信息</strong></span>
             <button ref={closeButton} type="button" onClick={onClose} aria-label="关闭作品信息"><X size={17} /></button>
           </header>
 
@@ -108,21 +97,13 @@ export function ReaderInfoPanel({
                 <span>{queued ? "已加入导入队列" : importing ? "正在加入" : "加入导入队列"}</span>
               </button>
             )}
+            {galleryId != null ? (
+              <button type="button" onClick={() => navigate({ name: "gallery", galleryId, returnTo })}>
+                <span>查看作品展示页</span><ArrowUpRight size={14} />
+              </button>
+            ) : null}
             {!isRemote && workId != null ? <button type="button" onClick={() => navigate({ name: "governance", workId })}>进入元数据治理</button> : null}
           </div>
-
-          <section className="reader-info-settings">
-            <header><Settings2 size={16} /><h3>阅读设置</h3></header>
-            <div className="reader-setting-row">
-              <span>模式</span>
-              <div className="reader-segmented">
-                <button type="button" className={mode === "single" ? "is-active" : ""} onClick={() => onSetMode("single")} aria-pressed={mode === "single"}>单页</button>
-                <button type="button" className={mode === "webtoon" ? "is-active" : ""} onClick={() => onSetMode("webtoon")} aria-pressed={mode === "webtoon"}>连续</button>
-              </div>
-            </div>
-            <div className="reader-setting-row"><span>方向</span><button type="button" onClick={onToggleDirection}>{direction === "rtl" ? "右 → 左" : "左 → 右"}</button></div>
-            <div className="reader-setting-row"><span>适配</span><button type="button" onClick={onCycleFit}>{FIT_LABEL[fit]}</button></div>
-          </section>
         </FadeInOut>
       ) : null}
     </Presence>
