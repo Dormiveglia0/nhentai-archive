@@ -1123,25 +1123,6 @@ body {
   }
 }
 
-.history-list {
-  display: grid;
-  gap: 10px;
-}
-
-.history-list p {
-  margin: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.history-list strong,
-.history-list span {
-  display: block;
-}
-
-.history-list span {
-  color: var(--muted);
-}
 .empty-inline {
   margin: 0;
   color: var(--muted);
@@ -2258,24 +2239,3 @@ button.gallery-tag:hover {
   .reader-thumb-field { padding: 20px clamp(24px, 9vw, 64px); }
 }
 /* =================== /Reader =================== */
-
-/* =================== History =================== */
-.history-bucket { margin-bottom: 1.5rem; }
-.history-bucket-label { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.5rem; }
-.history-row {
-  display: flex; align-items: center; gap: 0.75rem; width: 100%;
-  padding: 0.5rem 0.25rem; background: none; border: none;
-  border-bottom: 1px solid var(--line); text-align: left; cursor: pointer;
-}
-.history-row:hover { background: rgba(0,0,0,0.03); }
-.history-cover { width: 38px; height: 52px; flex: none; overflow: hidden; border-radius: 4px; }
-.history-cover img { width: 100%; height: 100%; object-fit: cover; }
-.history-cover img.blurred { filter: blur(12px); }
-.history-cover-empty { display: block; width: 100%; height: 100%; background: var(--line); }
-.history-main { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
-.history-main strong { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.history-main small { color: var(--muted); }
-.history-progress { font-size: 0.8rem; flex: none; }
-.history-progress.done { color: var(--green); }
-.history-progress.reading { color: var(--muted); }
-/* =================== /History =================== */

@@ -9,6 +9,8 @@ import { PageHeading } from "./PageHeading";
 import { PageNavigation } from "./PageNavigation";
 import "../Folio.css";
 
+export type FolioHeading = false | { title: string; description: string };
+
 export function FolioChrome({
   page,
   privacy,
@@ -18,6 +20,7 @@ export function FolioChrome({
   footer,
   overlay,
   scrollKey,
+  heading,
 }: {
   page: FolioPageId;
   privacy: boolean;
@@ -27,6 +30,7 @@ export function FolioChrome({
   footer?: ReactNode;
   overlay?: ReactNode;
   scrollKey?: string | number;
+  heading?: FolioHeading;
 }) {
   const reduceMotion = usePrefersReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -95,8 +99,8 @@ export function FolioChrome({
         </AnimatePresence>
         <main ref={scrollRef} className="folio-scroll" onScroll={updateBindingProgress}>
           <AnimatePresence mode="wait" initial={false}>
-            <m.div key={page} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28, scale: reduceMotion ? 1 : 0.992 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18, scale: reduceMotion ? 1 : 1.006 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
-              <PageHeading page={current} />
+            <m.div key={`${page}:${String(scrollKey ?? "")}`} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28, scale: reduceMotion ? 1 : 0.992 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18, scale: reduceMotion ? 1 : 1.006 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
+              {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}
               {children}
             </m.div>
           </AnimatePresence>

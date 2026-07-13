@@ -476,6 +476,12 @@
   font-size: 12px;
 }
 
+.folio-library-result-controls .folio-library-history-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
 .folio-library-result-controls button:hover:not(:disabled),
 .folio-library-result-controls button.is-active {
   border-color: var(--folio-ink);

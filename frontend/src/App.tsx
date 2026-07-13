@@ -57,21 +57,28 @@ function ArchiveApp() {
     };
   }, []);
 
+  if (page.name === "reader") {
+    return <ReaderPage source={{ kind: "local", workId: page.workId }} privacyMode={privacyMode} />;
+  }
+
+  if (page.name === "readerRemote") {
+    return <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} />;
+  }
+
+  const shellScrollKey = page.name === "gallery" ? `gallery:${page.galleryId}` : page.name;
+
   return (
     <ArchiveShell
       activePage={page.name}
+      scrollKey={shellScrollKey}
       privacyMode={privacyMode}
-      blurCovers={blurCovers}
       onPrivacyModeChange={setPrivacyMode}
-      onBlurCoversChange={setBlurCovers}
     >
       {page.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}
       {page.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={page.tag} /> : null}
       {page.name === "gallery" ? <GalleryDetailPage galleryId={page.galleryId} returnTo={page.returnTo} blurCovers={blurCovers} /> : null}
       {page.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
       {page.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
-      {page.name === "reader" ? <ReaderPage source={{ kind: "local", workId: page.workId }} privacyMode={privacyMode} /> : null}
-      {page.name === "readerRemote" ? <ReaderPage source={{ kind: "remote", galleryId: page.galleryId }} privacyMode={privacyMode} /> : null}
       {page.name === "governance" ? <GovernancePage initialWorkId={page.workId} blurCovers={blurCovers} /> : null}
       {page.name === "dictionary" ? <DictionaryPage /> : null}
       {page.name === "tasks" ? <TasksPage /> : null}

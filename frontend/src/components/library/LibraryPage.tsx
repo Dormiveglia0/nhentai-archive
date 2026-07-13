@@ -1,4 +1,4 @@
-import { AlertTriangle, Info, Library } from "lucide-react";
+import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 
 import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
@@ -77,6 +77,10 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
               />
               <div className="folio-library-result-controls">
                 <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>
+                <button className="folio-library-history-link" type="button" onClick={() => navigate({ name: "history" })}>
+                  <Clock3 size={14} />
+                  <span>阅读历史</span>
+                </button>
                 {library.multiSelect ? (
                   <button type="button" onClick={library.selectAllOnPage} disabled={library.works.length === 0}>
                     选中本页
