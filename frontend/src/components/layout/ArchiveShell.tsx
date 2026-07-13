@@ -57,7 +57,8 @@ export function ArchiveShell({
     activePage === "dictionary" ||
     activePage === "tasks" ||
     activePage === "export" ||
-    activePage === "files"
+    activePage === "files" ||
+    activePage === "settings"
   ) {
     return (
       <>

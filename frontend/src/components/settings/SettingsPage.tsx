@@ -1,254 +1,168 @@
-import {
-  Activity,
-  BarChart3,
-  Database,
-  Download,
-  EyeOff,
-  Folder,
-  HardDrive,
-  Languages,
-  RefreshCw,
-  Save,
-  ShieldCheck,
-} from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { AlertTriangle, RefreshCw, Save } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+import { type FormEvent } from "react";
 
-import { api, type FileOverview, type LibrarySummary } from "../../lib/api";
-import { FadeIn, Presence, Stagger, StaggerItem } from "../../lib/motion";
-import { NumberTicker } from "../effects/NumberTicker";
-import { formatBytes } from "../library/libraryHelpers";
+import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
+import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
 import { ConnectionSection } from "./ConnectionSection";
 import { DataSection } from "./DataSection";
 import { ExportDefaultsSection } from "./ExportDefaultsSection";
 import { PreferencesSection } from "./PreferencesSection";
 import { StorageSection } from "./StorageSection";
 import { TranslationSection } from "./TranslationSection";
-import { type SettingsSection, useSettingsState } from "./useSettingsState";
+import { useSettingsState } from "./useSettingsState";
+import "./SettingsPage.css";
 
-const NAV: { key: SettingsSection; label: string; desc: string; icon: typeof Database }[] = [
-  { key: "connection", label: "连接", desc: "远端 API 与运行态", icon: Database },
-  { key: "translation", label: "翻译", desc: "服务商、语言与测试", icon: Languages },
-  { key: "preferences", label: "隐私阅读", desc: "默认保护与阅读模式", icon: EyeOff },
-  { key: "export", label: "导出", desc: "CBZ 打包默认值", icon: Download },
-  { key: "data", label: "数据", desc: "馆藏摘要与语言分布", icon: BarChart3 },
-  { key: "storage", label: "存储", desc: "目录、源文件与清理", icon: Folder },
-];
+const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
+  connection: {
+    title: "数据源与连接",
+    copy: "管理远端接口、敏感凭据与当前运行态；密钥只报告配置状态，不会回显明文。",
+  },
+  translation: {
+    title: "机器翻译配置",
+    copy: "选择词典建议使用的服务、目标语言与单次批量边界。",
+  },
+  privacy: {
+    title: "隐私与阅读偏好",
+    copy: "设置后续页面打开时采用的默认保护方式与阅读布局。",
+  },
+  export: {
+    title: "CBZ 默认配方",
+    copy: "只定义导出中心的起始选项，单次下载仍可临时调整。",
+  },
+  data: {
+    title: "本地馆藏概览",
+    copy: "读取真实馆藏与文件清单，集中呈现规模、来源与需要维护的项目。",
+  },
+  storage: {
+    title: "存储与路径",
+    copy: "只读核对当前数据目录、源文件占用与可回收空间。",
+  },
+};
 
 export function SettingsPage() {
   const vm = useSettingsState();
-  const [library, setLibrary] = useState<LibrarySummary | null>(null);
-  const [files, setFiles] = useState<FileOverview | null>(null);
+  const reduceMotion = usePrefersReducedMotion();
+  const current = SECTION_COPY[vm.section];
 
-  useEffect(() => {
-    let alive = true;
-    Promise.all([api.librarySummary(), api.filesOverview()])
-      .then(([libraryPayload, filesPayload]) => {
-        if (!alive) return;
-        setLibrary(libraryPayload);
-        setFiles(filesPayload);
-      })
-      .catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  function onSubmit(event: FormEvent) {
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void vm.save();
+    if (vm.dirty && !vm.loading) void vm.save();
   }
 
-  const mt = vm.settings?.machine_translation ?? null;
-  const mtLabel = vm.mtProvider === "deepl" ? "DeepL API" : "Google 免费翻译";
-  const current = NAV.find((item) => item.key === vm.section) ?? NAV[0];
-  const needsStorageAttention = Boolean(files && (files.missing_source > 0 || files.reclaimable_bytes > 0));
-  const needsConnectionAttention = !vm.settings?.nhentai.api_key_configured;
-  const attentionText = needsConnectionAttention
-    ? "连接未就绪"
-    : needsStorageAttention
-      ? "存储需检查"
-      : "配置稳定";
+  function reload() {
+    if (vm.dirty && !window.confirm("重新读取会放弃尚未保存的设置，确定继续吗？")) return;
+    void vm.load();
+  }
+
+  const syncLabel = vm.loading ? "正在同步" : vm.dirty ? "有未保存更改" : vm.settings ? "已同步" : "等待配置";
 
   return (
-    <section className="page settings-page settings-deck-page">
-      <form id="settings-form" className="settings-deck-layout" onSubmit={onSubmit}>
-        <FadeIn className="settings-console-rail" x={-8}>
-          <div className="settings-console-brand">
-            <span>NH Archive</span>
-            <h1>设置</h1>
-            <p>本地配置、密钥状态、导出默认值和存储健康集中在这里处理。</p>
-          </div>
+    <form className="folio-page-body folio-settings-body folio-settings-page" onSubmit={onSubmit}>
+      <nav className="folio-settings-nav" aria-label="设置章节">
+        {SETTINGS_SECTIONS.map((item) => {
+          const Icon = item.icon;
+          const active = vm.section === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={active ? "is-active" : ""}
+              aria-current={active ? "page" : undefined}
+              onClick={() => vm.setSection(item.id)}
+            >
+              {active ? (
+                <m.span
+                  className="folio-settings-nav-active"
+                  layoutId="formal-settings-nav-active"
+                  transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
+                />
+              ) : null}
+              <Icon size={16} />
+              <strong>{item.label}</strong>
+              <small>{item.description}</small>
+            </button>
+          );
+        })}
+      </nav>
 
-          <Stagger className="settings-console-nav" key="settings-console-nav">
-            {NAV.map((item) => {
-              const Icon = item.icon;
-              return (
-                <StaggerItem key={item.key}>
-                  <button
-                    type="button"
-                    className={vm.section === item.key ? "active" : ""}
-                    onClick={() => vm.setSection(item.key)}
-                  >
-                    <Icon size={17} />
-                    <span>
-                      <strong>{item.label}</strong>
-                      <small>{item.desc}</small>
-                    </span>
-                  </button>
-                </StaggerItem>
-              );
-            })}
-          </Stagger>
-
-          <StatusDeck
-            apiReady={Boolean(vm.settings?.nhentai.api_key_configured)}
-            mtLabel={mtLabel}
-            mtReady={vm.mtProvider !== "deepl" || Boolean(mt?.deepl_api_key_configured)}
-            privacyOn={vm.privacyDefault}
-            library={library}
-            files={files}
-          />
-        </FadeIn>
-
-        <FadeIn className="settings-stage-motion" y={10}>
-          <section className="settings-stage">
-            <header className="settings-console-head">
-              <div className="settings-console-title">
-                <p>{contextCopy(vm.section)}</p>
-              </div>
-              <div className={`settings-console-health ${needsConnectionAttention || needsStorageAttention ? "attention" : ""}`}>
-                <ShieldCheck size={18} />
-                <span>{attentionText}</span>
-              </div>
-            </header>
-
-            <div className="settings-section-meta">
-              <span>{current.desc}</span>
-              <strong>{vm.loading ? "同步中" : "保存后即时生效"}</strong>
+      <AnimatePresence mode="wait" initial={false}>
+        <m.section
+          key={vm.section}
+          className="folio-settings-stage"
+          initial={{ opacity: 0, y: reduceMotion ? 0 : 10, clipPath: reduceMotion ? "none" : "inset(0 0 8% 0)" }}
+          animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
+          exit={{ opacity: 0, y: reduceMotion ? 0 : -7, clipPath: reduceMotion ? "none" : "inset(0 0 6% 0)" }}
+          transition={{ duration: reduceMotion ? 0 : duration.fast, ease: ease.standard }}
+        >
+          <header className="folio-settings-head">
+            <div>
+              <h2>{current.title}</h2>
+              <p>{current.copy}</p>
             </div>
+            <div className={`folio-settings-state${vm.dirty ? " is-dirty" : ""}${vm.loading ? " is-loading" : ""}`}>
+              <i />
+              {syncLabel}
+            </div>
+          </header>
 
-            <Presence>
-              <FadeIn key={vm.section} className="settings-main" y={8}>
-                {vm.section === "connection" ? <ConnectionSection vm={vm} /> : null}
-                {vm.section === "translation" ? <TranslationSection vm={vm} /> : null}
-                {vm.section === "preferences" ? <PreferencesSection vm={vm} /> : null}
-                {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
-                {vm.section === "data" ? <DataSection /> : null}
-                {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
-              </FadeIn>
-            </Presence>
+          {vm.section === "connection" ? <ConnectionSection vm={vm} /> : null}
+          {vm.section === "translation" ? <TranslationSection vm={vm} /> : null}
+          {vm.section === "privacy" ? <PreferencesSection vm={vm} /> : null}
+          {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
+          {vm.section === "data" ? <DataSection /> : null}
+          {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
 
+          <AnimatePresence mode="popLayout">
             {vm.error ? (
-              <FadeIn key={`error-${vm.error}`} y={6}>
-                <div className="notice error">{vm.error}</div>
-              </FadeIn>
+              <m.div
+                key={`error-${vm.error}`}
+                className="folio-settings-feedback is-error"
+                role="alert"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+              >
+                <AlertTriangle size={16} />
+                <span>{vm.error}</span>
+              </m.div>
             ) : null}
             {vm.message ? (
-              <FadeIn key={`message-${vm.message}`} y={6}>
-                <div className="notice slim">{vm.message}</div>
-              </FadeIn>
+              <m.div
+                key={`message-${vm.message}`}
+                className="folio-settings-feedback"
+                role="status"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+              >
+                <i />
+                <span>{vm.message}</span>
+              </m.div>
             ) : null}
-          </section>
-        </FadeIn>
+          </AnimatePresence>
+        </m.section>
+      </AnimatePresence>
 
-        <div className="settings-bottom settings-command-bar">
-          <div>
-            <button type="button" onClick={() => void vm.load()} disabled={vm.loading}>
-              <RefreshCw size={16} />
-              重新读取
-            </button>
-            <button className="primary-action" type="submit" disabled={vm.loading}>
-              <Save size={16} />
-              保存设置
-            </button>
-          </div>
+      <footer className="folio-settings-actions">
+        <div className="folio-settings-action-state">
+          <span className={vm.dirty ? "is-dirty" : ""} />
+          <p>
+            <strong>{vm.dirty ? "设置尚未保存" : "当前配置已同步"}</strong>
+            <small>{vm.dirty ? "保存后立即更新本机运行态" : "敏感值不会在页面中回显"}</small>
+          </p>
         </div>
-      </form>
-    </section>
+        <div className="folio-settings-action-buttons">
+          <button className="folio-settings-action" type="button" onClick={reload} disabled={vm.loading}>
+            <RefreshCw size={15} className={vm.loading ? "spin" : undefined} />
+            重新读取
+          </button>
+          <button className="folio-settings-action is-primary" type="submit" disabled={vm.loading || !vm.dirty || !vm.settings}>
+            <Save size={15} />
+            保存设置
+          </button>
+        </div>
+      </footer>
+    </form>
   );
-}
-
-function StatusDeck({
-  apiReady,
-  mtLabel,
-  mtReady,
-  privacyOn,
-  library,
-  files,
-}: {
-  apiReady: boolean;
-  mtLabel: string;
-  mtReady: boolean;
-  privacyOn: boolean;
-  library: LibrarySummary | null;
-  files: FileOverview | null;
-}) {
-  const reclaimable = files?.reclaimable_bytes ?? 0;
-  const cards = [
-    {
-      label: "远端连接",
-      value: apiReady ? "Ready" : "Missing",
-      detail: apiReady ? "API Key 已配置" : "等待 API Key",
-      icon: Activity,
-      attention: !apiReady,
-    },
-    {
-      label: "翻译引擎",
-      value: mtReady ? "Online" : "Key",
-      detail: mtLabel,
-      icon: Languages,
-      attention: !mtReady,
-    },
-    {
-      label: "馆藏规模",
-      value: library?.total ?? 0,
-      detail: `${library?.reading ?? 0} 部阅读中`,
-      icon: BarChart3,
-    },
-    {
-      label: "可回收空间",
-      value: reclaimable,
-      detail: privacyOn ? "隐私默认开启" : "隐私默认关闭",
-      icon: HardDrive,
-      attention: reclaimable > 0 || (files?.missing_source ?? 0) > 0,
-      format: formatBytes,
-    },
-  ];
-
-  return (
-    <Stagger className="settings-status-deck" key="settings-status-deck">
-      {cards.map((card) => {
-        const Icon = card.icon;
-        return (
-          <StaggerItem key={card.label} className="settings-status-cell">
-            <article className={`settings-status-card${card.attention ? " needs-attention" : ""}`}>
-              <Icon size={20} />
-              <span>{card.label}</span>
-              <strong>
-                {typeof card.value === "number" ? <NumberTicker value={card.value} format={card.format} /> : card.value}
-              </strong>
-              <small>{card.detail}</small>
-            </article>
-          </StaggerItem>
-        );
-      })}
-    </Stagger>
-  );
-}
-
-function contextCopy(section: SettingsSection) {
-  switch (section) {
-    case "connection":
-      return "先确认远端连接，导入、发现和缓存状态都会跟着这里变化。";
-    case "translation":
-      return "选择翻译服务并即时测试，词典批量填充会复用同一套配置。";
-    case "preferences":
-      return "这些是本地阅读体验默认值，保存后会影响后续打开的页面。";
-    case "export":
-      return "导出默认只决定起点，导出中心里仍然可以对单次任务临时调整。";
-    case "data":
-      return "这里显示真实馆藏健康度，用来判断是否需要治理或文件维护。";
-    case "storage":
-      return "路径只读展示，清理和删除操作放在文件管理里，避免误删。";
-  }
 }

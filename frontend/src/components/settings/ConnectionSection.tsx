@@ -1,137 +1,118 @@
-import { Eraser, Gauge, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Eraser, Eye, EyeOff, Gauge, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { api, NhentaiRuntimeStats } from "../../lib/api";
-import type { SettingsVM } from "./useSettingsState";
+import { api, type NhentaiRuntimeStats } from "../../lib/api";
+import { FolioField } from "../folio/ui/FolioPrimitives";
 import { StatusDot } from "./settingsHelpers";
+import type { SettingsVM } from "./useSettingsState";
 
 export function ConnectionSection({ vm }: { vm: SettingsVM }) {
-  const { settings } = vm;
-  const nh = settings?.nhentai;
+  const nh = vm.settings?.nhentai;
   const lastVerify = nh?.last_verify ?? null;
-
+  const [keyVisible, setKeyVisible] = useState(false);
   const [runtime, setRuntime] = useState<NhentaiRuntimeStats | null>(null);
   const [runtimeLoading, setRuntimeLoading] = useState(false);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const mountedRef = useRef(false);
+  const requestRef = useRef(0);
 
   const loadRuntime = useCallback(async () => {
-    setRuntimeLoading(true);
+    const requestId = ++requestRef.current;
+    if (mountedRef.current) {
+      setRuntimeLoading(true);
+      setRuntimeError(null);
+    }
     try {
-      setRuntime(await api.nhentaiRuntime());
-    } catch {
+      const payload = await api.nhentaiRuntime();
+      if (!mountedRef.current || requestId !== requestRef.current) return;
+      setRuntime(payload);
+    } catch (exc) {
+      if (!mountedRef.current || requestId !== requestRef.current) return;
       setRuntime(null);
+      setRuntimeError(exc instanceof Error ? exc.message : String(exc));
     } finally {
-      setRuntimeLoading(false);
+      if (mountedRef.current && requestId === requestRef.current) setRuntimeLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     void loadRuntime();
+    return () => {
+      mountedRef.current = false;
+      requestRef.current += 1;
+    };
   }, [loadRuntime]);
 
+  function clearKey() {
+    if (!window.confirm("确定清除已保存的 NH API Key 吗？环境变量中的 Key 不会被删除。")) return;
+    void vm.clearKey();
+  }
+
   return (
-    <section className="settings-card">
-      <div className="settings-title">
-        <h2>数据源与连接</h2>
-        <p>配置 NH API Key 与请求参数；敏感值不会在前端回显明文。保存后运行态客户端立即生效。</p>
-      </div>
-
-      <div className="settings-grid">
-        <label className="wide">
+    <section className="folio-settings-section" aria-label="数据源与连接配置">
+      <div className="folio-field-matrix">
+        <label className="folio-field folio-field-wide">
           <span>NH API Key</span>
-          <input
-            type="password"
-            value={vm.apiKey}
-            onChange={(event) => vm.setApiKey(event.target.value)}
-            placeholder={nh?.api_key_configured ? "已配置，输入新 key 可覆盖" : "输入 NH API Key"}
-            autoComplete="off"
-          />
+          <div className="folio-secret">
+            <input
+              type={keyVisible ? "text" : "password"}
+              value={vm.apiKey}
+              onChange={(event) => vm.setApiKey(event.target.value)}
+              placeholder={nh?.api_key_configured ? "已配置；输入新 Key 可覆盖" : "输入 NH API Key"}
+              autoComplete="off"
+            />
+            <button type="button" aria-label={keyVisible ? "隐藏密钥" : "显示密钥"} onClick={() => setKeyVisible((value) => !value)}>
+              {keyVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          <i />
         </label>
-        <label>
-          <span>Base URL</span>
-          <input value={nh?.base_url ?? ""} readOnly />
-        </label>
-        <label>
-          <span>请求超时（秒）</span>
-          <input value={nh?.request_timeout ?? ""} readOnly />
-        </label>
-        <label className="wide">
-          <span>User-Agent</span>
-          <input value={nh?.user_agent ?? ""} readOnly />
-        </label>
+        <FolioField label="Base URL" value={nh?.base_url ?? ""} readOnly />
+        <FolioField label="请求超时（秒）" value={nh ? String(nh.request_timeout) : ""} readOnly />
+        <FolioField label="User-Agent" value={nh?.user_agent ?? ""} readOnly wide />
       </div>
 
-      <div className="connection-actions">
-        <button type="button" onClick={() => void vm.verify()} disabled={vm.loading}>
-          <RefreshCw size={16} />
+      <div className="folio-settings-inline-actions">
+        <button className="folio-line-button" type="button" onClick={() => void vm.verify()} disabled={vm.loading || vm.dirty || !nh?.api_key_configured}>
+          <RefreshCw size={15} />
           验证连接
         </button>
-        <button type="button" onClick={() => void vm.clearCache()} disabled={vm.loading}>
-          <Eraser size={16} />
+        <button className="folio-line-button" type="button" onClick={() => void vm.clearCache()} disabled={vm.loading}>
+          <Eraser size={15} />
           清除远端缓存
         </button>
-        <button type="button" onClick={() => void vm.clearKey()} disabled={vm.loading || !nh?.api_key_configured}>
+        <button className="folio-line-button" type="button" onClick={clearKey} disabled={vm.loading || vm.dirty || !nh?.api_key_configured}>
           清除 Key
         </button>
+        {vm.dirty ? <span className="folio-settings-action-hint">请先保存或重新读取当前配置</span> : null}
       </div>
 
-      <dl className="settings-kv">
-        <div>
-          <dt>连接状态</dt>
-          <dd>{nh?.api_key_configured ? `已配置（${nh.api_key_source}）` : "未配置"}</dd>
-        </div>
-        <div>
-          <dt>最近验证</dt>
-          <dd>{lastVerify ? (lastVerify.ok ? "通过" : "失败") : "未验证"}</dd>
-        </div>
-        <div>
-          <dt>返回状态码</dt>
-          <dd>{lastVerify?.status_code ?? "—"}</dd>
-        </div>
-        <div>
-          <dt>验证信息</dt>
-          <dd>{lastVerify?.message ?? "—"}</dd>
-        </div>
+      <dl className="folio-settings-kv">
+        <div><dt>连接状态</dt><dd>{nh?.api_key_configured ? `已配置（${nh.api_key_source}）` : "未配置"}</dd></div>
+        <div><dt>最近验证</dt><dd>{lastVerify ? (lastVerify.ok ? "通过" : "失败") : "未验证"}</dd></div>
+        <div><dt>返回状态码</dt><dd>{lastVerify?.status_code ?? "—"}</dd></div>
+        <div><dt>验证信息</dt><dd title={lastVerify?.message ?? undefined}>{lastVerify?.message ?? "—"}</dd></div>
       </dl>
 
-      <div className="settings-subhead">
-        <h3>
-          <Gauge size={15} /> 运行态与配额
-        </h3>
-        <button type="button" className="settings-mini-btn" onClick={() => void loadRuntime()} disabled={runtimeLoading}>
-          <RefreshCw size={13} className={runtimeLoading ? "spin" : undefined} />
-          刷新
+      <div className="folio-settings-subhead">
+        <h3><Gauge size={16} />运行态与配额</h3>
+        <button className="folio-settings-mini-action" type="button" onClick={() => void loadRuntime()} disabled={runtimeLoading}>
+          <RefreshCw size={14} className={runtimeLoading ? "spin" : undefined} />
+          刷新运行态
         </button>
       </div>
-      <dl className="settings-kv">
-        <div>
-          <dt>缓存条目</dt>
-          <dd>{runtime ? `${runtime.cache_active_entries} / ${runtime.cache_entries}（有效/总）` : "—"}</dd>
-        </div>
-        <div>
-          <dt>限流冷却</dt>
-          <dd>
-            {runtime
-              ? runtime.cooldown_active
-                ? `冷却中 · 约 ${runtime.cooldown_remaining_seconds} 秒后恢复`
-                : "正常"
-              : "—"}
-          </dd>
-        </div>
-        <div>
-          <dt>CDN 配置</dt>
-          <dd>{runtime ? (runtime.cdn_configured ? "已解析" : "未解析") : "—"}</dd>
-        </div>
-        <div>
-          <dt>就绪</dt>
-          <dd>
-            <StatusDot ok={Boolean(nh?.api_key_configured) && !(runtime?.cooldown_active ?? false)} />
-          </dd>
-        </div>
+      {runtimeError ? <p className="folio-settings-inline-error" role="alert">{runtimeError}</p> : null}
+      <dl className="folio-settings-kv">
+        <div><dt>缓存条目</dt><dd>{runtime ? `${runtime.cache_active_entries} / ${runtime.cache_entries}（有效 / 总）` : "—"}</dd></div>
+        <div><dt>限流冷却</dt><dd>{runtime ? (runtime.cooldown_active ? `冷却中 · 约 ${runtime.cooldown_remaining_seconds} 秒` : "正常") : "—"}</dd></div>
+        <div><dt>CDN 配置</dt><dd>{runtime ? (runtime.cdn_configured ? "已解析" : "未解析") : "—"}</dd></div>
+        <div><dt>运行就绪</dt><dd><StatusDot ok={Boolean(nh?.api_key_configured) && !(runtime?.cooldown_active ?? false)} /></dd></div>
       </dl>
 
-      <div className="status-row">
+      <div className={`folio-settings-status-band${nh?.api_key_configured ? " is-ready" : " is-attention"}`}>
         <StatusDot ok={Boolean(nh?.api_key_configured)} />
-        <span>{nh?.api_key_configured ? "已就绪，可进行发现与导入。" : "未配置 API Key，发现与导入将不可用。"}</span>
+        <span>{nh?.api_key_configured ? "连接配置已就绪，可进行发现与导入。" : "尚未配置 API Key，发现与导入将不可用。"}</span>
       </div>
     </section>
   );

@@ -264,9 +264,10 @@ Root: `frontend/src/`
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
 - `components/settings/` — refactored settings module:
-  - `SettingsPage.tsx` — thin orchestrator: hero + functional left section nav (`Presence`-faded section switch) + active section + config summary aside.
-  - `useSettingsState.ts` — all state/actions (NH key, privacy/blur/reader, machine-translation provider/key/plan, load/save/verify/clear + `verifyTranslation`/`clearDeeplKey`).
-  - `ConnectionSection` / `TranslationSection` (NEW MT config card: provider picker google_free/deepl, DeepL key + plan, 测试机翻) / `PreferencesSection` / `StorageSection`, plus `settingsHelpers` (`StatusDot`/`SummaryRow`).
+  - `SettingsPage.tsx` — direct Folio composition with six horizontal chapters, unique section headings, animated chapter transitions, real sync/dirty state, inline feedback, and a viewport-fixed reload/save rail. It imports no demo state and has no left navigation.
+  - `SettingsPage.css` — production-only settings layout, metrics, manifests, storage paths, fixed action rail, 1024/390/320 responsive rules, and reduced-motion fallback. Replaced settings deck/rail/form/export-recipe rules were removed from `styles/app.css`.
+  - `useSettingsState.ts` — all real config state/actions, latest-request and unmount protection, complete dirty comparison, secret-draft reset, and load/save/verify/clear flows. Validation actions only run against saved config.
+  - `ConnectionSection` / `TranslationSection` / `PreferencesSection` / `ExportDefaultsSection` / `DataSection` / `StorageSection` — shared Folio fields/selects/toggles over real settings, runtime, library, and file APIs. Data/storage fetch only when their chapter is active; unresolved values render as `—`, never fabricated zeroes. `settingsHelpers` owns only `StatusDot`.
 - `components/dictionary/DictionaryPage.tsx`
   - Direct Folio composition for `#dictionary`: real summary, candidate pool, editor, evidence/preview ledger, fixed viewport command bar, and accessible bulk-import modal. It imports no demo code and contains no API orchestration.
 - `components/dictionary/useDictionaryState.ts`
