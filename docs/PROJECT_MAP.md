@@ -231,7 +231,7 @@ Root: `frontend/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
+  - Routes direct-migrated to Folio (`workbench`, `library`, `discover`, `governance`, `dictionary`) render through `FolioChrome`; routes still awaiting migration retain the legacy shell. `TaskDock` remains outside either chrome.
 - `components/layout/TaskDock.tsx`
   - Polls real `/api/jobs`; renders only when jobs are running/queued/failed or an error exists.
   - Failed-job retry remains available for existing import jobs.
@@ -245,8 +245,6 @@ Root: `frontend/src/`
   - Production-only popular fan, query composer, custom filter row, result/card/list/pager and four-viewport responsive layout. Replaced legacy discover/tag-picker/popular-fan selectors were removed from `styles/app.css`.
 - `components/discover/DiscoverToolbar.tsx`
   - Keyword/Gallery ID input plus visible multi-tag chips, icon-only random action, animated grid/list controls, equal-height query action, custom Folio language/type/sort menus and unimported toggle. Upload/scan are not discover toolbar modes.
-- `components/discover/FilterMenu.tsx`
-  - Legacy compact custom menu still shared by the not-yet-migrated dictionary candidate pool. The migrated discover page uses `FolioSelect` instead.
 - `components/discover/DiscoverFeed.tsx`
   - Result count, empty/error/notice states, dynamic current-page cards, icon pager.
 - `components/discover/DiscoverCard.tsx`
@@ -270,17 +268,21 @@ Root: `frontend/src/`
   - `useSettingsState.ts` — all state/actions (NH key, privacy/blur/reader, machine-translation provider/key/plan, load/save/verify/clear + `verifyTranslation`/`clearDeeplKey`).
   - `ConnectionSection` / `TranslationSection` (NEW MT config card: provider picker google_free/deepl, DeepL key + plan, 测试机翻) / `PreferencesSection` / `StorageSection`, plus `settingsHelpers` (`StatusDot`/`SummaryRow`).
 - `components/dictionary/DictionaryPage.tsx`
-  - Page orchestration only: loads summary/candidates/evidence/preview, selects candidates, writes terms, status changes, and refreshes dependent sections. Includes a 批量机翻 button (`/api/dictionary/suggest-batch`).
+  - Direct Folio composition for `#dictionary`: real summary, candidate pool, editor, evidence/preview ledger, fixed viewport command bar, and accessible bulk-import modal. It imports no demo code and contains no API orchestration.
+- `components/dictionary/useDictionaryState.ts`
+  - Owns all real summary/candidate/evidence/preview/mutation flow, latest-request invalidation, selection/form state, machine translation, review/ignore/delete, and batch suggestions. Editing invalidates the current preview; apply remains disabled until the current form has a read-only preview.
+- `components/dictionary/DictionaryPage.css` / `DictionaryEditor.css`
+  - Production-only responsive layout, custom focus treatment, candidate table, evidence ledger, modal and fixed command bar. All replaced legacy dictionary selectors and the orphaned `FilterMenu` were removed from `styles/app.css`.
 - `components/dictionary/DictionarySummaryStrip.tsx`
   - Real top summary strip for unconfigured/configured/ignored/review/suggestions.
 - `components/dictionary/DictionaryCandidatePool.tsx`
-  - Table-like candidate pool from `/api/dictionary/candidates`, with type/status filters and pagination.
+  - Table-like candidate pool from `/api/dictionary/candidates`, with custom Folio type/status/page-size selects, pagination, batch import, and review-only machine suggestions.
 - `components/dictionary/DictionaryEditor.tsx`
-  - Edits original term, Chinese display, aliases, type, scope, confidence, note; triggers preview/apply/ignore/review. The 机器翻译 block is a real 机翻填充中文名 button (`/api/dictionary/translate`) that fills `zh_name` from the configured provider for human review.
+  - Edits original term, Chinese display, aliases, type, scope, and note. The real 机翻填充中文名 action (`/api/dictionary/translate`) only fills `zh_name` for human review; the field labels keep their neutral color during focus.
+- `components/dictionary/DictionaryActionBar.tsx`
+  - Fixed preview/apply/ignore/review/delete controls. Preview is read-only; delete retains an irreversible-action confirmation; all actions stay available on mobile with compact labels.
 - `components/dictionary/DictionaryEvidencePanel.tsx`
-  - Tabs for real related works, co-tags, remote info, and history from `/api/dictionary/evidence`.
-- `components/dictionary/DictionaryApplyPreview.tsx`
-  - Expandable sticky bottom tray for real preview impact, samples, tag diff, and conflicts.
+  - One visible split ledger for real impact metrics, tag diff, co-tags, conflicts, remote mapping, and related works from `/api/dictionary/evidence` and `/preview-apply`; it does not hide evidence behind tabs.
 - `components/dictionary/BulkImportPanel.tsx`
   - Paste-based CSV/TSV/comma import with row-level preview before write.
 - `components/library/LibraryPage.tsx`

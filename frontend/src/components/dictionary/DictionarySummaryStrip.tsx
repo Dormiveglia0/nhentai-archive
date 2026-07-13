@@ -1,11 +1,5 @@
-import { Settings } from "lucide-react";
-
-import { DictionarySummary } from "../../lib/api";
+import type { DictionarySummary } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-
-type Props = {
-  summary: DictionarySummary | null;
-};
 
 const ITEMS = [
   { key: "unconfigured", label: "未配置", tone: "warn" },
@@ -15,22 +9,16 @@ const ITEMS = [
   { key: "suggestions", label: "机器建议", tone: "muted" },
 ] as const;
 
-export function DictionarySummaryStrip({ summary }: Props) {
+export function DictionarySummaryStrip({ summary }: { summary: DictionarySummary | null }) {
   return (
-    <section aria-label="词典摘要">
-      <Stagger className="dictionary-summary-strip">
+    <section className="folio-dictionary-summary" aria-label="词典摘要">
+      <Stagger className="folio-dictionary-summary-grid">
         {ITEMS.map((item) => (
-          <StaggerItem key={item.key} className={`dict-metric tone-${item.tone}`}>
-            <strong>{(summary?.[item.key] ?? 0).toLocaleString()}</strong>
+          <StaggerItem key={item.key} className={`folio-dictionary-metric is-${item.tone}`}>
+            <strong>{summary ? summary[item.key].toLocaleString() : "—"}</strong>
             <span>{item.label}</span>
           </StaggerItem>
         ))}
-        <StaggerItem className="dict-summary-action-cell">
-          <button type="button" className="dict-summary-action" disabled title="后续治理设置接入后开放">
-            <Settings size={15} />
-            治理设置
-          </button>
-        </StaggerItem>
       </Stagger>
     </section>
   );
