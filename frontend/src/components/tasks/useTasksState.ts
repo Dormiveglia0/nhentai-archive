@@ -114,10 +114,17 @@ export function useTasksState(): TasksViewModel {
 
   useEffect(() => {
     if (!hasActiveJobs) return;
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, 2500);
-    return () => window.clearInterval(timer);
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      if (document.visibilityState === "visible") await load();
+      if (!cancelled) timer = window.setTimeout(poll, 2500);
+    };
+    timer = window.setTimeout(poll, 2500);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [hasActiveJobs, load]);
 
   const visibleJobs = useMemo(() => {

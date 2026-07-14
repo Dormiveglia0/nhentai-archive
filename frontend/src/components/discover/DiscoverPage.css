@@ -45,7 +45,7 @@
 .folio-discover-popular-title > span:first-of-type {
   color: var(--folio-red);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -253,7 +253,7 @@
   border-left: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-discover-tag-clear:hover {
@@ -369,7 +369,7 @@
 .folio-discover-tag-panel label > span {
   flex: 0 0 auto;
   color: var(--folio-red);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-discover-tag-scope {
@@ -385,7 +385,7 @@
   border-right: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-discover-tag-scope button:last-child { border-right: 0; }
@@ -440,7 +440,7 @@
 .folio-discover-tag-options small,
 .folio-discover-tag-options em {
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-style: normal;
 }
 
@@ -661,7 +661,7 @@
   align-items: center;
   background: rgba(23, 24, 21, 0.82);
   color: var(--folio-paper-bright);
-  font-size: 11px;
+  font-size: 12px;
   position: absolute;
   left: 8px;
   bottom: 8px;
@@ -685,7 +685,7 @@
   align-items: center;
   gap: 9px;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-discover-card-meta span {
@@ -759,7 +759,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
 }

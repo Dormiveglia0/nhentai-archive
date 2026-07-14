@@ -24,7 +24,7 @@
   margin: 0 0 8px 1px;
   display: block;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.04em;
   transition: none;
 }
@@ -86,7 +86,7 @@
 .folio-dictionary-field > .folio-select > span {
   margin: 0 0 8px 1px;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.04em;
 }
 
@@ -126,7 +126,7 @@
   border: 1px solid rgba(173, 56, 46, 0.25);
   background: var(--folio-red-soft);
   color: var(--folio-ink);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-dictionary-chip-field > div > button:hover {
@@ -143,7 +143,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-dictionary-translate-row {
@@ -164,7 +164,7 @@
   border: 1px solid var(--folio-line-strong);
   background: transparent;
   color: var(--folio-ink);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
   transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
@@ -183,7 +183,7 @@
 .folio-dictionary-translate-row p {
   margin: 0;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.65;
 }
 
@@ -192,7 +192,7 @@
   padding-left: 10px;
   border-left: 2px solid var(--folio-red);
   color: var(--folio-red);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.6;
 }
 

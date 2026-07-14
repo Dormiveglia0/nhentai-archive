@@ -50,14 +50,14 @@
   display: grid;
   place-items: center;
   color: var(--folio-muted);
-  font: 11px Georgia, "Times New Roman", serif;
+  font: 12px Georgia, "Times New Roman", serif;
 }
 
 .folio-gallery-related-media > small {
   padding: 3px 5px;
   background: rgba(250,247,239,.88);
   color: var(--folio-ink);
-  font: 11px Georgia, "Times New Roman", serif;
+  font: 12px Georgia, "Times New Roman", serif;
   position: absolute;
   right: 0;
   bottom: 0;
@@ -105,7 +105,7 @@
 .folio-gallery-related-copy > small {
   margin-top: 7px;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-gallery-related-tags {
@@ -123,7 +123,7 @@
   flex: 0 0 auto;
   border: 1px solid var(--folio-line);
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
 }

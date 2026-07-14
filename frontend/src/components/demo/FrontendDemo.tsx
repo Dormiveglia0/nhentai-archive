@@ -12,7 +12,6 @@ export function FrontendDemo() {
   const [page, setPage] = useState<FolioPageId>("workbench");
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("connection");
   const [settingsRevision, setSettingsRevision] = useState(0);
-  const [privacy, setPrivacy] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,8 +37,6 @@ export function FrontendDemo() {
   return (
     <FolioChrome
       page={page}
-      privacy={privacy}
-      onPrivacyChange={setPrivacy}
       onNavigate={setPage}
       scrollKey={settingsSection}
       footer={<DemoCommandBar page={page} onNavigate={setPage} onResetSettings={resetSettings} announce={setNotice} />}

@@ -104,8 +104,6 @@ function ArchiveApp() {
     <ArchiveShell
       activePage={page.name}
       scrollKey={shellScrollKey}
-      privacyMode={privacyMode}
-      onPrivacyModeChange={setPrivacyMode}
     >
       <Suspense fallback={<FolioRouteFallback />}>
         {page.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}

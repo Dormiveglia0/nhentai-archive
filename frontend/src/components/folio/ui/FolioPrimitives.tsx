@@ -40,7 +40,7 @@ export function FolioSearchField({ value, onChange, placeholder }: { value: stri
   return (
     <label className="folio-search-field">
       <Search size={16} />
-      <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+      <input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} aria-label={placeholder} />
       <i />
     </label>
   );
@@ -117,6 +117,7 @@ export function FolioSelect<T extends string>({
       <span>{label}</span>
       <button
         type="button"
+        aria-label={`${label}：${selected.label}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}

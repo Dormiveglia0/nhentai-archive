@@ -70,7 +70,7 @@
   padding: 5px 7px;
   border-top: 1px solid rgba(23,24,21,.22);
   background: rgba(250,247,239,.88);
-  font: 11px Georgia, "Times New Roman", serif;
+  font: 12px Georgia, "Times New Roman", serif;
   position: absolute;
   left: 0;
   bottom: 0;
@@ -204,7 +204,7 @@
 .folio-gallery-lightbox-stage > header small,
 .folio-gallery-lightbox-stage > footer > span {
   color: rgba(243,239,229,.62);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-gallery-lightbox-stage > header button {

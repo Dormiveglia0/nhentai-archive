@@ -6,8 +6,8 @@
 .folio-export-metric > svg { color: var(--folio-red); }
 .folio-export-metric strong, .folio-export-metric span { display: block; }
 .folio-export-metric strong { font-family: Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1; }
-.folio-export-metric span { margin-top: 6px; color: var(--folio-muted); font-size: 11px; }
-.folio-export-message { min-height: 44px; margin: -8px 0 18px; padding: 9px 13px; display: flex; align-items: center; gap: 9px; border-left: 2px solid #4c6d56; background: linear-gradient(90deg, rgba(76,109,86,.09), transparent 70%); color: var(--folio-muted); font-size: 11px; }
+.folio-export-metric span { margin-top: 6px; color: var(--folio-muted); font-size: 12px; }
+.folio-export-message { min-height: 44px; margin: -8px 0 18px; padding: 9px 13px; display: flex; align-items: center; gap: 9px; border-left: 2px solid #4c6d56; background: linear-gradient(90deg, rgba(76,109,86,.09), transparent 70%); color: var(--folio-muted); font-size: 12px; }
 .folio-export-message.is-error { border-left-color: var(--folio-red); background: linear-gradient(90deg, var(--folio-red-soft), transparent 70%); }
 .folio-export-message > span { width: 6px; height: 6px; background: #4c6d56; transform: rotate(45deg); }
 .folio-export-message svg { color: var(--folio-red); }
@@ -17,20 +17,20 @@
 
 .folio-export-toolbar { min-width: 0; margin-bottom: 24px; padding-bottom: 16px; display: grid; grid-template-columns: minmax(260px, .6fr) minmax(250px, .65fr) auto; align-items: end; gap: 14px; border-bottom: 1px solid var(--folio-line-strong); }
 .folio-export-tabs { display: flex; }
-.folio-export-tabs button { min-height: 46px; flex: 1; padding: 0 12px; border: 0; border-bottom: 1px solid var(--folio-line); background: transparent; color: var(--folio-muted); font-size: 11px; position: relative; }
+.folio-export-tabs button { min-height: 46px; flex: 1; padding: 0 12px; border: 0; border-bottom: 1px solid var(--folio-line); background: transparent; color: var(--folio-muted); font-size: 12px; position: relative; }
 .folio-export-tabs button.is-active { color: var(--folio-ink); }
 .folio-export-tabs button > span { height: 2px; background: var(--folio-red); position: absolute; right: 0; bottom: -1px; left: 0; }
 .folio-export-tabs strong { position: relative; z-index: 1; }
 .folio-export-toolbar-actions { display: flex; gap: 7px; }
-.folio-export-toolbar-actions button { min-height: 44px; padding: 0 11px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--folio-line-strong); background: transparent; color: var(--folio-ink); font-size: 11px; white-space: nowrap; }
+.folio-export-toolbar-actions button { min-height: 44px; padding: 0 11px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--folio-line-strong); background: transparent; color: var(--folio-ink); font-size: 12px; white-space: nowrap; }
 .folio-export-toolbar-actions button:hover, .folio-export-toolbar-actions button.is-active { background: var(--folio-ink); color: var(--folio-paper-bright); }
 
 .folio-export-page .folio-export-layout { min-width: 0; display: grid; grid-template-columns: minmax(360px, .72fr) minmax(430px, 1fr); align-items: start; gap: clamp(30px, 4vw, 58px); }
 .folio-export-page .folio-export-source, .folio-export-inspector { min-width: 0; border-top: 1px solid var(--folio-line-strong); border-bottom: 1px solid var(--folio-line-strong); }
 .folio-export-column-head { min-height: 92px; padding: 17px 0; border-bottom: 1px solid var(--folio-line); }
-.folio-export-column-head > span { color: var(--folio-red); font-family: Georgia, serif; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; }
+.folio-export-column-head > span { color: var(--folio-red); font-family: Georgia, serif; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; }
 .folio-export-column-head h2 { margin: 7px 0 0; font-family: "Noto Serif SC", serif; font-size: 21px; }
-.folio-export-column-head p { margin: 5px 0 0; color: var(--folio-muted); font-size: 11px; }
+.folio-export-column-head p { margin: 5px 0 0; color: var(--folio-muted); font-size: 12px; }
 .folio-export-page .folio-export-source > .folio-empty { min-height: 300px; }
 .folio-export-work-list { min-width: 0; max-height: 630px; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: rgba(173,56,46,.58) rgba(23,24,21,.04); }
 .folio-export-page .folio-export-work-list::-webkit-scrollbar { width: 8px; height: 0; }
@@ -46,13 +46,13 @@
 .folio-export-cover { width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: var(--folio-paper-deep); }
 .folio-export-cover img { width: 100%; height: 100%; object-fit: cover; }
 .folio-export-cover img.is-blurred { filter: blur(11px); transform: scale(1.12); }
-.folio-export-cover em { color: var(--folio-muted); font-size: 11px; font-style: normal; text-align: center; }
+.folio-export-cover em { color: var(--folio-muted); font-size: 12px; font-style: normal; text-align: center; }
 .folio-export-item-check { width: 19px; height: 19px; display: grid; place-items: center; background: var(--folio-red); color: white; position: absolute; right: -4px; bottom: -3px; }
 .folio-export-item-info { min-width: 0; }
 .folio-export-item-info strong, .folio-export-item-info small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.folio-export-item-info strong { font-size: 11px; }
-.folio-export-item-info small { margin-top: 6px; color: var(--folio-muted); font-size: 11px; }
-.folio-export-item-status { min-height: 23px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--folio-line-strong); color: var(--folio-muted); font-size: 11px; white-space: nowrap; }
+.folio-export-item-info strong { font-size: 12px; }
+.folio-export-item-info small { margin-top: 6px; color: var(--folio-muted); font-size: 12px; }
+.folio-export-item-status { min-height: 23px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--folio-line-strong); color: var(--folio-muted); font-size: 12px; white-space: nowrap; }
 .folio-export-item-status.is-ready { border-color: #4c6d56; color: #4c6d56; }
 .folio-export-item-status.is-warning { border-color: #9a671f; color: #9a671f; }
 .folio-export-item-status.is-blocked { border-color: var(--folio-red); color: var(--folio-red); }
@@ -65,23 +65,23 @@
 .folio-export-inspector-head-text { min-width: 0; }
 .folio-export-inspector-head-text > strong { display: block; overflow: hidden; font-family: "Noto Serif SC", serif; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .folio-export-name-field { margin: 12px 0 9px; display: block; }
-.folio-export-name-field > span { margin-bottom: 5px; display: block; color: var(--folio-muted); font-size: 11px; }
-.folio-export-name-input { width: 100%; height: 38px; padding: 0 8px; border: 1px solid var(--folio-line); outline: 0; background: rgba(255,255,255,.18); color: var(--folio-ink); font-size: 11px; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.folio-export-name-field > span { margin-bottom: 5px; display: block; color: var(--folio-muted); font-size: 12px; }
+.folio-export-name-input { width: 100%; height: 38px; padding: 0 8px; border: 1px solid var(--folio-line); outline: 0; background: rgba(255,255,255,.18); color: var(--folio-ink); font-size: 12px; transition: border-color 180ms ease, box-shadow 180ms ease; }
 .folio-export-name-input:focus { border-color: rgba(173,56,46,.6); box-shadow: 4px 4px 0 var(--folio-red-soft); }
 .folio-export-comicinfo { margin-top: 20px; border-top: 1px solid var(--folio-line-strong); border-bottom: 1px solid var(--folio-line-strong); }
 .folio-export-comicinfo.is-off { opacity: .64; }
 .folio-export-comicinfo-title { min-height: 56px; padding: 10px 4px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--folio-line); }
 .folio-export-comicinfo-title svg { color: var(--folio-red); }
 .folio-export-comicinfo-title h3 { margin: 0; font-family: "Noto Serif SC", serif; font-size: 13px; }
-.folio-export-tag { margin-left: auto; padding: 3px 6px; border-bottom: 1px solid var(--folio-line-strong); font-size: 11px; }
+.folio-export-tag { margin-left: auto; padding: 3px 6px; border-bottom: 1px solid var(--folio-line-strong); font-size: 12px; }
 .folio-export-tag.is-ok { border-color: #4c6d56; color: #4c6d56; }
 .folio-export-comicinfo-rows { max-height: 230px; margin: 0; overflow-y: auto; }
 .folio-export-comicinfo-rows > div { min-height: 34px; padding: 6px 4px; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid var(--folio-line); }
-.folio-export-comicinfo-rows dt { color: var(--folio-muted); font-size: 11px; }
-.folio-export-comicinfo-rows dd { min-width: 0; margin: 0; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.folio-export-comicinfo .empty-inline { min-height: 90px; margin: 0; padding: 20px; display: grid; place-items: center; color: var(--folio-muted); font-size: 11px; text-align: center; }
+.folio-export-comicinfo-rows dt { color: var(--folio-muted); font-size: 12px; }
+.folio-export-comicinfo-rows dd { min-width: 0; margin: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.folio-export-comicinfo .empty-inline { min-height: 90px; margin: 0; padding: 20px; display: grid; place-items: center; color: var(--folio-muted); font-size: 12px; text-align: center; }
 .folio-export-issues { margin-top: 16px; }
-.folio-export-issues p { margin: 0; padding: 9px 8px; display: flex; gap: 7px; border-left: 2px solid #9a671f; background: rgba(154,103,31,.07); color: #80601f; font-size: 11px; line-height: 1.55; }
+.folio-export-issues p { margin: 0; padding: 9px 8px; display: flex; gap: 7px; border-left: 2px solid #9a671f; background: rgba(154,103,31,.07); color: #80601f; font-size: 12px; line-height: 1.55; }
 .folio-export-issues p.blocked { border-color: var(--folio-red); background: var(--folio-red-soft); color: var(--folio-red); }
 .folio-export-selected-strip { min-height: 76px; margin-top: 16px; padding: 8px; display: flex; gap: 7px; overflow-x: auto; border: 1px solid var(--folio-line); scrollbar-width: none; }
 .folio-export-selected-strip .folio-export-cover { width: 40px; height: 56px; flex: 0 0 40px; }
@@ -90,15 +90,15 @@
 
 .folio-export-action-zone { margin-top: 22px; padding: 14px 0; border-top: 1px solid var(--folio-line-strong); background: rgba(243,239,229,.96); position: sticky; bottom: 0; z-index: 4; }
 .folio-export-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 42px; gap: 7px; }
-.folio-export-options label, .folio-export-refresh { min-height: 42px; padding: 0 8px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-muted); font-size: 11px; cursor: pointer; }
+.folio-export-options label, .folio-export-refresh { min-height: 42px; padding: 0 8px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-muted); font-size: 12px; cursor: pointer; }
 .folio-export-options label.is-on { border-color: rgba(173,56,46,.45); background: var(--folio-red-soft); color: var(--folio-ink); }
 .folio-export-options input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .folio-export-options label:has(input:focus-visible), .folio-export-refresh:focus-visible { outline: 2px solid var(--folio-red); outline-offset: 2px; }
 .folio-export-refresh { padding: 0; }
 .folio-export-action-cta { margin-top: 11px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.folio-export-summary-line { color: var(--folio-muted); font-size: 11px; white-space: nowrap; }
+.folio-export-summary-line { color: var(--folio-muted); font-size: 12px; white-space: nowrap; }
 .folio-export-action-buttons { display: flex; justify-content: flex-end; gap: 7px; }
-.folio-export-primary, .folio-export-secondary { min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--folio-line-strong); background: transparent; color: var(--folio-ink); font-size: 11px; white-space: nowrap; }
+.folio-export-primary, .folio-export-secondary { min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--folio-line-strong); background: transparent; color: var(--folio-ink); font-size: 12px; white-space: nowrap; }
 .folio-export-primary { min-width: 150px; border-color: var(--folio-red); background: var(--folio-red); color: var(--folio-paper-bright); }
 .folio-export-primary:disabled, .folio-export-secondary:disabled { cursor: not-allowed; opacity: .32; }
 
@@ -120,7 +120,7 @@
   .folio-export-metric { min-height: 64px; padding: 8px 5px; align-items: center; flex-direction: column; justify-content: center; gap: 4px; text-align: center; }
   .folio-export-metric > svg { width: 14px; height: 14px; }
   .folio-export-metric strong { font-size: 19px; }
-  .folio-export-metric span { margin-top: 3px; font-size: 11px; white-space: nowrap; }
+  .folio-export-metric span { margin-top: 3px; font-size: 12px; white-space: nowrap; }
   .folio-export-toolbar { grid-template-columns: minmax(0, 1fr); }
   .folio-export-tabs { order: -1; }
   .folio-export-toolbar-actions { grid-column: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }

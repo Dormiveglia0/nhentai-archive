@@ -87,6 +87,7 @@ function MetadataCard({
       <div className="folio-governance-field-final">
         <span className="folio-governance-field-label">本地最终值</span>
         <AutoGrowTextarea
+          label={`本地最终值：${field.label}`}
           value={edit?.value ?? ""}
           onChange={(value) => onChange({ value, source: "manual" })}
           placeholder="未设置"
@@ -123,10 +124,12 @@ function ValueChips({ value, empty, accent = false }: { value?: string | null; e
 }
 
 function AutoGrowTextarea({
+  label,
   value,
   onChange,
   placeholder,
 }: {
+  label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -143,6 +146,7 @@ function AutoGrowTextarea({
       ref={ref}
       className="folio-governance-field-input"
       rows={1}
+      aria-label={label}
       value={value}
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}

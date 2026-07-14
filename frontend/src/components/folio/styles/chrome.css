@@ -112,77 +112,16 @@
 
 .folio-top-actions {
   grid-column: 3;
-  margin-left: 16px;
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
-.folio-privacy,
 .folio-menu-button {
   min-height: 44px;
   border: 1px solid var(--folio-line);
   background: rgba(250, 247, 239, 0.56);
   color: var(--folio-muted);
-}
-
-.folio-privacy {
-  min-width: 138px;
-  padding: 5px 13px 5px 7px;
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  font-size: 13px;
-}
-
-.folio-privacy-icon {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--folio-line);
-  position: relative;
-}
-
-.folio-privacy-icon::after {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  opacity: 0.35;
-}
-
-.folio-privacy-copy,
-.folio-privacy-copy span,
-.folio-privacy-copy strong {
-  display: block;
-}
-
-.folio-privacy-copy span {
-  font-size: 13px;
-  letter-spacing: 0.08em;
-}
-
-.folio-privacy-copy strong {
-  margin-top: 2px;
-  color: var(--folio-ink);
-  font-size: 13px;
-}
-
-.folio-privacy.is-on .folio-privacy-icon {
-  color: var(--folio-red);
-}
-
-.folio-privacy.is-on .folio-privacy-icon::after {
-  opacity: 1;
-  animation: folio-quiet-pulse 2.6s ease-in-out infinite;
 }
 
 .folio-menu-button {
@@ -391,5 +330,4 @@
   letter-spacing: 0.04em;
   line-height: 1.7;
 }
-
 

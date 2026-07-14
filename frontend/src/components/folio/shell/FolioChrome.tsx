@@ -1,4 +1,4 @@
-import { LockKeyhole, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -13,8 +13,6 @@ export type FolioHeading = false | { title: string; description: string };
 
 export function FolioChrome({
   page,
-  privacy,
-  onPrivacyChange,
   onNavigate,
   children,
   footer,
@@ -23,8 +21,6 @@ export function FolioChrome({
   heading,
 }: {
   page: FolioPageId;
-  privacy: boolean;
-  onPrivacyChange: (value: boolean) => void;
   onNavigate: (page: FolioPageId) => void;
   children: ReactNode;
   footer?: ReactNode;
@@ -79,10 +75,6 @@ export function FolioChrome({
         </button>
         <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
         <div className="folio-top-actions">
-          <button className={`folio-privacy${privacy ? " is-on" : ""}`} type="button" aria-pressed={privacy} onClick={() => onPrivacyChange(!privacy)}>
-            <span className="folio-privacy-icon" aria-hidden="true"><LockKeyhole size={15} /></span>
-            <span className="folio-privacy-copy"><span>隐私模式</span><strong>{privacy ? "开启" : "关闭"}</strong></span>
-          </button>
           <button className="folio-menu-button" type="button" aria-label={menuOpen ? "关闭导航" : "打开导航"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>

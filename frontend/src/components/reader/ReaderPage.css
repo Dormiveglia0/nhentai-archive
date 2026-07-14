@@ -304,7 +304,7 @@
 .reader-privacy-curtain strong,
 .reader-privacy-curtain small { display: block; }
 .reader-privacy-curtain strong { font-size: 13px; }
-.reader-privacy-curtain small { margin-top: 4px; color: var(--reader-muted); font-size: 11px; }
+.reader-privacy-curtain small { margin-top: 4px; color: var(--reader-muted); font-size: 12px; }
 
 .reader-feedback {
   min-height: 42px;

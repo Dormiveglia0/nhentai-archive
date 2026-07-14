@@ -287,6 +287,31 @@ def test_delete_work_cascades_all_tables_and_files(tmp_path):
     assert keep_source.read_bytes() == keep_bytes
 
 
+def test_delete_work_retains_metadata_when_file_removal_fails(tmp_path, monkeypatch):
+    _settings, db, archive, files = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    source = Path(
+        db.fetchone(
+            "SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (work_id,)
+        )["path"]
+    )
+
+    def reject_unlink(path, target, errors):
+        errors.append({"target": target, "code": "unlink_failed", "message": f"blocked: {path.name}"})
+        return 0
+
+    monkeypatch.setattr(files, "_unlink", reject_unlink)
+
+    result = files.delete([{"kind": "work", "work_id": work_id}])
+
+    assert result["removed_works"] == 0
+    assert result["deleted_files"] == 0
+    assert source.exists()
+    assert db.fetchone("SELECT 1 FROM works WHERE id=?", (work_id,)) is not None
+    assert db.fetchone("SELECT 1 FROM work_files WHERE work_id=?", (work_id,)) is not None
+    assert {error["code"] for error in result["errors"]} == {"unlink_failed", "work_retained"}
+
+
 def test_delete_orphan_removes_only_that_file(tmp_path):
     settings, _db, _archive, files = _setup(tmp_path)
     orphan = settings.library_dir / "loose.cbz"

@@ -10,8 +10,6 @@ type ShelledPageName = Exclude<Page["name"], "reader" | "readerRemote">;
 type Props = {
   activePage: ShelledPageName;
   scrollKey: string;
-  privacyMode: boolean;
-  onPrivacyModeChange: (value: boolean) => void;
   children: ReactNode;
 };
 
@@ -35,8 +33,6 @@ function chromeRoute(activePage: ShelledPageName): { page: FolioPageId; heading?
 export function ArchiveShell({
   activePage,
   scrollKey,
-  privacyMode,
-  onPrivacyModeChange,
   children
 }: Props) {
   const route = chromeRoute(activePage);
@@ -46,8 +42,6 @@ export function ArchiveShell({
       <FolioChrome
         page={route.page}
         heading={route.heading}
-        privacy={privacyMode}
-        onPrivacyChange={onPrivacyModeChange}
         onNavigate={(name: FolioPageId) => navigate({ name } as Parameters<typeof navigate>[0])}
         scrollKey={scrollKey}
       >

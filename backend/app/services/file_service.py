@@ -358,13 +358,24 @@ class FileMaintenanceService:
                     errors.append({"target": target, "code": "already_gone", "message": "作品不存在。"})
                     continue
                 paths = self._work_files(work_id)  # gather BEFORE cascade removes work_files rows
-                self.db.execute("DELETE FROM works WHERE id=?", (work_id,))  # ON DELETE CASCADE clears all references
-                removed_works += 1
+                work_errors: list[dict[str, Any]] = []
                 for path in paths:
-                    freed = self._unlink(path, target, errors)
+                    freed = self._unlink(path, target, work_errors)
                     if freed > 0:
                         deleted_files += 1
                         reclaimed_bytes += freed
+                if work_errors:
+                    errors.extend(work_errors)
+                    errors.append(
+                        {
+                            "target": target,
+                            "code": "work_retained",
+                            "message": "部分文件未能删除，作品元数据已保留以便恢复或重试。",
+                        }
+                    )
+                    continue
+                self.db.execute("DELETE FROM works WHERE id=?", (work_id,))  # ON DELETE CASCADE clears all references
+                removed_works += 1
             elif kind in ("orphan", "stale"):
                 path = self._abs(target.get("path"))
                 if path is None:

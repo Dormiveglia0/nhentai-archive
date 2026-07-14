@@ -94,7 +94,7 @@
 .reader-title small {
   margin-top: 4px;
   color: var(--reader-muted);
-  font: 11px Georgia, "Times New Roman", serif;
+  font: 12px Georgia, "Times New Roman", serif;
   letter-spacing: .12em;
 }
 
@@ -136,7 +136,7 @@
 
 .reader-page-jump span {
   color: var(--reader-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .reader-import-button {
@@ -280,7 +280,7 @@
   .reader-toolbar button { min-width: 42px; min-height: 42px; }
   .reader-back-button span { display: none; }
   .reader-title small { display: none; }
-  .reader-control-group button > span { font-size: 11px; }
+  .reader-control-group button > span { font-size: 12px; }
   .reader-import-button { width: 104px; flex-basis: 104px; }
   .reader-scrubber { padding: 15px 12px 9px; }
   .reader-scrubber-row { gap: 10px; }

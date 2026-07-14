@@ -163,7 +163,7 @@ function ChipEditor({
             <X size={12} />
           </button>
         ))}
-        <input value={draft} onChange={(event) => onDraft(event.target.value)} onKeyDown={keyDown} onBlur={onAdd} placeholder={placeholder} />
+        <input aria-label={label} value={draft} onChange={(event) => onDraft(event.target.value)} onKeyDown={keyDown} onBlur={onAdd} placeholder={placeholder} />
       </div>
       <i aria-hidden="true" />
     </div>

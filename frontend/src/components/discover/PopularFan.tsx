@@ -124,6 +124,7 @@ export function PopularFan({ loading, items, blurCovers, collapseSignal, onOpen,
               <button
                 type="button"
                 className="folio-discover-fan-cover"
+                aria-label={`打开作品详情：${item.title_japanese || item.pretty_title || item.title || `Gallery ${item.gallery_id}`}`}
                 onClick={() => {
                   if (skipClickRef.current) {
                     skipClickRef.current = false;

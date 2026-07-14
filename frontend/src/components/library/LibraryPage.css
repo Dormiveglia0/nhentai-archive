@@ -256,7 +256,7 @@
 .folio-library-tag-panel label > span {
   flex: 0 0 auto;
   color: var(--folio-red);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-library-tag-options {
@@ -308,7 +308,7 @@
 .folio-library-tag-options small,
 .folio-library-tag-options em {
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-style: normal;
 }
 
@@ -762,7 +762,7 @@
   align-items: center;
   background: rgba(23, 24, 21, 0.82);
   color: var(--folio-paper-bright);
-  font-size: 11px;
+  font-size: 12px;
   position: absolute;
   left: 8px;
   bottom: 8px;
@@ -785,7 +785,7 @@
   align-items: center;
   gap: 9px;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-library-card-meta span {
@@ -873,7 +873,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -997,7 +997,7 @@
   align-items: center;
   background: var(--folio-ink);
   color: var(--folio-paper-bright);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -1101,7 +1101,7 @@
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 27px;
   text-decoration: none;
 }

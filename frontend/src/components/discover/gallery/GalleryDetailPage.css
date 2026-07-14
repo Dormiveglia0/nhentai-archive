@@ -36,7 +36,7 @@
 
 .folio-gallery-context > span {
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
 }
 
@@ -145,13 +145,13 @@
 .folio-gallery-section-head p {
   margin-top: 5px;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-gallery-section-head > small {
   flex: 0 0 auto;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 

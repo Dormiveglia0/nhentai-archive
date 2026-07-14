@@ -188,7 +188,7 @@
   align-items: center;
   gap: 10px;
   color: var(--folio-red);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
 }
 
@@ -200,7 +200,7 @@
 
 .folio-gallery-kicker small {
   color: var(--folio-muted);
-  font: 11px Georgia, "Times New Roman", serif;
+  font: 12px Georgia, "Times New Roman", serif;
   letter-spacing: 0.1em;
 }
 
@@ -252,7 +252,7 @@
   align-items: center;
   gap: 6px;
   color: var(--folio-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .folio-gallery-facts dt svg { color: var(--folio-red); }

@@ -25,7 +25,7 @@ FrontendDemo.tsx
   -> ui/DemoCommandBar.tsx
 ```
 
-`FrontendDemo.tsx` owns only demo navigation, privacy state, notices, and settings reset. `components/folio/` owns reusable visual structure. `components/demo/` owns only public-preview content and must not become a production dependency.
+`FrontendDemo.tsx` owns only demo navigation, notices, and settings reset. `components/folio/` owns reusable visual structure. `components/demo/` owns only public-preview content and must not become a production dependency.
 
 ## Module Locator
 
