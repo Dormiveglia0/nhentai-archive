@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import type { GovernanceAggregate } from "../../lib/api";
-import { workTitle } from "../library/libraryHelpers";
+import { workTitle } from "../../lib/format";
 
 export function GovernanceWorkHeader({
   aggregate,

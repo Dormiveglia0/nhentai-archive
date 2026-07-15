@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
 import type { Job, JobLog } from "../../lib/api";
-import { canRetry, isToday, jobTypeLabel, stageLabel, targetLabel, type JobStatusFilter } from "./taskHelpers";
+import { canRetry, isToday, jobTypeLabel, stageLabel, targetLabel, type JobStatusFilter } from "../../lib/jobs";
 
 export type TaskSummary = {
   total: number;

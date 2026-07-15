@@ -10,7 +10,7 @@ import type {
   ExportSummaryStats,
   SettingsSummary,
 } from "../../lib/api";
-import { workTitle } from "../library/libraryHelpers";
+import { workTitle } from "../../lib/format";
 import { itemStatus } from "./exportHelpers";
 
 export type ExportViewModel = {

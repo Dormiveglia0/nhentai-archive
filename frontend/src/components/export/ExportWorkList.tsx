@@ -2,7 +2,7 @@ import { CheckSquare } from "lucide-react";
 
 import type { ExportQueueItem } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { workTitle } from "../library/libraryHelpers";
+import { workTitle } from "../../lib/format";
 import { Cover, STATUS_LABEL, itemStatus } from "./exportHelpers";
 import type { ExportItemStatus } from "./exportHelpers";
 

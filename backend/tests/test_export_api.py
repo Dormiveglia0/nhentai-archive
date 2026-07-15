@@ -39,7 +39,7 @@ class FakeExports:
 
 
 def test_export_routes_return_service_payloads(monkeypatch):
-    monkeypatch.setattr(main, "exports", FakeExports())
+    monkeypatch.setattr(main.services, "exports", FakeExports())
     client = TestClient(main.app)
 
     assert client.get("/api/exports/queue").json()["summary"]["ready"] == 1
@@ -52,7 +52,7 @@ def test_export_routes_return_service_payloads(monkeypatch):
 
 
 def test_export_download_streams_cbz_as_attachment(monkeypatch):
-    monkeypatch.setattr(main, "exports", FakeExports())
+    monkeypatch.setattr(main.services, "exports", FakeExports())
     client = TestClient(main.app)
 
     response = client.get("/api/works/7/export/download")
@@ -64,7 +64,7 @@ def test_export_download_streams_cbz_as_attachment(monkeypatch):
 
 
 def test_export_download_bundle_streams_zip(monkeypatch):
-    monkeypatch.setattr(main, "exports", FakeExports())
+    monkeypatch.setattr(main.services, "exports", FakeExports())
     client = TestClient(main.app)
 
     response = client.post(
@@ -77,7 +77,7 @@ def test_export_download_bundle_streams_zip(monkeypatch):
 
 
 def test_export_routes_map_service_errors(monkeypatch):
-    monkeypatch.setattr(main, "exports", FakeExports())
+    monkeypatch.setattr(main.services, "exports", FakeExports())
     client = TestClient(main.app)
 
     assert client.get("/api/works/404/export-preview").status_code == 404

@@ -32,7 +32,7 @@ FrontendDemo.tsx
 | Module | Demo page body | Header scene | Primary CSS | Formal page/state | Real API entry |
 | --- | --- | --- | --- | --- | --- |
 | 工作台 | `demo/modules/WorkbenchDemo.tsx` | `folio/scenes/WorkbenchScene.tsx` | `folio/styles/workbench.css`, `scenes.css` prefix `folio-scene-hub-*` | `workbench/WorkbenchPage.tsx`, `useWorkbenchState.ts` | `api.workbenchOverview()` |
-| 我的库 | `demo/modules/LibraryDemo.tsx` | `folio/scenes/LibraryScene.tsx` | `library/LibraryPage.css`, shared shelf/control rules in `folio/styles/library-discover.css`, scene prefix `folio-scene-library-*` | `library/LibraryPage.tsx`, `useLibraryState.ts`, `ContinueReadingRow.tsx` and feature components | `api.librarySummary/search/continueReading/recentAdded/tagFilters` |
+| 我的库 | `demo/modules/LibraryDemo.tsx` | `folio/scenes/LibraryScene.tsx` | `library/LibraryPage.css`, shared shelf/control rules in `folio/styles/library-discover.css`, scene prefix `folio-scene-library-*` | `library/LibraryPage.tsx`, `useLibraryState.ts`, shared `folio/ui/ContinueReadingRow.tsx` and feature components | `api.librarySummary/search/continueReading/recentAdded/tagFilters` |
 | 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `discover/DiscoverPage.css`, shared controls in `folio/styles/library-discover.css`, scene prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `useDiscoverState.ts`, `TagFilterSelector.tsx` and feature components | `api.feed/popular/random/dictionaryCandidates/dictionaryAutocomplete/importGallery` |
 | 治理 | `demo/modules/GovernanceDemo.tsx` | `folio/scenes/GovernanceScene.tsx` | `governance/GovernancePage.css`, `GovernanceEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-governance-*` | `governance/GovernancePage.tsx`, `useGovernanceState.ts`, `GovernanceReviewPanel.tsx`, `GovernanceTranslationPanel.tsx`, `GovernanceTagBoard.tsx` / `GovernanceTagItem.tsx` and queue/source/action components | `api.governanceQueue/workGovernance/apply/review/translate/bulk*` |
 | 词典 | `demo/modules/DictionaryDemo.tsx` | `folio/scenes/DictionaryScene.tsx` | `dictionary/DictionaryPage.css`, `DictionaryEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-dictionary-*` | `dictionary/DictionaryPage.tsx`, `useDictionaryState.ts` and feature components | `api.dictionarySummary/candidates/evidence/preview/apply/*` |
@@ -64,6 +64,9 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Large background atmosphere and discover radar hits | `folio/shell/ModuleBackdrop.tsx` + `folio/styles/base.css` |
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
+| Shared pagination, tag scroller, and work shelf | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx` |
+| Shared byte and work-title formatting | `lib/format.ts` |
+| Shared job labels, status rules, and action predicates | `lib/jobs.ts` |
 | Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |
 | Demo page dispatch | `demo/modules/DemoPage.tsx` |
 | Live task overlay outside reader routes | `layout/TaskDock.tsx` + `layout/TaskDock.css` |

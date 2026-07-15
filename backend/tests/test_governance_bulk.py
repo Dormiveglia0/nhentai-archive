@@ -158,7 +158,7 @@ def test_bulk_apply_api_rejects_empty_actions(tmp_path, monkeypatch):
 
     _settings, db, archive, governance = _setup(tmp_path)
     work_id = _import(db, archive, tmp_path, 666, title="Foxtrot")
-    monkeypatch.setattr(main, "governance", governance)
+    monkeypatch.setattr(main.services, "governance", governance)
     client = TestClient(main.app)
 
     resp = client.post("/api/governance/bulk/apply", json={"work_ids": [work_id], "actions": {}})
@@ -235,7 +235,7 @@ def test_bulk_apply_api_accepts_confirm_dictionary_only(tmp_path, monkeypatch):
     _settings, db, archive, governance = _setup(tmp_path)
     work_id = _import(db, archive, tmp_path, 782, title="API")
     _problem_dictionary_tag(db, work_id, 708, "api", "review")
-    monkeypatch.setattr(main, "governance", governance)
+    monkeypatch.setattr(main.services, "governance", governance)
     client = TestClient(main.app)
 
     resp = client.post(

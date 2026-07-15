@@ -12,6 +12,9 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 ## What Already Exists
 
+- Run the complete development stack with root `npm run dev`; do not require users to manage separate backend/frontend terminals. `npm run dev -- --check` is the non-starting environment check.
+- Backend startup is split by responsibility: `main.py` creates the app, `container.py` assembles dependencies, `api/<domain>.py` owns HTTP routes, and `services/` owns behavior. Extend the matching domain router instead of rebuilding a monolithic entrypoint.
+- Shared frontend pagination, tag scrolling, and work shelves live in `components/folio/ui/`; shared presentation formatting and job rules live in `lib/format.ts` and `lib/jobs.ts`. Feature folders are not cross-feature utility buckets.
 - All primary modules are real pages: discover, library, reader, history, governance, dictionary, export, files, tasks, settings, and workbench.
 - Governance supports single-work metadata decisions, metadata machine-translation suggestions, ComicInfo write-back, batch fill-missing metadata, batch ComicInfo write-back, source Web backfill, and batch confirmation of existing dictionary `review/conflict` terms.
 - Governance queue totals mean actionable works, not library size; language completeness honors real language tags unless an explicit metadata decision overrides them. Opening a work must never stage a source-value change by itself.

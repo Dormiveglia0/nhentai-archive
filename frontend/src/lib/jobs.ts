@@ -1,4 +1,4 @@
-import type { Job } from "../../lib/api";
+import type { Job } from "./api";
 
 export type JobStatusFilter = "all" | Job["status"];
 

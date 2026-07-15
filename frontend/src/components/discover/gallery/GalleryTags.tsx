@@ -4,7 +4,7 @@ import { m } from "motion/react";
 import type { GalleryDetail } from "../../../lib/api";
 import { Stagger, StaggerItem } from "../../../lib/motion";
 import { tagSearchHref } from "../../../lib/navigation";
-import { defaultDisplayTag } from "../TagScroller";
+import { defaultDisplayTag } from "../../folio/ui/TagScroller";
 import { TAG_GROUPS } from "./galleryDetailModel";
 import "./GalleryTags.css";
 

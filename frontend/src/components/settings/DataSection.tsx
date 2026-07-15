@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, type FileOverview, type LibrarySummary } from "../../lib/api";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
-import { formatBytes } from "../library/libraryHelpers";
+import { formatBytes } from "../../lib/format";
 
 type Metric = { label: string; value: number | null; format?: (value: number) => string; warn?: boolean };
 

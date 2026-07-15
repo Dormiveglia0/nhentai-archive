@@ -3,9 +3,9 @@ import { AnimatePresence, m } from "motion/react";
 
 import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
-import { IconPager } from "../discover/IconPager";
+import { IconPager } from "../folio/ui/IconPager";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
-import { ContinueReadingRow } from "./ContinueReadingRow";
+import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
 import { LibraryBatchTray } from "./LibraryBatchTray";
 import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
 import { LibraryToolbar } from "./LibraryToolbar";

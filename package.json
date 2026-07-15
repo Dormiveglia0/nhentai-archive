@@ -1,4 +1,8 @@
 {
+  "private": true,
+  "scripts": {
+    "dev": "python3 scripts/dev.py"
+  },
   "dependencies": {
     "@types/node": "^26.0.0"
   }

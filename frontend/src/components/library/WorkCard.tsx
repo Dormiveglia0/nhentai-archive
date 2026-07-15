@@ -2,7 +2,7 @@ import { BookOpen, Check } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
-import { TagScroller } from "../discover/TagScroller";
+import { TagScroller } from "../folio/ui/TagScroller";
 import type { LibraryView } from "./LibraryToolbar";
 import { authorLine, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
 

@@ -1,9 +1,9 @@
 import { useRef, useState, type PointerEvent } from "react";
 
-import { LibraryWork } from "../../lib/api";
-import { Stagger, StaggerItem } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
-import { workTitle } from "./libraryHelpers";
+import type { LibraryWork } from "../../../lib/api";
+import { workTitle } from "../../../lib/format";
+import { Stagger, StaggerItem } from "../../../lib/motion";
+import { navigate } from "../../../lib/navigation";
 
 type Props = {
   title: string;

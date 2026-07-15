@@ -34,7 +34,7 @@ class StubWorkbench:
 
 
 def test_workbench_overview_route_returns_aggregate(monkeypatch):
-    monkeypatch.setattr(main, "workbench", StubWorkbench())
+    monkeypatch.setattr(main.services, "workbench", StubWorkbench())
     client = TestClient(main.app)
 
     body = client.get("/api/workbench/overview").json()
