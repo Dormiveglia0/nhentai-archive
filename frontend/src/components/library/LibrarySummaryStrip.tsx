@@ -1,31 +1,35 @@
-import { LibrarySummary } from "../../lib/api";
+import { BookOpen, CheckCheck, Circle, Database, HardDrive, Tags } from "lucide-react";
+
+import type { LibrarySummary } from "../../lib/api";
+import { NumberTicker } from "../effects/NumberTicker";
 import { formatBytes } from "./libraryHelpers";
 
-type Props = {
-  summary: LibrarySummary | null;
-};
+export function LibrarySummaryStrip({ summary }: { summary: LibrarySummary | null }) {
+  if (!summary) {
+    return <div className="folio-library-summary-loading" role="status">正在读取真实馆藏摘要…</div>;
+  }
 
-export function LibrarySummaryStrip({ summary }: Props) {
-  const items: Array<{ label: string; value: string }> = summary
-    ? [
-        { label: "总收藏", value: summary.total.toLocaleString() },
-        { label: "已读", value: summary.completed.toLocaleString() },
-        { label: "阅读中", value: summary.reading.toLocaleString() },
-        { label: "未读", value: summary.unread.toLocaleString() },
-        { label: "待补标签", value: summary.untagged.toLocaleString() },
-        { label: "占用容量", value: formatBytes(summary.total_size_bytes) },
-      ]
-    : [];
+  const metrics = [
+    { label: "总收藏", value: summary.total, icon: Database },
+    { label: "已读", value: summary.completed, icon: CheckCheck },
+    { label: "阅读中", value: summary.reading, icon: BookOpen },
+    { label: "未读", value: summary.unread, icon: Circle },
+    { label: "待补标签", value: summary.untagged, icon: Tags },
+    { label: "占用容量", value: summary.total_size_bytes, icon: HardDrive, format: formatBytes },
+  ];
 
   return (
-    <div className="library-summary">
-      {items.map((item) => (
-        <span key={item.label}>
-          <strong>{item.value}</strong>
-          {item.label}
-        </span>
-      ))}
-      {!summary ? <span className="library-summary-loading">读取馆藏摘要…</span> : null}
-    </div>
+    <section className="folio-library-summary" aria-label="馆藏真实摘要">
+      {metrics.map((metric) => {
+        const Icon = metric.icon;
+        return (
+          <article key={metric.label}>
+            <Icon size={16} />
+            <span>{metric.label}</span>
+            <strong><NumberTicker value={metric.value} format={metric.format} /></strong>
+          </article>
+        );
+      })}
+    </section>
   );
 }

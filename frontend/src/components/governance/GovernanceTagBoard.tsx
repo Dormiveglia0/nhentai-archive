@@ -1,50 +1,50 @@
 import type { GovernanceAggregate, GovernanceTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
+import { GovernanceTagItem } from "./GovernanceTagItem";
 
 export function GovernanceTagBoard({
   aggregate,
   onApplyDictionaryTag,
+  onReviewDictionaryTag,
+  applyingTagId,
 }: {
   aggregate: GovernanceAggregate;
-  onApplyDictionaryTag: (tag: GovernanceTag) => Promise<void>;
+  onApplyDictionaryTag: (tag: GovernanceTag, zhName: string) => Promise<void>;
+  onReviewDictionaryTag: (tag: GovernanceTag) => Promise<void>;
+  applyingTagId: number | null;
 }) {
   return (
-    <section className="governance-tags governance-panel">
-      <div className="governance-panel-head">
+    <section id="governance-tags" className="folio-governance-tags">
+      <header className="folio-governance-section-head">
         <div>
-          <span className="eyebrow">Tags</span>
+          <span>Tags</span>
           <h2>标签</h2>
         </div>
-        <button type="button" onClick={() => navigate({ name: "dictionary" })}>
+        <button className="folio-line-button" type="button" onClick={() => navigate({ name: "dictionary" })}>
           管理词典
         </button>
-      </div>
+      </header>
       {aggregate.tags.groups.length ? (
-        <div className="tag-governance-groups">
+        <div className="folio-governance-tag-groups">
           {aggregate.tags.groups.map((group) => (
             <article key={group.key}>
               <h3>{group.label}</h3>
-              <div className="governance-tag-wrap">
+              <div className="folio-governance-tag-list">
                 {group.tags.map((tag) => (
-                  <span key={tag.id} className={`governance-tag ${tag.state === "conflict" ? "conflict" : ""}`}>
-                    {tag.display}
-                    {tag.state === "conflict" ? (
-                      <button type="button" onClick={() => navigate({ name: "dictionary" })}>
-                        去词典
-                      </button>
-                    ) : tag.state === "pending" && tag.remote_tag_id ? (
-                      <button type="button" onClick={() => void onApplyDictionaryTag(tag)}>
-                        确认
-                      </button>
-                    ) : null}
-                  </span>
+                  <GovernanceTagItem
+                    key={`${tag.id}-${tag.state}`}
+                    tag={tag}
+                    busy={applyingTagId === tag.id}
+                    onApply={onApplyDictionaryTag}
+                    onReview={onReviewDictionaryTag}
+                  />
                 ))}
               </div>
             </article>
           ))}
         </div>
       ) : (
-        <p className="empty-inline">该作品暂无标签。可从词典或重新解析流程补充。</p>
+        <p className="folio-governance-inline-empty">该作品暂无标签。可从词典或重新解析流程补充。</p>
       )}
     </section>
   );

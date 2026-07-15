@@ -1,0 +1,614 @@
+/* All module header scene styling; scene TSX is split per module. */
+.folio-scene {
+  width: min(48vw, 620px);
+  height: 228px;
+  color: rgba(23, 24, 21, 0.31);
+  position: absolute;
+  right: clamp(26px, 4vw, 70px);
+  top: 0;
+}
+
+.folio-scene > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.folio-scene g,
+.folio-scene path,
+.folio-scene circle,
+.folio-scene rect,
+.folio-scene ellipse {
+  vector-effect: non-scaling-stroke;
+}
+
+.folio-scene-hub-orbits,
+.folio-scene-governance-stamp,
+.folio-scene-task-complete {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.folio-scene-hub-orbits {
+  stroke: rgba(23, 24, 21, 0.18);
+  animation: folio-scene-orbit 14s linear infinite;
+}
+
+.folio-scene-hub-links {
+  stroke: rgba(173, 56, 46, 0.34);
+  stroke-dasharray: 7 9;
+  animation: folio-scene-dash 4.8s linear infinite;
+}
+
+.folio-scene-hub-panels > g {
+  stroke: rgba(23, 24, 21, 0.26);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-hub-panel 7.2s ease-in-out infinite;
+}
+
+.folio-scene-hub-panels > g:nth-child(2) {
+  animation-delay: -1.8s;
+}
+
+.folio-scene-hub-panels > g:nth-child(3) {
+  animation-delay: -3.6s;
+}
+
+.folio-scene-hub-panels > g:nth-child(4) {
+  animation-delay: -5.4s;
+}
+
+.folio-scene-hub-panels rect {
+  fill: rgba(250, 247, 239, 0.58);
+}
+
+.folio-scene-hub-panels circle {
+  fill: rgba(173, 56, 46, 0.1);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-hub-core {
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-core 4.8s ease-in-out infinite;
+}
+
+.folio-scene-hub-core > rect:first-child {
+  fill: rgba(173, 56, 46, 0.025);
+}
+
+.folio-scene-hub-core > rect:nth-child(2) {
+  fill: rgba(250, 247, 239, 0.72);
+}
+
+.folio-scene-hub-core-scan {
+  stroke-width: 2;
+  filter: drop-shadow(0 3px 5px rgba(173, 56, 46, 0.22));
+  animation: folio-scene-hub-scan 4.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.folio-scene-hub-nodes circle {
+  fill: var(--folio-paper-bright);
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-node 3.2s ease-in-out infinite;
+}
+
+.folio-scene-hub-nodes circle:nth-child(2) {
+  animation-delay: -0.8s;
+}
+
+.folio-scene-hub-nodes circle:nth-child(3) {
+  animation-delay: -1.6s;
+}
+
+.folio-scene-hub-nodes circle:nth-child(4) {
+  animation-delay: -2.4s;
+}
+
+.folio-scene-hub-pulse circle {
+  fill: none;
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-hub-pulse 4.8s ease-out infinite;
+}
+
+.folio-scene-hub-pulse circle:last-child {
+  animation-delay: -2.4s;
+}
+
+.folio-scene-library-shelf {
+  stroke: rgba(23, 24, 21, 0.34);
+}
+
+.folio-scene-library-shelf rect {
+  fill: rgba(250, 247, 239, 0.18);
+}
+
+.folio-scene-library-spines {
+  stroke: var(--folio-red);
+  opacity: 0.68;
+}
+
+.folio-scene-library-destination {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-library-accepted 9s ease-in-out infinite;
+}
+
+.folio-scene-library-file {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-file-in 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-discover-records > g {
+  stroke: rgba(23, 24, 21, 0.24);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-discover-record 6.2s ease-in-out infinite;
+}
+
+.folio-scene-discover-records > g:nth-child(2) {
+  animation-delay: -4.13s;
+}
+
+.folio-scene-discover-records > g:nth-child(3) {
+  animation-delay: -2.07s;
+}
+
+.folio-scene-discover-records rect {
+  fill: rgba(250, 247, 239, 0.62);
+}
+
+.folio-scene-discover-records circle {
+  fill: rgba(173, 56, 46, 0.1);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-search-lens {
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-discover-lens 6.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-search-lens > circle {
+  fill: rgba(250, 247, 239, 0.2);
+  stroke-width: 1.6;
+}
+
+.folio-scene-search-match rect {
+  fill: rgba(173, 56, 46, 0.06);
+}
+
+.folio-scene-search-match {
+  animation: folio-scene-discover-match 2.07s ease-in-out infinite;
+}
+
+.folio-scene-search-scan {
+  stroke-width: 2;
+  filter: drop-shadow(0 4px 6px rgba(173, 56, 46, 0.2));
+  animation: folio-scene-discover-scan 2.07s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.folio-scene-governance-board {
+  stroke: rgba(23, 24, 21, 0.23);
+}
+
+.folio-scene-governance-card > rect:first-child {
+  fill: rgba(250, 247, 239, 0.42);
+}
+
+.folio-scene-governance-local > rect:first-child {
+  fill: rgba(68, 95, 82, 0.025);
+  stroke: rgba(68, 95, 82, 0.24);
+}
+
+.folio-scene-governance-source circle {
+  fill: rgba(173, 56, 46, 0.16);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-governance-local circle {
+  fill: rgba(68, 95, 82, 0.12);
+  stroke: var(--folio-green);
+}
+
+.folio-scene-governance-bridge {
+  stroke: rgba(173, 56, 46, 0.52);
+  stroke-dasharray: 12 88;
+  animation: folio-scene-review-bridge 8s ease-in-out infinite;
+}
+
+.folio-scene-governance-target {
+  fill: rgba(68, 95, 82, 0.035);
+  stroke: rgba(68, 95, 82, 0.2);
+  stroke-dasharray: 5 5;
+}
+
+.folio-scene-governance-change {
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-review-apply 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-governance-change rect {
+  fill: rgba(173, 56, 46, 0.13);
+  animation: folio-scene-review-value 8s ease-in-out infinite;
+}
+
+.folio-scene-governance-change circle {
+  fill: rgba(250, 247, 239, 0.82);
+}
+
+.folio-scene-governance-stamp {
+  stroke: var(--folio-red);
+  animation: folio-scene-review-stamp 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-dictionary-book {
+  stroke: rgba(23, 24, 21, 0.3);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: folio-scene-lexicon-open 8s ease-in-out infinite;
+}
+
+.folio-scene-dictionary-book path:first-child,
+.folio-scene-dictionary-book path:nth-child(2) {
+  fill: rgba(250, 247, 239, 0.72);
+}
+
+.folio-scene-dictionary-slots rect {
+  fill: rgba(23, 24, 21, 0.1);
+  stroke: none;
+  animation: folio-scene-lexicon-slot 6s ease-in-out infinite;
+}
+
+.folio-scene-dictionary-slots rect:nth-child(2),
+.folio-scene-dictionary-slots rect:nth-child(4) {
+  animation-delay: -3s;
+}
+
+.folio-scene-dictionary-token {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-lexicon-token 9s ease-in-out infinite;
+}
+
+.folio-scene-dictionary-token rect {
+  fill: rgba(250, 247, 239, 0.92);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-dictionary-token text {
+  fill: var(--folio-red);
+  stroke: none;
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 16px;
+}
+
+.folio-scene-dictionary-token-b {
+  animation-delay: -3s;
+}
+
+.folio-scene-dictionary-token-c {
+  animation-delay: -6s;
+}
+
+.folio-scene-dictionary-bookmark {
+  fill: rgba(173, 56, 46, 0.16);
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center top;
+  animation: folio-scene-lexicon-bookmark 5s ease-in-out infinite;
+}
+
+.folio-scene-task-columns rect {
+  fill: rgba(250, 247, 239, 0.62);
+  stroke: rgba(23, 24, 21, 0.2);
+}
+
+.folio-scene-task-columns .folio-scene-task-column-running {
+  fill: rgba(173, 56, 46, 0.055);
+  stroke: rgba(173, 56, 46, 0.28);
+}
+
+.folio-scene-task-columns circle {
+  fill: rgba(23, 24, 21, 0.1);
+  stroke: none;
+}
+
+.folio-scene-task-card {
+  stroke: rgba(23, 24, 21, 0.27);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.folio-scene-task-card rect {
+  fill: var(--folio-paper-bright);
+}
+
+.folio-scene-task-card circle {
+  fill: rgba(173, 56, 46, 0.18);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-task-card-main {
+  animation: folio-scene-task-advance 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-task-card-waiting {
+  animation: folio-scene-task-wait 4.5s ease-in-out infinite;
+}
+
+.folio-scene-task-progress {
+  stroke: var(--folio-red);
+  stroke-width: 3;
+  stroke-dasharray: 72 100;
+  animation: folio-scene-task-progress 9s ease-in-out infinite;
+}
+
+.folio-scene-task-transfer {
+  color: rgba(173, 56, 46, 0.62);
+}
+
+.folio-scene-task-transfer > svg {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-task-transfer 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-task-transfer > svg:last-child {
+  animation-delay: -0.45s;
+}
+
+.folio-scene-task-running-progress {
+  stroke: rgba(23, 24, 21, 0.11);
+  stroke-width: 4;
+}
+
+.folio-scene-task-running-value {
+  stroke: var(--folio-red);
+  stroke-dasharray: 0 100;
+  animation: folio-scene-task-running 9s ease-in-out infinite;
+}
+
+.folio-scene-task-complete {
+  stroke: var(--folio-green);
+  animation: folio-scene-task-complete 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-task-complete circle {
+  fill: rgba(68, 95, 82, 0.09);
+}
+
+.folio-scene-export-file {
+  --folio-export-bundle-x: 0px;
+  --folio-export-bundle-y: 0px;
+  stroke: rgba(23, 24, 21, 0.3);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-export-bind 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-export-file path:first-child {
+  fill: rgba(250, 247, 239, 0.86);
+}
+
+.folio-scene-export-file-a {
+  --folio-export-bundle-x: 274px;
+  --folio-export-bundle-y: -10px;
+}
+
+.folio-scene-export-file-b {
+  --folio-export-bundle-x: 249px;
+  --folio-export-bundle-y: 0px;
+}
+
+.folio-scene-export-file-c {
+  --folio-export-bundle-x: 224px;
+  --folio-export-bundle-y: 10px;
+}
+
+.folio-scene-export-rail {
+  stroke: rgba(23, 24, 21, 0.14);
+  stroke-dasharray: 4 8;
+}
+
+.folio-scene-export-archive {
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-export-archive 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-export-cover {
+  fill: rgba(250, 247, 239, 0.84);
+}
+
+.folio-scene-export-archive rect {
+  fill: rgba(173, 56, 46, 0.045);
+}
+
+.folio-scene-export-zip {
+  stroke-width: 2;
+  stroke-dasharray: 4 6;
+  animation: folio-scene-export-zip 9s linear infinite;
+}
+
+.folio-scene-export-slider {
+  fill: var(--folio-paper-bright);
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-export-slider 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.folio-scene-export-seal {
+  stroke: var(--folio-green);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-export-seal 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-export-seal circle {
+  fill: rgba(68, 95, 82, 0.09);
+}
+
+.folio-scene-files-source-stack {
+  fill: rgba(250, 247, 239, 0.25);
+  stroke: rgba(23, 24, 21, 0.12);
+}
+
+.folio-scene-files-scanner {
+  stroke: rgba(23, 24, 21, 0.28);
+}
+
+.folio-scene-files-scanner rect {
+  fill: rgba(250, 247, 239, 0.68);
+}
+
+.folio-scene-files-scanner circle {
+  fill: rgba(173, 56, 46, 0.14);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-files-folder-back {
+  fill: rgba(229, 223, 209, 0.58);
+  stroke: rgba(23, 24, 21, 0.26);
+}
+
+.folio-scene-files-document {
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-file-route 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-files-document > rect {
+  fill: rgba(250, 247, 239, 0.94);
+}
+
+.folio-scene-files-document-status {
+  stroke: var(--folio-green);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-file-status 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-files-document-status circle {
+  fill: rgba(68, 95, 82, 0.1);
+}
+
+.folio-scene-files-scan-beam {
+  fill: var(--folio-red);
+  stroke: none;
+  filter: drop-shadow(0 4px 6px rgba(173, 56, 46, 0.18));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-file-scan 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.folio-scene-files-folder-front {
+  fill: rgba(250, 247, 239, 0.94);
+  stroke: var(--folio-red);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: folio-scene-file-drawer 9s ease-in-out infinite;
+}
+
+.folio-scene-settings-console,
+.folio-scene-settings-cell,
+.folio-scene-settings-status {
+  fill: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.folio-scene-settings-console {
+  stroke: rgba(23, 24, 21, 0.2);
+  animation: folio-scene-settings-console 5.8s ease-in-out infinite;
+}
+
+.folio-scene-settings-console > rect {
+  fill: rgba(250, 247, 239, 0.42);
+}
+
+.folio-scene-settings-console circle:first-of-type {
+  fill: rgba(173, 56, 46, 0.18);
+  stroke: var(--folio-red);
+}
+
+.folio-scene-settings-console circle:last-of-type {
+  fill: rgba(68, 95, 82, 0.12);
+  stroke: var(--folio-green);
+}
+
+.folio-scene-settings-console .folio-scene-settings-cursor {
+  fill: rgba(173, 56, 46, 0.045);
+  stroke: rgba(173, 56, 46, 0.56);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-settings-cursor 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-settings-cell {
+  color: rgba(23, 24, 21, 0.48);
+  stroke: currentColor;
+  animation: folio-scene-settings-cell 6s ease-in-out infinite;
+}
+
+.folio-scene-settings-cell-a {
+  animation-delay: 0s;
+}
+
+.folio-scene-settings-cell-b {
+  animation-delay: -4s;
+}
+
+.folio-scene-settings-cell-c {
+  animation-delay: -2s;
+}
+
+.folio-scene-settings-status {
+  stroke: rgba(23, 24, 21, 0.14);
+}
+
+.folio-scene-settings-status-track {
+  stroke: rgba(23, 24, 21, 0.14);
+}
+
+.folio-scene-settings-status circle {
+  fill: var(--folio-red);
+  stroke: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-settings-status-dot 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-settings-status-value {
+  stroke: var(--folio-red);
+  stroke-dasharray: 0 100;
+  animation: folio-scene-settings-status-rail 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.folio-scene-settings-status > svg {
+  color: var(--folio-green);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: folio-scene-settings-status-check 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+

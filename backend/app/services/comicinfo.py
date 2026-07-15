@@ -43,6 +43,8 @@ def _tag_output(aggregate: dict[str, Any]) -> str | None:
     values: list[str] = []
     for group in aggregate["tags"]["groups"]:
         for tag in group["tags"]:
+            if tag.get("type") != "tag":
+                continue
             display = _stringify(tag.get("display") or tag.get("name") or tag.get("slug"))
             if display and display not in values:
                 values.append(display)

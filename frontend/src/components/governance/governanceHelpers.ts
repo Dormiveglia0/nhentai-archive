@@ -5,31 +5,9 @@ export type FieldEdit = {
   source: "manual" | "remote" | "comicinfo" | "current";
 };
 
-// Fields where the parsed source value is inherited as the local final value by default.
-export const INHERIT_FIELDS = new Set([
-  "title",
-  "title_japanese",
-  "pretty_title",
-  "artist",
-  "group",
-  "published_at",
-  "summary",
-]);
-
 export function buildInitialEdits(fields: MetadataFieldDiff[]): Record<string, FieldEdit> {
   return Object.fromEntries(
-    fields.map((field) => {
-      const hasOverride = field.working_source !== "current" || Boolean(field.updated_at);
-      if (
-        !hasOverride &&
-        INHERIT_FIELDS.has(field.field) &&
-        field.source_value &&
-        normalize(field.source_value) !== normalize(field.working_value)
-      ) {
-        return [field.field, { value: field.source_value, source: toEditableSource(field.source) }];
-      }
-      return [field.field, { value: field.working_value || "", source: toEditableSource(field.working_source) }];
-    })
+    fields.map((field) => [field.field, { value: field.working_value || "", source: toEditableSource(field.working_source) }])
   );
 }
 

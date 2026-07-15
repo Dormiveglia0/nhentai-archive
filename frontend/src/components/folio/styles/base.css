@@ -1,0 +1,581 @@
+/* Canvas tokens, paper atmosphere, binding progress and global focus states. */
+.folio {
+  --folio-paper: #f3efe5;
+  --folio-paper-bright: #faf7ef;
+  --folio-paper-deep: #e5dfd1;
+  --folio-ink: #171815;
+  --folio-muted: #6d695f;
+  --folio-faint: #726c61;
+  --folio-line: rgba(23, 24, 21, 0.16);
+  --folio-line-strong: rgba(23, 24, 21, 0.58);
+  --folio-red: #ad382e;
+  --folio-red-soft: rgba(173, 56, 46, 0.1);
+  --folio-green: #445f52;
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: 78px minmax(0, 1fr) 68px;
+  color: var(--folio-ink);
+  background: var(--folio-paper);
+  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  position: fixed;
+  inset: 0;
+  overflow: clip;
+  isolation: isolate;
+}
+
+.folio.folio-no-command {
+  grid-template-rows: 78px minmax(0, 1fr);
+}
+
+.folio-no-command .folio-atmosphere {
+  bottom: 0;
+}
+
+.folio::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.48;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(23, 24, 21, 0.018) 5px 6px),
+    repeating-linear-gradient(90deg, transparent 0 83px, rgba(255, 255, 255, 0.15) 83px 84px);
+}
+
+.folio::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 74% 18%, rgba(255, 255, 255, 0.34), transparent 28%),
+    radial-gradient(circle at 18% 78%, rgba(173, 56, 46, 0.035), transparent 34%),
+    linear-gradient(118deg, transparent 0 42%, rgba(255, 255, 255, 0.13) 48%, transparent 56%);
+  animation: folio-paper-light 18s ease-in-out infinite alternate;
+}
+
+.folio-binding {
+  --folio-scroll-size: 1;
+  --folio-scroll-offset: 0;
+  width: 24px;
+  position: absolute;
+  z-index: 55;
+  inset: 0 auto 0 0;
+  pointer-events: none;
+}
+
+.folio-binding::before,
+.folio-binding::after {
+  content: "";
+  position: absolute;
+}
+
+.folio-binding::before {
+  width: 1px;
+  top: 0;
+  bottom: 0;
+  left: 18px;
+  background: rgba(173, 56, 46, 0.34);
+}
+
+.folio-binding::after {
+  width: 1px;
+  top: 0;
+  bottom: 0;
+  left: 21px;
+  background: rgba(23, 24, 21, 0.07);
+}
+
+.folio-binding-progress {
+  width: 3px;
+  height: calc(var(--folio-scroll-size) * 100%);
+  min-height: 14px;
+  display: block;
+  position: absolute;
+  top: calc(var(--folio-scroll-offset) * 100%);
+  left: 17px;
+  background: linear-gradient(180deg, rgba(173, 56, 46, 0.48), var(--folio-red) 8% 92%, rgba(173, 56, 46, 0.48));
+  box-shadow: 4px 0 11px rgba(173, 56, 46, 0.12);
+  transition: top 180ms cubic-bezier(0.22, 1, 0.36, 1), height 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-atmosphere {
+  position: absolute;
+  z-index: -1;
+  top: 78px;
+  right: 0;
+  bottom: 68px;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.folio-atmosphere i {
+  display: block;
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.folio-atmosphere > svg {
+  display: block;
+  position: absolute;
+  fill: none;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.folio-atmosphere-workbench i {
+  width: min(35vw, 520px);
+  height: 54%;
+  top: 260px;
+  right: 7vw;
+  border: 1px solid rgba(23, 24, 21, 0.045);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 39px, rgba(23, 24, 21, 0.052) 39px 40px),
+    linear-gradient(110deg, rgba(250, 247, 239, 0.32), rgba(229, 223, 209, 0.12));
+  box-shadow: 14px 18px 0 rgba(23, 24, 21, 0.012);
+  clip-path: polygon(0 0, 82% 0, 100% 17%, 100% 100%, 0 100%);
+  animation: folio-atmosphere-sheet-shuffle 13s ease-in-out infinite;
+}
+
+.folio-atmosphere-workbench i:nth-child(2) {
+  width: min(29vw, 430px);
+  height: 46%;
+  top: auto;
+  right: auto;
+  bottom: -14%;
+  left: 8vw;
+  animation-delay: -4.3s;
+}
+
+.folio-atmosphere-workbench i:last-child {
+  width: min(25vw, 360px);
+  height: 40%;
+  top: auto;
+  right: 33vw;
+  bottom: -20%;
+  animation-delay: -8.6s;
+}
+
+.folio-atmosphere-library > svg {
+  width: clamp(280px, 38vw, 520px);
+  height: clamp(280px, 38vw, 520px);
+  bottom: -18%;
+  left: 11vw;
+  color: rgba(23, 24, 21, 0.028);
+  animation: folio-atmosphere-library-open 16s ease-in-out infinite;
+}
+
+.folio-radar {
+  width: min(72vw, 1040px);
+  aspect-ratio: 1;
+  position: absolute;
+  right: -22vw;
+  bottom: -56%;
+}
+
+.folio-radar-grid,
+.folio-radar-sweep {
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.folio-radar-grid {
+  background:
+    repeating-radial-gradient(circle, transparent 0 70px, rgba(23, 24, 21, 0.055) 71px 72px),
+    repeating-conic-gradient(from 7deg, rgba(23, 24, 21, 0.035) 0 0.8deg, transparent 0.8deg 15deg);
+  opacity: 0.82;
+  -webkit-mask-image: radial-gradient(circle, #000 0 58%, transparent 78%);
+  mask-image: radial-gradient(circle, #000 0 58%, transparent 78%);
+  animation: folio-atmosphere-radar-grid 42s linear infinite;
+}
+
+.folio-radar-sweep {
+  background: conic-gradient(from 18deg, transparent 0 86%, rgba(173, 56, 46, 0.04) 88%, rgba(173, 56, 46, 0.2) 93%, transparent 96%);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 12%, #000 13% 61%, transparent 75%);
+  mask-image: radial-gradient(circle, transparent 0 12%, #000 13% 61%, transparent 75%);
+  animation: folio-atmosphere-radar-sweep 4.4s linear infinite;
+}
+
+.folio-radar-hit {
+  --folio-radar-hit-at: 0s;
+  width: 12px;
+  height: 12px;
+  display: block;
+  position: absolute;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  animation: folio-atmosphere-radar-hit 4.4s ease-out infinite;
+  animation-delay: var(--folio-radar-hit-at);
+}
+
+.folio-radar-hit::before,
+.folio-radar-hit::after {
+  content: "";
+  border: 1px solid var(--folio-red);
+  border-radius: 50%;
+  position: absolute;
+  inset: 1px;
+  opacity: 0;
+  animation: folio-atmosphere-radar-ripple 4.4s ease-out infinite;
+  animation-delay: var(--folio-radar-hit-at);
+}
+
+.folio-radar-hit::after {
+  animation-delay: calc(var(--folio-radar-hit-at) + 90ms);
+}
+
+.folio-radar-hit > b {
+  width: 8px;
+  height: 8px;
+  display: block;
+  border: 1px solid var(--folio-red);
+  border-radius: 50%;
+  background: var(--folio-paper-bright);
+  position: absolute;
+  inset: 2px;
+}
+
+.folio-radar-hit em {
+  width: 104px;
+  height: 48px;
+  padding: 12px 11px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  border-top: 1px solid rgba(173, 56, 46, 0.48);
+  border-left: 1px solid rgba(173, 56, 46, 0.48);
+  background: rgba(250, 247, 239, 0.6);
+  position: absolute;
+  left: 20px;
+  top: -18px;
+  opacity: 0;
+  transform-origin: left center;
+  animation: folio-atmosphere-radar-result 4.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-delay: calc(var(--folio-radar-hit-at) + 110ms);
+}
+
+.folio-radar-hit em b {
+  height: 1px;
+  display: block;
+  background: rgba(23, 24, 21, 0.22);
+}
+
+.folio-radar-hit em b:last-child {
+  width: 64%;
+  background: rgba(173, 56, 46, 0.46);
+}
+
+.folio-radar-hit-a {
+  --folio-radar-hit-at: 4.29s;
+  top: calc(29% - 6px);
+  left: calc(44% - 6px);
+}
+
+.folio-radar-hit-b {
+  --folio-radar-hit-at: 3.66s;
+  top: calc(40% - 6px);
+  left: calc(26% - 6px);
+}
+
+.folio-radar-hit-c {
+  --folio-radar-hit-at: 0.24s;
+  top: calc(15% - 6px);
+  left: calc(58% - 6px);
+}
+
+.folio-radar-hit-c em {
+  right: 20px;
+  left: auto;
+  transform-origin: right center;
+}
+
+.folio-atmosphere-governance i:first-child {
+  width: min(44vw, 640px);
+  height: 46%;
+  top: auto;
+  right: -8vw;
+  bottom: -24%;
+  border-radius: 44% 56% 61% 39% / 62% 38% 62% 38%;
+  background: radial-gradient(ellipse at 44% 48%, rgba(68, 95, 82, 0.1), transparent 66%);
+  filter: blur(12px);
+  mix-blend-mode: multiply;
+  animation: folio-atmosphere-review-balance 10s ease-in-out infinite alternate;
+}
+
+.folio-atmosphere-governance i:nth-child(2),
+.folio-atmosphere-governance i:last-child {
+  width: min(37vw, 540px);
+  height: 40%;
+  top: auto;
+  right: auto;
+  bottom: -18%;
+  left: 15vw;
+  border: 0;
+  border-radius: 58% 42% 34% 66% / 42% 61% 39% 58%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(173, 56, 46, 0.11), transparent 65%);
+  filter: blur(12px);
+  mix-blend-mode: multiply;
+  animation: folio-atmosphere-review-balance 9s ease-in-out infinite alternate-reverse;
+}
+
+.folio-atmosphere-governance i:last-child {
+  width: min(24vw, 360px);
+  height: 32%;
+  right: 30vw;
+  bottom: 8%;
+  left: auto;
+  background: radial-gradient(ellipse at 50% 50%, rgba(23, 24, 21, 0.055), transparent 66%);
+  animation-delay: -4.5s;
+}
+
+.folio-atmosphere-dictionary i {
+  width: 112px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(23, 24, 21, 0.1);
+  border-radius: 25px;
+  background: rgba(250, 247, 239, 0.48);
+  box-shadow: 7px 9px 0 rgba(23, 24, 21, 0.018);
+  color: rgba(23, 24, 21, 0.16);
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 22px;
+  font-style: normal;
+  animation: folio-atmosphere-term-card 9s ease-in-out infinite;
+}
+
+.folio-atmosphere-dictionary i::before {
+  content: "Aa";
+}
+
+.folio-atmosphere-dictionary i:first-child {
+  top: auto;
+  right: 36vw;
+  bottom: 25%;
+  transform: rotate(-5deg);
+}
+
+.folio-atmosphere-dictionary i:nth-child(2) {
+  top: auto;
+  right: 20vw;
+  bottom: 9%;
+  transform: rotate(4deg);
+  animation-delay: -3s;
+}
+
+.folio-atmosphere-dictionary i:nth-child(2)::before {
+  content: "译";
+}
+
+.folio-atmosphere-dictionary i:last-child {
+  top: auto;
+  right: 5vw;
+  bottom: 29%;
+  transform: rotate(7deg);
+  animation-delay: -6s;
+}
+
+.folio-atmosphere-dictionary i:last-child::before {
+  content: "↔";
+}
+
+.folio-atmosphere-tasks,
+.folio-atmosphere-files,
+.folio-atmosphere-settings,
+.folio-atmosphere-governance,
+.folio-atmosphere-dictionary,
+.folio-atmosphere-export {
+  height: auto;
+  bottom: 68px;
+}
+
+.folio-atmosphere-tasks i {
+  width: min(27vw, 390px);
+  height: 56%;
+  top: auto;
+  bottom: -20%;
+  left: 7vw;
+  border-top: 1px solid rgba(23, 24, 21, 0.06);
+  border-right: 1px solid rgba(23, 24, 21, 0.035);
+  background:
+    repeating-linear-gradient(180deg, rgba(23, 24, 21, 0.025) 0 1px, transparent 1px 46px),
+    linear-gradient(180deg, rgba(173, 56, 46, 0.028), transparent 72%);
+  clip-path: polygon(0 0, 87% 0, 100% 8%, 100% 100%, 0 100%);
+  animation: folio-atmosphere-queue-depth 8.5s ease-in-out infinite;
+}
+
+.folio-atmosphere-tasks i:nth-child(2) {
+  left: 36.5vw;
+  bottom: -14%;
+  animation-delay: -2.8s;
+}
+
+.folio-atmosphere-tasks i:last-child {
+  left: auto;
+  right: 7vw;
+  bottom: -8%;
+  border-top-color: rgba(68, 95, 82, 0.07);
+  background:
+    repeating-linear-gradient(180deg, rgba(68, 95, 82, 0.026) 0 1px, transparent 1px 46px),
+    linear-gradient(180deg, rgba(68, 95, 82, 0.025), transparent 72%);
+  animation-delay: -5.6s;
+}
+
+.folio-atmosphere-export i {
+  width: min(38vw, 550px);
+  height: 34%;
+  top: auto;
+  right: -4vw;
+  bottom: -18%;
+  border: 1px solid rgba(23, 24, 21, 0.07);
+  background: rgba(250, 247, 239, 0.16);
+  clip-path: polygon(0 16%, 30% 16%, 36% 0, 100% 0, 100% 100%, 0 100%);
+  animation: folio-atmosphere-export-sleeve 9s ease-in-out infinite;
+}
+
+.folio-atmosphere-export i:nth-child(2) {
+  width: min(32vw, 470px);
+  top: auto;
+  right: 23vw;
+  bottom: -25%;
+  border-color: rgba(173, 56, 46, 0.075);
+  animation-delay: -3s;
+}
+
+.folio-atmosphere-export i:last-child {
+  width: min(27vw, 390px);
+  top: auto;
+  right: auto;
+  bottom: -30%;
+  left: 9vw;
+  animation-delay: -6s;
+}
+
+.folio-atmosphere-files i {
+  width: min(42vw, 610px);
+  height: 46%;
+  top: auto;
+  right: -9vw;
+  bottom: -22%;
+  border: 1px solid rgba(23, 24, 21, 0.05);
+  background: linear-gradient(135deg, rgba(250, 247, 239, 0.22), rgba(229, 223, 209, 0.08));
+  clip-path: polygon(0 13%, 31% 13%, 37% 0, 100% 0, 100% 100%, 0 100%);
+  box-shadow: -18px -16px 0 rgba(23, 24, 21, 0.012);
+  animation: folio-atmosphere-volume-shift 10s ease-in-out infinite;
+}
+
+.folio-atmosphere-files i:nth-child(2) {
+  width: min(36vw, 520px);
+  right: 17vw;
+  bottom: -30%;
+  animation-delay: -3.3s;
+}
+
+.folio-atmosphere-files i:last-child {
+  width: min(30vw, 440px);
+  right: auto;
+  bottom: -35%;
+  left: 8vw;
+  border-color: rgba(173, 56, 46, 0.045);
+  animation-delay: -6.6s;
+}
+
+.folio-atmosphere-settings i {
+  display: none;
+}
+
+.folio-atmosphere-settings i:first-child {
+  width: min(62vw, 940px);
+  height: 48%;
+  display: block;
+  right: -7vw;
+  bottom: -12%;
+  border: 1px solid rgba(23, 24, 21, 0.055);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 63px, rgba(23, 24, 21, 0.035) 63px 64px),
+    repeating-linear-gradient(180deg, transparent 0 43px, rgba(23, 24, 21, 0.035) 43px 44px),
+    linear-gradient(135deg, rgba(250, 247, 239, 0.22), rgba(229, 223, 209, 0.04));
+  clip-path: polygon(0 0, calc(100% - 62px) 0, 100% 62px, 100% 100%, 0 100%);
+  opacity: 0.48;
+  animation: folio-atmosphere-settings-sheet 14s ease-in-out infinite alternate;
+}
+
+.folio *,
+.folio *::before,
+.folio *::after {
+  box-sizing: border-box;
+}
+
+.folio * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(173, 56, 46, 0.56) transparent;
+}
+
+.folio *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.folio *::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid rgba(23, 24, 21, 0.08);
+}
+
+.folio *::-webkit-scrollbar-thumb {
+  min-height: 46px;
+  border: 3px solid transparent;
+  border-radius: 0;
+  background: rgba(173, 56, 46, 0.55);
+  background-clip: padding-box;
+}
+
+.folio *::-webkit-scrollbar-thumb:hover {
+  background: var(--folio-red);
+  background-clip: padding-box;
+}
+
+.folio button,
+.folio input,
+.folio textarea {
+  font: inherit;
+}
+
+.folio button {
+  cursor: pointer;
+}
+
+.folio input,
+.folio textarea {
+  appearance: none;
+  border-radius: 0;
+}
+
+.folio input[type="search"]::-webkit-search-cancel-button,
+.folio input[type="number"]::-webkit-inner-spin-button,
+.folio input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  display: none;
+}
+
+.folio button:focus-visible,
+.folio a:focus-visible,
+.folio textarea:focus-visible {
+  outline: 0;
+  box-shadow:
+    0 0 0 1px var(--folio-paper-bright),
+    0 0 0 3px var(--folio-red);
+}
+
+.folio button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}

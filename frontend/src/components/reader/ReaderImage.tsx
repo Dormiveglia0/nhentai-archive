@@ -1,5 +1,6 @@
 import { CSSProperties, forwardRef, useState } from "react";
 import { RotateCw } from "lucide-react";
+import "./ReaderPanels.css";
 
 type ReaderImageProps = {
   src: string;

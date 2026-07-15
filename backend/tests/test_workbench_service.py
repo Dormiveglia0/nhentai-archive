@@ -88,6 +88,8 @@ def test_overview_reflects_real_works_jobs_and_progress(tmp_path):
 
     assert data["library"]["total"] == 1
     assert data["library"]["reading"] == 1
+    assert data["governance"]["unreviewed"] == 1
+    assert data["governance"]["automatic_issues"] == 1
     assert data["jobs"]["failed"] == 1
     assert data["jobs"]["completed"] == 1
     assert len(data["jobs"]["failed_recent"]) == 1

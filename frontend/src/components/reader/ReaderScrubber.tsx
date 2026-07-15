@@ -1,7 +1,8 @@
-import { PointerEvent as ReactPointerEvent, useCallback, useRef, useState } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { Presence, FadeInOut } from "../../lib/motion";
 import { clamp } from "./readerHelpers";
+import "./ReaderToolbar.css";
 
 type ReaderScrubberProps = {
   visible: boolean;
@@ -17,6 +18,13 @@ export function ReaderScrubber({ visible, pageIndex, pageCount, onJump, onScrubC
   const lastEmitted = useRef(pageIndex);
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState(pageIndex);
+
+  useEffect(() => {
+    if (!dragging) {
+      lastEmitted.current = pageIndex;
+      setPreview(pageIndex);
+    }
+  }, [dragging, pageIndex]);
 
   const pageFromClientX = useCallback(
     (clientX: number) => {
@@ -54,11 +62,23 @@ export function ReaderScrubber({ visible, pageIndex, pageCount, onJump, onScrubC
     if (!dragging) return;
     setDragging(false);
     onScrubChange(false);
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
   const shownPage = dragging ? preview : pageIndex;
   const fill = pageCount > 1 ? ((shownPage - 1) / (pageCount - 1)) * 100 : 0;
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 5 : 1;
+    let next: number | null = null;
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown") next = shownPage - step;
+    if (event.key === "ArrowRight" || event.key === "ArrowUp") next = shownPage + step;
+    if (event.key === "Home") next = 1;
+    if (event.key === "End") next = pageCount;
+    if (next === null) return;
+    event.preventDefault();
+    emit(clamp(next, 1, pageCount));
+  };
 
   return (
     <Presence>
@@ -73,12 +93,17 @@ export function ReaderScrubber({ visible, pageIndex, pageCount, onJump, onScrubC
               aria-valuemin={1}
               aria-valuemax={pageCount}
               aria-valuenow={shownPage}
+              aria-valuetext={`第 ${shownPage} 页，共 ${pageCount} 页`}
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
               onMouseEnter={() => onScrubChange(true)}
               onMouseLeave={() => !dragging && onScrubChange(false)}
+              onFocus={() => onScrubChange(true)}
+              onBlur={() => !dragging && onScrubChange(false)}
             >
               <div className="reader-scrubber-rail">
                 <div className="reader-scrubber-fill" style={{ width: `${fill}%` }} />

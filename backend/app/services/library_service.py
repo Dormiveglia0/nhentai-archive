@@ -163,6 +163,13 @@ class LibraryService:
             "num_pages": num_pages,
         }
 
+    def work(self, work_id: int) -> dict[str, Any] | None:
+        rows = self.db.fetchall(
+            f"SELECT {WORK_COLUMNS} {WORK_JOINS} WHERE w.id = ?",
+            (work_id,),
+        )
+        return self._finalize(rows)[0] if rows else None
+
     def recent_added(self, limit: int = 12) -> dict[str, Any]:
         return {"result": self._top("1 = 1", [], "w.created_at DESC, w.id DESC", limit)}
 

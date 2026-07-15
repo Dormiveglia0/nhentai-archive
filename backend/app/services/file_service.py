@@ -209,13 +209,17 @@ class FileMaintenanceService:
         result = entries[start : start + per_page]
         for entry in result:
             if entry["kind"] == "work":
-                entry["tags"] = self._work_tags_display(int(entry["work_id"]))
+                tag_items = self._work_tags(int(entry["work_id"]))
+                entry["tag_items"] = tag_items
+                entry["tags"] = [tag["display"] for tag in tag_items]
         return {"result": result, "total": total, "page": page, "per_page": per_page}
 
-    def _work_tags_display(self, work_id: int, limit: int = 12) -> list[str]:
+    def _work_tags(self, work_id: int, limit: int = 12) -> list[dict[str, Any]]:
         rows = self.db.fetchall(
             """
-            SELECT COALESCE(d.zh_name, wt.remote_name, wt.remote_slug) AS display
+            SELECT wt.remote_tag_id AS id, wt.tag_type AS type, wt.remote_name AS name,
+                   wt.remote_slug AS slug,
+                   COALESCE(d.zh_name, wt.remote_name, wt.remote_slug) AS display
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
             WHERE wt.work_id = ?
@@ -224,7 +228,7 @@ class FileMaintenanceService:
             """,
             (work_id, limit),
         )
-        return [str(r["display"]) for r in rows if r.get("display")]
+        return [row for row in rows if row.get("display")]
 
     def duplicates(self) -> dict[str, Any]:
         """Real duplicate detection over stored source files and gallery ids.
@@ -280,7 +284,15 @@ class FileMaintenanceService:
         reclaim = sum(p.stat().st_size for p in existing)
         work_tags = self.db.fetchone("SELECT COUNT(*) AS n FROM work_tags WHERE work_id=?", (work_id,))["n"]
         has_progress = self.db.fetchone("SELECT 1 FROM reader_progress WHERE work_id=?", (work_id,)) is not None
-        has_governance = self.db.fetchone("SELECT 1 FROM work_metadata WHERE work_id=?", (work_id,)) is not None
+        has_governance = self.db.fetchone(
+            """
+            SELECT 1 FROM work_metadata WHERE work_id = ?
+            UNION ALL
+            SELECT 1 FROM governance_reviews WHERE work_id = ?
+            LIMIT 1
+            """,
+            (work_id, work_id),
+        ) is not None
         warnings: list[str] = []
         if has_progress:
             warnings.append("has_progress")
@@ -354,13 +366,24 @@ class FileMaintenanceService:
                     errors.append({"target": target, "code": "already_gone", "message": "作品不存在。"})
                     continue
                 paths = self._work_files(work_id)  # gather BEFORE cascade removes work_files rows
-                self.db.execute("DELETE FROM works WHERE id=?", (work_id,))  # ON DELETE CASCADE clears all references
-                removed_works += 1
+                work_errors: list[dict[str, Any]] = []
                 for path in paths:
-                    freed = self._unlink(path, target, errors)
+                    freed = self._unlink(path, target, work_errors)
                     if freed > 0:
                         deleted_files += 1
                         reclaimed_bytes += freed
+                if work_errors:
+                    errors.extend(work_errors)
+                    errors.append(
+                        {
+                            "target": target,
+                            "code": "work_retained",
+                            "message": "部分文件未能删除，作品元数据已保留以便恢复或重试。",
+                        }
+                    )
+                    continue
+                self.db.execute("DELETE FROM works WHERE id=?", (work_id,))  # ON DELETE CASCADE clears all references
+                removed_works += 1
             elif kind in ("orphan", "stale"):
                 path = self._abs(target.get("path"))
                 if path is None:

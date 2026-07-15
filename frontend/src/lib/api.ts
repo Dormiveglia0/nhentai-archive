@@ -241,12 +241,27 @@ export type LibrarySearchResult = {
 export type GovernanceReason = {
   code: string;
   label: string;
+  detail?: string;
   severity: "warning" | "danger" | string;
+};
+
+export type GovernanceReviewState = "unreviewed" | "stale" | "approved";
+
+export type GovernanceReview = {
+  state: GovernanceReviewState;
+  reviewed_at?: string | null;
+  note?: string | null;
+  history?: Array<{
+    action: "approve" | "reopen" | string;
+    note?: string | null;
+    created_at?: string | null;
+  }>;
 };
 
 export type GovernanceQueueItem = {
   work: LibraryWork;
   reasons: GovernanceReason[];
+  review: GovernanceReview;
   completeness_percent: number;
   updated_at?: string | null;
 };
@@ -255,10 +270,16 @@ export type GovernanceQueue = {
   result: GovernanceQueueItem[];
   summary: {
     total: number;
+    unreviewed: number;
+    stale: number;
+    approved: number;
+    automatic_issues: number;
     missing_metadata: number;
     untagged: number;
+    dictionary_unmapped: number;
     dictionary_review: number;
     dictionary_conflict: number;
+    missing_source: number;
     missing_comicinfo: number;
     missing_cover: number;
   };
@@ -309,9 +330,18 @@ export type GovernanceAggregate = {
   work: LibraryWork;
   files: GovernanceFile[];
   metadata: { fields: MetadataFieldDiff[] };
-  tags: { groups: GovernanceTagGroup[]; summary: { confirmed: number; pending: number; conflicts: number } };
-  dictionary: { matched: number; pending: number; conflicts: number };
+  tags: { groups: GovernanceTagGroup[]; summary: { confirmed: number; preserved: number; unmapped: number; review: number; pending: number; conflicts: number } };
+  dictionary: { matched: number; preserved: number; unmapped: number; review: number; pending: number; conflicts: number };
   exports: unknown[];
+  automatic_issues: GovernanceReason[];
+  checks: Array<{
+    key: "metadata" | "dictionary" | "files" | string;
+    label: string;
+    description: string;
+    status: "passed" | "warning" | "danger" | string;
+    issues: GovernanceReason[];
+  }>;
+  review: GovernanceReview;
   recommended_actions: Array<{ code: string; label: string }>;
   completeness_percent: number;
 };
@@ -345,6 +375,11 @@ export type GovernanceTranslateResult = {
   result: GovernanceTranslateSuggestion[];
   skipped: Array<{ field: string; label: string; reason: string }>;
   provider: string | null;
+};
+
+export type GovernanceReviewResult = {
+  review: GovernanceReview;
+  governance: GovernanceAggregate;
 };
 
 export type GovernanceBulkActions = {
@@ -469,6 +504,7 @@ export type FileEntry = {
   remote_gallery_id?: number | null;
   updated_at?: string | null;
   tags?: string[];
+  tag_items?: LibraryTag[];
   // loose entries
   path?: string;
   name?: string;
@@ -642,10 +678,16 @@ export type WorkbenchOverview = {
   };
   governance: {
     total: number;
+    unreviewed: number;
+    stale: number;
+    approved: number;
+    automatic_issues: number;
     missing_metadata: number;
     untagged: number;
+    dictionary_unmapped: number;
     dictionary_review: number;
     dictionary_conflict: number;
+    missing_source: number;
     missing_comicinfo: number;
     missing_cover: number;
   };
@@ -845,7 +887,7 @@ export const api = {
     query.set("unimported_only", String(Boolean(params.unimported_only)));
     return cachedDiscoverRequest<{
       result: GallerySummary[];
-      total: number;
+      total: number | null;
       num_pages: number;
       per_page: number;
       reason?: string;
@@ -969,6 +1011,12 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ fields: fields ?? null })
     }),
+  reviewWorkGovernance: (id: number, action: "approve" | "reopen", note?: string) =>
+    request<GovernanceReviewResult>(`/api/works/${id}/governance/review`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ action, note: note?.trim() || null })
+    }),
   governanceBulkPreview: (work_ids: number[], actions: GovernanceBulkActions) =>
     request<GovernanceBulkPreview>("/api/governance/bulk/preview", {
       method: "POST",
@@ -1038,7 +1086,7 @@ export const api = {
     }),
   filesDuplicates: () => request<FileDuplicates>("/api/files/duplicates"),
   works: () => request<{ result: Work[] }>("/api/works"),
-  work: (id: number) => request<Work>(`/api/works/${id}`),
+  work: (id: number) => request<LibraryWork>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
   readerState: (id: number) => request<ReaderState>(`/api/works/${id}/reader-state`),
   updateReaderState: (id: number, pageIndex: number, completed = false) =>

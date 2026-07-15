@@ -1,279 +1,170 @@
-import { Info, Library } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
 
-import { api, LibrarySummary, LibraryTag, LibraryTagFilter, LibraryWork } from "../../lib/api";
-import { Stagger, StaggerItem } from "../../lib/motion";
-import { ContinueReadingRow } from "./ContinueReadingRow";
+import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
+import { navigate } from "../../lib/navigation";
 import { IconPager } from "../discover/IconPager";
+import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
+import { ContinueReadingRow } from "./ContinueReadingRow";
 import { LibraryBatchTray } from "./LibraryBatchTray";
 import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
-import { LibraryToolbar, LibraryView } from "./LibraryToolbar";
+import { LibraryToolbar } from "./LibraryToolbar";
 import { WorkCard } from "./WorkCard";
 import { WorkInspector } from "./WorkInspector";
+import { useLibraryState } from "./useLibraryState";
+import "./LibraryPage.css";
 
-type Props = {
-  blurCovers: boolean;
-};
-
-const PER_PAGE = 24;
-
-export function LibraryPage({ blurCovers }: Props) {
-  const [summary, setSummary] = useState<LibrarySummary | null>(null);
-  const [continueReading, setContinueReading] = useState<LibraryWork[]>([]);
-  const [recentAdded, setRecentAdded] = useState<LibraryWork[]>([]);
-
-  const [works, setWorks] = useState<LibraryWork[]>([]);
-  const [total, setTotal] = useState(0);
-  const [numPages, setNumPages] = useState(1);
-  const [selected, setSelected] = useState<LibraryWork | null>(null);
-
-  const [q, setQ] = useState("");
-  const [language, setLanguage] = useState("all");
-  const [readStatus, setReadStatus] = useState("all");
-  const [source, setSource] = useState("all");
-  const [sort, setSort] = useState("recent_updated");
-  const [tags, setTags] = useState<LibraryTagFilter[]>([]);
-  const [view, setView] = useState<LibraryView>("grid");
-  const [page, setPage] = useState(1);
-  const [reloadKey, setReloadKey] = useState(0);
-
-  const [multiSelect, setMultiSelect] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const token = useRef(0);
-
-  const filtersActive =
-    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || tags.length > 0;
-
-  const loadOverview = useCallback(async () => {
-    try {
-      const [summaryPayload, cont, added] = await Promise.all([
-        api.librarySummary(),
-        api.libraryContinueReading(12),
-        api.libraryRecentAdded(12),
-      ]);
-      setSummary(summaryPayload);
-      setContinueReading(cont.result);
-      setRecentAdded(added.result);
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadOverview();
-  }, [loadOverview]);
-
-  useEffect(() => {
-    const current = ++token.current;
-    setLoading(true);
-    setError(null);
-    api
-      .librarySearch({
-        q,
-        page,
-        per_page: PER_PAGE,
-        sort,
-        read_status: readStatus,
-        source,
-        language,
-        tag_ids: tags.map((tag) => tag.id),
-      })
-      .then((payload) => {
-        if (token.current !== current) return;
-        setWorks(payload.result);
-        setTotal(payload.total);
-        setNumPages(payload.num_pages);
-        setSelected((prev) => {
-          if (prev && payload.result.some((work) => work.id === prev.id)) return prev;
-          return payload.result[0] ?? null;
-        });
-      })
-      .catch((exc) => {
-        if (token.current !== current) return;
-        setError(exc instanceof Error ? exc.message : String(exc));
-        setWorks([]);
-        setTotal(0);
-        setNumPages(1);
-      })
-      .finally(() => {
-        if (token.current === current) setLoading(false);
-      });
-  }, [q, page, sort, readStatus, source, language, tags, reloadKey]);
-
-  const reload = useCallback(() => {
-    setReloadKey((value) => value + 1);
-    void loadOverview();
-  }, [loadOverview]);
-
-  function toggleMultiSelect() {
-    setMultiSelect((on) => !on);
-    setSelectedIds(new Set());
-  }
-
-  function toggleId(id: number) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function selectAllOnPage() {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      works.forEach((work) => next.add(work.id));
-      return next;
-    });
-  }
-
-  function afterBulk() {
-    setSelectedIds(new Set());
-    reload();
-  }
-
-  function resetFilters() {
-    setQ("");
-    setLanguage("all");
-    setReadStatus("all");
-    setSource("all");
-    setTags([]);
-    setPage(1);
-  }
-
-  function changeFilter(apply: () => void) {
-    apply();
-    setPage(1);
-  }
-
-  function pickTag(tag: LibraryTag) {
-    if (tags.some((item) => item.id === tag.id)) return;
-    changeFilter(() => setTags([...tags, { id: tag.id, type: tag.type, name: tag.name, slug: tag.slug, display: tag.display, count: 0 }]));
-  }
-
-  const emptyLibrary = summary?.total === 0;
+export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
+  const library = useLibraryState();
 
   return (
-    <section className="page library-page">
-      <div className="hero">
-        <div>
-          <h1>我的库</h1>
-          <p>专属的同人志档案馆，所有条目都来自真实入库的 CBZ 与本地索引。</p>
-          <LibrarySummaryStrip summary={summary} />
-        </div>
-        <div className="sketch" aria-hidden="true" />
-      </div>
+    <section className="folio-page-body folio-library-page">
+      <LibrarySummaryStrip summary={library.summary} />
 
       <LibraryToolbar
-        q={q}
-        onQ={(value) => changeFilter(() => setQ(value))}
-        language={language}
-        onLanguage={(value) => changeFilter(() => setLanguage(value))}
-        readStatus={readStatus}
-        onReadStatus={(value) => changeFilter(() => setReadStatus(value))}
-        source={source}
-        onSource={(value) => changeFilter(() => setSource(value))}
-        sort={sort}
-        onSort={(value) => changeFilter(() => setSort(value))}
-        tags={tags}
-        onTags={(next) => changeFilter(() => setTags(next))}
-        view={view}
-        onView={setView}
-        summary={summary}
-        canReset={filtersActive}
-        onReset={resetFilters}
+        q={library.q}
+        onQ={library.setQ}
+        language={library.language}
+        onLanguage={library.setLanguage}
+        readStatus={library.readStatus}
+        onReadStatus={library.setReadStatus}
+        source={library.source}
+        onSource={library.setSource}
+        sort={library.sort}
+        onSort={library.setSort}
+        tags={library.tags}
+        onTags={library.setTags}
+        view={library.view}
+        onView={library.setView}
+        summary={library.summary}
+        canReset={library.filtersActive}
+        onReset={library.resetFilters}
       />
 
-      {error ? <div className="notice error">{error}</div> : null}
-
-      {emptyLibrary && !error ? (
-        <div className="empty-state">
-          <Library size={26} />
-          <strong>库里还没有作品</strong>
-          <p>先在发现页导入真实 CBZ，导入完成后即可在这里筛选、继续阅读与管理。</p>
+      {library.error ? (
+        <div className="folio-library-error" role="alert">
+          <AlertTriangle size={17} />
+          <span>{library.error}</span>
         </div>
       ) : null}
 
-      {!emptyLibrary && !filtersActive ? (
-        <>
-          <ContinueReadingRow title="继续阅读" works={continueReading} blurCovers={blurCovers} />
-          <ContinueReadingRow title="最近添加" works={recentAdded} blurCovers={blurCovers} />
-        </>
+      {library.emptyLibrary && !library.error ? (
+        <section className="folio-ruled-panel folio-library-empty-library">
+          <FolioEmptyState
+            icon={Library}
+            title="库里还没有作品"
+            copy="先从发现页导入真实作品。导入完成后，这里会显示馆藏、阅读进度、标签与文件状态。"
+            action="前往发现页"
+            onAction={() => navigate({ name: "discover" })}
+          />
+        </section>
       ) : null}
 
-      {!emptyLibrary ? (
-        <div className="library-layout">
-          <div className="library-results">
-            <div className="library-results-head">
-              <span>
-                {loading ? "读取中…" : `共 ${total.toLocaleString()} 部作品`}
-                {filtersActive ? " · 已筛选" : ""}
-              </span>
-              <div className="library-results-tools">
-                {multiSelect ? (
-                  <button type="button" className="library-batch-link" onClick={selectAllOnPage} disabled={works.length === 0}>
+      {!library.emptyLibrary && !library.filtersActive ? (
+        <div className="folio-library-shelves">
+          <ContinueReadingRow title="继续阅读" works={library.continueReading} blurCovers={blurCovers} />
+          <ContinueReadingRow title="最近添加" works={library.recentAdded} blurCovers={blurCovers} />
+        </div>
+      ) : null}
+
+      {!library.emptyLibrary ? (
+        <div className="folio-library-browser">
+          <section className="folio-library-results" aria-busy={library.loading}>
+            <header className="folio-library-results-head">
+              <FolioPanelHeading
+                title="馆藏索引"
+                description={library.filtersActive ? "以下结果来自当前真实筛选条件。" : "浏览所有已入库并完成本地索引的作品。"}
+              />
+              <div className="folio-library-result-controls">
+                <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>
+                <button className="folio-library-history-link" type="button" onClick={() => navigate({ name: "history" })}>
+                  <Clock3 size={14} />
+                  <span>阅读历史</span>
+                </button>
+                {library.multiSelect ? (
+                  <button type="button" onClick={library.selectAllOnPage} disabled={library.works.length === 0}>
                     选中本页
                   </button>
                 ) : null}
                 <button
                   type="button"
-                  className={`library-batch-toggle${multiSelect ? " is-on" : ""}`}
-                  onClick={toggleMultiSelect}
-                  aria-pressed={multiSelect}
+                  className={library.multiSelect ? "is-active" : ""}
+                  onClick={library.toggleMultiSelect}
+                  aria-pressed={library.multiSelect}
                 >
-                  {multiSelect ? "退出多选" : "多选"}
+                  {library.multiSelect ? "退出多选" : "批量选择"}
                 </button>
               </div>
-            </div>
+            </header>
 
-            {multiSelect ? (
-              <LibraryBatchTray
-                selectedIds={Array.from(selectedIds)}
-                onClear={() => setSelectedIds(new Set())}
-                onDone={afterBulk}
-              />
-            ) : null}
+            <AnimatePresence initial={false}>
+              {library.multiSelect ? (
+                <m.div
+                  key="batch"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: duration.fast, ease: ease.standard }}
+                  className="folio-library-batch-wrap"
+                >
+                  <LibraryBatchTray
+                    selectedIds={Array.from(library.selectedIds)}
+                    onClear={library.clearSelectedIds}
+                    onDone={library.afterBulkAction}
+                  />
+                </m.div>
+              ) : null}
+            </AnimatePresence>
 
-            {!loading && works.length === 0 && !error ? (
-              <div className="empty-state compact">
-                <Info size={22} />
-                <strong>没有符合条件的作品</strong>
-                <p>调整筛选条件或点击重置查看全部馆藏。</p>
+            {!library.loading && library.works.length === 0 && !library.error ? (
+              <div className="folio-library-empty-results">
+                <FolioEmptyState
+                  icon={Info}
+                  title="没有符合条件的作品"
+                  copy="调整搜索、标签或筛选条件，或者重置后查看全部真实馆藏。"
+                  action="重置筛选"
+                  onAction={library.resetFilters}
+                />
               </div>
             ) : (
-              <Stagger
-                key={`${view}:${page}:${works.length}:${works[0]?.id ?? "none"}`}
-                className={view === "grid" ? "library-grid" : "library-list"}
-              >
-                {works.map((work) => (
-                  <StaggerItem key={work.id} className="library-card-cell">
-                    <WorkCard
-                      work={work}
-                      view={view}
-                      blurCovers={blurCovers}
-                      selected={selected?.id === work.id}
-                      onSelect={() => setSelected(work)}
-                      onPickTag={pickTag}
-                      multiSelect={multiSelect}
-                      checked={selectedIds.has(work.id)}
-                      onToggle={() => toggleId(work.id)}
-                    />
-                  </StaggerItem>
-                ))}
-              </Stagger>
+              <div className={library.loading ? "folio-library-cards is-loading" : "folio-library-cards"}>
+                <Stagger
+                  key={`${library.view}:${library.page}:${library.works.length}:${library.works[0]?.id ?? "none"}`}
+                  className={library.view === "grid" ? "folio-library-grid" : "folio-library-list"}
+                >
+                  {library.works.map((work) => (
+                    <StaggerItem key={work.id} className="folio-library-card-cell">
+                      <WorkCard
+                        work={work}
+                        view={library.view}
+                        blurCovers={blurCovers}
+                        selected={library.selected?.id === work.id}
+                        onSelect={() => library.setSelected(work)}
+                        onPickTag={library.pickTag}
+                        multiSelect={library.multiSelect}
+                        checked={library.selectedIds.has(work.id)}
+                        onToggle={() => library.toggleSelectedId(work.id)}
+                      />
+                    </StaggerItem>
+                  ))}
+                </Stagger>
+              </div>
             )}
 
-            <IconPager page={page} totalPages={numPages} loading={loading} onPage={setPage} />
-          </div>
+            <IconPager
+              className="folio-library-pager"
+              page={library.page}
+              totalPages={library.numPages}
+              loading={library.loading}
+              onPage={library.setPage}
+            />
+          </section>
 
           <WorkInspector
-            work={selected}
+            work={library.selected}
             blurCovers={blurCovers}
-            onClose={() => setSelected(null)}
-            onPickTag={pickTag}
+            onClose={() => library.setSelected(null)}
+            onPickTag={library.pickTag}
           />
         </div>
       ) : null}

@@ -20,29 +20,29 @@ export function GovernanceActionBar({
   onReload: () => Promise<void>;
 }) {
   return (
-    <div className="governance-actionbar">
-      <button className="governance-action primary" type="button" onClick={() => void onSave()} disabled={saving || (!writeBack && changedCount === 0)}>
+    <div className="folio-governance-actions">
+      <button className="folio-governance-action is-primary" type="button" onClick={() => void onSave()} disabled={saving || (!writeBack && changedCount === 0)}>
         <Save size={17} />
         {saving ? "保存中..." : writeBack && !changedCount ? "回写源文件" : `保存修改${changedCount ? ` (${changedCount})` : ""}`}
       </button>
-      <label className="governance-writeback">
+      <label className="folio-governance-writeback">
         <input
           type="checkbox"
           checked={writeBack}
           onChange={(event) => onWriteBackChange(event.target.checked)}
         />
-        同时回写源文件（ComicInfo）
-        <span className="governance-writeback-hint">将就地改写源 CBZ，不可撤销</span>
+        <i aria-hidden="true"><span /></i>
+        <span><strong>同时回写 ComicInfo</strong><small>就地改写源 CBZ，不可撤销</small></span>
       </label>
-      <button className="governance-action" type="button" onClick={() => navigate({ name: "dictionary" })}>
+      <button className="folio-governance-action" type="button" onClick={() => navigate({ name: "dictionary" })}>
         <Tags size={16} />
         管理词典
       </button>
-      <button className="governance-action" type="button" onClick={() => navigate({ name: "export", workId })}>
+      <button className="folio-governance-action" type="button" onClick={() => navigate({ name: "export", workId })}>
         <Download size={16} />
         进入导出
       </button>
-      <button className="governance-action" type="button" onClick={() => void onReload()}>
+      <button className="folio-governance-action" type="button" onClick={() => void onReload()}>
         <RefreshCw size={16} />
         重新读取
       </button>

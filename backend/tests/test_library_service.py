@@ -117,6 +117,21 @@ def test_search_filters_and_pagination(tmp_path):
     assert len(page1["result"]) == 1
 
 
+def test_work_includes_reader_metadata_and_real_tags(tmp_path):
+    settings, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    work_id = _import_work(archive, tmp_path, "reader", "Reader Work", "remote", 111)
+    _link_tags(db, work_id, [
+        {"id": 10, "type": "artist", "name": "author", "slug": "author"},
+        {"id": 20, "type": "tag", "name": "story", "slug": "story"},
+    ])
+
+    work = library.work(work_id)
+
+    assert work is not None
+    assert [(tag["type"], tag["display"]) for tag in work["tags"]] == [("artist", "author"), ("tag", "story")]
+
+
 def test_search_read_status_filter(tmp_path):
     settings, db, archive = _setup(tmp_path)
     library = LibraryService(db)

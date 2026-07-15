@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
 import type { Job, JobLog } from "../../lib/api";
@@ -57,12 +57,16 @@ export function useTasksState(): TasksViewModel {
   const [actingId, setActingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const jobsRequestRef = useRef(0);
+  const logsRequestRef = useRef(0);
 
-  const load = useCallback(async (preferredFocusId?: number | null, initial = false) => {
+  const load = useCallback(async (preferredFocusId?: number | null, initial = false, showRefreshing = false) => {
+    const requestId = ++jobsRequestRef.current;
     if (initial) setLoading(true);
-    else setRefreshing(true);
+    else if (showRefreshing) setRefreshing(true);
     try {
       const payload = await api.jobs();
+      if (requestId !== jobsRequestRef.current) return;
       setJobs(payload.result);
       setError(null);
       setFocusId((current) => {
@@ -72,14 +76,17 @@ export function useTasksState(): TasksViewModel {
         return payload.result[0]?.id ?? null;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === jobsRequestRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === jobsRequestRef.current) {
+        setLoading(false);
+      }
+      if (showRefreshing) setRefreshing(false);
     }
   }, []);
 
   const loadLogs = useCallback(async (jobId: number | null) => {
+    const requestId = ++logsRequestRef.current;
     if (!jobId) {
       setLogs([]);
       return;
@@ -87,27 +94,38 @@ export function useTasksState(): TasksViewModel {
     setLogsLoading(true);
     try {
       const payload = await api.jobLogs(jobId);
-      setLogs(payload.result);
+      if (requestId === logsRequestRef.current) setLogs(payload.result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (requestId === logsRequestRef.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLogsLoading(false);
+      if (requestId === logsRequestRef.current) setLogsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let alive = true;
-    const loadIfAlive = async (initial = false) => {
-      if (!alive) return;
-      await load(undefined, initial);
-    };
-    void loadIfAlive(true);
-    const timer = window.setInterval(() => void loadIfAlive(), 2500);
+    void load(undefined, true);
     return () => {
-      alive = false;
-      window.clearInterval(timer);
+      jobsRequestRef.current += 1;
+      logsRequestRef.current += 1;
     };
   }, [load]);
+
+  const hasActiveJobs = jobs.some((job) => job.status === "queued" || job.status === "running" || job.status === "cancelling");
+
+  useEffect(() => {
+    if (!hasActiveJobs) return;
+    let cancelled = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      if (document.visibilityState === "visible") await load();
+      if (!cancelled) timer = window.setTimeout(poll, 2500);
+    };
+    timer = window.setTimeout(poll, 2500);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [hasActiveJobs, load]);
 
   const visibleJobs = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -211,6 +229,7 @@ export function useTasksState(): TasksViewModel {
 
   const deleteJob = useCallback(
     async (id: number) => {
+      if (!window.confirm(`确定删除任务 #${id} 的记录吗？此操作不可撤销。`)) return;
       setActingId(id);
       setError(null);
       setNotice(null);
@@ -239,7 +258,7 @@ export function useTasksState(): TasksViewModel {
     }
   }, [load]);
 
-  const refresh = useCallback(() => load(focusId), [focusId, load]);
+  const refresh = useCallback(() => load(focusId, false, true), [focusId, load]);
 
   return {
     jobs,

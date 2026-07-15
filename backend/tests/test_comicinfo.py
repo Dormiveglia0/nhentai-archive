@@ -29,7 +29,11 @@ def test_build_fields_and_to_xml_from_aggregate():
             {"field": "artist", "working_value": "tonari", "current_value": None, "source_value": None},
         ]},
         "tags": {"groups": [
-            {"tags": [{"display": "雨", "name": "rain", "slug": "rain"}]},
+            {"tags": [
+                {"type": "artist", "display": "tonari", "name": "tonari", "slug": "tonari"},
+                {"type": "language", "display": "日本語", "name": "japanese", "slug": "japanese"},
+                {"type": "tag", "display": "雨", "name": "rain", "slug": "rain"},
+            ]},
         ]},
     }
     fields = comicinfo.build_fields(aggregate)

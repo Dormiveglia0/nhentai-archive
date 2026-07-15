@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { ReaderImage } from "./ReaderImage";
-import { Fit, ReaderPageItem } from "./readerHelpers";
+import type { Fit, ReaderPageItem } from "./readerHelpers";
 
 type WebtoonViewProps = {
   pages: ReaderPageItem[];
@@ -13,7 +13,6 @@ type WebtoonViewProps = {
 };
 
 export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome, emptyHint }: WebtoonViewProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Map<number, HTMLImageElement>>(new Map());
   // -1 哨兵:确保进入 webtoon 时下方“外部跳页”effect 至少滚动一次到当前页,
   // 否则初值等于 pageIndex 会被提前 return,列表停在顶部并把进度回写成第 1 页。
@@ -22,6 +21,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   // 观测视口中部的页面，回写当前页
   useEffect(() => {
     if (pages.length === 0) return;
+    const root = itemRefs.current.values().next().value?.closest<HTMLElement>(".reader-viewport") ?? null;
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -34,7 +34,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
           onReachPage(idx);
         }
       },
-      { root: null, threshold: [0.5], rootMargin: "-20% 0px -20% 0px" }
+      { root, threshold: 0, rootMargin: "-45% 0px -45% 0px" }
     );
     itemRefs.current.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
@@ -55,7 +55,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   }
 
   return (
-    <div className="reader-webtoon" ref={containerRef} onClick={onToggleChrome}>
+    <div className="reader-webtoon" onClick={onToggleChrome}>
       {pages.map((page) => (
         <ReaderImage
           key={page.key}

@@ -1,11 +1,18 @@
+import { AlertTriangle, PenLine } from "lucide-react";
+
 import { FadeIn } from "../../lib/motion";
+import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { GovernanceActionBar } from "./GovernanceActionBar";
 import { GovernanceBulkBar } from "./GovernanceBulkBar";
 import { GovernanceQueueRail } from "./GovernanceQueueRail";
+import { GovernanceReviewPanel } from "./GovernanceReviewPanel";
+import { GovernanceSourceRail } from "./GovernanceSourceRail";
 import { GovernanceTagBoard } from "./GovernanceTagBoard";
 import { GovernanceWorkHeader } from "./GovernanceWorkHeader";
 import { MetadataEditor } from "./MetadataEditor";
 import { useGovernanceState } from "./useGovernanceState";
+import "./GovernancePage.css";
+import "./GovernanceEditor.css";
 
 type Props = {
   initialWorkId?: number;
@@ -16,29 +23,34 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
   const gov = useGovernanceState(initialWorkId);
 
   return (
-    <section className="page governance-page">
-      <header className="governance-topbar">
-        <div>
-          <span className="eyebrow">Metadata</span>
-          <h1>元数据编辑</h1>
-        </div>
-        <p>从队列选一部作品，对照来源核对并写入本地最终元数据。</p>
-      </header>
+    <section className="folio-page-body folio-governance-page">
+      {gov.error ? (
+        <FadeIn key={gov.error} className="folio-governance-message is-error" y={6}>
+          <AlertTriangle size={16} />
+          <span>{gov.error}</span>
+        </FadeIn>
+      ) : null}
+      {gov.notice ? (
+        <FadeIn key={gov.notice} className="folio-governance-message" y={6}>
+          <span aria-hidden="true" />
+          <p>{gov.notice}</p>
+        </FadeIn>
+      ) : null}
 
-      {gov.error ? <FadeIn key={gov.error} className="notice error" y={6}>{gov.error}</FadeIn> : null}
-      {gov.notice ? <FadeIn key={gov.notice} className="notice success" y={6}>{gov.notice}</FadeIn> : null}
-
-      {gov.loading ? <div className="page-panel">正在读取作品队列...</div> : null}
+      {gov.loading ? <div className="folio-governance-loading" role="status">正在读取真实治理队列…</div> : null}
 
       {!gov.loading && gov.queue && gov.queue.result.length === 0 ? (
-        <div className="page-panel boundary-panel">
-          <strong>暂无待编辑作品</strong>
-          <p>当前本地库没有可编辑元数据的真实作品。导入 CBZ 后这里会显示真实队列。</p>
-        </div>
+        <section className="folio-ruled-panel folio-governance-empty">
+          <FolioEmptyState
+            icon={PenLine}
+            title="暂无待编辑作品"
+            copy="当前本地库没有需要治理的真实作品；导入或重新索引 CBZ 后，队列会按实际缺失项自动生成。"
+          />
+        </section>
       ) : null}
 
       {!gov.loading && gov.queue && gov.queue.result.length ? (
-        <div className="governance-shell">
+        <div className={gov.bulkMode ? "folio-governance-workspace is-bulk" : "folio-governance-workspace"}>
           <GovernanceQueueRail
             queue={gov.queue}
             selectedId={gov.selectedId}
@@ -48,12 +60,21 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
             onToggleSelected={gov.toggleSelected}
           />
 
-          <div className="governance-editor">
-            <div className="governance-bulk-toggle">
-              <button type="button" onClick={gov.toggleBulkMode}>
-                {gov.bulkMode ? "退出批量" : "批量处理"}
+          <main className="folio-governance-editor">
+            <header className="folio-governance-modebar">
+              <div>
+                <span>{gov.bulkMode ? "Batch workflow" : "Review workflow"}</span>
+                <strong>{gov.bulkMode ? "批量治理" : "单部审核"}</strong>
+              </div>
+              <button
+                className={gov.bulkMode ? "folio-filter-toggle is-active" : "folio-filter-toggle"}
+                type="button"
+                aria-pressed={gov.bulkMode}
+                onClick={gov.toggleBulkMode}
+              >
+                {gov.bulkMode ? "退出批量" : "进入批量"}
               </button>
-            </div>
+            </header>
 
             {gov.bulkMode ? (
               <GovernanceBulkBar
@@ -72,11 +93,18 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
               />
             ) : (
               <>
-                {gov.aggregateLoading ? <div className="page-panel">正在读取作品元数据...</div> : null}
+                {gov.aggregateLoading ? <div className="folio-governance-loading" role="status">正在读取作品元数据…</div> : null}
                 {!gov.aggregateLoading && gov.aggregate ? (
-                  <FadeIn key={gov.aggregate.work.id} y={10}>
+                  <FadeIn key={gov.aggregate.work.id} className="folio-governance-document" y={10}>
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
-
+                    <GovernanceReviewPanel
+                      aggregate={gov.aggregate}
+                      changedCount={gov.changedFields.length}
+                      busy={gov.reviewing}
+                      note={gov.reviewNote}
+                      onNoteChange={gov.setReviewNote}
+                      onReview={gov.reviewWork}
+                    />
                     <MetadataEditor
                       aggregate={gov.aggregate}
                       edits={gov.edits}
@@ -85,27 +113,38 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onToggleDiff={() => gov.setOnlyDiff((value) => !value)}
                       onTranslate={gov.translateMetadata}
                       translating={gov.translating}
+                      translationSuggestions={gov.translationSuggestions}
+                      onAcceptTranslation={gov.acceptTranslation}
+                      onAcceptAllTranslations={gov.acceptAllTranslations}
+                      onDismissTranslation={gov.dismissTranslation}
                     />
-
-                    <GovernanceTagBoard aggregate={gov.aggregate} onApplyDictionaryTag={gov.applyDictionaryTag} />
-
-                    <GovernanceActionBar
-                      workId={gov.aggregate.work.id}
-                      changedCount={gov.changedFields.length}
-                      saving={gov.saving}
-                      writeBack={gov.writeBack}
-                      onWriteBackChange={gov.setWriteBack}
-                      onSave={gov.saveMetadata}
-                      onReload={gov.reload}
+                    <GovernanceTagBoard
+                      aggregate={gov.aggregate}
+                      onApplyDictionaryTag={gov.applyDictionaryTag}
+                      onReviewDictionaryTag={gov.reviewDictionaryTag}
+                      applyingTagId={gov.dictionaryApplyingId}
                     />
                   </FadeIn>
                 ) : null}
+                {!gov.aggregateLoading && gov.aggregate ? (
+                  <GovernanceActionBar
+                    workId={gov.aggregate.work.id}
+                    changedCount={gov.changedFields.length}
+                    saving={gov.saving}
+                    writeBack={gov.writeBack}
+                    onWriteBackChange={gov.setWriteBack}
+                    onSave={gov.saveMetadata}
+                    onReload={gov.reload}
+                  />
+                ) : null}
                 {!gov.aggregateLoading && !gov.aggregate ? (
-                  <div className="governance-editor-empty">从左侧队列选择一部作品开始编辑。</div>
+                  <FolioEmptyState icon={PenLine} title="选择一部作品" copy="从队列选择作品后，在这里核对来源、字段与词典映射。" />
                 ) : null}
               </>
             )}
-          </div>
+          </main>
+
+          <GovernanceSourceRail aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} />
         </div>
       ) : null}
     </section>

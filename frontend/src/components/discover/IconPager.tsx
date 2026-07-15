@@ -1,14 +1,15 @@
 import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 type Props = {
+  className: string;
   page: number;
   totalPages: number;
   loading: boolean;
   onPage: (page: number) => void;
 };
 
-export function IconPager({ page, totalPages, loading, onPage }: Props) {
+export function IconPager({ className, page, totalPages, loading, onPage }: Props) {
   const [draft, setDraft] = useState(String(page));
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export function IconPager({ page, totalPages, loading, onPage }: Props) {
   if (totalPages <= 1) return null;
 
   return (
-    <form className="icon-pager" onSubmit={submit}>
+    <form className={className} onSubmit={submit}>
       <button type="button" onClick={() => onPage(1)} disabled={loading || page <= 1} aria-label="第一页">
         <ChevronsLeft size={17} />
       </button>

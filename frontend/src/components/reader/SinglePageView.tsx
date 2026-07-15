@@ -1,5 +1,5 @@
 import { ReaderImage } from "./ReaderImage";
-import { Direction, Fit, ReaderPageItem, clickZoneDelta } from "./readerHelpers";
+import { clickZoneDelta, type Direction, type Fit, type ReaderPageItem } from "./readerHelpers";
 
 type SinglePageViewProps = {
   page: ReaderPageItem | null;

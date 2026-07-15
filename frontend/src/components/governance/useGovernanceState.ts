@@ -8,6 +8,7 @@ import {
   GovernanceBulkResult,
   GovernanceQueue,
   GovernanceTag,
+  GovernanceTranslateSuggestion,
 } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 import { buildInitialEdits, type FieldEdit, normalize } from "./governanceHelpers";
@@ -22,10 +23,14 @@ export function useGovernanceState(initialWorkId?: number) {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [edits, setEdits] = useState<Record<string, FieldEdit>>({});
-  const [onlyDiff, setOnlyDiff] = useState(false);
+  const [onlyDiff, setOnlyDiff] = useState(true);
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [translationSuggestions, setTranslationSuggestions] = useState<GovernanceTranslateSuggestion[]>([]);
+  const [dictionaryApplyingId, setDictionaryApplyingId] = useState<number | null>(null);
   const [writeBack, setWriteBack] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewNote, setReviewNote] = useState("");
 
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -86,6 +91,8 @@ export function useGovernanceState(initialWorkId?: number) {
   );
   useEffect(() => {
     setEdits(initialEdits);
+    setTranslationSuggestions([]);
+    setReviewNote("");
   }, [initialEdits]);
 
   const changedFields = aggregate
@@ -101,12 +108,19 @@ export function useGovernanceState(initialWorkId?: number) {
   const reload = async () => {
     setNotice(null);
     setError(null);
-    const [queuePayload, aggregatePayload] = await Promise.all([
-      api.governanceQueue(),
-      selectedId ? api.workGovernance(selectedId) : Promise.resolve(null),
-    ]);
-    setQueue(queuePayload);
-    setAggregate(aggregatePayload);
+    setAggregateLoading(Boolean(selectedId));
+    try {
+      const [queuePayload, aggregatePayload] = await Promise.all([
+        api.governanceQueue(),
+        selectedId ? api.workGovernance(selectedId) : Promise.resolve(null),
+      ]);
+      setQueue(queuePayload);
+      setAggregate(aggregatePayload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAggregateLoading(false);
+    }
   };
 
   const saveMetadata = async () => {
@@ -146,26 +160,24 @@ export function useGovernanceState(initialWorkId?: number) {
     }
   };
 
-  const translateMetadata = async () => {
+  const translateMetadata = async (fields: string[]) => {
     if (!aggregate) return;
+    if (!fields.length) {
+      setNotice("请至少选择一个需要生成中文建议的字段。");
+      return;
+    }
     setTranslating(true);
     setNotice(null);
     setError(null);
     try {
-      const out = await api.translateWorkGovernance(aggregate.work.id);
+      const out = await api.translateWorkGovernance(aggregate.work.id, fields);
       if (!out.result.length) {
-        setNotice("没有可机翻的字段（来源为空或翻译无变化）。");
+        setTranslationSuggestions([]);
+        setNotice("没有生成可用建议：所选字段为空，或翻译结果与原文相同。");
         return;
       }
-      // 仅预填进编辑框供人工复核;不写库,需用户点击保存才持久化。
-      setEdits((current) => {
-        const next = { ...current };
-        out.result.forEach((item) => {
-          next[item.field] = { value: item.suggestion, source: "manual" };
-        });
-        return next;
-      });
-      setNotice(`已机翻填充 ${out.result.length} 个字段（${out.provider ?? "机翻"}），请复核后保存。`);
+      setTranslationSuggestions(out.result);
+      setNotice(`已生成 ${out.result.length} 条中文建议（${out.provider ?? "机翻"}）；尚未采纳或保存。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -173,27 +185,102 @@ export function useGovernanceState(initialWorkId?: number) {
     }
   };
 
-  const applyDictionaryTag = async (tag: GovernanceTag) => {
-    if (!aggregate || !tag.remote_tag_id) return;
+  const acceptTranslation = (suggestion: GovernanceTranslateSuggestion) => {
+    changeField(suggestion.field, { value: suggestion.suggestion, source: "manual" });
+    setTranslationSuggestions((current) => current.filter((item) => item.field !== suggestion.field));
+  };
+
+  const acceptAllTranslations = () => {
+    setEdits((current) => {
+      const next = { ...current };
+      translationSuggestions.forEach((item) => {
+        next[item.field] = { value: item.suggestion, source: "manual" };
+      });
+      return next;
+    });
+    setTranslationSuggestions([]);
+    setNotice("中文建议已放入本地最终值；仍需点击保存才会写入数据库。");
+  };
+
+  const dismissTranslation = (field: string) =>
+    setTranslationSuggestions((current) => current.filter((item) => item.field !== field));
+
+  const applyDictionaryTag = async (tag: GovernanceTag, zhName: string) => {
+    if (!aggregate || !tag.remote_tag_id || dictionaryApplyingId !== null) return;
     const original = tag.name || tag.slug || tag.display;
+    const cleanName = zhName.trim();
+    if (!cleanName) {
+      setNotice("请先填写本地显示名。");
+      return;
+    }
     const payload: DictionaryApplyPayload = {
       original_text: original,
-      zh_name: tag.display,
+      zh_name: cleanName,
       tag_type: tag.type || "tag",
       remote_tag_id: tag.remote_tag_id,
       status: "configured",
     };
+    setDictionaryApplyingId(tag.id);
     setNotice(null);
     setError(null);
-    const preview = await api.dictionaryPreviewApply(payload);
-    if (preview.conflicts.length) {
-      setError(`词典预览发现 ${preview.conflicts.length} 个冲突，请到词典页处理。`);
+    try {
+      const preview = await api.dictionaryPreviewApply(payload);
+      if (preview.conflicts.length) {
+        setError(`词典预览发现 ${preview.conflicts.length} 个冲突，请到词典页处理。`);
+        return;
+      }
+      const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: [], dictionary_apply: [payload] });
+      setAggregate(result.governance);
+      setQueue(await api.governanceQueue());
+      setNotice(`已建立词典映射：${original} → ${cleanName}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDictionaryApplyingId(null);
+    }
+  };
+
+  const reviewDictionaryTag = async (tag: GovernanceTag) => {
+    if (!aggregate || !tag.dictionary_id || dictionaryApplyingId !== null) return;
+    setDictionaryApplyingId(tag.id);
+    setNotice(null);
+    setError(null);
+    try {
+      await api.dictionaryReview(tag.dictionary_id);
+      const [nextAggregate, nextQueue] = await Promise.all([
+        api.workGovernance(aggregate.work.id),
+        api.governanceQueue(),
+      ]);
+      setAggregate(nextAggregate);
+      setQueue(nextQueue);
+      setNotice(`已确认词典译名：${tag.display}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDictionaryApplyingId(null);
+    }
+  };
+
+  const reviewWork = async (action: "approve" | "reopen") => {
+    if (!aggregate) return;
+    if (action === "approve" && changedFields.length) {
+      setNotice("请先保存字段修改，再核对当前版本。");
       return;
     }
-    const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: [], dictionary_apply: [payload] });
-    setAggregate(result.governance);
-    setQueue(await api.governanceQueue());
-    setNotice(`已应用词典映射：${tag.display}`);
+    setReviewing(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const result = await api.reviewWorkGovernance(aggregate.work.id, action, reviewNote);
+      setAggregate(result.governance);
+      setQueue(await api.governanceQueue());
+      setReviewNote("");
+      setNotice(action === "approve" ? "已记录本版本的人工核对；字段、词典或文件变化后会自动失效。" : "已撤销人工核对，作品重新进入待核对队列。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setReviewing(false);
+    }
   };
 
   const selectWork = (id: number) => {
@@ -316,8 +403,18 @@ export function useGovernanceState(initialWorkId?: number) {
     reload,
     saveMetadata,
     translating,
+    translationSuggestions,
+    acceptTranslation,
+    acceptAllTranslations,
+    dismissTranslation,
+    dictionaryApplyingId,
     translateMetadata,
     applyDictionaryTag,
+    reviewDictionaryTag,
+    reviewing,
+    reviewNote,
+    setReviewNote,
+    reviewWork,
     selectWork,
     bulkMode,
     toggleBulkMode,

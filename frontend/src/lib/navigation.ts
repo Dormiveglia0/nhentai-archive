@@ -75,6 +75,27 @@ export function navigate(page: Page) {
   window.location.hash = hash;
 }
 
+export function tagSearchHref(tag: {
+  id?: number | null;
+  type?: string | null;
+  name?: string | null;
+  slug?: string | null;
+  display?: string | null;
+}) {
+  const id = Number(tag.id);
+  if (Number.isFinite(id) && id > 0) {
+    return `#discover?${tagQuery({
+      id,
+      type: tag.type || undefined,
+      name: tag.name || undefined,
+      slug: tag.slug || undefined,
+      display: tag.display || undefined,
+    })}`;
+  }
+  const query = tag.name || tag.slug || tag.display;
+  return `#discover${query ? `?q=${encodeURIComponent(query)}` : ""}`;
+}
+
 function tagQuery(tag: RemoteTag) {
   const query = new URLSearchParams();
   query.set("tag_id", String(tag.id));

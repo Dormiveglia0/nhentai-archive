@@ -1,74 +1,126 @@
-import { IconPager } from "../discover/IconPager";
-import { FadeIn } from "../../lib/motion";
+import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, History, RotateCw } from "lucide-react";
+import type { CSSProperties } from "react";
+
+import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
+import { IconPager } from "../discover/IconPager";
+import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { groupByBucket, progressLabel, timeOfDay } from "./historyHelpers";
 import { useHistoryState } from "./useHistoryState";
+import "./HistoryPage.css";
 
 export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
   const state = useHistoryState();
   const entries = state.data?.result ?? [];
   const buckets = groupByBucket(entries);
+  const completedOnPage = entries.filter((entry) => entry.completed).length;
 
   return (
-    <section className="page history-page">
-      <header className="hero">
-        <div>
-          <h1>阅读历史</h1>
-          <p>按日期排列的真实阅读轨迹,数据来自本地阅读记录。</p>
-        </div>
-        <div className="sketch" aria-hidden="true" />
+    <section className="folio-page-body folio-history-page">
+      <header className="folio-history-context">
+        <button type="button" onClick={() => navigate({ name: "library" })}>
+          <ArrowLeft size={15} />
+          返回我的库
+        </button>
+        <span>{state.loading && !state.data ? "正在读取真实记录…" : `${(state.data?.total ?? 0).toLocaleString()} 条阅读记录`}</span>
       </header>
 
-      {state.error ? <div className="notice error">{state.error}</div> : null}
-      {state.loading ? <div className="page-panel">正在读取阅读历史...</div> : null}
+      <section className="folio-history-summary" aria-label="阅读历史摘要">
+        <article>
+          <History size={18} />
+          <span><small>全部记录</small><strong>{state.data ? state.data.total.toLocaleString() : "—"}</strong></span>
+        </article>
+        <article>
+          <CalendarDays size={18} />
+          <span><small>当前页</small><strong>{state.data ? `${state.page} / ${state.data.num_pages || 1}` : "—"}</strong></span>
+        </article>
+        <article>
+          <Clock3 size={18} />
+          <span><small>本页作品</small><strong>{state.data ? entries.length.toLocaleString() : "—"}</strong></span>
+        </article>
+        <article>
+          <span className="folio-history-complete-mark" aria-hidden="true" />
+          <span><small>本页已读完</small><strong>{state.data ? completedOnPage.toLocaleString() : "—"}</strong></span>
+        </article>
+      </section>
 
-      {!state.loading && entries.length === 0 ? (
-        <div className="page-panel boundary-panel">
-          <strong>暂无阅读记录</strong>
-          <p>开始阅读任意作品后,这里会按日期显示真实的阅读轨迹。</p>
+      {state.error ? (
+        <div className="folio-history-error" role="alert">
+          <span>{state.error}</span>
+          <button type="button" onClick={state.reload}><RotateCw size={14} />重新读取</button>
         </div>
       ) : null}
 
-      {!state.loading && entries.length ? (
-        <FadeIn className="history-list" y={8}>
+      {state.loading ? (
+        <div className="folio-history-loading" role="status" aria-label="正在读取阅读历史">
+          <i /><i /><i />
+        </div>
+      ) : null}
+
+      {!state.loading && !state.error && entries.length === 0 ? (
+        <section className="folio-ruled-panel folio-history-empty">
+          <FolioEmptyState
+            icon={History}
+            title="还没有阅读轨迹"
+            copy="打开任意已入库作品后，这里会按真实日期记录阅读进度。"
+            action="浏览我的库"
+            onAction={() => navigate({ name: "library" })}
+          />
+        </section>
+      ) : null}
+
+      {!state.loading && !state.error && entries.length > 0 ? (
+        <FadeIn className="folio-history-timeline" y={10}>
           {buckets.map((bucket) => (
-            <div className="history-bucket" key={bucket.label}>
-              <h2 className="history-bucket-label">{bucket.label}</h2>
-              {bucket.entries.map((entry) => {
-                const progress = progressLabel(entry);
-                return (
-                  <button
-                    className="history-row"
-                    type="button"
-                    key={`${entry.id}-${entry.date}`}
-                    onClick={() => navigate({ name: "reader", workId: entry.id })}
-                  >
-                    <span className="history-cover">
-                      {entry.cover_path ? (
-                        <img
-                          className={blurCovers ? "blurred" : ""}
-                          src={`/api/works/${entry.id}/cover`}
-                          alt=""
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="history-cover-empty" aria-hidden="true" />
-                      )}
-                    </span>
-                    <span className="history-main">
-                      <strong>{entry.title_japanese || entry.pretty_title || entry.title}</strong>
-                      <small>
-                        {timeOfDay(entry.last_opened_at)} · 阅读 {entry.read_events} 次 · 最远第 {entry.furthest_page}/
-                        {entry.page_count} 页
-                      </small>
-                    </span>
-                    <span className={`history-progress ${progress.tone}`}>{progress.text}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <section className="folio-history-bucket" key={bucket.label}>
+              <header className="folio-history-bucket-head">
+                <span />
+                <h2>{bucket.label}</h2>
+                <small>{bucket.entries.length} 项</small>
+              </header>
+              <Stagger className="folio-history-rows">
+                {bucket.entries.map((entry) => {
+                  const progress = progressLabel(entry);
+                  const percent = Math.max(0, Math.min(100, entry.progress_percent));
+                  return (
+                    <StaggerItem key={`${entry.id}-${entry.date}`} className="folio-history-row-wrap">
+                      <button
+                        className="folio-history-row"
+                        type="button"
+                        onClick={() => navigate({ name: "reader", workId: entry.id })}
+                      >
+                        <span className="folio-history-cover">
+                          {entry.cover_path ? (
+                            <img
+                              className={blurCovers ? "is-blurred" : ""}
+                              src={`/api/works/${entry.id}/cover`}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : <span className="folio-history-cover-empty" aria-hidden="true" />}
+                        </span>
+                        <span className="folio-history-main">
+                          <strong>{entry.title_japanese || entry.pretty_title || entry.title}</strong>
+                          <small>
+                            <span>{timeOfDay(entry.last_opened_at)}</span>
+                            <span>打开 {entry.read_events} 次</span>
+                            <span>最远第 {entry.furthest_page} / {entry.page_count} 页</span>
+                          </small>
+                        </span>
+                        <span className={`folio-history-progress is-${progress.tone}`}>
+                          <span><strong>{progress.text}</strong><small>{percent}%</small></span>
+                          <i style={{ "--folio-history-progress": `${percent}%` } as CSSProperties}><span /></i>
+                        </span>
+                        <ArrowUpRight className="folio-history-open" size={17} />
+                      </button>
+                    </StaggerItem>
+                  );
+                })}
+              </Stagger>
+            </section>
           ))}
           <IconPager
+            className="folio-history-pager"
             page={state.page}
             totalPages={state.data?.num_pages ?? 1}
             loading={state.loading}

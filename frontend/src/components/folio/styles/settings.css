@@ -1,0 +1,269 @@
+/* Settings navigation, controls and section transitions. */
+.folio-settings-nav {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(135px, 1fr));
+  border-bottom: 1px solid var(--folio-line-strong);
+  overflow-x: auto;
+  position: relative;
+  z-index: 10;
+}
+
+.folio-settings-nav button {
+  min-width: 0;
+  min-height: 76px;
+  padding: 11px 13px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  text-align: left;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: color 220ms ease, transform 220ms ease;
+}
+
+.folio-settings-nav button:last-child {
+  border-right: 0;
+}
+
+.folio-settings-nav-active {
+  border-bottom: 2px solid var(--folio-red);
+  background: var(--folio-red-soft);
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.folio-settings-nav button strong,
+.folio-settings-nav button small {
+  grid-column: 2;
+}
+
+.folio-settings-nav button strong {
+  color: inherit;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 13px;
+}
+
+.folio-settings-nav button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.folio-settings-nav button:hover,
+.folio-settings-nav button.is-active {
+  color: var(--folio-ink);
+}
+
+.folio-settings-nav button:hover {
+  transform: translateY(-2px);
+}
+
+.folio-settings-stage {
+  min-height: 450px;
+  padding-top: 32px;
+  position: relative;
+  isolation: isolate;
+}
+
+.folio-settings-head {
+  margin-bottom: 30px;
+  padding-bottom: 21px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-settings-head > div:first-child {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  column-gap: 12px;
+}
+
+.folio-settings-head > div:first-child > span {
+  color: var(--folio-red);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 13px;
+}
+
+.folio-settings-head h2 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 28px;
+}
+
+.folio-settings-head p {
+  grid-column: 2;
+  margin: 6px 0 0;
+  color: var(--folio-muted);
+  font-size: 13px;
+}
+
+.folio-settings-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--folio-red);
+  font-size: 13px;
+}
+
+.folio-settings-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.folio-secret {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--folio-line);
+  background: rgba(250, 247, 239, 0.25);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.folio-secret input {
+  min-width: 0;
+  width: 100%;
+  height: 44px;
+  padding: 0 11px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 13px;
+}
+
+.folio-secret button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+}
+
+.folio-choice-row {
+  margin-bottom: 26px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--folio-line-strong);
+}
+
+.folio-choice-row button {
+  min-height: 72px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border: 0;
+  border-right: 1px solid var(--folio-line);
+  border-bottom: 1px solid var(--folio-line-strong);
+  background: transparent;
+  color: var(--folio-muted);
+  text-align: left;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: color 220ms ease, transform 220ms ease;
+}
+
+.folio-choice-row button:last-child {
+  border-right: 0;
+}
+
+.folio-choice-row button span,
+.folio-choice-row button small {
+  display: block;
+}
+
+.folio-choice-row button span {
+  color: inherit;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+}
+
+.folio-choice-row button small {
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.folio-choice-row button svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--folio-red);
+  opacity: 0;
+  transform: scale(0.4) rotate(-20deg);
+  transition: opacity 220ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-choice-row button.is-active {
+  color: var(--folio-ink);
+}
+
+.folio-choice-active {
+  background: var(--folio-red-soft);
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.folio-choice-row button.is-active svg {
+  opacity: 1;
+  transform: scale(1) rotate(0);
+}
+
+.folio-segment-field {
+  margin-top: 28px;
+}
+
+.folio-segment-field > span {
+  margin-bottom: 9px;
+  display: block;
+  color: var(--folio-muted);
+  font-size: 13px;
+}
+
+.folio-segment-field > div {
+  display: inline-flex;
+}
+
+.folio-segment-field button {
+  min-width: 116px;
+  min-height: 44px;
+  border: 1px solid var(--folio-line-strong);
+  border-right: 0;
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 13px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: color 220ms ease, transform 220ms ease;
+}
+
+.folio-segment-field button:last-child {
+  border-right: 1px solid var(--folio-line-strong);
+}
+
+.folio-segment-field button:hover {
+  transform: translateY(-2px);
+}
+

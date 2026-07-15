@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api, type ReadingHistoryPage } from "../../lib/api";
 
@@ -7,20 +7,26 @@ export function useHistoryState() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+  const requestId = useRef(0);
 
   useEffect(() => {
-    let alive = true;
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError(null);
     api
       .libraryReadingHistory(page)
-      .then((payload) => alive && setData(payload))
-      .catch((err: Error) => alive && setError(err.message))
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [page]);
+      .then((payload) => {
+        if (currentRequest === requestId.current) setData(payload);
+      })
+      .catch((err: Error) => {
+        if (currentRequest === requestId.current) setError(err.message);
+      })
+      .finally(() => {
+        if (currentRequest === requestId.current) setLoading(false);
+      });
+    return () => { requestId.current += 1; };
+  }, [page, revision]);
 
-  return { data, page, setPage, loading, error };
+  return { data, page, setPage, loading, error, reload: () => setRevision((value) => value + 1) };
 }

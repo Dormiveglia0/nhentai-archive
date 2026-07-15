@@ -1,87 +1,48 @@
-import { FadeIn } from "../../lib/motion";
+import { AlertCircle, Archive, CheckCircle2, ShieldAlert, TriangleAlert } from "lucide-react";
+
+import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
+import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { ExportInspector } from "./ExportInspector";
 import { ExportToolbar } from "./ExportToolbar";
 import { ExportWorkList } from "./ExportWorkList";
 import { useExportState } from "./useExportState";
+import "./ExportPage.css";
 
-type Props = {
-  initialWorkId?: number;
-  blurCovers: boolean;
-};
-
-export function ExportPage({ initialWorkId, blurCovers }: Props) {
-  const vm = useExportState(initialWorkId);
-  const focusItem = vm.focusId ? vm.items.find((item) => item.work.id === vm.focusId) ?? null : null;
+export function ExportPage({ initialWorkId, blurCovers }: { initialWorkId?: number; blurCovers: boolean }) {
+  const exports = useExportState(initialWorkId);
+  const focusItem = exports.focusId ? exports.items.find((item) => item.work.id === exports.focusId) ?? null : null;
+  const metrics = [
+    { label: "全部作品", value: exports.summary?.total, icon: Archive },
+    { label: "导出就绪", value: exports.summary?.ready, icon: CheckCircle2 },
+    { label: "存在警告", value: exports.summary?.warnings, icon: TriangleAlert },
+    { label: "导出阻塞", value: exports.summary?.blocked, icon: ShieldAlert },
+  ];
 
   return (
-    <section className="page export-page">
-      {vm.error ? (
-        <FadeIn key={vm.error} className="notice error" y={6}>
-          {vm.error}
-        </FadeIn>
-      ) : null}
-      {vm.notice ? (
-        <FadeIn key={vm.notice} className="notice success" y={6}>
-          {vm.notice}
-        </FadeIn>
-      ) : null}
+    <section className="folio-page-body folio-export-page">
+      <section className="folio-export-summary" aria-label="导出队列摘要">
+        <Stagger className="folio-export-summary-grid">
+          {metrics.map(({ label, value, icon: Icon }) => <StaggerItem key={label} className="folio-export-metric"><Icon size={16} /><div><strong>{value == null ? "—" : value.toLocaleString()}</strong><span>{label}</span></div></StaggerItem>)}
+        </Stagger>
+      </section>
 
-      {vm.loading ? <div className="page-panel">正在读取导出队列...</div> : null}
+      {exports.error ? <FadeIn key={exports.error} className="folio-export-message is-error" y={6}><AlertCircle size={15} /><p>{exports.error}</p></FadeIn> : null}
+      {exports.notice ? <FadeIn key={exports.notice} className="folio-export-message" y={6}><span aria-hidden="true" /><p>{exports.notice}</p></FadeIn> : null}
+      {exports.loading ? <div className="folio-export-loading" role="status">正在读取真实导出队列…</div> : null}
 
-      {!vm.loading && vm.queue ? (
-        vm.queue.result.length === 0 ? (
-          <div className="page-panel boundary-panel">
-            <strong>暂无可导出作品</strong>
-            <p>导入真实 CBZ 后，导出队列会显示源文件、阻塞项和 ComicInfo preview。</p>
+      {!exports.loading && exports.queue ? exports.queue.result.length === 0 ? (
+        <section className="folio-ruled-panel folio-export-empty"><FolioEmptyState icon={Archive} title="暂无可导出作品" copy="导入真实 CBZ 后，导出队列会显示源文件、阻塞项与 ComicInfo 预览。" /></section>
+      ) : (
+        <>
+          <ExportToolbar query={exports.query} statusFilter={exports.statusFilter} onQueryChange={exports.setQuery} onStatusFilterChange={exports.setStatusFilter} multiSelect={exports.multiSelect} onToggleMultiSelect={exports.toggleMultiSelect} onSelectReady={exports.selectReady} onClear={exports.clearSelected} />
+          <div className="folio-export-layout">
+            <main className="folio-export-source">
+              <header className="folio-export-column-head"><span>Local collection</span><h2>选择作品</h2><p>{exports.visibleItems.length} 项匹配当前条件</p></header>
+              {exports.visibleItems.length ? <ExportWorkList items={exports.visibleItems} selectedIds={exports.selectedIds} focusId={exports.focusId} multiSelect={exports.multiSelect} blurCovers={blurCovers} onPick={exports.pickItem} /> : <FolioEmptyState icon={Archive} title="没有匹配的作品" copy={exports.query ? "调整搜索词或筛选条件后重试。" : "当前筛选条件下没有真实条目。"} />}
+            </main>
+            <ExportInspector focusItem={focusItem} preview={exports.preview} selectedItems={exports.selectedItems} selectedSize={exports.selectedSize} exportOptions={exports.exportOptions} previewLoading={exports.previewLoading} downloading={exports.downloading} blurCovers={blurCovers} outputNames={exports.outputNames} onRename={exports.renameOutput} onSetOption={exports.setExportOption} onRefresh={() => void exports.refreshPreview()} onDownload={() => void exports.downloadSelected()} onDownloadOne={(id) => void exports.downloadOne(id)} />
           </div>
-        ) : (
-          <>
-            <ExportToolbar
-              query={vm.query}
-              statusFilter={vm.statusFilter}
-              onQueryChange={vm.setQuery}
-              onStatusFilterChange={vm.setStatusFilter}
-              multiSelect={vm.multiSelect}
-              onToggleMultiSelect={vm.toggleMultiSelect}
-              onSelectReady={vm.selectReady}
-              onClear={vm.clearSelected}
-            />
-
-            <div className="export-workspace">
-              {vm.visibleItems.length === 0 ? (
-                <div className="page-panel boundary-panel export-empty-list">
-                  <strong>没有匹配的作品</strong>
-                  <p>{vm.query ? "尝试调整搜索词或筛选条件。" : "调整筛选条件后重新查看。"}</p>
-                </div>
-              ) : (
-                <ExportWorkList
-                  items={vm.visibleItems}
-                  selectedIds={vm.selectedIds}
-                  focusId={vm.focusId}
-                  multiSelect={vm.multiSelect}
-                  blurCovers={blurCovers}
-                  onPick={vm.pickItem}
-                />
-              )}
-              <ExportInspector
-                focusItem={focusItem}
-                preview={vm.preview}
-                selectedItems={vm.selectedItems}
-                selectedSize={vm.selectedSize}
-                exportOptions={vm.exportOptions}
-                previewLoading={vm.previewLoading}
-                downloading={vm.downloading}
-                blurCovers={blurCovers}
-                outputNames={vm.outputNames}
-                onRename={vm.renameOutput}
-                onSetOption={vm.setExportOption}
-                onRefresh={vm.refreshPreview}
-                onDownload={vm.downloadSelected}
-                onDownloadOne={vm.downloadOne}
-              />
-            </div>
-          </>
-        )
+        </>
       ) : null}
     </section>
   );

@@ -1,36 +1,40 @@
-import { Ban, Languages, Plus, RotateCcw, Save, SearchCheck, Trash2 } from "lucide-react";
-import { KeyboardEvent, useState } from "react";
+import { Languages, Plus, X } from "lucide-react";
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useState } from "react";
 
-import { api, DictionaryApplyPayload } from "../../lib/api";
+import type { DictionaryApplyPayload } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
+import { FolioSelect } from "../folio/ui/FolioPrimitives";
 
 type Props = {
   value: DictionaryApplyPayload;
   dictionaryId?: number | null;
   loading: boolean;
+  translating: boolean;
+  mtError: string | null;
   onChange: (value: DictionaryApplyPayload) => void;
   onNew: () => void;
-  onPreview: () => void;
-  onApply: () => void;
-  onIgnore: () => void;
-  onReview: () => void;
-  onDelete: () => void;
+  onTranslate: () => void;
 };
 
-const TYPES = [
-  ["tag", "标签"],
-  ["artist", "作者"],
-  ["group", "社团"],
-  ["character", "角色"],
-  ["parody", "原作"],
-  ["language", "语言"],
-  ["category", "分类"],
+const TYPE_OPTIONS = [
+  { value: "tag", label: "标签" },
+  { value: "artist", label: "作者" },
+  { value: "group", label: "社团" },
+  { value: "character", label: "角色" },
+  { value: "parody", label: "原作" },
+  { value: "language", label: "语言" },
+  { value: "category", label: "分类" },
 ] as const;
 
-export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew, onPreview, onApply, onIgnore, onReview, onDelete }: Props) {
+export function DictionaryEditor({ value, dictionaryId, loading, translating, mtError, onChange, onNew, onTranslate }: Props) {
   const [aliasDraft, setAliasDraft] = useState("");
   const [scopeDraft, setScopeDraft] = useState("");
   const editorKey = String(dictionaryId ?? value.remote_tag_id ?? "new");
+
+  useEffect(() => {
+    setAliasDraft("");
+    setScopeDraft("");
+  }, [editorKey]);
 
   function update(next: Partial<DictionaryApplyPayload>) {
     onChange({ ...value, ...next });
@@ -48,58 +52,33 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
     update({ [field]: (value[field] ?? []).filter((chip) => chip !== item) });
   }
 
-  const [translating, setTranslating] = useState(false);
-  const [mtError, setMtError] = useState<string | null>(null);
-
-  async function machineTranslate() {
-    const text = value.original_text.trim();
-    if (!text) return;
-    setTranslating(true);
-    setMtError(null);
-    try {
-      const result = await api.dictionaryTranslate(text);
-      if (result.translation) update({ zh_name: result.translation });
-      else setMtError("机翻返回为空");
-    } catch (exc) {
-      setMtError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setTranslating(false);
-    }
-  }
-
   return (
-    <section className="dictionary-pane dictionary-editor">
-      <header className="dictionary-pane-head">
+    <section className="folio-dictionary-editor" aria-labelledby="folio-dictionary-editor-title">
+      <header className="folio-dictionary-panel-head">
         <div>
-          <h2>术语编辑器</h2>
-          <span>{value.remote_tag_id ? `远端 tag #${value.remote_tag_id}` : "本地自定义词条"}</span>
+          <span>Term editor</span>
+          <h2 id="folio-dictionary-editor-title">术语编辑器</h2>
+          <p>{value.remote_tag_id ? `远端标签 #${value.remote_tag_id}` : "本地自定义词条"}</p>
         </div>
-        <button type="button" className="head-action" onClick={onNew}>
+        <button className="folio-line-button" type="button" onClick={onNew}>
           <Plus size={15} />
           新建本地词条
         </button>
       </header>
 
-      <FadeIn key={editorKey} className="dictionary-editor-motion" y={8}>
-        <div className="dictionary-form">
-          <label className="wide">
-            <span>原文 *</span>
+      <FadeIn key={editorKey} className="folio-dictionary-editor-motion" y={8}>
+        <div className="folio-dictionary-form">
+          <DictionaryField label="原文 *" wide>
             <input value={value.original_text} onChange={(event) => update({ original_text: event.target.value })} />
-          </label>
-          <label>
-            <span>中文名 *</span>
+          </DictionaryField>
+
+          <DictionaryField label="中文名 *">
             <input value={value.zh_name} onChange={(event) => update({ zh_name: event.target.value })} />
-          </label>
-          <label>
-            <span>类型 *</span>
-            <select value={value.tag_type} onChange={(event) => update({ tag_type: event.target.value })}>
-              {TYPES.map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          </DictionaryField>
+
+          <div className="folio-dictionary-field">
+            <FolioSelect label="类型 *" value={value.tag_type} options={TYPE_OPTIONS} onChange={(tagType) => update({ tag_type: tagType })} />
+          </div>
 
           <ChipEditor
             label="别名"
@@ -112,7 +91,7 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
           />
           <ChipEditor
             label="适用范围"
-            placeholder="标题、系列名、作品名"
+            placeholder="标题、系列名或作品名"
             chips={value.scope ?? []}
             draft={scopeDraft}
             onDraft={setScopeDraft}
@@ -120,52 +99,31 @@ export function DictionaryEditor({ value, dictionaryId, loading, onChange, onNew
             onRemove={(item) => removeChip("scope", item)}
           />
 
-          <label className="wide">
-            <span>备注</span>
+          <DictionaryField label="备注" wide>
             <textarea value={value.note ?? ""} onChange={(event) => update({ note: event.target.value })} rows={5} />
-          </label>
+          </DictionaryField>
         </div>
 
-        {mtError ? <p className="dictionary-mt-error">{mtError}</p> : null}
-
-        <footer className="dictionary-actions">
-          <button
-            type="button"
-            onClick={() => void machineTranslate()}
-            disabled={loading || translating || !value.original_text.trim()}
-            title="用设置中的机翻服务翻译原文并填入中文名"
-          >
-            <Languages size={16} />
-            {translating ? "翻译中…" : "机翻中文名"}
+        <div className="folio-dictionary-translate-row">
+          <button type="button" onClick={onTranslate} disabled={loading || translating || !value.original_text.trim()}>
+            <Languages size={15} />
+            {translating ? "翻译中…" : "机翻填入中文名"}
           </button>
-          <button type="button" onClick={onPreview} disabled={loading || !value.original_text || !value.zh_name}>
-            <SearchCheck size={16} />
-            预览影响
-          </button>
-          <button type="button" className="primary" onClick={onApply} disabled={loading || !value.original_text || !value.zh_name}>
-            <Save size={16} />
-            {dictionaryId ? "保存修改" : "写入词典"}
-          </button>
-          <button
-            type="button"
-            onClick={onIgnore}
-            disabled={loading || !value.original_text.trim() || value.ignored}
-            title="保留原文、不翻译；适用于无需中文名的标签"
-          >
-            <Ban size={16} />
-            忽略
-          </button>
-          <button type="button" onClick={onReview} disabled={loading || !dictionaryId}>
-            <RotateCcw size={16} />
-            加入复核
-          </button>
-          <button type="button" className="danger" onClick={onDelete} disabled={loading || !dictionaryId}>
-            <Trash2 size={16} />
-            删除
-          </button>
-        </footer>
+          <p>机器结果只填入编辑器，仍需预览并人工确认后保存。</p>
+        </div>
+        {mtError ? <p className="folio-dictionary-mt-error" role="alert">{mtError}</p> : null}
       </FadeIn>
     </section>
+  );
+}
+
+function DictionaryField({ label, wide = false, children }: { label: string; wide?: boolean; children: ReactNode }) {
+  return (
+    <label className={`folio-dictionary-field${wide ? " is-wide" : ""}`}>
+      <span>{label}</span>
+      {children}
+      <i aria-hidden="true" />
+    </label>
   );
 }
 
@@ -186,6 +144,8 @@ function ChipEditor({
   onAdd: () => void;
   onRemove: (value: string) => void;
 }) {
+  const labelId = useId();
+
   function keyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -194,17 +154,18 @@ function ChipEditor({
   }
 
   return (
-    <label className="wide chip-field">
-      <span>{label}</span>
+    <div className="folio-dictionary-field is-wide folio-dictionary-chip-field" role="group" aria-labelledby={labelId}>
+      <span id={labelId}>{label}</span>
       <div>
         {chips.map((chip) => (
-          <button key={chip} type="button" onClick={() => onRemove(chip)}>
+          <button key={chip} type="button" onClick={() => onRemove(chip)} title={`移除 ${chip}`}>
             {chip}
-            <b>×</b>
+            <X size={12} />
           </button>
         ))}
-        <input value={draft} onChange={(event) => onDraft(event.target.value)} onKeyDown={keyDown} onBlur={onAdd} placeholder={placeholder} />
+        <input aria-label={label} value={draft} onChange={(event) => onDraft(event.target.value)} onKeyDown={keyDown} onBlur={onAdd} placeholder={placeholder} />
       </div>
-    </label>
+      <i aria-hidden="true" />
+    </div>
   );
 }

@@ -100,6 +100,11 @@ class GovernanceTranslateRequest(BaseModel):
     fields: list[str] | None = None
 
 
+class GovernanceReviewRequest(BaseModel):
+    action: str
+    note: str | None = None
+
+
 class ExportItemRequest(BaseModel):
     work_id: int | None = None
     output_name: str | None = None
@@ -416,6 +421,14 @@ def translate_work_governance(work_id: int, payload: GovernanceTranslateRequest)
         raise HTTPException(status_code=502, detail=exc.message) from exc
 
 
+@app.post("/api/works/{work_id}/governance/review")
+def review_work_governance(work_id: int, payload: GovernanceReviewRequest):
+    try:
+        return governance.review(work_id, payload.action, payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.post("/api/governance/bulk/preview")
 def governance_bulk_preview(payload: GovernanceBulkRequest):
     try:
@@ -607,7 +620,7 @@ def list_works():
 
 @app.get("/api/works/{work_id}")
 def get_work(work_id: int):
-    work = archive.get_work(work_id)
+    work = library.work(work_id)
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
     return work

@@ -1,4 +1,4 @@
-import { Direction, Fit, Mode, ReaderPageItem } from "./readerHelpers";
+import type { Direction, Fit, Mode, ReaderPageItem } from "./readerHelpers";
 import { SinglePageView } from "./SinglePageView";
 import { WebtoonView } from "./WebtoonView";
 
@@ -37,7 +37,7 @@ export function ReaderViewport({
   return (
     <div className={masked ? "reader-viewport masked" : "reader-viewport"}>
       {loading && pages.length === 0 ? (
-        <p className="reader-loading">加载中…</p>
+        <div className="reader-loading" role="status"><span><i /><i /><i /></span><p>正在装载阅读页面</p></div>
       ) : mode === "webtoon" ? (
         <WebtoonView
           pages={pages}

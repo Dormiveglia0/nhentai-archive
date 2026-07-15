@@ -1,229 +1,139 @@
-import { useState } from "react";
+import { Copy, HardDrive, Play, RefreshCw, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+import type { ReactNode } from "react";
 
-import { api, type FileDeletePreview, type FileDuplicates, type FileOverview, type LibraryScanPreview } from "../../lib/api";
+import type { FileDuplicates, FileOverview, LibraryScanPreview } from "../../lib/api";
+import { duration, ease } from "../../lib/motion";
 import { formatBytes } from "./fileHelpers";
-
-const WARNING_LABELS: Record<string, string> = {
-  has_progress: "含阅读进度",
-  has_governance: "含治理元数据",
-  already_gone: "目标已不存在",
-  forbidden_path: "路径不在受管目录内",
-};
 
 type Props = {
   overview: FileOverview | null;
   duplicates: FileDuplicates | null;
-  preview: FileDeletePreview | null;
-  pendingLabel: string | null;
   busy: boolean;
-  actionNotice?: string | null;
-  onCleanup: (cat: "orphan" | "stale", label: string) => void;
-  onConfirm: () => void;
-  onCancel: () => void;
+  scanBusy: boolean;
+  scanPreview: LibraryScanPreview | null;
+  scanNotice: string | null;
+  scanError: string | null;
+  onCleanup: (category: "orphan" | "stale", label: string) => void;
+  onScanPreview: () => void;
+  onScanStart: () => void;
+  onScanCancel: () => void;
 };
 
 function HealthRow({ label, count }: { label: string; count: number }) {
+  return <li><span>{label}</span><em className={count > 0 ? "is-bad" : "is-ok"}><i aria-hidden="true" />{count}</em></li>;
+}
+
+function RailSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof ShieldCheck;
+  title: string;
+  children: ReactNode;
+}) {
   return (
-    <li>
-      <span>{label}</span>
-      <em className={count > 0 ? "bad" : "ok"}>{count}</em>
-    </li>
+    <section className="folio-files-rail-section">
+      <header><Icon size={15} /><h3>{title}</h3></header>
+      {children}
+    </section>
   );
 }
 
 export function FileHealthRail({
   overview,
   duplicates,
-  preview,
-  pendingLabel,
   busy,
-  actionNotice,
+  scanBusy,
+  scanPreview,
+  scanNotice,
+  scanError,
   onCleanup,
-  onConfirm,
-  onCancel,
+  onScanPreview,
+  onScanStart,
+  onScanCancel,
 }: Props) {
-  const hasHealthyWork = preview?.items.some((i) => i.kind === "work" && i.exists) ?? false;
-  const hasWarnings = preview?.items.some((i) => i.warnings.length > 0) ?? false;
-
-  const [scanPreview, setScanPreview] = useState<LibraryScanPreview | null>(null);
-  const [scanBusy, setScanBusy] = useState(false);
-  const [scanNotice, setScanNotice] = useState<string | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
-
-  const handleScanPreview = async () => {
-    setScanBusy(true);
-    setScanPreview(null);
-    setScanNotice(null);
-    setScanError(null);
-    try {
-      const result = await api.scanLibraryPreview();
-      setScanPreview(result);
-    } catch (e) {
-      setScanError(String(e));
-    } finally {
-      setScanBusy(false);
-    }
-  };
-
-  const handleScanStart = async () => {
-    setScanBusy(true);
-    setScanNotice(null);
-    setScanError(null);
-    try {
-      await api.enqueueLibraryScan();
-      setScanPreview(null);
-      setScanNotice("已加入任务中心");
-    } catch (e) {
-      setScanError(String(e));
-    } finally {
-      setScanBusy(false);
-    }
-  };
+  const scanCount = scanPreview ? scanPreview.new_linked.length + scanPreview.new_local.length : 0;
 
   return (
-    <aside className="files-rail">
-      <section className="files-rail-section">
-        <h4>健康检查</h4>
+    <aside className="folio-files-rail">
+      <header className="folio-files-column-head">
+        <span>Maintenance</span>
+        <h2>维护与健康</h2>
+        <p>所有破坏性操作都先显示真实影响。</p>
+      </header>
+
+      <RailSection icon={ShieldCheck} title="索引健康">
         {overview ? (
-          <ul className="files-health">
+          <ul className="folio-files-health-list">
             <HealthRow label="缺失源文件" count={overview.missing_source} />
             <HealthRow label="缺失封面" count={overview.missing_cover} />
             <HealthRow label="孤立文件" count={overview.orphan_count} />
             <HealthRow label="临时残留" count={overview.stale_count} />
           </ul>
-        ) : (
-          <p className="files-dim">读取中…</p>
-        )}
-      </section>
+        ) : <p className="folio-files-dim">正在读取真实索引…</p>}
+      </RailSection>
 
-      <section className="files-rail-section">
-        <h4>重复检查</h4>
+      <RailSection icon={Copy} title="重复检查">
         {duplicates ? (
-          <ul className="files-health">
-            <li>
-              <span>Hash 相同</span>
-              <em className={duplicates.hash.files > 0 ? "bad" : "ok"}>{duplicates.hash.files}</em>
-            </li>
-            <li>
-              <span>Gallery ID 相同</span>
-              <em className={duplicates.gallery_id.works > 0 ? "bad" : "ok"}>{duplicates.gallery_id.works}</em>
-            </li>
+          <ul className="folio-files-health-list">
+            <HealthRow label="Hash 相同文件" count={duplicates.hash.files} />
+            <HealthRow label="Gallery ID 相同作品" count={duplicates.gallery_id.works} />
           </ul>
-        ) : (
-          <p className="files-dim">读取中…</p>
-        )}
-      </section>
+        ) : <p className="folio-files-dim">正在核对重复项…</p>}
+      </RailSection>
 
-      <section className="files-rail-section">
-        <h4>清理工具</h4>
+      <RailSection icon={Trash2} title="清理预览">
         {overview ? (
-          <ul className="files-cleanup">
+          <ul className="folio-files-cleanup-list">
             <li>
-              <span className="files-cleanup-main">
-                <span>临时与导出残留</span>
-                <em>{formatBytes(overview.stale_bytes)} · {overview.stale_count} 项</em>
-              </span>
-              <button type="button" onClick={() => onCleanup("stale", "临时与导出残留")} disabled={busy || overview.stale_count === 0}>
-                清理
-              </button>
+              <span><strong>临时与导出残留</strong><small>{formatBytes(overview.stale_bytes)} · {overview.stale_count} 项</small></span>
+              <button type="button" onClick={() => onCleanup("stale", "临时与导出残留")} disabled={busy || overview.stale_count === 0}>预览</button>
             </li>
             <li>
-              <span className="files-cleanup-main">
-                <span>孤立文件</span>
-                <em>{formatBytes(overview.orphan_bytes)} · {overview.orphan_count} 项</em>
-              </span>
-              <button type="button" onClick={() => onCleanup("orphan", "孤立文件")} disabled={busy || overview.orphan_count === 0}>
-                清理
-              </button>
+              <span><strong>孤立文件</strong><small>{formatBytes(overview.orphan_bytes)} · {overview.orphan_count} 项</small></span>
+              <button type="button" onClick={() => onCleanup("orphan", "孤立文件")} disabled={busy || overview.orphan_count === 0}>预览</button>
             </li>
           </ul>
-        ) : (
-          <p className="files-dim">读取中…</p>
-        )}
+        ) : <p className="folio-files-dim">正在统计可清理空间…</p>}
 
-        {preview ? (
-          <div className="files-preview">
-            <p className="files-preview-line">
-              {pendingLabel ? <span className="files-preview-label">{pendingLabel}</span> : null}
-              将删除 <strong>{preview.files_to_delete}</strong> 个文件
-              {preview.works_to_remove > 0 ? (
-                <>
-                  {" · 移除 "}
-                  <strong>{preview.works_to_remove}</strong> 个作品
-                </>
-              ) : null}
-              {" · 可回收 "}
-              <strong>{formatBytes(preview.reclaim_bytes)}</strong>
-            </p>
-            {hasWarnings ? (
-              <ul className="files-warn-list">
-                {preview.items.flatMap((item, idx) =>
-                  item.warnings.map((w) => (
-                    <li key={`${idx}-${w}`} className="files-warn">
-                      {WARNING_LABELS[w] ?? w}
-                      {item.kind === "work" && item.title ? `：${item.title}` : ""}
-                    </li>
-                  )),
-                )}
-              </ul>
-            ) : null}
-            <div className="files-confirm-row">
-              <button type="button" className="files-danger" onClick={onConfirm} disabled={busy}>
-                {hasHealthyWork ? "确认删除（不可恢复）" : "确认删除"}
-              </button>
-              <button type="button" className="files-ghost" onClick={onCancel} disabled={busy}>
-                取消
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="files-dim">开启多选勾选文件，或用上面的清理按钮，预览后再确认删除。</p>
-        )}
-        {actionNotice ? <p className="files-notice">{actionNotice}</p> : null}
-      </section>
+        <p className="folio-files-dim">预览完成后会打开独立确认窗口，不会直接删除。</p>
+      </RailSection>
 
-      <section className="files-rail-section">
-        <h4>扫描库</h4>
-        <ul className="files-cleanup">
-          <li>
-            <span className="files-cleanup-main">
-              <span>扫描未索引 CBZ</span>
-              <em>将新文件入库</em>
-            </span>
-            <button type="button" onClick={() => void handleScanPreview()} disabled={scanBusy}>
-              预览
-            </button>
-          </li>
-        </ul>
+      <RailSection icon={HardDrive} title="目录扫描">
+        <div className="folio-files-scan-action">
+          <span><strong>扫描未索引 CBZ</strong><small>仅在确认后创建后台任务</small></span>
+          <button type="button" onClick={onScanPreview} disabled={busy} aria-busy={scanBusy}>
+            {scanBusy ? <RefreshCw className="folio-files-spin" size={14} /> : <Search size={14} />}预览
+          </button>
+        </div>
 
-        {scanPreview ? (
-          <div className="files-preview">
-            <p className="files-preview-line">
-              新增 <strong>{scanPreview.counts.new_linked}</strong> linked /{" "}
-              <strong>{scanPreview.counts.new_local}</strong> local · 已知{" "}
-              <strong>{scanPreview.counts.already_known}</strong> · 不可读{" "}
-              <strong>{scanPreview.counts.unreadable}</strong>
-            </p>
-            <div className="files-confirm-row">
-              <button type="button" onClick={() => void handleScanStart()} disabled={scanBusy}>
-                开始扫描
-              </button>
-              <button type="button" className="files-ghost" onClick={() => setScanPreview(null)} disabled={scanBusy}>
-                取消
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p className="files-dim">点击「预览」查看可入库的新文件。</p>
-        )}
-
-        {scanNotice ? (
-          <p className="files-notice">
-            {scanNotice} · <a href="#tasks">查看任务中心</a>
-          </p>
-        ) : null}
-        {scanError ? <p className="files-notice">{scanError}</p> : null}
-      </section>
+        <AnimatePresence mode="wait" initial={false}>
+          {scanPreview ? (
+            <m.div
+              key="scan-preview"
+              className="folio-files-preview"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: duration.base, ease: ease.standard }}
+            >
+              <p>
+                可关联入库 <strong>{scanPreview.counts.new_linked}</strong> 个 · 本地入库 <strong>{scanPreview.counts.new_local}</strong> 个
+                {" · "}已知 <strong>{scanPreview.counts.already_known}</strong>
+                {" · "}不可读 <strong>{scanPreview.counts.unreadable}</strong>
+              </p>
+              <div className="folio-files-confirm">
+                <button type="button" onClick={onScanStart} disabled={busy || scanCount === 0}><Play size={14} />加入任务</button>
+                <button type="button" onClick={onScanCancel} disabled={busy}><X size={14} />取消</button>
+              </div>
+            </m.div>
+          ) : <m.p key="scan-hint" className="folio-files-dim" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>先预览目录差异，不会立即写入。</m.p>}
+        </AnimatePresence>
+        {scanNotice ? <p className="folio-files-notice" role="status">{scanNotice} · <a href="#tasks">查看任务中心</a></p> : null}
+        {scanError ? <p className="folio-files-notice is-error" role="alert">{scanError}</p> : null}
+      </RailSection>
     </aside>
   );
 }

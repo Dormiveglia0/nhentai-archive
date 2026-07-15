@@ -95,45 +95,45 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
   }
 
   return (
-    <div className="library-batch-tray">
-      <div className="batch-tray-head">
-        <span className="batch-count">已选 {count} 部</span>
-        <button type="button" className="batch-clear" onClick={onClear} disabled={busy}>
+    <div className="folio-library-batch" aria-busy={busy}>
+      <div className="folio-library-batch-head">
+        <span><strong>{count}</strong> 部已选</span>
+        <button type="button" onClick={onClear} disabled={busy || count === 0}>
           <X size={14} /> 清空
         </button>
       </div>
 
       {deletePreview ? (
-        <div className="batch-delete-confirm">
-          <p className="batch-warning">
+        <div className="folio-library-delete-confirm">
+          <p>
             将永久删除 {deletePreview.works_to_remove} 部作品（共 {deletePreview.files_to_delete} 个文件，
             释放 {formatBytes(deletePreview.reclaim_bytes)}）。源 CBZ、封面与所有阅读进度/治理记录将被级联移除，且不可恢复。
           </p>
-          <div className="batch-actions">
-            <button type="button" className="batch-danger" onClick={confirmDelete} disabled={busy}>
+          <div className="folio-library-batch-actions">
+            <button type="button" className="is-danger" onClick={confirmDelete} disabled={busy}>
               确认删除
             </button>
-            <button type="button" className="batch-ghost" onClick={() => setDeletePreview(null)} disabled={busy}>
+            <button type="button" onClick={() => setDeletePreview(null)} disabled={busy}>
               取消
             </button>
           </div>
         </div>
       ) : (
-        <div className="batch-actions">
+        <div className="folio-library-batch-actions">
           <button type="button" onClick={exportSelected} disabled={busy || count === 0}>
             <Download size={15} /> 导出下载
           </button>
           <button type="button" onClick={fillMissing} disabled={busy || count === 0}>
             <Wand2 size={15} /> 补全缺失元数据
           </button>
-          <button type="button" className="batch-danger" onClick={previewDelete} disabled={busy || count === 0}>
+          <button type="button" className="is-danger" onClick={previewDelete} disabled={busy || count === 0}>
             <Trash2 size={15} /> 删除所选
           </button>
         </div>
       )}
 
-      {notice ? <div className="batch-notice">{notice}</div> : null}
-      {error ? <div className="batch-notice error">{error}</div> : null}
+      {notice ? <div className="folio-library-batch-notice" role="status">{notice}</div> : null}
+      {error ? <div className="folio-library-batch-notice is-error" role="alert">{error}</div> : null}
     </div>
   );
 }

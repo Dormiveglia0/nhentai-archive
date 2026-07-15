@@ -1,8 +1,8 @@
-import { RefreshCw, Search, Upload } from "lucide-react";
+import { Languages, RefreshCw, Upload } from "lucide-react";
 
-import { DictionaryCandidate } from "../../lib/api";
+import type { DictionaryCandidate } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { FilterMenu } from "../discover/FilterMenu";
+import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
 
 type Props = {
   query: string;
@@ -10,6 +10,8 @@ type Props = {
   status: string;
   candidates: DictionaryCandidate[];
   loading: boolean;
+  suggesting: boolean;
+  batchCount: number;
   selectedKey?: string | null;
   offset: number;
   limit: number;
@@ -17,6 +19,7 @@ type Props = {
   onTypeFilter: (value: string) => void;
   onStatus: (value: string) => void;
   onRefresh: () => void;
+  onSuggest: () => void;
   onBulkImport: () => void;
   onSelect: (candidate: DictionaryCandidate) => void;
   onPage: (offset: number) => void;
@@ -31,7 +34,7 @@ const TYPE_OPTIONS = [
   { value: "character", label: "角色" },
   { value: "parody", label: "原作" },
   { value: "language", label: "语言" },
-];
+] as const;
 
 const STATUS_OPTIONS = [
   { value: "all", label: "全部状态" },
@@ -40,7 +43,13 @@ const STATUS_OPTIONS = [
   { value: "suggested", label: "机器建议" },
   { value: "review", label: "待复核" },
   { value: "ignored", label: "已忽略" },
-];
+] as const;
+
+const LIMIT_OPTIONS = [
+  { value: "20", label: "20 条 / 页" },
+  { value: "50", label: "50 条 / 页" },
+  { value: "80", label: "80 条 / 页" },
+] as const;
 
 const TYPE_LABELS: Record<string, string> = {
   tag: "标签",
@@ -52,118 +61,111 @@ const TYPE_LABELS: Record<string, string> = {
   category: "分类",
 };
 
-function typeLabel(type?: string | null) {
-  if (!type) return "标签";
-  return TYPE_LABELS[type] ?? type;
-}
+export function DictionaryCandidatePool(props: Props) {
+  const currentPage = Math.floor(props.offset / props.limit) + 1;
 
-export function DictionaryCandidatePool({
-  query,
-  typeFilter,
-  status,
-  candidates,
-  loading,
-  selectedKey,
-  offset,
-  limit,
-  onQuery,
-  onTypeFilter,
-  onStatus,
-  onRefresh,
-  onBulkImport,
-  onSelect,
-  onPage,
-  onLimit,
-}: Props) {
   return (
-    <section className="dictionary-pane candidate-pool">
-      <header className="dictionary-pane-head">
+    <section className="folio-dictionary-candidates" aria-labelledby="folio-dictionary-candidate-title">
+      <header className="folio-dictionary-panel-head">
         <div>
-          <h2>候选术语池</h2>
-          <span>{loading ? "读取真实缓存..." : `${candidates.length} 项`}</span>
+          <span>Candidate pool</span>
+          <h2 id="folio-dictionary-candidate-title">候选术语池</h2>
+          <p>{props.loading ? "正在读取真实缓存…" : `当前页 ${props.candidates.length} 项`}</p>
         </div>
-        <div className="pane-head-actions">
-          <button type="button" className="head-action" onClick={onBulkImport}>
+        <div className="folio-dictionary-head-actions">
+          <button className="folio-line-button" type="button" onClick={props.onBulkImport}>
             <Upload size={14} />
             批量导入
           </button>
-          <button type="button" className="icon-btn" onClick={onRefresh} aria-label="刷新候选">
+          <button className="folio-dictionary-icon-button" type="button" onClick={props.onRefresh} aria-label="刷新候选">
             <RefreshCw size={15} />
           </button>
         </div>
       </header>
 
-      <div className="candidate-filters">
-        <label className="candidate-search">
-          <Search size={15} />
-          <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="搜索原文或中文词条" />
-        </label>
-        <FilterMenu value={typeFilter} options={TYPE_OPTIONS} onChange={onTypeFilter} />
-        <FilterMenu value={status} options={STATUS_OPTIONS} onChange={onStatus} />
+      <div className="folio-dictionary-filters">
+        <FolioSearchField value={props.query} onChange={props.onQuery} placeholder="搜索原文或中文词条" />
+        <div className="folio-dictionary-filter-row">
+          <FolioSelect label="类型" value={props.typeFilter} options={TYPE_OPTIONS} onChange={props.onTypeFilter} />
+          <FolioSelect label="状态" value={props.status} options={STATUS_OPTIONS} onChange={props.onStatus} />
+        </div>
+        <button
+          className="folio-dictionary-suggest"
+          type="button"
+          onClick={props.onSuggest}
+          disabled={props.loading || props.suggesting || props.batchCount === 0}
+        >
+          <Languages size={15} />
+          <span>{props.suggesting ? "生成建议中…" : `为当前候选生成建议${props.batchCount ? ` (${props.batchCount})` : ""}`}</span>
+          <small>只生成待审核项，不直接应用到作品</small>
+        </button>
       </div>
 
-      <div className="candidate-table" role="table" aria-label="候选术语">
-        <div className="candidate-row candidate-head" role="row">
+      <div className="folio-dictionary-table" aria-label="候选术语">
+        <div className="folio-dictionary-table-head" aria-hidden="true">
           <span>原文</span>
           <span>建议翻译</span>
           <span>影响</span>
           <span>状态</span>
         </div>
-        <Stagger className="candidate-row-list">
-          {candidates.map((candidate) => {
+        <Stagger className="folio-dictionary-row-list">
+          {props.candidates.map((candidate) => {
             const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
             const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";
             const rowKey = candidateRowKey(candidate);
-            const active = selectedKey === rowKey;
             return (
-              <StaggerItem key={rowKey} className="candidate-row-motion">
+              <StaggerItem key={rowKey} className="folio-dictionary-row-motion">
                 <button
                   type="button"
-                  className={active ? "candidate-row active" : "candidate-row"}
-                  onClick={() => onSelect(candidate)}
-                  role="row"
+                  className={props.selectedKey === rowKey ? "folio-dictionary-row is-active" : "folio-dictionary-row"}
+                  aria-pressed={props.selectedKey === rowKey}
+                  onClick={() => props.onSelect(candidate)}
                 >
-                  <span className="candidate-term">
-                    <i className={`type-badge type-${candidate.type || "tag"}`}>{typeLabel(candidate.type)}</i>
+                  <span className="folio-dictionary-term">
+                    <i data-type={candidate.type || "tag"}>{typeLabel(candidate.type)}</i>
                     <strong title={label}>{label}</strong>
                   </span>
-                  <span className={display === "未配置" ? "candidate-display muted" : "candidate-display"}>{display}</span>
-                  <span className="candidate-impact">{candidate.impact_work_count ?? 0}</span>
-                  <span className="candidate-status">
-                    <em className={statusTone(candidate)}>
-                      {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
-                    </em>
+                  <span className={display === "未配置" ? "folio-dictionary-display is-muted" : "folio-dictionary-display"}>{display}</span>
+                  <span className="folio-dictionary-impact">{candidate.impact_work_count ?? 0}</span>
+                  <span className={`folio-dictionary-status is-${statusTone(candidate)}`}>
+                    {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
                   </span>
                 </button>
               </StaggerItem>
             );
           })}
         </Stagger>
-        {!loading && candidates.length === 0 ? (
-          <div className="dictionary-empty">暂无真实候选。先在发现页缓存远端 tag，或使用批量导入创建本地词典。</div>
+        {!props.loading && props.candidates.length === 0 ? (
+          <div className="folio-dictionary-empty">暂无真实候选。先在发现页缓存远端标签，或使用批量导入创建本地词典。</div>
         ) : null}
       </div>
 
-      <footer className="candidate-pager">
-        <span>第 {Math.floor(offset / limit) + 1} 页</span>
-        <button type="button" disabled={offset === 0} onClick={() => onPage(Math.max(0, offset - limit))}>
-          上一页
-        </button>
-        <button type="button" disabled={candidates.length < limit} onClick={() => onPage(offset + limit)}>
-          下一页
-        </button>
-        <select value={limit} onChange={(event) => onLimit(Number(event.target.value))}>
-          <option value={20}>20 条/页</option>
-          <option value={50}>50 条/页</option>
-          <option value={80}>80 条/页</option>
-        </select>
+      <footer className="folio-dictionary-pager">
+        <span>第 {currentPage} 页</span>
+        <div>
+          <button type="button" disabled={props.offset === 0} onClick={() => props.onPage(Math.max(0, props.offset - props.limit))}>上一页</button>
+          <button type="button" disabled={props.candidates.length < props.limit} onClick={() => props.onPage(props.offset + props.limit)}>下一页</button>
+        </div>
+        <FolioSelect
+          label="每页"
+          value={String(props.limit)}
+          options={LIMIT_OPTIONS}
+          onChange={(value) => props.onLimit(Number(value))}
+        />
       </footer>
     </section>
   );
 }
 
 function candidateRowKey(candidate: DictionaryCandidate) {
-  return candidate.id ? `remote-${candidate.id}` : `dict-${candidate.dictionary_id}`;
+  if (candidate.id != null) return `remote-${candidate.id}`;
+  if (candidate.dictionary_id != null) return `dict-${candidate.dictionary_id}`;
+  return `${candidate.type ?? "tag"}:${candidate.name ?? candidate.slug ?? "unknown"}`;
+}
+
+function typeLabel(type?: string | null) {
+  if (!type) return "标签";
+  return TYPE_LABELS[type] ?? type;
 }
 
 function statusLabel(status?: string | null) {

@@ -1,8 +1,11 @@
-import { ChevronDown, Search, X } from "lucide-react";
-import { KeyboardEvent, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, Search, Tag, X } from "lucide-react";
+import { AnimatePresence, m } from "motion/react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
-import { api, RemoteTag } from "../../lib/api";
-import { TagFilter } from "./discoverTypes";
+import { api, type RemoteTag } from "../../lib/api";
+import { duration, ease } from "../../lib/motion";
+import { tagSearchHref } from "../../lib/navigation";
+import type { TagFilter } from "./discoverTypes";
 import { defaultDisplayTag } from "./TagScroller";
 
 type Props = {
@@ -16,160 +19,209 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   const [cached, setCached] = useState<RemoteTag[]>([]);
   const [suggestions, setSuggestions] = useState<RemoteTag[]>([]);
   const [loading, setLoading] = useState(false);
-  const [cachedLoading, setCachedLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<"tag" | "meta">("tag");
+  const cachedRequested = useRef(false);
   const latestQuery = useRef("");
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
 
   useEffect(() => {
-    function onPointerDown(event: PointerEvent) {
+    function closeOnOutsidePointer(event: PointerEvent) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, []);
+    function closeOnEscape(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape" || !open) return;
+      setOpen(false);
+      window.requestAnimationFrame(() => triggerRef.current?.focus());
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
 
   useEffect(() => {
-    if (!open || cached.length || cachedLoading) return;
-    setCachedLoading(true);
-    api
-      .dictionaryCandidates({ limit: 80 })
-      .then((payload) => setCached(uniqueRemoteTags(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number"))))
-      .catch((exc) => setError(exc instanceof Error ? exc.message : String(exc)))
-      .finally(() => setCachedLoading(false));
-  }, [cached.length, cachedLoading, open]);
-
-  useEffect(() => {
-    const q = query.trim();
-    latestQuery.current = q;
+    if (!open || cachedRequested.current) return;
+    let cancelled = false;
+    cachedRequested.current = true;
+    setLoading(true);
     setError(null);
-    if (!open || !canSearchTag(q)) {
+    void api.dictionaryCandidates({ limit: 80 })
+      .then((payload) => {
+        if (!cancelled) {
+          setCached(uniqueRemoteTags(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number")));
+        }
+      })
+      .catch((exception) => {
+        if (!cancelled) {
+          cachedRequested.current = false;
+          setError(exception instanceof Error ? exception.message : String(exception));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    const normalizedQuery = query.trim();
+    latestQuery.current = normalizedQuery;
+    setError(null);
+    if (!open || !canSearchTag(normalizedQuery)) {
       setSuggestions([]);
       return;
     }
+
+    let cancelled = false;
     const handle = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const payload = await api.dictionaryAutocomplete(q, 12);
-        if (latestQuery.current === q) {
-          setSuggestions(uniqueRemoteTags(payload.result.filter((tag): tag is RemoteTag => typeof tag.id === "number")));
+        const payload = await api.dictionaryAutocomplete(normalizedQuery, 12);
+        if (!cancelled && latestQuery.current === normalizedQuery) {
+          setSuggestions(uniqueRemoteTags(payload.result));
         }
-      } catch (exc) {
-        if (latestQuery.current === q) setError(exc instanceof Error ? exc.message : String(exc));
+      } catch (exception) {
+        if (!cancelled && latestQuery.current === normalizedQuery) {
+          setError(exception instanceof Error ? exception.message : String(exception));
+        }
       } finally {
-        if (latestQuery.current === q) setLoading(false);
+        if (!cancelled && latestQuery.current === normalizedQuery) setLoading(false);
       }
     }, 220);
-    return () => window.clearTimeout(handle);
-  }, [query, open]);
 
-  function submit() {
-    const first = (canSearchTag(query.trim()) ? suggestions : cached)[0];
-    if (first) {
-      choose(first);
-    }
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [open, query]);
+
+  function chooseFirst() {
+    const first = (canSearchTag(query.trim()) ? suggestions : cached).find((tag) => matchesScope(tag, scope));
+    if (first) toggle(first);
   }
 
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key !== "Enter") return;
     event.preventDefault();
-    submit();
+    chooseFirst();
   }
 
   function remove(tag: RemoteTag) {
     onSelect(selected.filter((item) => item.id !== tag.id));
   }
 
-  function clear() {
-    onSelect([]);
-  }
-
-  function choose(tag: RemoteTag) {
+  function toggle(tag: RemoteTag) {
     if (typeof tag.id !== "number") {
       setError("该词条尚未映射远端 tag，不能用于远端筛选。");
       return;
     }
-    const exists = selected.some((item) => item.id === tag.id);
-    if (!exists) onSelect([...selected, tag]);
-    setQuery("");
-    setSuggestions([]);
-    setOpen(false);
-  }
-
-  function toggle(tag: RemoteTag) {
-    if (selected.some((item) => item.id === tag.id)) {
-      remove(tag);
-    } else {
-      onSelect([...selected, tag]);
-    }
+    if (selected.some((item) => item.id === tag.id)) remove(tag);
+    else onSelect([...selected, tag]);
     setQuery("");
     setSuggestions([]);
   }
 
-  const q = query.trim();
-  const visible = canSearchTag(q) ? suggestions : cached;
-  const selectedSummary = selected.length
-    ? `${defaultDisplayTag(selected[0])}${selected.length > 1 ? ` +${selected.length - 1}` : ""}`
-    : "选择或搜索远端 tag";
+  const normalizedQuery = query.trim();
+  const visible = uniqueRemoteTags([...selected, ...(canSearchTag(normalizedQuery) ? suggestions : cached)])
+    .filter((tag) => matchesScope(tag, scope));
 
   return (
-    <div ref={rootRef} className={open ? "tag-filter-shell open" : "tag-filter-shell"}>
-      <button className="tag-filter tag-filter-trigger" type="button" onClick={() => setOpen((value) => !value)}>
-        <Search size={15} />
-        <span>{selectedSummary}</span>
-        <ChevronDown size={15} />
-      </button>
-      {open ? (
-        <div className="tag-picker">
-          <div className="tag-picker-search">
-            <Search size={15} />
-            <input
-              autoFocus
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={onSearchKeyDown}
-              placeholder="输入中文译名、别名或原始 tag"
-            />
-            {loading || cachedLoading ? <span className="tag-filter-state">...</span> : null}
-            {error ? <span className="tag-filter-state error">!</span> : null}
+    <div ref={rootRef} className={open ? "folio-discover-tags is-open" : "folio-discover-tags"}>
+      {selected.length ? (
+        <div className="folio-discover-tag-selection">
+          <div className="folio-discover-tag-chips" aria-label="已选远端标签">
+            {selected.map((tag) => (
+              <span key={tag.id}>
+                <a href={tagSearchHref(tag)}>{defaultDisplayTag(tag)}</a>
+                <button type="button" aria-label={`移除标签 ${defaultDisplayTag(tag)}`} onClick={() => remove(tag)}><X size={12} /></button>
+              </span>
+            ))}
           </div>
-          {selected.length ? (
-            <div className="tag-picker-selected">
-              <span>已选</span>
-              <div>
-                {selected.map((tag) => (
-                  <button key={tag.id} type="button" onClick={() => remove(tag)}>
-                    {defaultDisplayTag(tag)}
-                    <X size={12} />
-                  </button>
-                ))}
-                <button className="clear-tags" type="button" onClick={clear} aria-label="清除全部标签">
-                  清除
-                </button>
-              </div>
-            </div>
-          ) : null}
-          <div className="tag-picker-list">
-            {visible.map((tag) => {
-              const active = selected.some((item) => item.id === tag.id);
-              return (
-                <button key={tag.id} className={active ? "active" : ""} type="button" onClick={() => toggle(tag)}>
-                  <span className="tag-picker-labels">
-                    <strong>{defaultDisplayTag(tag)}</strong>
-                    <small>{tag.name || tag.slug || `#${tag.id}`}</small>
-                  </span>
-                  <span>{active ? "已选" : tag.type || "tag"}</span>
-                </button>
-              );
-            })}
-            {!visible.length && !loading && !cachedLoading ? (
-              <div className="tag-picker-empty">
-                {canSearchTag(q) ? "没有真实 tag 结果" : "暂无缓存 tag，输入中文或至少 2 个字符搜索"}
-              </div>
-            ) : null}
-          </div>
+          <button className="folio-discover-tag-clear" type="button" onClick={() => onSelect([])}><X size={13} />清空</button>
         </div>
       ) : null}
+
+      <button
+        ref={triggerRef}
+        className="folio-discover-tag-trigger"
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Tag size={15} />
+        <strong>{selected.length ? `${selected.length} 个标签` : "添加标签"}</strong>
+        <ChevronDown size={14} />
+      </button>
+
+      <AnimatePresence>
+        {open ? (
+          <m.div
+            id={panelId}
+            className="folio-discover-tag-panel"
+            role="dialog"
+            aria-label="选择远端检索标签"
+            initial={{ opacity: 0, y: -7, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -5, scale: 0.99 }}
+            transition={{ duration: duration.fast, ease: ease.standard }}
+          >
+            <label>
+              <Search size={15} />
+              <input
+                autoFocus
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={onSearchKeyDown}
+                placeholder="中文译名、别名或原始 tag"
+                aria-label="搜索远端标签"
+              />
+              {loading ? <span role="status">检索中</span> : null}
+            </label>
+
+            <div className="folio-discover-tag-scope" role="tablist" aria-label="标签候选分类">
+              <button type="button" role="tab" aria-selected={scope === "tag"} className={scope === "tag" ? "is-active" : ""} onClick={() => setScope("tag")}>内容标签</button>
+              <button type="button" role="tab" aria-selected={scope === "meta"} className={scope === "meta" ? "is-active" : ""} onClick={() => setScope("meta")}>作者与作品信息</button>
+            </div>
+
+            <div className="folio-discover-tag-options">
+              {error ? <p role="alert">{error}</p> : null}
+              {!error && visible.map((tag) => {
+                const active = selected.some((item) => item.id === tag.id);
+                return (
+                  <a
+                    key={tag.id}
+                    href={tagSearchHref(tag)}
+                    className={active ? "is-active" : ""}
+                    aria-current={active ? "true" : undefined}
+                    onClick={(event) => {
+                      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                      event.preventDefault();
+                      toggle(tag);
+                    }}
+                  >
+                    <span><strong>{defaultDisplayTag(tag)}</strong><small>{tag.name || tag.slug || `#${tag.id}`}</small></span>
+                    <em>{tagTypeLabel(tag.type)}</em>
+                    {active ? <Check size={15} /> : <i />}
+                  </a>
+                );
+              })}
+              {!error && !loading && !visible.length ? (
+                <p>{canSearchTag(normalizedQuery) ? "没有真实 tag 结果" : "暂无缓存 tag；输入中文或至少两个字符检索"}</p>
+              ) : null}
+            </div>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -181,8 +233,16 @@ function canSearchTag(value: string) {
 function uniqueRemoteTags(tags: RemoteTag[]) {
   const seen = new Set<number>();
   return tags.filter((tag) => {
-    if (typeof tag.id !== "number" || seen.has(tag.id)) return false;
+    if (seen.has(tag.id)) return false;
     seen.add(tag.id);
     return true;
   });
+}
+
+function matchesScope(tag: RemoteTag, scope: "tag" | "meta") {
+  return scope === "tag" ? (tag.type || "tag") === "tag" : (tag.type || "tag") !== "tag";
+}
+
+function tagTypeLabel(type?: string) {
+  return ({ artist: "作者", group: "社团", parody: "原作", character: "角色", category: "分类", language: "语言", tag: "标签" } as Record<string, string>)[type || "tag"] || type || "标签";
 }

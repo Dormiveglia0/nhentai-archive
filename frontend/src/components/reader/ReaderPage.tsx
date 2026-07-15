@@ -1,12 +1,13 @@
+import { AlertTriangle, ArrowLeft, EyeOff, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { navigate } from "../../lib/navigation";
 import {
   arrowDelta,
   clamp,
-  Fit,
-  Mode,
-  ReaderPanel,
+  type Fit,
+  type Mode,
+  type ReaderPanel,
   ZOOM_MAX,
   ZOOM_MIN,
   ZOOM_STEP,
@@ -17,9 +18,10 @@ import { ReaderScrubber } from "./ReaderScrubber";
 import { ReaderToolbar } from "./ReaderToolbar";
 import { ReaderViewport } from "./ReaderViewport";
 import { ThumbnailOverlay } from "./ThumbnailOverlay";
-import { ReaderSource, useReaderData } from "./useReaderData";
 import { useReaderChrome } from "./useReaderChrome";
+import { type ReaderSource, useReaderData } from "./useReaderData";
 import { useReaderPrefs } from "./useReaderPrefs";
+import "./ReaderPage.css";
 
 type Props = {
   source: ReaderSource;
@@ -28,92 +30,110 @@ type Props = {
 
 const FIT_ORDER: Fit[] = ["height", "width", "original"];
 
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, button, [role='slider'], [contenteditable='true']"));
+}
+
 export function ReaderPage({ source, privacyMode }: Props) {
   const data = useReaderData(source);
   const { prefs, setMode, setDirection, setFit } = useReaderPrefs();
-  const { visible: chromeVisible, setPinned, reveal } = useReaderChrome();
-
+  const { visible: chromeVisible, setPinned, reveal, hide } = useReaderChrome();
   const [zoom, setZoom] = useState(1);
   const [masked, setMasked] = useState(false);
   const [activePanel, setActivePanel] = useState<ReaderPanel>("none");
   const [jumpOpen, setJumpOpen] = useState(false);
+  const [uiError, setUiError] = useState<string | null>(null);
 
-  // 切换作品时重置缩放/面板/遮罩/跳页层
   useEffect(() => {
     setZoom(1);
     setActivePanel("none");
     setMasked(false);
     setJumpOpen(false);
+    setUiError(null);
   }, [data.sourceKey]);
 
-  // 面板开启时钉住 chrome
   useEffect(() => {
-    setPinned(activePanel !== "none");
-  }, [activePanel, setPinned]);
+    setPinned(activePanel !== "none" || jumpOpen);
+  }, [activePanel, jumpOpen, setPinned]);
 
-  // 标题
   useEffect(() => {
     document.title = privacyMode ? "NH Archive" : data.title;
-    return () => {
-      document.title = "NH Archive";
-    };
+    return () => { document.title = "NH Archive"; };
   }, [privacyMode, data.title]);
 
-  const flip = useCallback((delta: number) => data.setPage(data.pageIndex + delta), [data.setPage, data.pageIndex]);
+  useEffect(() => {
+    if (!uiError) return;
+    const timer = window.setTimeout(() => setUiError(null), 5600);
+    return () => window.clearTimeout(timer);
+  }, [uiError]);
+
+  const goBack = useCallback(() => navigate({ name: data.isRemote ? "discover" : "library" }), [data.isRemote]);
+  const flip = useCallback((delta: number) => data.setPage(data.pageIndex + delta), [data.pageIndex, data.setPage]);
   const jump = useCallback((pageIndex: number) => data.setPage(pageIndex), [data.setPage]);
-  const zoomBy = useCallback(
-    (steps: number) => setZoom((z) => clamp(Number((z + steps * ZOOM_STEP).toFixed(2)), ZOOM_MIN, ZOOM_MAX)),
-    []
-  );
+  const zoomBy = useCallback((steps: number) => {
+    setZoom((value) => clamp(Number((value + steps * ZOOM_STEP).toFixed(2)), ZOOM_MIN, ZOOM_MAX));
+  }, []);
   const cycleFit = useCallback(() => {
-    const idx = FIT_ORDER.indexOf(prefs.fit);
-    setFit(FIT_ORDER[(idx + 1) % FIT_ORDER.length]);
+    const index = FIT_ORDER.indexOf(prefs.fit);
+    setFit(FIT_ORDER[(index + 1) % FIT_ORDER.length]);
   }, [prefs.fit, setFit]);
-  const toggleDirection = useCallback(
-    () => setDirection(prefs.direction === "rtl" ? "ltr" : "rtl"),
-    [prefs.direction, setDirection]
-  );
-  const setModeAndReset = useCallback(
-    (mode: Mode) => {
-      if (mode === "webtoon") setZoom(1);
-      setMode(mode);
-    },
-    [setMode]
-  );
-  const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen();
+  const toggleDirection = useCallback(() => {
+    setDirection(prefs.direction === "rtl" ? "ltr" : "rtl");
+  }, [prefs.direction, setDirection]);
+  const setModeAndReset = useCallback((mode: Mode) => {
+    if (mode === "webtoon") setZoom(1);
+    setMode(mode);
+  }, [setMode]);
+  const toggleFullscreen = useCallback(async () => {
+    setUiError(null);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch (reason) {
+      setUiError(reason instanceof Error ? reason.message : "浏览器拒绝进入全屏。");
+    }
   }, []);
   const openPanel = useCallback((panel: ReaderPanel) => {
-    setActivePanel((current) => (current === panel ? "none" : panel));
+    setActivePanel((current) => current === panel ? "none" : panel);
   }, []);
+  const setInteractionPinned = useCallback((active: boolean) => {
+    setPinned(active || activePanel !== "none" || jumpOpen);
+  }, [activePanel, jumpOpen, setPinned]);
   const toggleChrome = useCallback(() => {
-    if (activePanel !== "none") return; // panel drives the pin; don't fight it
-    if (chromeVisible) setPinned(false);
+    if (activePanel !== "none" || jumpOpen) return;
+    if (chromeVisible) hide();
     else reveal();
-  }, [activePanel, chromeVisible, setPinned, reveal]);
+  }, [activePanel, chromeVisible, hide, jumpOpen, reveal]);
 
-  // 键盘
   useEffect(() => {
     const handle = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      if (event.key === "Escape") {
+        if (jumpOpen) setJumpOpen(false);
+        else if (activePanel !== "none") setActivePanel("none");
+        else if (document.fullscreenElement) void document.exitFullscreen();
+        return;
+      }
+      if (isInteractiveTarget(event.target)) return;
+
       const key = event.key;
       const delta = arrowDelta(key, prefs.direction);
       if (prefs.mode === "single" && delta !== 0) {
+        event.preventDefault();
         flip(delta);
-        return;
-      }
-      if (key === " ") {
+      } else if (key === " ") {
         event.preventDefault();
         flip(event.shiftKey ? -1 : 1);
-      } else if (key === "f") {
-        toggleFullscreen();
-      } else if (key === "h") {
-        setMasked((v) => !v);
-      } else if (key === "t") {
+      } else if (key.toLowerCase() === "f") {
+        event.preventDefault();
+        void toggleFullscreen();
+      } else if (key.toLowerCase() === "h") {
+        event.preventDefault();
+        setMasked((value) => !value);
+      } else if (key.toLowerCase() === "t") {
+        event.preventDefault();
         openPanel("thumbnails");
-      } else if (key === "i") {
+      } else if (key.toLowerCase() === "i") {
+        event.preventDefault();
         openPanel("info");
       } else if (key === "+" || key === "=") {
         zoomBy(1);
@@ -121,28 +141,35 @@ export function ReaderPage({ source, privacyMode }: Props) {
         zoomBy(-1);
       } else if (key === "0") {
         setZoom(1);
-      } else if (key === "g") {
+      } else if (key.toLowerCase() === "g" && data.pageCount > 0) {
         event.preventDefault();
         setJumpOpen(true);
-      } else if (key === "Escape") {
-        if (activePanel !== "none") setActivePanel("none");
-        else if (document.fullscreenElement) void document.exitFullscreen();
       }
     };
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [activePanel, flip, openPanel, prefs.direction, prefs.mode, toggleFullscreen, zoomBy]);
+  }, [activePanel, data.pageCount, flip, jumpOpen, openPanel, prefs.direction, prefs.mode, toggleFullscreen, zoomBy]);
 
   if (data.error) {
     return (
-      <section className="reader-shell">
-        <div className="notice error">{data.error}</div>
+      <section className="reader-shell reader-error-shell">
+        <div className="reader-error-card" role="alert">
+          <AlertTriangle size={25} />
+          <span><strong>无法打开阅读器</strong><p>{data.error}</p></span>
+          <div>
+            <button type="button" onClick={goBack}><ArrowLeft size={15} />返回</button>
+            <button type="button" onClick={data.reload}><RotateCw size={15} />重新读取</button>
+          </div>
+        </div>
       </section>
     );
   }
 
+  const feedbackError = data.actionError || uiError;
+
   return (
-    <section className="reader-shell">
+    <section className={`reader-shell reader-source-${data.isRemote ? "remote" : "local"}`}>
+      <div className="reader-atmosphere" aria-hidden="true"><i /><i /><i /></div>
       <ReaderViewport
         pages={data.pages}
         pageIndex={data.pageIndex}
@@ -158,7 +185,15 @@ export function ReaderPage({ source, privacyMode }: Props) {
         onToggleChrome={toggleChrome}
       />
 
-      {data.notice ? <div className="notice slim reader-notice">{data.notice}</div> : null}
+      {masked ? (
+        <button className="reader-privacy-curtain" type="button" onClick={() => setMasked(false)}>
+          <EyeOff size={22} />
+          <span><strong>页面已遮罩</strong><small>点击恢复阅读 · H</small></span>
+        </button>
+      ) : null}
+
+      {feedbackError ? <div className="reader-feedback is-error" role="alert"><AlertTriangle size={15} /><span>{feedbackError}</span></div> : null}
+      {!feedbackError && data.notice ? <div className="reader-feedback is-success" role="status"><span>{data.notice}</span></div> : null}
 
       <ReaderToolbar
         visible={chromeVisible}
@@ -170,18 +205,21 @@ export function ReaderPage({ source, privacyMode }: Props) {
         direction={prefs.direction}
         fit={prefs.fit}
         masked={masked}
+        importing={data.importing}
+        queued={data.queued}
         activePanel={activePanel}
-        onBack={() => navigate({ name: data.isRemote ? "discover" : "library" })}
+        onBack={goBack}
         onFlip={flip}
         onSetMode={setModeAndReset}
         onToggleDirection={toggleDirection}
         onCycleFit={cycleFit}
         onZoom={zoomBy}
-        onToggleMask={() => setMasked((v) => !v)}
-        onToggleFullscreen={toggleFullscreen}
+        onToggleMask={() => setMasked((value) => !value)}
+        onToggleFullscreen={() => void toggleFullscreen()}
         onOpenPanel={openPanel}
-        onImport={data.importRemote}
-        onPanelHoverChange={setPinned}
+        onOpenJump={() => setJumpOpen(true)}
+        onImport={() => void data.importRemote()}
+        onPanelHoverChange={setInteractionPinned}
       />
 
       <ReaderScrubber
@@ -189,7 +227,7 @@ export function ReaderPage({ source, privacyMode }: Props) {
         pageIndex={data.pageIndex}
         pageCount={data.pageCount}
         onJump={jump}
-        onScrubChange={setPinned}
+        onScrubChange={setInteractionPinned}
       />
 
       <ThumbnailOverlay
@@ -207,17 +245,16 @@ export function ReaderPage({ source, privacyMode }: Props) {
         tags={data.tags}
         progressPercent={data.progressPercent}
         isRemote={data.isRemote}
+        importing={data.importing}
+        queued={data.queued}
+        completed={data.completed}
         workId={data.work?.id ?? null}
-        mode={prefs.mode}
-        direction={prefs.direction}
-        fit={prefs.fit}
-        onSetMode={setModeAndReset}
-        onToggleDirection={toggleDirection}
-        onCycleFit={cycleFit}
+        galleryId={data.isRemote ? data.gallery?.gallery_id ?? null : data.work?.remote_gallery_id ?? null}
+        returnTo={source.kind === "local" ? `reader/${source.workId}` : `reader/remote/${source.galleryId}`}
         onMarkCompleted={data.markCompleted}
-        onImport={data.importRemote}
+        onImport={() => void data.importRemote()}
         onClose={() => setActivePanel("none")}
-        onHoverChange={setPinned}
+        onHoverChange={setInteractionPinned}
       />
 
       <ReaderJumpDialog
