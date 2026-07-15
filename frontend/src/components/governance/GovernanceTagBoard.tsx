@@ -1,13 +1,16 @@
 import type { GovernanceAggregate, GovernanceTag } from "../../lib/api";
-import { navigate, tagSearchHref } from "../../lib/navigation";
+import { navigate } from "../../lib/navigation";
+import { GovernanceTagItem } from "./GovernanceTagItem";
 
 export function GovernanceTagBoard({
   aggregate,
   onApplyDictionaryTag,
+  onReviewDictionaryTag,
   applyingTagId,
 }: {
   aggregate: GovernanceAggregate;
-  onApplyDictionaryTag: (tag: GovernanceTag) => Promise<void>;
+  onApplyDictionaryTag: (tag: GovernanceTag, zhName: string) => Promise<void>;
+  onReviewDictionaryTag: (tag: GovernanceTag) => Promise<void>;
   applyingTagId: number | null;
 }) {
   return (
@@ -28,18 +31,13 @@ export function GovernanceTagBoard({
               <h3>{group.label}</h3>
               <div className="folio-governance-tag-list">
                 {group.tags.map((tag) => (
-                  <span key={tag.id} className={`folio-governance-tag is-${tag.state}`}>
-                    <a href={tagSearchHref({ id: tag.remote_tag_id, type: tag.type, name: tag.name, slug: tag.slug, display: tag.display })}>{tag.display}</a>
-                    {tag.state === "conflict" ? (
-                      <button type="button" onClick={() => navigate({ name: "dictionary" })}>
-                        去词典
-                      </button>
-                    ) : tag.state === "pending" && tag.remote_tag_id ? (
-                      <button type="button" disabled={applyingTagId === tag.id} onClick={() => void onApplyDictionaryTag(tag)}>
-                        {applyingTagId === tag.id ? "确认中" : "确认"}
-                      </button>
-                    ) : null}
-                  </span>
+                  <GovernanceTagItem
+                    key={`${tag.id}-${tag.state}`}
+                    tag={tag}
+                    busy={applyingTagId === tag.id}
+                    onApply={onApplyDictionaryTag}
+                    onReview={onReviewDictionaryTag}
+                  />
                 ))}
               </div>
             </article>

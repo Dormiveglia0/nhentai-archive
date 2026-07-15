@@ -1,8 +1,8 @@
-import { Languages } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
-import type { GovernanceAggregate, MetadataFieldDiff } from "../../lib/api";
+import type { GovernanceAggregate, GovernanceTranslateSuggestion, MetadataFieldDiff } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
+import { GovernanceTranslationPanel } from "./GovernanceTranslationPanel";
 import { normalize, type FieldEdit, sourceLabel, splitValues, toEditableSource } from "./governanceHelpers";
 
 type Props = {
@@ -11,16 +11,34 @@ type Props = {
   onChange: (field: string, edit: FieldEdit) => void;
   onlyDiff: boolean;
   onToggleDiff: () => void;
-  onTranslate: () => void;
+  onTranslate: (fields: string[]) => void;
   translating: boolean;
+  translationSuggestions: GovernanceTranslateSuggestion[];
+  onAcceptTranslation: (suggestion: GovernanceTranslateSuggestion) => void;
+  onAcceptAllTranslations: () => void;
+  onDismissTranslation: (field: string) => void;
 };
 
 const REQUIRED_FIELDS = new Set(["title", "language"]);
 
-export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleDiff, onTranslate, translating }: Props) {
+export function MetadataEditor({
+  aggregate,
+  edits,
+  onChange,
+  onlyDiff,
+  onToggleDiff,
+  onTranslate,
+  translating,
+  translationSuggestions,
+  onAcceptTranslation,
+  onAcceptAllTranslations,
+  onDismissTranslation,
+}: Props) {
   const changed = (field: MetadataFieldDiff) => isChanged(field, edits[field.field]);
   const needsDecision = (field: MetadataFieldDiff) =>
-    changed(field) || (!normalize(field.working_value) && REQUIRED_FIELDS.has(field.field));
+    changed(field) ||
+    (!normalize(field.working_value) && REQUIRED_FIELDS.has(field.field)) ||
+    (Boolean(normalize(field.source_value)) && field.differs_from_source);
   const fields = onlyDiff
     ? aggregate.metadata.fields.filter(needsDecision)
     : aggregate.metadata.fields;
@@ -45,10 +63,6 @@ export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleD
           <button type="button" className="folio-line-button" onClick={adoptAllSources} disabled={!adoptable.length}>
             补全空字段{adoptable.length ? ` (${adoptable.length})` : ""}
           </button>
-          <button type="button" className="folio-line-button" onClick={onTranslate} disabled={translating}>
-            <Languages size={14} />
-            {translating ? "机翻中…" : "机翻填充中文"}
-          </button>
           <button
             type="button"
             className={onlyDiff ? "folio-filter-toggle is-active" : "folio-filter-toggle"}
@@ -59,6 +73,14 @@ export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleD
           </button>
         </div>
       </header>
+      <GovernanceTranslationPanel
+        suggestions={translationSuggestions}
+        translating={translating}
+        onGenerate={onTranslate}
+        onAccept={onAcceptTranslation}
+        onAcceptAll={onAcceptAllTranslations}
+        onDismiss={onDismissTranslation}
+      />
       <Stagger key={`${aggregate.work.id}-${onlyDiff}`} className="folio-governance-field-grid">
         {fields.length ? (
           fields.map((field) => (
@@ -85,14 +107,15 @@ function MetadataCard({
 }) {
   const sourceAllowed = toEditableSource(field.source);
   const changed = isChanged(field, edit);
-  const needsDecision = !normalize(field.working_value) && REQUIRED_FIELDS.has(field.field);
+  const missingRequired = !normalize(field.working_value) && REQUIRED_FIELDS.has(field.field);
+  const needsDecision = missingRequired || (Boolean(normalize(field.source_value)) && field.differs_from_source);
   return (
     <article className={`folio-governance-field-card${needsDecision ? " is-review" : ""}${changed ? " is-changed" : ""}`}>
       <div className="folio-governance-field-head">
         <strong>{field.label}</strong>
         {field.source_value ? <span>{sourceLabel(field.source)}</span> : null}
         {field.differs_from_source ? <span>来源不同</span> : null}
-        {needsDecision ? <em>待确认</em> : null}
+        {missingRequired ? <em>必填缺失</em> : null}
         {changed ? <em className="is-changed">待保存</em> : null}
       </div>
       <div className="folio-governance-field-compare">

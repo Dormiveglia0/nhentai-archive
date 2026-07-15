@@ -11,6 +11,7 @@ from xml.etree import ElementTree
 
 from app.database import Database
 from app.services import comicinfo
+from app.services.dictionary_service import DEFAULT_IGNORED_REMOTE_TYPES, DEFAULT_IGNORED_REMOTE_TYPE_SQL
 
 
 METADATA_FIELDS = {
@@ -46,6 +47,27 @@ TAG_GROUP_LABELS = {
     "category": "语言与分类",
 }
 
+REASON_GROUPS = {
+    "metadata": {"missing_metadata"},
+    "dictionary": {"untagged", "dictionary_unmapped", "dictionary_review", "dictionary_conflict"},
+    "files": {"missing_source", "missing_comicinfo", "missing_cover"},
+}
+
+CHECK_DEFINITIONS = {
+    "metadata": {
+        "label": "元数据",
+        "description": "自动检查标题与语言是否存在；其余字段在下方进行来源对照和人工取舍。",
+    },
+    "dictionary": {
+        "label": "词典",
+        "description": "检查标签是否存在，以及每个标签是否已映射、待复核或发生冲突。",
+    },
+    "files": {
+        "label": "文件",
+        "description": "检查源 CBZ、封面文件与 ComicInfo.xml 是否可用。",
+    },
+}
+
 
 class GovernanceService:
     """Local-only metadata/tag governance aggregate backed by SQLite and stored CBZ files."""
@@ -57,9 +79,10 @@ class GovernanceService:
 
     def queue(self) -> dict[str, Any]:
         rows = self.db.fetchall(
-            """
+            f"""
             SELECT
               w.*,
+              rg.payload_json AS remote_payload_json,
               COALESCE(f.size_bytes, 0) AS size_bytes,
               f.path AS source_path,
               (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata,
@@ -81,8 +104,14 @@ class GovernanceService:
                  FROM work_tags wt
                  JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
                 WHERE wt.work_id = w.id AND d.status = 'conflict') AS conflict_count,
+              (SELECT COUNT(*)
+                 FROM work_tags wt
+                WHERE wt.work_id = w.id
+                  AND wt.dictionary_id IS NULL
+                  AND COALESCE(wt.tag_type, 'tag') NOT IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})) AS unmapped_count,
               (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id) AS metadata_count
             FROM works w
+            LEFT JOIN remote_galleries rg ON rg.gallery_id = w.remote_gallery_id
             LEFT JOIN (
               SELECT work_id, path, SUM(size_bytes) AS size_bytes
               FROM work_files
@@ -92,20 +121,38 @@ class GovernanceService:
             ORDER BY w.updated_at DESC, w.id DESC
             """
         )
+        review_context = self._queue_review_context()
         items = []
         summary = {
             "total": 0,
+            "unreviewed": 0,
+            "stale": 0,
+            "approved": 0,
+            "automatic_issues": 0,
             "missing_metadata": 0,
             "untagged": 0,
+            "dictionary_unmapped": 0,
             "dictionary_review": 0,
             "dictionary_conflict": 0,
+            "missing_source": 0,
             "missing_comicinfo": 0,
             "missing_cover": 0,
         }
         for row in rows:
+            work_id = int(row["id"])
             reasons = self._queue_reasons(row)
-            if reasons:
+            fingerprint = self._review_fingerprint(
+                row,
+                review_context["files"].get(work_id, []),
+                review_context["metadata"].get(work_id, []),
+                review_context["tags"].get(work_id, []),
+            )
+            review = self._review_state(review_context["reviews"].get(work_id), fingerprint)
+            if review["state"] != "approved":
                 summary["total"] += 1
+            summary[review["state"]] += 1
+            if reasons:
+                summary["automatic_issues"] += 1
             for reason in reasons:
                 if reason["code"] in summary:
                     summary[reason["code"]] += 1
@@ -113,6 +160,7 @@ class GovernanceService:
                 {
                     "work": self._work_summary(row),
                     "reasons": reasons,
+                    "review": review,
                     "completeness_percent": self._completeness(reasons),
                     "updated_at": row.get("updated_at"),
                 }
@@ -135,6 +183,10 @@ class GovernanceService:
         metadata_fields = self._metadata_fields(work, tag_rows, archive_sources, remote_payload, saved)
         tag_groups, tag_summary, dictionary_summary = self._tag_summary(tag_rows)
         reasons = self._queue_reasons(self._queue_row_for_work(work, files, tag_rows, saved))
+        fingerprint = self._review_fingerprint(work, files, list(saved.values()), tag_rows)
+        latest_review = self._latest_review(work_id)
+        review = self._review_state(latest_review, fingerprint)
+        review["history"] = self._review_history(work_id)
 
         return {
             "work": self._work_summary(work),
@@ -143,9 +195,40 @@ class GovernanceService:
             "tags": {"groups": tag_groups, "summary": tag_summary},
             "dictionary": dictionary_summary,
             "exports": [],
+            "automatic_issues": reasons,
+            "checks": self._automatic_checks(reasons),
+            "review": review,
             "recommended_actions": self._recommended_actions(reasons),
             "completeness_percent": self._completeness(reasons),
         }
+
+    def review(self, work_id: int, action: str, note: str | None = None) -> dict[str, Any]:
+        work = self._work_row(work_id)
+        if not work:
+            raise ValueError(f"Work {work_id} not found")
+        if action not in {"approve", "reopen"}:
+            raise ValueError("Unsupported governance review action")
+        clean_note = self._stringify(note)
+        if clean_note and len(clean_note) > 1000:
+            raise ValueError("审核备注不能超过 1000 个字符")
+
+        snapshot_hash = None
+        if action == "approve":
+            files = self.db.fetchall("SELECT * FROM work_files WHERE work_id = ? ORDER BY id", (work_id,))
+            metadata = self.db.fetchall("SELECT * FROM work_metadata WHERE work_id = ? ORDER BY field", (work_id,))
+            tags = self._tag_rows(work_id)
+            saved = {str(row["field"]): row for row in metadata}
+            reasons = self._queue_reasons(self._queue_row_for_work(work, files, tags, saved))
+            if reasons and not clean_note:
+                raise ValueError("当前仍有系统提示，请填写审核备注说明保留或延期处理的原因")
+            snapshot_hash = self._review_fingerprint(work, files, metadata, tags)
+
+        self.db.execute(
+            "INSERT INTO governance_reviews (work_id, action, snapshot_hash, note) VALUES (?, ?, ?, ?)",
+            (work_id, action, snapshot_hash, clean_note),
+        )
+        aggregate = self.work_governance(work_id)
+        return {"review": aggregate["review"], "governance": aggregate}
 
     def apply(self, work_id: int, payload: dict[str, Any]) -> dict[str, Any]:
         work = self._work_row(work_id)
@@ -549,31 +632,223 @@ class GovernanceService:
             "new_size_bytes": new_size,
         }
 
+    def _queue_review_context(self) -> dict[str, dict[int, Any]]:
+        context: dict[str, dict[int, Any]] = {
+            "files": {},
+            "metadata": {},
+            "tags": {},
+            "reviews": {},
+        }
+        for row in self.db.fetchall("SELECT * FROM work_files ORDER BY work_id, id"):
+            context["files"].setdefault(int(row["work_id"]), []).append(row)
+        for row in self.db.fetchall("SELECT * FROM work_metadata ORDER BY work_id, field"):
+            context["metadata"].setdefault(int(row["work_id"]), []).append(row)
+        for row in self.db.fetchall(
+            """
+            SELECT
+              wt.id, wt.work_id, wt.remote_tag_id, wt.dictionary_id, wt.tag_type,
+              wt.remote_name, wt.remote_slug, wt.created_at,
+              d.zh_name, d.status AS dictionary_status, d.ignored
+            FROM work_tags wt
+            LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
+            ORDER BY wt.work_id, wt.tag_type, wt.id
+            """
+        ):
+            context["tags"].setdefault(int(row["work_id"]), []).append(row)
+        for row in self.db.fetchall(
+            """
+            SELECT gr.*
+            FROM governance_reviews gr
+            JOIN (
+              SELECT work_id, MAX(id) AS id
+              FROM governance_reviews
+              GROUP BY work_id
+            ) latest ON latest.id = gr.id
+            """
+        ):
+            context["reviews"][int(row["work_id"])] = row
+        return context
+
+    def _review_fingerprint(
+        self,
+        work: dict[str, Any],
+        files: list[dict[str, Any]],
+        metadata: list[dict[str, Any]],
+        tags: list[dict[str, Any]],
+    ) -> str:
+        file_rows = []
+        for row in files:
+            path = Path(str(row.get("path") or ""))
+            try:
+                stat = path.stat()
+                actual = {"exists": True, "size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+            except OSError:
+                actual = {"exists": False, "size": None, "mtime_ns": None}
+            file_rows.append(
+                {
+                    "id": row.get("id"),
+                    "kind": row.get("kind"),
+                    "path": row.get("path"),
+                    "size_bytes": row.get("size_bytes"),
+                    "sha256": row.get("sha256"),
+                    **actual,
+                }
+            )
+
+        cover_value = self._stringify(work.get("cover_path"))
+        cover_path = Path(cover_value) if cover_value else None
+        try:
+            cover_stat = cover_path.stat() if cover_path else None
+            cover = {
+                "path": str(cover_path) if cover_path else None,
+                "exists": cover_stat is not None,
+                "size": cover_stat.st_size if cover_stat else None,
+                "mtime_ns": cover_stat.st_mtime_ns if cover_stat else None,
+            }
+        except OSError:
+            cover = {"path": str(cover_path), "exists": False, "size": None, "mtime_ns": None}
+
+        remote_payload_json = work.get("remote_payload_json")
+        if "remote_payload_json" not in work and work.get("remote_gallery_id"):
+            remote_row = self.db.fetchone(
+                "SELECT payload_json FROM remote_galleries WHERE gallery_id = ?",
+                (work["remote_gallery_id"],),
+            )
+            remote_payload_json = remote_row.get("payload_json") if remote_row else None
+
+        payload = {
+            "work": {
+                key: work.get(key)
+                for key in (
+                    "id",
+                    "remote",
+                    "remote_gallery_id",
+                    "media_id",
+                    "title",
+                    "title_japanese",
+                    "pretty_title",
+                    "source",
+                    "language",
+                    "page_count",
+                    "cover_path",
+                )
+            },
+            "metadata": [
+                {
+                    "field": row.get("field"),
+                    "value": row.get("value"),
+                    "source": row.get("source"),
+                    "source_value": row.get("source_value"),
+                }
+                for row in sorted(metadata, key=lambda item: (str(item.get("field") or ""), int(item.get("id") or 0)))
+            ],
+            "tags": [
+                {
+                    "id": row.get("id"),
+                    "remote_tag_id": row.get("remote_tag_id"),
+                    "dictionary_id": row.get("dictionary_id"),
+                    "tag_type": row.get("tag_type"),
+                    "remote_name": row.get("remote_name"),
+                    "remote_slug": row.get("remote_slug"),
+                    "zh_name": row.get("zh_name"),
+                    "dictionary_status": row.get("dictionary_status"),
+                    "ignored": row.get("ignored"),
+                }
+                for row in sorted(tags, key=lambda item: int(item.get("id") or 0))
+            ],
+            "files": sorted(file_rows, key=lambda item: int(item.get("id") or 0)),
+            "cover": cover,
+            "remote_payload_json": remote_payload_json,
+        }
+        body = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+    def _review_state(self, latest: dict[str, Any] | None, fingerprint: str) -> dict[str, Any]:
+        if not latest or latest.get("action") == "reopen":
+            return {"state": "unreviewed", "reviewed_at": None, "note": latest.get("note") if latest else None}
+        state = "approved" if latest.get("snapshot_hash") == fingerprint else "stale"
+        return {"state": state, "reviewed_at": latest.get("created_at"), "note": latest.get("note")}
+
+    def _latest_review(self, work_id: int) -> dict[str, Any] | None:
+        return self.db.fetchone(
+            "SELECT * FROM governance_reviews WHERE work_id = ? ORDER BY id DESC LIMIT 1",
+            (work_id,),
+        )
+
+    def _review_history(self, work_id: int) -> list[dict[str, Any]]:
+        return [
+            {
+                "action": row["action"],
+                "note": row.get("note"),
+                "created_at": row.get("created_at"),
+            }
+            for row in self.db.fetchall(
+                "SELECT action, note, created_at FROM governance_reviews WHERE work_id = ? ORDER BY id DESC LIMIT 8",
+                (work_id,),
+            )
+        ]
+
+    def _automatic_checks(self, reasons: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        checks = []
+        for key, definition in CHECK_DEFINITIONS.items():
+            issues = [reason for reason in reasons if reason["code"] in REASON_GROUPS[key]]
+            status = "danger" if any(reason["severity"] == "danger" for reason in issues) else "warning" if issues else "passed"
+            checks.append({"key": key, **definition, "status": status, "issues": issues})
+        return checks
+
     def _queue_reasons(self, row: dict[str, Any]) -> list[dict[str, Any]]:
         reasons: list[dict[str, Any]] = []
-        if self._missing_metadata(row):
-            reasons.append({"code": "missing_metadata", "label": "待补 metadata", "severity": "warning"})
+        missing_fields = self._missing_metadata_fields(row)
+        if missing_fields:
+            reasons.append(
+                {
+                    "code": "missing_metadata",
+                    "label": f"缺少{'、'.join(missing_fields)}",
+                    "detail": "标题与语言是当前自动检查的必填字段。",
+                    "severity": "warning",
+                }
+            )
         if int(row.get("tag_count") or 0) == 0:
-            reasons.append({"code": "untagged", "label": "暂无标签", "severity": "warning"})
+            reasons.append({"code": "untagged", "label": "暂无标签", "detail": "没有可供词典治理的标签。", "severity": "warning"})
+        if int(row.get("unmapped_count") or 0) > 0:
+            reasons.append(
+                {
+                    "code": "dictionary_unmapped",
+                    "label": f"{int(row.get('unmapped_count') or 0)} 个词条未映射",
+                    "detail": "标签尚未建立本地词典映射。",
+                    "severity": "warning",
+                }
+            )
         if int(row.get("review_count") or 0) > 0:
-            reasons.append({"code": "dictionary_review", "label": "词典待复核", "severity": "warning"})
+            reasons.append({"code": "dictionary_review", "label": "词典待复核", "detail": "已有译名尚未人工确认。", "severity": "warning"})
         if int(row.get("conflict_count") or 0) > 0:
-            reasons.append({"code": "dictionary_conflict", "label": "词典冲突", "severity": "danger"})
-        if not self._archive_has_comicinfo(row.get("source_path")):
-            reasons.append({"code": "missing_comicinfo", "label": "缺 ComicInfo", "severity": "warning"})
+            reasons.append({"code": "dictionary_conflict", "label": "词典冲突", "detail": "同一词条存在互斥映射。", "severity": "danger"})
+        source_path = row.get("source_path")
+        if not source_path or not Path(str(source_path)).exists():
+            reasons.append({"code": "missing_source", "label": "源 CBZ 不可用", "detail": "源文件不存在或未建立关联。", "severity": "danger"})
+        elif not self._archive_has_comicinfo(str(source_path)):
+            reasons.append({"code": "missing_comicinfo", "label": "缺 ComicInfo", "detail": "源 CBZ 内没有 ComicInfo.xml。", "severity": "warning"})
         cover_path = row.get("cover_path")
         if not cover_path or not Path(str(cover_path)).exists():
-            reasons.append({"code": "missing_cover", "label": "缺封面", "severity": "warning"})
+            reasons.append({"code": "missing_cover", "label": "缺封面", "detail": "封面文件不存在或路径失效。", "severity": "warning"})
         return reasons
 
     def _missing_metadata(self, row: dict[str, Any]) -> bool:
+        return bool(self._missing_metadata_fields(row))
+
+    def _missing_metadata_fields(self, row: dict[str, Any]) -> list[str]:
         title = self._final_metadata_value(row, "title")
         language = self._final_metadata_value(row, "language")
         language_overridden = int(row.get("language_metadata_count") or 0) > 0
         has_language = bool(self._normalize_value(language)) or (
             not language_overridden and int(row.get("language_tag_count") or 0) > 0
         )
-        return not self._normalize_value(title) or not has_language
+        missing = []
+        if not self._normalize_value(title):
+            missing.append("标题")
+        if not has_language:
+            missing.append("语言")
+        return missing
 
     def _final_metadata_value(self, row: dict[str, Any], field: str) -> Any:
         saved_key = f"{field}_metadata"
@@ -734,19 +1009,42 @@ class GovernanceService:
 
     def _tag_summary(self, rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, int], dict[str, int]]:
         groups: dict[str, dict[str, Any]] = {}
-        tag_summary = {"confirmed": 0, "pending": 0, "conflicts": 0}
-        dictionary_summary = {"matched": 0, "pending": 0, "conflicts": 0}
+        tag_summary = {"confirmed": 0, "preserved": 0, "unmapped": 0, "review": 0, "pending": 0, "conflicts": 0}
+        dictionary_summary = {"matched": 0, "preserved": 0, "unmapped": 0, "review": 0, "pending": 0, "conflicts": 0}
         for row in rows:
             status = row.get("dictionary_status")
             state = "confirmed"
-            if status == "review":
+            default_preserved = not row.get("dictionary_id") and row.get("tag_type") in DEFAULT_IGNORED_REMOTE_TYPES
+            if default_preserved:
+                state = "preserved"
+            elif not row.get("dictionary_id"):
+                state = "unmapped"
+            elif status == "review":
                 state = "pending"
             elif status == "conflict":
                 state = "conflict"
-            tag_summary["conflicts" if state == "conflict" else state] += 1
+            if state == "conflict":
+                tag_summary["conflicts"] += 1
+            elif state == "pending":
+                tag_summary["review"] += 1
+                tag_summary["pending"] += 1
+            elif state == "unmapped":
+                tag_summary["unmapped"] += 1
+                tag_summary["pending"] += 1
+            elif state == "preserved":
+                tag_summary["preserved"] += 1
+                tag_summary["confirmed"] += 1
+            else:
+                tag_summary["confirmed"] += 1
             if row.get("dictionary_id") and status not in PROBLEM_DICTIONARY_STATUSES:
                 dictionary_summary["matched"] += 1
+            elif default_preserved:
+                dictionary_summary["preserved"] += 1
+            elif not row.get("dictionary_id"):
+                dictionary_summary["unmapped"] += 1
+                dictionary_summary["pending"] += 1
             elif status == "review":
+                dictionary_summary["review"] += 1
                 dictionary_summary["pending"] += 1
             elif status == "conflict":
                 dictionary_summary["conflicts"] += 1
@@ -802,6 +1100,11 @@ class GovernanceService:
         source_file = next((row for row in files if row["kind"] == "source_cbz"), None)
         review_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "review")
         conflict_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "conflict")
+        unmapped_count = sum(
+            1
+            for row in tag_rows
+            if not row.get("dictionary_id") and row.get("tag_type") not in DEFAULT_IGNORED_REMOTE_TYPES
+        )
         saved = saved or {}
         return {
             **work,
@@ -819,6 +1122,7 @@ class GovernanceService:
             ),
             "review_count": review_count,
             "conflict_count": conflict_count,
+            "unmapped_count": unmapped_count,
         }
 
     def _work_summary(self, row: dict[str, Any]) -> dict[str, Any]:
@@ -853,8 +1157,10 @@ class GovernanceService:
         labels = {
             "missing_metadata": "补全文本元数据",
             "untagged": "应用词典或重新解析标签",
+            "dictionary_unmapped": "为未映射词条设置译名",
             "dictionary_review": "复核词典映射",
             "dictionary_conflict": "解决词典冲突",
+            "missing_source": "修复源文件关联",
             "missing_comicinfo": "确认后回写 ComicInfo",
             "missing_cover": "检查源文件封面",
         }

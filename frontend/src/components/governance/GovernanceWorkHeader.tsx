@@ -32,8 +32,8 @@ export function GovernanceWorkHeader({
 
         <div className="folio-governance-review-state" data-tone={tone}>
           {issueCount ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
-          <span>审核状态</span>
-          <strong>{issueCount ? `${issueCount} 项需要处理` : "没有待办，可人工复核"}</strong>
+          <span>系统检查</span>
+          <strong>{issueCount ? `${issueCount} 项提示` : "未发现规则问题"}</strong>
         </div>
       </div>
     </header>

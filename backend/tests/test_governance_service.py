@@ -2,6 +2,10 @@ import json
 import zipfile
 from pathlib import Path
 
+import pytest
+from fastapi.testclient import TestClient
+
+from app import main
 from app.config import Settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
@@ -170,6 +174,8 @@ def test_aggregate_parses_real_comicinfo_fields(tmp_path):
     assert fields["group"]["source_value"] == "Tonari Teas"
     assert fields["language"]["source_value"] == "ja"
     assert aggregate["tags"]["summary"]["confirmed"] == 1
+    assert aggregate["tags"]["summary"]["preserved"] == 1
+    assert aggregate["tags"]["summary"]["unmapped"] == 0
 
 
 def test_apply_persists_local_metadata_decisions(tmp_path):
@@ -220,9 +226,11 @@ def test_queue_accepts_language_tag_and_counts_only_real_work(tmp_path):
 
     queue = service.queue()
 
-    assert queue["result"][0]["reasons"] == []
+    reason_codes = {reason["code"] for reason in queue["result"][0]["reasons"]}
+    assert "missing_metadata" not in reason_codes
+    assert "dictionary_unmapped" in reason_codes
     assert queue["summary"]["missing_metadata"] == 0
-    assert queue["summary"]["total"] == 0
+    assert queue["summary"]["total"] == 1
 
     service.apply(work_id, {"metadata": [{"field": "language", "value": None, "source": "manual"}]})
 
@@ -237,6 +245,136 @@ def test_dictionary_review_tags_surface_pending_and_conflict_summary(tmp_path):
 
     aggregate = service.work_governance(work_id)
 
-    assert aggregate["dictionary"] == {"matched": 0, "pending": 1, "conflicts": 1}
+    assert aggregate["dictionary"] == {
+        "matched": 0,
+        "preserved": 0,
+        "unmapped": 0,
+        "review": 1,
+        "pending": 1,
+        "conflicts": 1,
+    }
     assert aggregate["tags"]["summary"]["pending"] == 1
     assert aggregate["tags"]["summary"]["conflicts"] == 1
+
+
+def test_dictionary_check_preserves_proper_names_but_flags_content_tags(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path, comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>")
+    _link_tag(db, work_id, remote_id=10, tag_type="artist", name="tonari")
+
+    artist_codes = {reason["code"] for reason in service.queue()["result"][0]["reasons"]}
+    assert "dictionary_unmapped" not in artist_codes
+
+    _link_tag(db, work_id, remote_id=12, tag_type="tag", name="rain")
+
+    tag_codes = {reason["code"] for reason in service.queue()["result"][0]["reasons"]}
+    assert "dictionary_unmapped" in tag_codes
+
+
+def test_human_review_is_explicit_and_becomes_stale_after_metadata_change(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path, comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>")
+
+    initial = service.work_governance(work_id)
+    assert initial["review"]["state"] == "unreviewed"
+    assert service.queue()["summary"]["total"] == 1
+
+    reviewed = service.review(work_id, "approve", "已检查来源差异")
+    assert reviewed["review"]["state"] == "approved"
+    assert reviewed["review"]["note"] == "已检查来源差异"
+    assert service.queue()["summary"]["total"] == 0
+    assert service.queue()["summary"]["approved"] == 1
+
+    service.apply(work_id, {"metadata": [{"field": "title", "value": "雨后的教室", "source": "manual"}]})
+
+    stale = service.work_governance(work_id)
+    assert stale["review"]["state"] == "stale"
+    assert service.queue()["summary"]["stale"] == 1
+    assert service.queue()["summary"]["total"] == 1
+
+
+def test_review_can_be_reopened_and_keeps_audit_history(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+
+    service.review(work_id, "approve", "first pass")
+    reopened = service.review(work_id, "reopen", "需要再次检查词典")
+
+    assert reopened["review"]["state"] == "unreviewed"
+    assert [event["action"] for event in reopened["review"]["history"][:2]] == ["reopen", "approve"]
+    assert reopened["review"]["history"][0]["note"] == "需要再次检查词典"
+
+
+def test_review_with_open_system_issues_requires_a_note(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+
+    with pytest.raises(ValueError, match="系统提示"):
+        service.review(work_id, "approve")
+
+
+def test_clean_work_can_be_reviewed_without_a_note(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(
+        db,
+        archive,
+        tmp_path,
+        comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>",
+    )
+    _link_tag(db, work_id, remote_id=20, tag_type="language", name="japanese", dictionary_status="configured")
+
+    result = service.review(work_id, "approve")
+
+    assert result["review"]["state"] == "approved"
+    assert result["review"]["note"] is None
+
+
+def test_review_becomes_stale_when_cover_file_changes(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path, comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>")
+    _link_tag(db, work_id, remote_id=20, tag_type="language", name="japanese", dictionary_status="configured")
+    service.review(work_id, "approve")
+
+    cover = Path(db.fetchone("SELECT cover_path FROM works WHERE id = ?", (work_id,))["cover_path"])
+    cover.unlink()
+
+    assert service.work_governance(work_id)["review"]["state"] == "stale"
+
+
+def test_review_becomes_stale_when_cached_remote_metadata_changes(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path, comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>")
+    _link_tag(db, work_id, remote_id=20, tag_type="language", name="japanese", dictionary_status="configured")
+    service.review(work_id, "approve")
+
+    payload = json.loads(db.fetchone("SELECT payload_json FROM remote_galleries WHERE gallery_id = 1234")["payload_json"])
+    payload["title"]["english"] = "Changed remote title"
+    db.execute("UPDATE remote_galleries SET payload_json = ? WHERE gallery_id = 1234", (json.dumps(payload),))
+
+    assert service.work_governance(work_id)["review"]["state"] == "stale"
+
+
+def test_file_check_distinguishes_missing_source_from_missing_comicinfo(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    source = db.fetchone("SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'", (work_id,))
+    Path(source["path"]).unlink()
+
+    reason_codes = {reason["code"] for reason in service.queue()["result"][0]["reasons"]}
+
+    assert "missing_source" in reason_codes
+    assert "missing_comicinfo" not in reason_codes
+
+
+def test_review_api_records_explicit_approval(tmp_path, monkeypatch):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    monkeypatch.setattr(main, "governance", service)
+
+    response = TestClient(main.app).post(
+        f"/api/works/{work_id}/governance/review",
+        json={"action": "approve", "note": "已知晓当前系统提示"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["review"]["state"] == "approved"

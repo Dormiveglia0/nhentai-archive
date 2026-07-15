@@ -54,10 +54,11 @@ export function GovernanceSourceRail({
 
           <section className="folio-governance-source-tags">
             <div><Tags size={15} /><strong>词典状态</strong></div>
-            <span><em>已确认</em><b>{aggregate.tags.summary.confirmed}</b></span>
-            <span><em>待确认</em><b>{aggregate.tags.summary.pending}</b></span>
-            <span className={aggregate.tags.summary.conflicts ? "is-alert" : ""}><em>冲突</em><b>{aggregate.tags.summary.conflicts}</b></span>
-            <span><em>词典命中</em><b>{aggregate.dictionary.matched}</b></span>
+            <span><em>已映射</em><b>{aggregate.dictionary.matched}</b></span>
+            <span><em>保留原名</em><b>{aggregate.dictionary.preserved}</b></span>
+            <span className={aggregate.dictionary.unmapped ? "is-alert" : ""}><em>未映射</em><b>{aggregate.dictionary.unmapped}</b></span>
+            <span><em>待复核</em><b>{aggregate.dictionary.review}</b></span>
+            <span className={aggregate.dictionary.conflicts ? "is-alert" : ""}><em>冲突</em><b>{aggregate.dictionary.conflicts}</b></span>
           </section>
 
         </>
@@ -73,7 +74,7 @@ function runAction(code: string) {
     scrollToSection("governance-metadata");
     return;
   }
-  if (code === "dictionary_review") {
+  if (code === "dictionary_unmapped" || code === "dictionary_review") {
     scrollToSection("governance-tags");
     return;
   }
@@ -85,7 +86,7 @@ function runAction(code: string) {
     document.querySelector<HTMLInputElement>(".folio-governance-writeback input")?.focus();
     return;
   }
-  if (code === "untagged" || code === "missing_cover") {
+  if (code === "untagged" || code === "missing_source" || code === "missing_cover") {
     navigate({ name: "files" });
   }
 }

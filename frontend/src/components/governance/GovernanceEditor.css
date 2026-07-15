@@ -2,6 +2,7 @@
 .folio-governance-tags {
   min-width: 0;
   margin-top: 30px;
+  scroll-margin-top: 92px;
   border-top: 1px solid var(--folio-line-strong);
   border-bottom: 1px solid var(--folio-line-strong);
 }
@@ -244,6 +245,210 @@
   opacity: 0.32;
 }
 
+.folio-governance-translation {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-governance-translation-intro {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.folio-governance-translation-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(173, 56, 46, 0.42);
+  color: var(--folio-red);
+  position: relative;
+}
+
+.folio-governance-translation-mark::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid var(--folio-red);
+  border-right: 1px solid var(--folio-red);
+  position: absolute;
+  top: 3px;
+  right: 3px;
+}
+
+.folio-governance-translation-intro h3 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 15px;
+}
+
+.folio-governance-translation-intro p,
+.folio-governance-translation-intro small {
+  display: block;
+  color: var(--folio-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.folio-governance-translation-intro p { margin: 5px 0 0; }
+.folio-governance-translation-intro small { margin-top: 3px; }
+
+.folio-governance-translation-controls {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.folio-governance-translation-fields {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.folio-governance-translation-fields button {
+  min-height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 12px;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.folio-governance-translation-fields button.is-active {
+  border-color: rgba(173, 56, 46, 0.46);
+  background: var(--folio-red-soft);
+  color: var(--folio-ink);
+}
+
+.folio-governance-translation-fields button:active { transform: scale(0.97); }
+
+.folio-governance-translation-generate {
+  min-width: 112px;
+  min-height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--folio-ink);
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+  font-size: 12px;
+}
+
+.folio-governance-translation-generate:disabled {
+  cursor: not-allowed;
+  opacity: 0.36;
+}
+
+.folio-governance-translation-results {
+  margin-top: 18px;
+  border-top: 1px solid var(--folio-line-strong);
+}
+
+.folio-governance-translation-results > header {
+  min-height: 54px;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-governance-translation-results > header strong,
+.folio-governance-translation-results > header span { display: block; }
+.folio-governance-translation-results > header strong { font-size: 13px; }
+.folio-governance-translation-results > header span { margin-top: 3px; color: var(--folio-muted); font-size: 12px; }
+
+.folio-governance-translation-results > header > button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--folio-line-strong);
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 12px;
+}
+
+.folio-governance-translation-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.folio-governance-translation-list > * {
+  min-width: 0;
+  border-right: 1px solid var(--folio-line);
+}
+
+.folio-governance-translation-list > *:last-child { border-right: 0; }
+
+.folio-governance-translation-card {
+  min-width: 0;
+  padding: 14px;
+}
+
+.folio-governance-translation-card > strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+}
+
+.folio-governance-translation-card > div {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--folio-line);
+}
+
+.folio-governance-translation-card > div > span {
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-governance-translation-card p {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.folio-governance-translation-card .is-suggestion {
+  border-top-color: rgba(173, 56, 46, 0.38);
+}
+
+.folio-governance-translation-card .is-suggestion p { color: var(--folio-red); }
+
+.folio-governance-translation-card footer {
+  margin-top: 13px;
+  display: flex;
+  gap: 7px;
+}
+
+.folio-governance-translation-card footer button {
+  min-height: 34px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--folio-line-strong);
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 12px;
+}
+
+.folio-governance-translation-card footer button:first-child {
+  border-color: var(--folio-red);
+  background: var(--folio-red);
+  color: var(--folio-paper-bright);
+}
+
 .folio-governance-inline-empty {
   min-height: 120px;
   margin: 0;
@@ -303,6 +508,17 @@
   background: rgba(183, 125, 39, 0.07);
 }
 
+.folio-governance-tag.is-unmapped {
+  border-style: dashed;
+  border-color: rgba(183, 125, 39, 0.52);
+  background: rgba(183, 125, 39, 0.05);
+}
+
+.folio-governance-tag.is-preserved {
+  border-color: rgba(70, 101, 84, 0.34);
+  color: #466554;
+}
+
 .folio-governance-tag.is-conflict {
   border-color: rgba(173, 56, 46, 0.46);
   background: var(--folio-red-soft);
@@ -332,6 +548,47 @@
   opacity: 0.42;
 }
 
+.folio-governance-tag.is-editing {
+  width: 100%;
+  flex-wrap: wrap;
+  padding: 7px;
+}
+
+.folio-governance-tag-mapper {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  border-top: 1px solid var(--folio-line);
+  padding-top: 7px;
+}
+
+.folio-governance-tag-mapper input {
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--folio-line-strong);
+  outline: 0;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--folio-ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.folio-governance-tag-mapper input:focus {
+  border-color: rgba(173, 56, 46, 0.68);
+  box-shadow: 3px 3px 0 var(--folio-red-soft);
+}
+
+.folio-governance-tag-mapper > button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--folio-red);
+  background: var(--folio-red);
+  color: var(--folio-paper-bright);
+}
+
 @media (max-width: 700px) {
   .folio-governance-section-head {
     align-items: flex-start;
@@ -344,6 +601,32 @@
 
   .folio-governance-section-tools > button {
     flex: 1 1 140px;
+  }
+
+  .folio-governance-translation-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .folio-governance-translation-generate {
+    width: 100%;
+  }
+
+  .folio-governance-translation-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .folio-governance-translation-list > * {
+    border-right: 0;
+    border-bottom: 1px solid var(--folio-line);
+  }
+
+  .folio-governance-translation-list > *:last-child {
+    border-bottom: 0;
+  }
+
+  .folio-governance-translation-card {
+    padding: 14px 0;
   }
 
   .folio-governance-field-grid {
@@ -365,6 +648,10 @@
 
   .folio-governance-tag-groups h3 {
     margin: 0;
+  }
+
+  .folio-governance-tag-mapper {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

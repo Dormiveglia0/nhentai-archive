@@ -284,7 +284,15 @@ class FileMaintenanceService:
         reclaim = sum(p.stat().st_size for p in existing)
         work_tags = self.db.fetchone("SELECT COUNT(*) AS n FROM work_tags WHERE work_id=?", (work_id,))["n"]
         has_progress = self.db.fetchone("SELECT 1 FROM reader_progress WHERE work_id=?", (work_id,)) is not None
-        has_governance = self.db.fetchone("SELECT 1 FROM work_metadata WHERE work_id=?", (work_id,)) is not None
+        has_governance = self.db.fetchone(
+            """
+            SELECT 1 FROM work_metadata WHERE work_id = ?
+            UNION ALL
+            SELECT 1 FROM governance_reviews WHERE work_id = ?
+            LIMIT 1
+            """,
+            (work_id, work_id),
+        ) is not None
         warnings: list[str] = []
         if has_progress:
             warnings.append("has_progress")

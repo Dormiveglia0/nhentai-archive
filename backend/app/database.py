@@ -113,6 +113,18 @@ CREATE TABLE IF NOT EXISTS work_metadata (
   UNIQUE(work_id, field)
 );
 
+CREATE TABLE IF NOT EXISTS governance_reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_id INTEGER NOT NULL REFERENCES works(id) ON DELETE CASCADE,
+  action TEXT NOT NULL CHECK(action IN ('approve', 'reopen')),
+  snapshot_hash TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_governance_reviews_work_id
+  ON governance_reviews(work_id, id DESC);
+
 CREATE TABLE IF NOT EXISTS reader_progress (
   work_id INTEGER PRIMARY KEY REFERENCES works(id) ON DELETE CASCADE,
   page_index INTEGER NOT NULL,

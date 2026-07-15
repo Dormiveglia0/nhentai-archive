@@ -100,6 +100,11 @@ class GovernanceTranslateRequest(BaseModel):
     fields: list[str] | None = None
 
 
+class GovernanceReviewRequest(BaseModel):
+    action: str
+    note: str | None = None
+
+
 class ExportItemRequest(BaseModel):
     work_id: int | None = None
     output_name: str | None = None
@@ -414,6 +419,14 @@ def translate_work_governance(work_id: int, payload: GovernanceTranslateRequest)
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except TranslationError as exc:
         raise HTTPException(status_code=502, detail=exc.message) from exc
+
+
+@app.post("/api/works/{work_id}/governance/review")
+def review_work_governance(work_id: int, payload: GovernanceReviewRequest):
+    try:
+        return governance.review(work_id, payload.action, payload.note)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/governance/bulk/preview")

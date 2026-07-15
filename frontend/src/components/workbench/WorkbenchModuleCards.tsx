@@ -34,9 +34,9 @@ export function WorkbenchModuleCards({ overview }: { overview: WorkbenchOverview
       headline: governance.total,
       tone: governance.total > 0 ? "warn" : "muted",
       stats: [
-        { label: "缺失元数据", value: governance.missing_metadata },
-        { label: "未打标签", value: governance.untagged },
-        { label: "词典待复核", value: governance.dictionary_review },
+        { label: "未人工核对", value: governance.unreviewed },
+        { label: "内容已变化", value: governance.stale },
+        { label: "系统有提示", value: governance.automatic_issues },
       ],
       go: { name: "governance" },
       goLabel: "进入治理",

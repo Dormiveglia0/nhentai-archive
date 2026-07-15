@@ -229,6 +229,20 @@ def test_preview_delete_work_expands_cascade_without_touching_disk(tmp_path):
     assert db.fetchone("SELECT 1 FROM works WHERE id=?", (work_id,)) is not None
 
 
+def test_preview_delete_treats_review_history_as_governance(tmp_path):
+    _settings, db, archive, files = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    db.execute(
+        "INSERT INTO governance_reviews (work_id, action, snapshot_hash) VALUES (?, 'approve', 'test')",
+        (work_id,),
+    )
+
+    item = files.preview_delete([{"kind": "work", "work_id": work_id}])["items"][0]
+
+    assert item["has_governance"] is True
+    assert "has_governance" in item["warnings"]
+
+
 def test_preview_delete_orphan_reports_reclaim_bytes(tmp_path):
     settings, _db, _archive, files = _setup(tmp_path)
     orphan = settings.library_dir / "loose.cbz"
@@ -265,6 +279,7 @@ def test_delete_work_cascades_all_tables_and_files(tmp_path):
     )
     db.execute("INSERT INTO work_tags (work_id, remote_tag_id, tag_type) VALUES (?, 5, 'tag')", (drop_id,))
     db.execute("INSERT INTO work_metadata (work_id, field, value, source) VALUES (?, 'title', 'X', 'manual')", (drop_id,))
+    db.execute("INSERT INTO governance_reviews (work_id, action, snapshot_hash) VALUES (?, 'approve', 'test')", (drop_id,))
     db.execute("INSERT INTO reader_progress (work_id, page_index, page_count, progress_percent) VALUES (?, 1, 2, 50)", (drop_id,))
     db.execute("INSERT INTO reading_history (work_id, page_index) VALUES (?, 1)", (drop_id,))
     drop_source = Path(db.fetchone("SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (drop_id,))["path"])
@@ -280,7 +295,7 @@ def test_delete_work_cascades_all_tables_and_files(tmp_path):
     assert result["errors"] == []
     assert not drop_source.exists()
     assert not drop_cover.exists()
-    for table in ("works", "work_files", "work_pages", "work_tags", "work_metadata", "reader_progress", "reading_history"):
+    for table in ("works", "work_files", "work_pages", "work_tags", "work_metadata", "governance_reviews", "reader_progress", "reading_history"):
         assert db.fetchone(f"SELECT 1 FROM {table} WHERE work_id=?", (drop_id,)) is None if table != "works" else db.fetchone("SELECT 1 FROM works WHERE id=?", (drop_id,)) is None
     # other work untouched
     assert db.fetchone("SELECT 1 FROM works WHERE id=?", (keep_id,)) is not None

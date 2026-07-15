@@ -5,6 +5,7 @@ import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { GovernanceActionBar } from "./GovernanceActionBar";
 import { GovernanceBulkBar } from "./GovernanceBulkBar";
 import { GovernanceQueueRail } from "./GovernanceQueueRail";
+import { GovernanceReviewPanel } from "./GovernanceReviewPanel";
 import { GovernanceSourceRail } from "./GovernanceSourceRail";
 import { GovernanceTagBoard } from "./GovernanceTagBoard";
 import { GovernanceWorkHeader } from "./GovernanceWorkHeader";
@@ -96,6 +97,14 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <FadeIn key={gov.aggregate.work.id} className="folio-governance-document" y={10}>
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
+                    <GovernanceReviewPanel
+                      aggregate={gov.aggregate}
+                      changedCount={gov.changedFields.length}
+                      busy={gov.reviewing}
+                      note={gov.reviewNote}
+                      onNoteChange={gov.setReviewNote}
+                      onReview={gov.reviewWork}
+                    />
                     <MetadataEditor
                       aggregate={gov.aggregate}
                       edits={gov.edits}
@@ -104,10 +113,15 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onToggleDiff={() => gov.setOnlyDiff((value) => !value)}
                       onTranslate={gov.translateMetadata}
                       translating={gov.translating}
+                      translationSuggestions={gov.translationSuggestions}
+                      onAcceptTranslation={gov.acceptTranslation}
+                      onAcceptAllTranslations={gov.acceptAllTranslations}
+                      onDismissTranslation={gov.dismissTranslation}
                     />
                     <GovernanceTagBoard
                       aggregate={gov.aggregate}
                       onApplyDictionaryTag={gov.applyDictionaryTag}
+                      onReviewDictionaryTag={gov.reviewDictionaryTag}
                       applyingTagId={gov.dictionaryApplyingId}
                     />
                   </FadeIn>

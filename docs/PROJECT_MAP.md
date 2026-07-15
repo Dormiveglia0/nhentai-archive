@@ -24,7 +24,7 @@ Root: `backend/app/`
   - `Settings`: resolves local data paths, `NHENTAI_API_KEY`, base URL, user agent, timeout.
   - Environment API key has priority over DB-stored API key.
 - `database.py`
-  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `reader_progress`, `reading_history`, `jobs`, `settings`. (Export is a stream-to-browser download and keeps no records; the legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
+  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `jobs`, `settings`. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
 - `services/nhentai_client.py`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
@@ -84,10 +84,12 @@ Root: `backend/app/`
   - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
 - `services/governance_service.py`
   - Local-only governance reads/writes; never calls the NH API.
-  - `queue()`: real queue items and reason counts from `works`, `work_files`, `work_tags`, `local_tag_dictionary`, source CBZ ComicInfo presence, and cover file existence.
-  - `work_governance(work_id)`: aggregate with work header, files, metadata field diffs, tag groups, dictionary summary, recommended actions, and completeness.
+  - `queue()`: real queue items, explicit human-review state and automatic reason counts from `works`, `work_files`, `work_tags`, `local_tag_dictionary`, source CBZ ComicInfo presence, and cover file existence. `summary.total` is the unreviewed/stale backlog, not the automatic-issue count.
+  - `work_governance(work_id)`: aggregate with work header, files, metadata field diffs, tag groups, dictionary summary, automatic check groups, recommended actions, and current review state/history.
   - Reads source metadata from real stored CBZ members (`ComicInfo.xml` and the first JSON metadata file when present) plus cached `remote_galleries.payload_json`.
   - `apply(work_id, payload)`: persists final metadata decisions into `work_metadata`; optional dictionary apply delegates to `DictionaryService.apply()`. It does not mutate source CBZ files.
+  - `review(work_id, action, note)`: appends approve/reopen events. Approval hashes the current work/metadata/tag/dictionary/file snapshot; any later change makes that approval stale. Open automatic issues require an explanatory note.
+  - `translate_metadata(work_id, fields)`: read-only suggestions for title/subtitle/summary; never writes or auto-adopts output.
   - `bulk_preview()` / `bulk_apply()`: selected-work batch actions for fill-missing metadata, opt-in ComicInfo write-back, source Web backfill, and confirming existing dictionary `review/conflict` terms when they are unlocked, not ignored, and already have a Chinese name.
 - `services/export_service.py`
   - Local-only export preview/packaging for **browser download**; never calls the NH API, never mutates source CBZ files, and never writes a second copy to the server. No export records are kept.
@@ -103,7 +105,7 @@ Root: `backend/app/`
   - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
   - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Work entries expose structured `tag_items` for real search links while retaining the legacy display-only `tags` list. Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
   - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
-  - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
+  - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/governance_reviews/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry/pause/resume/cancel/logs/checkpoint`.
   - Job payloads include `created_at` / `updated_at`; statuses include `queued/running/paused/completed/failed/cancelled`.
@@ -227,7 +229,7 @@ Root: `frontend/src/`
   - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
   - Dictionary API types and helpers live here: candidates, autocomplete, preview/apply, preview/import bulk rows.
   - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
-  - Governance API types/helpers: queue, aggregate, metadata translate, bulk preview/apply (fill missing metadata, write-back, confirm dictionary terms), and apply payload/result. Governance calls are local-only and not run through the discover session cache.
+  - Governance API types/helpers: queue, aggregate, explicit review approve/reopen, metadata translation suggestions, bulk preview/apply (fill missing metadata, write-back, confirm dictionary terms), and apply payload/result. Governance calls are local-only and not run through the discover session cache.
   - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), `enqueueBulkExport` for task-center bulk artifacts, and persisted preset settings. Export calls are local-only and not run through the discover session cache.
   - Job API type/helpers: `Job` (including `created_at` / `updated_at`, `paused/cancelled/cancelling` statuses and bulk-export target fields), `JobLog`, `jobs()`, `jobLogs()`, `pauseJob()`, `resumeJob()`, `cancelJob()`, `retryJob()`, delete/clear, and bulk-export download URL.
 - `vite.config.ts`
@@ -326,18 +328,22 @@ Root: `frontend/src/`
   - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. `WebtoonView` observes the actual reader scroller through a center band, so tall continuous pages update current-page progress reliably.
   - `ReaderToolbar` hides single-page direction controls in continuous mode; `ReaderScrubber` provides keyboard/touch progress without a native slider. `ReaderInfoPanel` groups real author/group, parody/character, content, category and language tags, retains the real gallery-display link, and contains no duplicate reader settings. `ThumbnailOverlay` clips its own width so large page counts cannot create a document-level horizontal scrollbar. `ThumbnailOverlay` and `ReaderJumpDialog` remain focus-restoring modal surfaces.
 - `components/governance/GovernancePage.tsx`
-  - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
+  - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, automatic-check + human-review panel, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
   - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance` through `useGovernanceState`.
   - Empty library/empty queue is an honest empty state; no sample works, fake conflicts, or fake recommendations.
   - Fixed viewport action bar keeps save/write-back visible at every document length and includes real dictionary/export/reload routes. ComicInfo write-back and bulk write-back still require the existing irreversible-action confirmations.
 - `components/governance/GovernancePage.css` / `GovernanceEditor.css`
-  - Production-only three-column workspace, animated queue progress, work header, source rail, fixed command bar, bulk reports, field provenance ledger and tag groups. Mobile keeps the real queue as a horizontal track and moves source evidence below the editor; no native checkbox chrome is visible.
+  - Production-only three-column workspace, review/check ledger, work header, source rail, fixed command bar, bulk reports, translation decision cards, field provenance ledger and tag groups. Mobile keeps the real queue as a horizontal track and moves source evidence below the editor; no native checkbox chrome is visible.
+- `components/governance/GovernanceReviewPanel.tsx`
+  - Separates three automatic check groups (metadata/dictionary/files) from explicit human approval. Shows current/stale/approved state, requires notes for accepted warnings, and exposes reopen without pretending that a clean check equals human review.
+- `components/governance/GovernanceTranslationPanel.tsx`
+  - Field-scoped Chinese suggestion flow: select title/subtitle/summary, compare original and suggestion, then accept one/all or ignore. Acceptance only updates the editor; the fixed save action remains the sole persistence step.
 - `components/governance/GovernanceSourceRail.tsx`
   - Real source type, Gallery ID, page/file facts, tag/dictionary counts and backend-recommended actions. It does not calculate or invent a health score.
 - `components/governance/MetadataEditor.tsx`
-  - Source/current/final field comparison with auto-growing textareas, adopt/revert actions, machine-translation prefill and animated difference filtering. “仅看差异” is an `aria-pressed` custom control, not a native checkbox.
+  - Source/current/final field comparison with auto-growing textareas, adopt/revert actions and animated decision filtering. Source differences and missing required values enter the decision view; translation suggestions remain separate until explicitly accepted. “只看待确认” is an `aria-pressed` custom control, not a native checkbox.
 - `components/governance/GovernanceQueueRail.tsx` / `GovernanceBulkBar.tsx`
-  - Queue reasons/completeness and real bulk preview/apply. Custom checkbox visuals preserve semantic inputs; preview remains read-only and apply retains all current mutation safeguards.
+  - Queue separates pending review, automatic metadata/dictionary/file issues, approved snapshots and all works, with an in-place definition for every filter. Bulk preview/apply remains real and read-only-before-apply; custom checkbox visuals preserve semantic inputs and mutation safeguards.
 - `components/export/` — export center (browser-download model), split into focused modules:
   - `ExportPage.tsx` — direct Folio composition for real queue summary, toolbar, local-work list and CBZ recipe inspector. It imports no demo code.
   - `ExportPage.css` — production-only responsive source/recipe layout, custom selection/status controls, metadata ledger and sticky action recipe. Replaced global `.export-*` rules were removed from `styles/app.css`.

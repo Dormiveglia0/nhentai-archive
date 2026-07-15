@@ -15,19 +15,20 @@ type Props = {
   onToggleSelected: (id: number) => void;
 };
 
-type QueueFilter = "attention" | "metadata" | "dictionary" | "files" | "all";
+type QueueFilter = "review" | "metadata" | "dictionary" | "files" | "approved" | "all";
 
-const DICTIONARY_REASONS = new Set(["untagged", "dictionary_review", "dictionary_conflict"]);
-const FILE_REASONS = new Set(["missing_comicinfo", "missing_cover"]);
+const DICTIONARY_REASONS = new Set(["untagged", "dictionary_unmapped", "dictionary_review", "dictionary_conflict"]);
+const FILE_REASONS = new Set(["missing_source", "missing_comicinfo", "missing_cover"]);
 
 export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, selectedIds, onToggleSelected }: Props) {
-  const [filter, setFilter] = useState<QueueFilter>(() => (queue.summary.total ? "attention" : "all"));
-  const filters: Array<{ id: QueueFilter; label: string; count: number }> = [
-    { id: "attention", label: "待处理", count: queue.summary.total },
-    { id: "metadata", label: "元数据", count: queue.summary.missing_metadata },
-    { id: "dictionary", label: "词典", count: countMatching(queue, DICTIONARY_REASONS) },
-    { id: "files", label: "文件", count: countMatching(queue, FILE_REASONS) },
-    { id: "all", label: "全部", count: queue.result.length },
+  const [filter, setFilter] = useState<QueueFilter>(() => (queue.summary.total ? "review" : "all"));
+  const filters: Array<{ id: QueueFilter; label: string; count: number; description: string }> = [
+    { id: "review", label: "待核对", count: queue.summary.total, description: "尚未人工核对，或核对后内容已经变化。" },
+    { id: "metadata", label: "元数据", count: queue.summary.missing_metadata, description: "标题或语言缺失；其余字段在对照表中人工判断。" },
+    { id: "dictionary", label: "词典", count: countMatching(queue, DICTIONARY_REASONS), description: "无标签、未映射、译名待复核或词典冲突。" },
+    { id: "files", label: "文件", count: countMatching(queue, FILE_REASONS), description: "源 CBZ、封面或 ComicInfo.xml 不可用。" },
+    { id: "approved", label: "已核对", count: queue.summary.approved, description: "人工确认过当前数据快照；后续变化会自动失效。" },
+    { id: "all", label: "全部", count: queue.result.length, description: "显示全部真实作品，不代表其已经通过审核。" },
   ];
   const visibleItems = useMemo(
     () => queue.result.filter((item) => matchesFilter(item, filter)),
@@ -59,6 +60,7 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
           </button>
         ))}
       </div>
+      <p className="folio-governance-filter-explainer">{filters.find((item) => item.id === filter)?.description}</p>
       {visibleItems.length ? (
         <Stagger key={`${filter}-${visibleItems.map((item) => item.work.id).join("-")}`} className="folio-governance-queue-list">
           {visibleItems.map((item) => (
@@ -100,8 +102,8 @@ function QueueCard({
   checked: boolean;
   onToggleSelected: (id: number) => void;
 }) {
-  const conflictCount = item.reasons.filter((reason) => reason.severity === "danger").length;
-  const status = !item.reasons.length ? "已核对" : conflictCount ? `${conflictCount} 个冲突` : `${item.reasons.length} 项待办`;
+  const reviewState = item.review.state;
+  const status = reviewState === "approved" ? "已人工核对" : reviewState === "stale" ? "内容变化" : "待人工核对";
   return (
     <article className={`folio-governance-queue-card${selected ? " is-selected" : ""}`}>
       {bulkMode ? (
@@ -115,7 +117,7 @@ function QueueCard({
           <strong>{workTitle(item.work)}</strong>
           <span
             className="folio-governance-queue-percent"
-            data-tone={!item.reasons.length ? "ok" : conflictCount ? "bad" : "warn"}
+            data-tone={reviewState === "approved" ? "ok" : reviewState === "stale" ? "bad" : "warn"}
           >
             {status}
           </span>
@@ -129,7 +131,7 @@ function QueueCard({
               </em>
             ))}
           </span>
-        ) : null}
+        ) : <span className="folio-governance-queue-system-pass"><CheckCircle2 size={13} />系统检查无提示</span>}
       </button>
     </article>
   );
@@ -141,7 +143,8 @@ function countMatching(queue: GovernanceQueue, codes: Set<string>) {
 
 function matchesFilter(item: GovernanceQueueItem, filter: QueueFilter) {
   if (filter === "all") return true;
-  if (filter === "attention") return item.reasons.length > 0;
+  if (filter === "review") return item.review.state !== "approved";
+  if (filter === "approved") return item.review.state === "approved";
   if (filter === "metadata") return item.reasons.some((reason) => reason.code === "missing_metadata");
   const codes = filter === "dictionary" ? DICTIONARY_REASONS : FILE_REASONS;
   return item.reasons.some((reason) => codes.has(reason.code));
