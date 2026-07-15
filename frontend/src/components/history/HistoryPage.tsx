@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 
 import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
-import { IconPager } from "../discover/IconPager";
+import { IconPager } from "../folio/ui/IconPager";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { groupByBucket, progressLabel, timeOfDay } from "./historyHelpers";
 import { useHistoryState } from "./useHistoryState";

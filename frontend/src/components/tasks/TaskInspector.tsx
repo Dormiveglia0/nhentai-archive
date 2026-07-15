@@ -20,7 +20,7 @@ import {
   statusLabel,
   statusTone,
   targetLabel,
-} from "./taskHelpers";
+} from "../../lib/jobs";
 
 type Props = {
   job: Job | null;

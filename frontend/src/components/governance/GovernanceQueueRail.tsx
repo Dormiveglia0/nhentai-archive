@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { GovernanceQueue, GovernanceQueueItem } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
-import { workTitle } from "../library/libraryHelpers";
+import { workTitle } from "../../lib/format";
 
 type Props = {
   queue: GovernanceQueue;

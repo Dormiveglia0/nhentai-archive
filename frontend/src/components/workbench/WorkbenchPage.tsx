@@ -2,7 +2,7 @@ import { BookOpen, RefreshCw } from "lucide-react";
 
 import { FadeIn } from "../../lib/motion";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
-import { ContinueReadingRow } from "../library/ContinueReadingRow";
+import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
 import { WorkbenchMetricStrip } from "./WorkbenchMetricStrip";
 import { WorkbenchModuleCards } from "./WorkbenchModuleCards";
 import { useWorkbenchState } from "./useWorkbenchState";

@@ -21,7 +21,7 @@ class FakeFiles:
 
 
 def test_files_overview_and_inventory_routes(monkeypatch):
-    monkeypatch.setattr(main, "files_service", FakeFiles())
+    monkeypatch.setattr(main.services, "files", FakeFiles())
     client = TestClient(main.app)
 
     assert client.get("/api/files/overview").json()["work_count"] == 3
@@ -33,7 +33,7 @@ def test_files_overview_and_inventory_routes(monkeypatch):
 
 
 def test_files_preview_and_delete_routes(monkeypatch):
-    monkeypatch.setattr(main, "files_service", FakeFiles())
+    monkeypatch.setattr(main.services, "files", FakeFiles())
     client = TestClient(main.app)
 
     preview = client.post("/api/files/preview-delete", json={"targets": [{"kind": "work", "work_id": 1}]})
@@ -45,13 +45,13 @@ def test_files_preview_and_delete_routes(monkeypatch):
 
 
 def test_files_delete_accepts_empty_targets(monkeypatch):
-    monkeypatch.setattr(main, "files_service", FakeFiles())
+    monkeypatch.setattr(main.services, "files", FakeFiles())
     client = TestClient(main.app)
     assert client.post("/api/files/delete", json={"targets": []}).status_code == 200
 
 
 def test_files_duplicates_route(monkeypatch):
-    monkeypatch.setattr(main, "files_service", FakeFiles())
+    monkeypatch.setattr(main.services, "files", FakeFiles())
     client = TestClient(main.app)
 
     body = client.get("/api/files/duplicates").json()

@@ -4,23 +4,27 @@ Local-first personal doujin archive platform. The first implementation slice bui
 
 ## Run
 
-Backend:
+Install dependencies once:
 
 ```bash
-cd backend
-python3 -m pip install -r requirements.txt
-NHENTAI_API_KEY=your_key uvicorn app.main:app --reload
+python3 -m venv .venv
+.venv/bin/pip install -r backend/requirements.txt
+npm --prefix frontend install
 ```
 
-Frontend:
+Start the whole project from the repository root:
 
 ```bash
-cd frontend
-npm install
 npm run dev
 ```
 
-The frontend dev server proxies `/api` to `http://127.0.0.1:8000`.
+This starts FastAPI on `http://127.0.0.1:8001` and Vite on `http://127.0.0.1:5173`. Press `Ctrl+C` once to stop both. The frontend proxies `/api` to the backend automatically.
+
+Set `NHENTAI_API_KEY` on the same command when needed:
+
+```bash
+NHENTAI_API_KEY=your_key npm run dev
+```
 
 ## Data
 

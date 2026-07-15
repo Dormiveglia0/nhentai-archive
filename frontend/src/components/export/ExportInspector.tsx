@@ -2,7 +2,7 @@ import { AlertTriangle, Download, FileCheck2, FileCode2, FileJson, Package, Refr
 
 import type { ExportOptions, ExportPreview, ExportQueueItem } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
-import { formatBytes, workTitle } from "../library/libraryHelpers";
+import { formatBytes, workTitle } from "../../lib/format";
 import { Cover, STATUS_LABEL, itemStatus } from "./exportHelpers";
 
 type ExportInspectorProps = {

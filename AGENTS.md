@@ -16,6 +16,7 @@ For frontend work, read `docs/AGENT_MAP.md` first. It maps each demo module, sce
 
 ## Build, Test, and Development Commands
 
+- Unified development environment: `npm run dev` (starts backend on 8001 and frontend on 5173; one `Ctrl+C` stops both)
 - Backend dev server: `PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001`
 - Backend tests: `PYTHONPATH=backend .venv/bin/pytest backend/tests -q`
 - Frontend dev server: `cd frontend && npm run dev`

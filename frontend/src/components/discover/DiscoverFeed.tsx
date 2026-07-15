@@ -5,7 +5,7 @@ import { Stagger, StaggerItem } from "../../lib/motion";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { DiscoverCard } from "./DiscoverCard";
 import type { TagFilter } from "./discoverTypes";
-import { IconPager } from "./IconPager";
+import { IconPager } from "../folio/ui/IconPager";
 
 type Props = {
   items: GallerySummary[];

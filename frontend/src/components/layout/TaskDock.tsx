@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Job } from "../../lib/api";
 import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
 import { navigate } from "../../lib/navigation";
-import { canRetry, jobTypeLabel, stageLabel, targetLabel } from "../tasks/taskHelpers";
+import { canRetry, jobTypeLabel, stageLabel, targetLabel } from "../../lib/jobs";
 import "./TaskDock.css";
 
 export function TaskDock() {

@@ -16,6 +16,12 @@ Read order for future AI work:
 4. `docs/DEVELOPMENT_RULES.md`
 5. The relevant formal component and feature-local CSS from the agent map.
 
+## Development Entry
+
+- Root `npm run dev` delegates to `scripts/dev.py`.
+- The stdlib launcher starts FastAPI on port 8001 and Vite on port 5173, preserves `PYTHONPATH`/`VITE_API_PROXY_TARGET`, and terminates both process groups when either side exits or the user presses `Ctrl+C`.
+- `npm run dev -- --check` validates the local backend executable, npm, and frontend dependencies without starting servers.
+
 ## Backend Map
 
 Root: `backend/app/`
@@ -26,6 +32,11 @@ Root: `backend/app/`
 - `database.py`
   - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `jobs`, `settings`. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
+- `container.py`
+  - Composition root for settings, SQLite, the remote client, and service instances. API modules share this single mutable registry; tests replace registry members instead of patching route modules.
+- `api/`
+  - Domain routers for discover, dictionary, library, governance, exports, files, works/reader state, jobs, settings, and system/workbench endpoints.
+  - `schemas.py` owns HTTP request models; `shared.py` owns remote API error translation. Business logic remains in `services/`.
 - `services/nhentai_client.py`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
   - `media_url()` resolves CDN paths through `/api/v2/cdn`; frontend must not guess image URLs.
@@ -117,7 +128,7 @@ Root: `backend/app/`
 - `services/workbench_service.py`
   - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
-  - FastAPI route wiring.
+  - Small FastAPI application factory: lifespan, CORS, and mounting the `/api` router only.
 
 ## API Status
 

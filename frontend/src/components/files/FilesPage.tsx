@@ -1,7 +1,7 @@
 import { AlertCircle, CircleCheck } from "lucide-react";
 
 import { FadeIn } from "../../lib/motion";
-import { IconPager } from "../discover/IconPager";
+import { IconPager } from "../folio/ui/IconPager";
 import { FileDeleteDialog } from "./FileDeleteDialog";
 import { FileDetailPanel } from "./FileDetailPanel";
 import { FileHealthRail } from "./FileHealthRail";

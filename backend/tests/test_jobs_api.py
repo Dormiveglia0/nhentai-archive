@@ -111,8 +111,8 @@ class StubImports:
 
 
 def test_jobs_routes_include_created_at_and_retry_payload(monkeypatch):
-    monkeypatch.setattr(main, "jobs", StubJobs())
-    monkeypatch.setattr(main, "imports", StubImports())
+    monkeypatch.setattr(main.services, "jobs", StubJobs())
+    monkeypatch.setattr(main.services, "imports", StubImports())
     client = TestClient(main.app)
 
     listed = client.get("/api/jobs").json()["result"][0]
@@ -127,8 +127,8 @@ def test_jobs_routes_include_created_at_and_retry_payload(monkeypatch):
 def test_retry_route_rejects_invalid_retry(monkeypatch):
     stub_imports = StubImports()
     stub_imports.reject_retry = True
-    monkeypatch.setattr(main, "jobs", StubJobs())
-    monkeypatch.setattr(main, "imports", stub_imports)
+    monkeypatch.setattr(main.services, "jobs", StubJobs())
+    monkeypatch.setattr(main.services, "imports", stub_imports)
     client = TestClient(main.app)
 
     response = client.post("/api/jobs/1/retry")
@@ -138,8 +138,8 @@ def test_retry_route_rejects_invalid_retry(monkeypatch):
 
 
 def test_jobs_control_and_log_routes(monkeypatch):
-    monkeypatch.setattr(main, "jobs", StubJobs())
-    monkeypatch.setattr(main, "imports", StubImports())
+    monkeypatch.setattr(main.services, "jobs", StubJobs())
+    monkeypatch.setattr(main.services, "imports", StubImports())
     client = TestClient(main.app)
 
     assert client.post("/api/jobs/1/pause").json()["status"] == "paused"
@@ -150,7 +150,7 @@ def test_jobs_control_and_log_routes(monkeypatch):
 
 def test_delete_and_clear_routes(monkeypatch):
     stub = StubJobs()
-    monkeypatch.setattr(main, "jobs", stub)
+    monkeypatch.setattr(main.services, "jobs", stub)
     client = TestClient(main.app)
 
     assert client.delete("/api/jobs/1").json() == {"deleted": 1}
@@ -160,7 +160,7 @@ def test_delete_and_clear_routes(monkeypatch):
 def test_delete_active_job_returns_conflict(monkeypatch):
     stub = StubJobs()
     stub.active_delete = True
-    monkeypatch.setattr(main, "jobs", stub)
+    monkeypatch.setattr(main.services, "jobs", stub)
     client = TestClient(main.app)
 
     response = client.delete("/api/jobs/1")
@@ -172,7 +172,7 @@ def test_delete_active_job_returns_conflict(monkeypatch):
 def test_delete_missing_job_returns_not_found(monkeypatch):
     stub = StubJobs()
     stub.missing_delete = True
-    monkeypatch.setattr(main, "jobs", stub)
+    monkeypatch.setattr(main.services, "jobs", stub)
     client = TestClient(main.app)
 
     assert client.delete("/api/jobs/1").status_code == 404

@@ -1,7 +1,7 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
 
-import type { RemoteTag } from "../../lib/api";
-import { tagSearchHref } from "../../lib/navigation";
+import type { RemoteTag } from "../../../lib/api";
+import { tagSearchHref } from "../../../lib/navigation";
 
 type Props = {
   tags: RemoteTag[];
@@ -44,7 +44,6 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
   }
 
   function pick(event: ReactMouseEvent, tag: RemoteTag) {
-    // Tags live inside a clickable card body; never let a tag click bubble up to open the work.
     event.stopPropagation();
     if (dragged.current) {
       event.preventDefault();

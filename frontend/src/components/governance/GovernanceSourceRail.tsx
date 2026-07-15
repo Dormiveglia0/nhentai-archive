@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2, Database, FileArchive, Tags } from "lucide-re
 
 import type { GovernanceAggregate } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
-import { formatBytes } from "../library/libraryHelpers";
+import { formatBytes } from "../../lib/format";
 
 export function GovernanceSourceRail({
   aggregate,

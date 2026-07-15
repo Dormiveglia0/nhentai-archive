@@ -3,7 +3,7 @@ import { ArrowUpRight, Layers3 } from "lucide-react";
 import type { GalleryDetail } from "../../../lib/api";
 import { Stagger, StaggerItem } from "../../../lib/motion";
 import { navigate, tagSearchHref } from "../../../lib/navigation";
-import { defaultDisplayTag } from "../TagScroller";
+import { defaultDisplayTag } from "../../folio/ui/TagScroller";
 import "./GalleryRelated.css";
 
 export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; blurCovers: boolean }) {

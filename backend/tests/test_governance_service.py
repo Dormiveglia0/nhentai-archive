@@ -369,7 +369,7 @@ def test_file_check_distinguishes_missing_source_from_missing_comicinfo(tmp_path
 def test_review_api_records_explicit_approval(tmp_path, monkeypatch):
     db, archive, service = _setup(tmp_path)
     work_id = _import_work(db, archive, tmp_path)
-    monkeypatch.setattr(main, "governance", service)
+    monkeypatch.setattr(main.services, "governance", service)
 
     response = TestClient(main.app).post(
         f"/api/works/{work_id}/governance/review",

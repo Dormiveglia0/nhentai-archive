@@ -15,6 +15,11 @@
 - If a module is visually unfinished, prefer a clear boundary screen over a decorative fake dashboard.
 - Do not add adult sample assets to the repository. Non-explicit line art or empty-state graphics are allowed.
 
+## Architecture Rules
+
+- Keep `backend/app/main.py` limited to application creation, middleware, and lifespan hooks. Put HTTP adapters in `backend/app/api/<domain>.py`, request models in `api/schemas.py`, dependency assembly in `container.py`, and business behavior in `services/`.
+- Keep frontend feature state and page composition in its feature folder. Move genuinely reused visual components to `components/folio/` and cross-feature formatting/navigation helpers to `lib/`; do not make one feature folder another feature's utility library.
+
 ## Documentation Rules
 
 - Update `docs/PROJECT_STATUS.md` after every meaningful module stage.

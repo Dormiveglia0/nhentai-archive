@@ -1,4 +1,4 @@
-export { formatBytes } from "../library/libraryHelpers";
+export { formatBytes } from "../../lib/format";
 
 export function targetLabel(target: Record<string, unknown>): string {
   const galleryId = target.gallery_id;

@@ -35,9 +35,9 @@ def _wire(tmp_path, monkeypatch):
     jobs = JobService(db)
     export_jobs = ExportJobService(settings, jobs, exports)
     export_jobs._start_worker = lambda _job_id: None
-    monkeypatch.setattr(main, "jobs", jobs)
-    monkeypatch.setattr(main, "exports", exports)
-    monkeypatch.setattr(main, "export_jobs", export_jobs)
+    monkeypatch.setattr(main.services, "jobs", jobs)
+    monkeypatch.setattr(main.services, "exports", exports)
+    monkeypatch.setattr(main.services, "export_jobs", export_jobs)
     return settings, db, archive, exports, jobs, export_jobs
 
 
@@ -125,7 +125,7 @@ def test_control_routes_dispatch_by_type(tmp_path, monkeypatch):
 
     calls: list[str] = []
     for name in ("resume_job", "cancel_job", "retry_job"):
-        monkeypatch.setattr(main.imports, name, lambda job_id, n=name: calls.append(f"import:{n}"))
+        monkeypatch.setattr(main.services.imports, name, lambda job_id, n=name: calls.append(f"import:{n}"))
 
     bulk = jobs.create("bulk_export", {
         "work_ids": [], "options": {}, "total": 0, "packaged": 0,

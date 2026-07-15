@@ -17,7 +17,7 @@ def _png() -> bytes:
 def test_scan_preview_lists_new_local(tmp_path, monkeypatch):
     lib = tmp_path / "library"
     lib.mkdir()
-    object.__setattr__(main.settings, "data_dir", tmp_path)
+    object.__setattr__(main.services.settings, "data_dir", tmp_path)
     with zipfile.ZipFile(lib / "fresh.cbz", "w") as archive:
         archive.writestr("001.png", _png())
     client = TestClient(main.app)

@@ -6,7 +6,7 @@ import { api, type RemoteTag } from "../../lib/api";
 import { duration, ease } from "../../lib/motion";
 import { tagSearchHref } from "../../lib/navigation";
 import type { TagFilter } from "./discoverTypes";
-import { defaultDisplayTag } from "./TagScroller";
+import { defaultDisplayTag } from "../folio/ui/TagScroller";
 
 type Props = {
   selected: TagFilter[];

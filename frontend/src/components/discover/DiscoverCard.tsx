@@ -3,7 +3,7 @@ import { BookOpen, Download } from "lucide-react";
 import type { GallerySummary, RemoteTag } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 import type { TagFilter } from "./discoverTypes";
-import { defaultDisplayTag, TagScroller } from "./TagScroller";
+import { defaultDisplayTag, TagScroller } from "../folio/ui/TagScroller";
 
 type Props = {
   item: GallerySummary;

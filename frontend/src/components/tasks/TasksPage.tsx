@@ -3,7 +3,7 @@ import { m } from "motion/react";
 
 import { FadeIn } from "../../lib/motion";
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
-import { STATUS_TABS } from "./taskHelpers";
+import { STATUS_TABS } from "../../lib/jobs";
 import { TaskInspector } from "./TaskInspector";
 import { TaskList } from "./TaskList";
 import { TaskSummaryStrip } from "./TaskSummaryStrip";

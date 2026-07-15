@@ -6,7 +6,7 @@ import { api, type FileOverview } from "../../lib/api";
 import { navigate } from "../../lib/navigation";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { FolioField } from "../folio/ui/FolioPrimitives";
-import { formatBytes } from "../library/libraryHelpers";
+import { formatBytes } from "../../lib/format";
 import type { SettingsVM } from "./useSettingsState";
 
 const PATH_LABELS: Record<string, string> = {
