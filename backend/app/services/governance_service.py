@@ -64,7 +64,15 @@ class GovernanceService:
               f.path AS source_path,
               (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata,
               (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'language') AS language_metadata,
+              (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata_count,
+              (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'language') AS language_metadata_count,
               (SELECT COUNT(*) FROM work_tags wt WHERE wt.work_id = w.id) AS tag_count,
+              (SELECT COUNT(*)
+                 FROM work_tags wt
+                 LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
+                WHERE wt.work_id = w.id
+                  AND wt.tag_type = 'language'
+                  AND TRIM(COALESCE(d.zh_name, wt.remote_name, wt.remote_slug, '')) <> '') AS language_tag_count,
               (SELECT COUNT(*)
                  FROM work_tags wt
                  JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
@@ -86,7 +94,7 @@ class GovernanceService:
         )
         items = []
         summary = {
-            "total": len(rows),
+            "total": 0,
             "missing_metadata": 0,
             "untagged": 0,
             "dictionary_review": 0,
@@ -96,6 +104,8 @@ class GovernanceService:
         }
         for row in rows:
             reasons = self._queue_reasons(row)
+            if reasons:
+                summary["total"] += 1
             for reason in reasons:
                 if reason["code"] in summary:
                     summary[reason["code"]] += 1
@@ -557,11 +567,19 @@ class GovernanceService:
         return reasons
 
     def _missing_metadata(self, row: dict[str, Any]) -> bool:
-        required_values = [self._final_metadata_value(row, "title"), self._final_metadata_value(row, "language")]
-        return any(value is None or str(value).strip() == "" for value in required_values)
+        title = self._final_metadata_value(row, "title")
+        language = self._final_metadata_value(row, "language")
+        language_overridden = int(row.get("language_metadata_count") or 0) > 0
+        has_language = bool(self._normalize_value(language)) or (
+            not language_overridden and int(row.get("language_tag_count") or 0) > 0
+        )
+        return not self._normalize_value(title) or not has_language
 
     def _final_metadata_value(self, row: dict[str, Any], field: str) -> Any:
         saved_key = f"{field}_metadata"
+        count_key = f"{field}_metadata_count"
+        if int(row.get(count_key) or 0) > 0:
+            return row.get(saved_key)
         if saved_key in row and row.get(saved_key) is not None:
             return row.get(saved_key)
         return row.get(field)
@@ -790,7 +808,15 @@ class GovernanceService:
             "source_path": source_file["path"] if source_file else None,
             "title_metadata": saved.get("title", {}).get("value"),
             "language_metadata": saved.get("language", {}).get("value"),
+            "title_metadata_count": int("title" in saved),
+            "language_metadata_count": int("language" in saved),
             "tag_count": len(tag_rows),
+            "language_tag_count": sum(
+                1
+                for row in tag_rows
+                if row.get("tag_type") == "language"
+                and self._stringify(row.get("zh_name") or row.get("remote_name") or row.get("remote_slug"))
+            ),
             "review_count": review_count,
             "conflict_count": conflict_count,
         }
@@ -829,7 +855,7 @@ class GovernanceService:
             "untagged": "应用词典或重新解析标签",
             "dictionary_review": "复核词典映射",
             "dictionary_conflict": "解决词典冲突",
-            "missing_comicinfo": "等待导出阶段生成 ComicInfo",
+            "missing_comicinfo": "确认后回写 ComicInfo",
             "missing_cover": "检查源文件封面",
         }
         return [{"code": reason["code"], "label": labels[reason["code"]]} for reason in reasons if reason["code"] in labels]

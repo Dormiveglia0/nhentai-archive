@@ -1,6 +1,7 @@
-import { Database, FileArchive, Tags } from "lucide-react";
+import { ArrowRight, CheckCircle2, Database, FileArchive, Tags } from "lucide-react";
 
 import type { GovernanceAggregate } from "../../lib/api";
+import { navigate } from "../../lib/navigation";
 import { formatBytes } from "../library/libraryHelpers";
 
 export function GovernanceSourceRail({
@@ -13,15 +14,37 @@ export function GovernanceSourceRail({
   const sourceFile = aggregate?.files.find((file) => file.kind === "source_cbz");
 
   return (
-    <aside className="folio-governance-source" aria-label="来源对照摘要">
+    <aside className="folio-governance-source" aria-label="当前作品治理清单">
       <header>
-        <span>Source check</span>
-        <h2>来源对照</h2>
-        <p>{bulkMode ? "批量模式只显示预览结果，不会在确认前写入。" : "核对当前作品的真实来源、文件与词典状态。"}</p>
+        <span>Review checklist</span>
+        <h2>处理清单</h2>
+        <p>{bulkMode ? "先预览每部作品将发生的变化，再决定是否应用。" : "只列出仍需判断或明确执行的真实问题。"}</p>
       </header>
 
       {aggregate ? (
         <>
+          <section className="folio-governance-source-actions">
+            <strong>下一步</strong>
+            {aggregate.recommended_actions.length ? (
+              <ul>
+                {aggregate.recommended_actions.map((action) => (
+                  <li key={action.code}>
+                    <button type="button" onClick={() => runAction(action.code)}>
+                      <span>{action.label}</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="folio-governance-source-complete">
+                <CheckCircle2 size={18} />
+                <p>当前作品没有系统待办，仍可人工复核字段。</p>
+                <button type="button" onClick={() => navigate({ name: "library" })}>返回我的库</button>
+              </div>
+            )}
+          </section>
+
           <dl className="folio-governance-source-facts">
             <div><dt><Database size={14} />来源</dt><dd>{aggregate.work.source === "remote" ? "远端入库" : "本地导入"}</dd></div>
             <div><dt>Gallery ID</dt><dd>{aggregate.work.remote_gallery_id || "—"}</dd></div>
@@ -37,18 +60,39 @@ export function GovernanceSourceRail({
             <span><em>词典命中</em><b>{aggregate.dictionary.matched}</b></span>
           </section>
 
-          <section className="folio-governance-source-actions">
-            <strong>当前建议</strong>
-            {aggregate.recommended_actions.length ? (
-              <ul>{aggregate.recommended_actions.map((action) => <li key={action.code}>{action.label}</li>)}</ul>
-            ) : (
-              <p>当前没有额外治理建议。</p>
-            )}
-          </section>
         </>
       ) : (
         <div className="folio-governance-source-empty"><i /><i /><i /><i /></div>
       )}
     </aside>
   );
+}
+
+function runAction(code: string) {
+  if (code === "missing_metadata") {
+    scrollToSection("governance-metadata");
+    return;
+  }
+  if (code === "dictionary_review") {
+    scrollToSection("governance-tags");
+    return;
+  }
+  if (code === "dictionary_conflict") {
+    navigate({ name: "dictionary" });
+    return;
+  }
+  if (code === "missing_comicinfo") {
+    document.querySelector<HTMLInputElement>(".folio-governance-writeback input")?.focus();
+    return;
+  }
+  if (code === "untagged" || code === "missing_cover") {
+    navigate({ name: "files" });
+  }
+}
+
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    block: "start",
+  });
 }

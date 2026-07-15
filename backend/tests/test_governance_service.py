@@ -208,6 +208,27 @@ def test_queue_uses_saved_metadata_when_checking_missing_fields(tmp_path):
     assert service.queue()["summary"]["missing_metadata"] == 0
 
 
+def test_queue_accepts_language_tag_and_counts_only_real_work(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(
+        db,
+        archive,
+        tmp_path,
+        comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>",
+    )
+    _link_tag(db, work_id, remote_id=20, tag_type="language", name="japanese")
+
+    queue = service.queue()
+
+    assert queue["result"][0]["reasons"] == []
+    assert queue["summary"]["missing_metadata"] == 0
+    assert queue["summary"]["total"] == 0
+
+    service.apply(work_id, {"metadata": [{"field": "language", "value": None, "source": "manual"}]})
+
+    assert service.queue()["summary"]["missing_metadata"] == 1
+
+
 def test_dictionary_review_tags_surface_pending_and_conflict_summary(tmp_path):
     db, archive, service = _setup(tmp_path)
     work_id = _import_work(db, archive, tmp_path)

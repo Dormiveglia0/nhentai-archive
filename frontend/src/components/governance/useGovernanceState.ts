@@ -22,7 +22,7 @@ export function useGovernanceState(initialWorkId?: number) {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [edits, setEdits] = useState<Record<string, FieldEdit>>({});
-  const [onlyDiff, setOnlyDiff] = useState(false);
+  const [onlyDiff, setOnlyDiff] = useState(true);
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [dictionaryApplyingId, setDictionaryApplyingId] = useState<number | null>(null);

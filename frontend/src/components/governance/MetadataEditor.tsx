@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import type { GovernanceAggregate, MetadataFieldDiff } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { type FieldEdit, sourceLabel, splitValues } from "./governanceHelpers";
+import { normalize, type FieldEdit, sourceLabel, splitValues, toEditableSource } from "./governanceHelpers";
 
 type Props = {
   aggregate: GovernanceAggregate;
@@ -15,19 +15,36 @@ type Props = {
   translating: boolean;
 };
 
+const REQUIRED_FIELDS = new Set(["title", "language"]);
+
 export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleDiff, onTranslate, translating }: Props) {
+  const changed = (field: MetadataFieldDiff) => isChanged(field, edits[field.field]);
+  const needsDecision = (field: MetadataFieldDiff) =>
+    changed(field) || (!normalize(field.working_value) && REQUIRED_FIELDS.has(field.field));
   const fields = onlyDiff
-    ? aggregate.metadata.fields.filter((field) => field.differs_from_source || field.dirty)
+    ? aggregate.metadata.fields.filter(needsDecision)
     : aggregate.metadata.fields;
+  const adoptable = aggregate.metadata.fields.filter(
+    (field) => field.source_value && !normalize(edits[field.field]?.value)
+  );
+
+  const adoptAllSources = () => {
+    adoptable.forEach((field) => {
+      onChange(field.field, { value: field.source_value || "", source: toEditableSource(field.source) });
+    });
+  };
 
   return (
-    <section className="folio-governance-fields">
+    <section id="governance-metadata" className="folio-governance-fields">
       <header className="folio-governance-section-head">
         <div>
-          <span>ComicInfo / 解析来源</span>
-          <h2>字段对照</h2>
+          <span>Decision table</span>
+          <h2>字段决策</h2>
         </div>
         <div className="folio-governance-section-tools">
+          <button type="button" className="folio-line-button" onClick={adoptAllSources} disabled={!adoptable.length}>
+            补全空字段{adoptable.length ? ` (${adoptable.length})` : ""}
+          </button>
           <button type="button" className="folio-line-button" onClick={onTranslate} disabled={translating}>
             <Languages size={14} />
             {translating ? "机翻中…" : "机翻填充中文"}
@@ -38,7 +55,7 @@ export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleD
             aria-pressed={onlyDiff}
             onClick={onToggleDiff}
           >
-            仅看差异
+            {onlyDiff ? "查看全部字段" : "只看待确认"}
           </button>
         </div>
       </header>
@@ -50,7 +67,7 @@ export function MetadataEditor({ aggregate, edits, onChange, onlyDiff, onToggleD
             </StaggerItem>
           ))
         ) : (
-          <p className="folio-governance-inline-empty">当前没有与来源值存在差异的字段。</p>
+          <p className="folio-governance-inline-empty">当前没有待确认字段；可查看全部字段进行人工复核。</p>
         )}
       </Stagger>
     </section>
@@ -66,13 +83,17 @@ function MetadataCard({
   edit: FieldEdit;
   onChange: (edit: FieldEdit) => void;
 }) {
-  const sourceAllowed = field.source === "remote" || field.source === "comicinfo" ? field.source : "manual";
+  const sourceAllowed = toEditableSource(field.source);
+  const changed = isChanged(field, edit);
+  const needsDecision = !normalize(field.working_value) && REQUIRED_FIELDS.has(field.field);
   return (
-    <article className={`folio-governance-field-card${field.differs_from_source ? " is-diff" : ""}`}>
+    <article className={`folio-governance-field-card${needsDecision ? " is-review" : ""}${changed ? " is-changed" : ""}`}>
       <div className="folio-governance-field-head">
         <strong>{field.label}</strong>
         {field.source_value ? <span>{sourceLabel(field.source)}</span> : null}
-        {field.differs_from_source ? <em>与来源不同</em> : null}
+        {field.differs_from_source ? <span>来源不同</span> : null}
+        {needsDecision ? <em>待确认</em> : null}
+        {changed ? <em className="is-changed">待保存</em> : null}
       </div>
       <div className="folio-governance-field-compare">
         <div className="folio-governance-field-column">
@@ -138,8 +159,8 @@ function AutoGrowTextarea({
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    el.style.height = "0px";
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
   }, [value]);
   return (
     <textarea
@@ -151,5 +172,12 @@ function AutoGrowTextarea({
       placeholder={placeholder}
       onChange={(event) => onChange(event.target.value)}
     />
+  );
+}
+
+function isChanged(field: MetadataFieldDiff, edit?: FieldEdit) {
+  if (!edit) return false;
+  return (
+    normalize(edit.value) !== normalize(field.working_value) || edit.source !== field.working_source
   );
 }

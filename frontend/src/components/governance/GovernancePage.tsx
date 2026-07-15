@@ -62,8 +62,8 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
           <main className="folio-governance-editor">
             <header className="folio-governance-modebar">
               <div>
-                <span>{gov.bulkMode ? "Batch workflow" : "Metadata workflow"}</span>
-                <strong>{gov.bulkMode ? "批量处理" : "元数据对照编辑"}</strong>
+                <span>{gov.bulkMode ? "Batch workflow" : "Review workflow"}</span>
+                <strong>{gov.bulkMode ? "批量治理" : "单部审核"}</strong>
               </div>
               <button
                 className={gov.bulkMode ? "folio-filter-toggle is-active" : "folio-filter-toggle"}
@@ -71,7 +71,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 aria-pressed={gov.bulkMode}
                 onClick={gov.toggleBulkMode}
               >
-                {gov.bulkMode ? "退出批量" : "批量处理"}
+                {gov.bulkMode ? "退出批量" : "进入批量"}
               </button>
             </header>
 

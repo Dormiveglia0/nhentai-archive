@@ -11,7 +11,7 @@ export function GovernanceTagBoard({
   applyingTagId: number | null;
 }) {
   return (
-    <section className="folio-governance-tags">
+    <section id="governance-tags" className="folio-governance-tags">
       <header className="folio-governance-section-head">
         <div>
           <span>Tags</span>

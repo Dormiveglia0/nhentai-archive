@@ -1,6 +1,6 @@
 # Next Stage Prompt: Post-Closure QA And Polish
 
-Use this prompt after the feature-complete local loop remains green (`pytest` + `npm run build`). The latest closure baseline is 185 backend tests plus the route-split frontend build and desktop/mobile browser regression.
+Use this prompt after the feature-complete local loop remains green (`pytest` + `npm run build`). The latest closure baseline is 186 backend tests plus the route-split frontend build and desktop/mobile browser regression.
 
 ## Required Reading Order
 
@@ -14,6 +14,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 - All primary modules are real pages: discover, library, reader, history, governance, dictionary, export, files, tasks, settings, and workbench.
 - Governance supports single-work metadata decisions, metadata machine-translation suggestions, ComicInfo write-back, batch fill-missing metadata, batch ComicInfo write-back, source Web backfill, and batch confirmation of existing dictionary `review/conflict` terms.
+- Governance queue totals mean actionable works, not library size; language completeness honors real language tags unless an explicit metadata decision overrides them. Opening a work must never stage a source-value change by itself.
 - Export supports immediate browser downloads for single/small batches and `bulk_export` task-center jobs for selections over `EXPORT_SYNC_THRESHOLD`.
 - Bulk-export artifacts are temporary: written as `.zip`, available from the task inspector, deleted after download, and swept after 24h.
 - Library scan jobs, import jobs, and bulk-export jobs all route through the real task center.

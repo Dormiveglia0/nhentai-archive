@@ -39,7 +39,7 @@ export const FOLIO_PAGES: PageDefinition[] = [
   { id: "workbench", label: "工作台", title: "工作台", description: "馆藏、治理、任务与文件状态的每日入口。", icon: LayoutDashboard },
   { id: "library", label: "我的库", title: "我的库", description: "筛选、阅读与管理所有真实入库的本地作品。", icon: Library },
   { id: "discover", label: "发现", title: "发现 / 导入", description: "从远端源检索、预览并加入真实导入队列。", icon: Search },
-  { id: "governance", label: "治理", title: "元数据编辑", description: "对照远端来源，核对并写入本地最终元数据。", icon: PenLine },
+  { id: "governance", label: "治理", title: "治理工作台", description: "聚焦需要人工判断的元数据、词典与文件问题。", icon: PenLine },
   { id: "dictionary", label: "词典", title: "词典治理", description: "统一英文术语、中文显示与检索入口。", icon: Languages },
   { id: "tasks", label: "队列", title: "任务中心", description: "追踪导入、扫描、治理与导出的处理过程。", icon: Workflow },
   { id: "export", label: "导出", title: "导出中心", description: "检查配方并生成带标准元数据的 CBZ。", icon: Download },
