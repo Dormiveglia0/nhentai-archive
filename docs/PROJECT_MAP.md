@@ -6,15 +6,15 @@ Implemented loop:
 
 `discover remote gallery -> dictionary display/mapping -> detail modal -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress -> governance metadata/tag review -> export preview/rename/download CBZ (single or .zip bundle) to the user`
 
-This stage also implements real NH API Key settings and rewrites the discover page into a unified feed against `design/搜索导入.png`. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
+This stage also implements real NH API Key settings and rewrites the discover page into a unified Folio feed. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
 
 Read order for future AI work:
 
-1. `docs/PROJECT_STATUS.md`
-2. `docs/PROJECT_MAP.md`
-3. `docs/DEVELOPMENT_RULES.md`
-4. `design/nh_archive_product_design_flow.md`
-5. The relevant `design/*.png`
+1. `docs/AGENT_MAP.md`
+2. `docs/PROJECT_STATUS.md`
+3. `docs/PROJECT_MAP.md`
+4. `docs/DEVELOPMENT_RULES.md`
+5. The relevant formal component and feature-local CSS from the agent map.
 
 ## Backend Map
 
@@ -257,7 +257,7 @@ Root: `frontend/src/`
 - `components/discover/DiscoverFeed.tsx`
   - Result count, empty/error/notice states, dynamic current-page cards, icon pager.
 - `components/discover/DiscoverCard.tsx`
-  - Cover-first card based on `design/库.png`: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
+  - Cover-first Folio card: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
 - `components/discover/TagFilterSelector.tsx`
   - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected options stay at the top, and one fixed clear action removes all selected tags. It opens on content `tag` results only; author/group/parody/character/category/language live in a separate “作者与作品信息” scope. Mobile gives selected chips their own full-width row so the first chip cannot sit under the trigger.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.

@@ -51,4 +51,3 @@ export function WorkbenchDemo({ onNavigate }: { onNavigate: (page: FolioPageId) 
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ const WORK_ID = process.env.E2E_WORK_ID ?? "1";
 test.beforeEach(async ({ page }) => {
   await page.goto(`/#reader/${WORK_ID}`);
   await page.mouse.move(10, 10); // 唤出 chrome
+  await expect(page.locator(".reader-counter")).toHaveText(/\d+\s*\/\s*\d+/);
 });
 
 test("显示页码计数并能下一页", async ({ page }) => {
@@ -16,12 +17,12 @@ test("显示页码计数并能下一页", async ({ page }) => {
 });
 
 test("切换到连续滚动模式", async ({ page }) => {
-  await page.getByRole("button", { name: "滚动阅读" }).click();
+  await page.getByRole("button", { name: "单页", exact: true }).click();
   await expect(page.locator(".reader-webtoon")).toBeVisible();
 });
 
 test("打开缩略图浮层并跳页", async ({ page }) => {
-  await page.getByRole("button", { name: "缩略图" }).click();
+  await page.getByRole("button", { name: "页面索引" }).click();
   await expect(page.locator(".reader-thumb-field")).toBeVisible();
   await page.locator(".reader-thumb-tile").nth(2).click();
   await expect(page.locator(".reader-thumb-field")).toHaveCount(0);
@@ -29,9 +30,9 @@ test("打开缩略图浮层并跳页", async ({ page }) => {
   await expect(page.locator(".reader-counter")).toContainText("3 /");
 });
 
-test("打开信息面板含阅读设置", async ({ page }) => {
-  await page.getByRole("button", { name: "信息" }).click();
-  await expect(page.getByText("阅读设置")).toBeVisible();
+test("打开作品信息面板", async ({ page }) => {
+  await page.getByRole("button", { name: "作品信息" }).click();
+  await expect(page.getByText("本地阅读进度")).toBeVisible();
 });
 
 test("底部进度条点击跳页", async ({ page }) => {
@@ -48,7 +49,7 @@ test("底部进度条点击跳页", async ({ page }) => {
 
 test("g 键数字跳页", async ({ page }) => {
   await page.keyboard.press("g");
-  const input = page.locator(".reader-jump input");
+  const input = page.getByRole("textbox", { name: "目标页码" });
   await expect(input).toBeVisible();
   await input.fill("3");
   await input.press("Enter");

@@ -10,7 +10,7 @@
 
 ## Design Rules
 
-- The active visual source is `design/`: especially `搜索导入.png`, `库.png`, `阅读.png`, `任务中心.png`, and `设置.png`.
+- The maintained visual source is `frontend/src/components/folio/`, `/demo`, and each formal route's feature-local CSS; use `docs/AGENT_MAP.md` to find the owner.
 - Keep the Doujin Archive Gallery system: warm paper background, black editorial headings, terracotta primary actions, top global bar, secondary nav, right inspectors, and bottom task dock.
 - If a module is visually unfinished, prefer a clear boundary screen over a decorative fake dashboard.
 - Do not add adult sample assets to the repository. Non-explicit line art or empty-state graphics are allowed.

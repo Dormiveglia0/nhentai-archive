@@ -33,15 +33,7 @@ class WorkbenchService:
                 "total_pages": lib["total_pages"],
                 "total_size_bytes": lib["total_size_bytes"],
             },
-            "governance": {
-                "total": gov["total"],
-                "missing_metadata": gov["missing_metadata"],
-                "untagged": gov["untagged"],
-                "dictionary_review": gov["dictionary_review"],
-                "dictionary_conflict": gov["dictionary_conflict"],
-                "missing_comicinfo": gov["missing_comicinfo"],
-                "missing_cover": gov["missing_cover"],
-            },
+            "governance": gov,
             "files": {
                 "work_count": files["work_count"],
                 "source_bytes": files["source_bytes"],

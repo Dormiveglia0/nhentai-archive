@@ -70,4 +70,3 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
     </div>
   );
 }
-

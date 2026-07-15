@@ -11,7 +11,7 @@ For frontend work, read `docs/AGENT_MAP.md` first. It maps each demo module, sce
 - `backend/tests/`: focused pytest coverage for backend services and API behavior.
 - `frontend/src/`: React application code, grouped by `components/`, `lib/`, and global styles.
 - `frontend/src/components/`: feature folders for discover, library, reader, dictionary, settings, and shell layout.
-- `design/`: product design references. Treat these as hard UI references, not loose inspiration.
+- `frontend/src/components/folio/`: current visual system; use `/demo` and formal feature CSS as the maintained UI baseline.
 - `docs/`: project map, status, development rules, and next-stage prompts for future agents.
 
 ## Build, Test, and Development Commands

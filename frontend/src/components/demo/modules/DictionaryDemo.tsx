@@ -122,4 +122,3 @@ export function DictionaryDemo({ announce }: { announce: (message: string) => vo
     </div>
   );
 }
-
