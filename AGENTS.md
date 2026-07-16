@@ -6,30 +6,30 @@ NH Archive is a local-first React + FastAPI + SQLite application.
 
 For frontend work, read `docs/AGENT_MAP.md` first. It maps each demo module, scene animation, CSS layer, formal component, and real API entry so agents can load only the files relevant to the change.
 
-- `backend/app/`: FastAPI entrypoint, SQLite schema, config, and service modules.
-- `backend/app/services/`: domain services such as discovery, import, archive parsing, reader state, settings, jobs, and dictionary logic.
-- `backend/tests/`: focused pytest coverage for backend services and API behavior.
-- `frontend/src/`: React application code, grouped by `components/`, `lib/`, and global styles.
-- `frontend/src/components/`: feature folders for discover, library, reader, dictionary, settings, and shell layout.
-- `frontend/src/components/folio/`: current visual system; use `/demo` and formal feature CSS as the maintained UI baseline.
+- `apps/api/app/`: FastAPI entrypoint, SQLite schema, config, and service modules.
+- `apps/api/app/services/`: domain services such as discovery, import, archive parsing, reader state, settings, jobs, and dictionary logic.
+- `apps/api/tests/`: focused pytest coverage for API services and HTTP behavior.
+- `apps/web/src/`: React application code, grouped by `components/`, `lib/`, and global styles.
+- `apps/web/src/components/`: feature folders for discover, library, reader, dictionary, settings, and shell layout.
+- `apps/web/src/components/folio/`: current visual system; use `/demo` and formal feature CSS as the maintained UI baseline.
 - `docs/`: project map, status, development rules, and next-stage prompts for future agents.
 
 ## Build, Test, and Development Commands
 
 - Unified development environment: `npm run dev` (starts backend on 8001 and frontend on 5173; one `Ctrl+C` stops both)
-- Backend dev server: `PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001`
-- Backend tests: `PYTHONPATH=backend .venv/bin/pytest backend/tests -q`
-- Frontend dev server: `cd frontend && npm run dev`
-- Frontend build: `cd frontend && npm run build`
-- Frontend preview: `cd frontend && npm run preview`
+- API dev server: `PYTHONPATH=apps/api .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001`
+- API tests: `PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q`
+- Web dev server: `cd apps/web && npm run dev`
+- Web build: `cd apps/web && npm run build`
+- Web preview: `cd apps/web && npm run preview`
 
 Use `VITE_API_PROXY_TARGET=http://127.0.0.1:8001` when the frontend must proxy to a non-default backend port.
 
 ## Coding Style & Naming Conventions
 
-Python uses small service classes, explicit return dictionaries, and SQLite access through the existing database helpers. Keep API routes thin and put business logic in `backend/app/services/*_service.py`.
+Python uses small service classes, explicit return dictionaries, and SQLite access through the existing database helpers. Keep API routes thin and put business logic in `apps/api/app/services/*_service.py`.
 
-React uses TypeScript components with PascalCase filenames, feature-local components, and shared API types in `frontend/src/lib/api.ts`. Keep styling in the existing CSS system unless a feature already has a localized style pattern.
+React uses TypeScript components with PascalCase filenames, feature-local components, and shared API types in `apps/web/src/lib/api.ts`. Keep styling in the existing CSS system unless a feature already has a localized style pattern.
 
 ## Testing Guidelines
 
@@ -45,4 +45,4 @@ Pull requests should include: changed module summary, verification commands and 
 
 ## Security & Configuration Tips
 
-Never commit `.env`, API keys, imported CBZ files, generated page caches, or `backend/.local-data/`. Settings APIs must report whether sensitive values are configured, not return plaintext secrets.
+Never commit `.env`, API keys, imported CBZ files, generated page caches, or `.local-data/`. Settings APIs must report whether sensitive values are configured, not return plaintext secrets.

@@ -1,7 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "dev": "python3 scripts/dev.py"
+    "dev": "python3 scripts/dev.py",
+    "build": "npm --prefix apps/web run build",
+    "test": "PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q"
   },
   "dependencies": {
     "@types/node": "^26.0.0"

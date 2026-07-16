@@ -10,38 +10,40 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKEND = [
+API_PORT = os.environ.get("NH_ARCHIVE_API_PORT", "8001")
+WEB_PORT = os.environ.get("NH_ARCHIVE_WEB_PORT", "5173")
+API = [
     str(ROOT / ".venv/bin/uvicorn"),
     "app.main:app",
     "--host",
     "0.0.0.0",
     "--port",
-    "8001",
+    API_PORT,
     "--reload",
     "--reload-dir",
-    str(ROOT / "backend"),
+    str(ROOT / "apps/api"),
 ]
-FRONTEND = [
+WEB = [
     "npm",
     "--prefix",
-    str(ROOT / "frontend"),
+    str(ROOT / "apps/web"),
     "run",
     "dev",
     "--",
     "--port",
-    "5173",
+    WEB_PORT,
     "--strictPort",
 ]
 
 
 def check() -> list[str]:
     missing = []
-    if not os.access(BACKEND[0], os.X_OK):
+    if not os.access(API[0], os.X_OK):
         missing.append("缺少 .venv/bin/uvicorn，请先安装后端依赖。")
     if shutil.which("npm") is None:
         missing.append("缺少 npm。")
-    if not (ROOT / "frontend/node_modules").is_dir():
-        missing.append("缺少 frontend/node_modules，请先运行 npm --prefix frontend install。")
+    if not (ROOT / "apps/web/node_modules").is_dir():
+        missing.append("缺少 apps/web/node_modules，请先运行 npm --prefix apps/web install。")
     return missing
 
 
@@ -77,18 +79,18 @@ def main() -> int:
 
     env = os.environ.copy()
     env["PYTHONPATH"] = os.pathsep.join(
-        part for part in (str(ROOT / "backend"), env.get("PYTHONPATH")) if part
+        part for part in (str(ROOT / "apps/api"), env.get("PYTHONPATH")) if part
     )
-    env.setdefault("VITE_API_PROXY_TARGET", "http://127.0.0.1:8001")
+    env.setdefault("VITE_API_PROXY_TARGET", f"http://127.0.0.1:{API_PORT}")
     processes: list[subprocess.Popen] = []
 
     try:
         signal.signal(signal.SIGTERM, interrupt)
-        for command in (BACKEND, FRONTEND):
+        for command in (API, WEB):
             processes.append(
                 subprocess.Popen(command, cwd=ROOT, env=env, start_new_session=True)
             )
-        print("NH Archive 开发环境：http://127.0.0.1:5173", flush=True)
+        print(f"NH Archive 开发环境：http://127.0.0.1:{WEB_PORT}", flush=True)
         while all(process.poll() is None for process in processes):
             time.sleep(0.2)
         return next(process.returncode for process in processes if process.returncode is not None)

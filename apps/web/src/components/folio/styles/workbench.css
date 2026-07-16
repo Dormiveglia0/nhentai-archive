@@ -1,0 +1,345 @@
+/* Shared page body primitives and workbench layout. */
+.folio-page-body {
+  min-width: 0;
+  padding: clamp(28px, 3.4vw, 52px) clamp(26px, 4vw, 70px) 54px;
+}
+
+.folio-settings-body {
+  padding-top: 0;
+}
+
+.folio-panel-heading {
+  min-width: 0;
+}
+
+.folio-panel-heading h2 {
+  margin: 0;
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.folio-panel-heading p {
+  margin: 8px 0 0;
+  color: var(--folio-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Formal summaries use independent archival entries, not joined cells or interactive cards. */
+.folio-metric-cluster {
+  min-width: 0;
+}
+
+.folio-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(176px, 1fr));
+  gap: clamp(18px, 2vw, 28px);
+}
+
+.folio-metric-card {
+  --folio-metric-tone: var(--folio-muted);
+  min-width: 0;
+  min-height: 104px;
+  padding: 15px 2px 12px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line);
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.folio-metric-card::before {
+  content: "";
+  width: 30px;
+  height: 2px;
+  background: var(--folio-metric-tone);
+  position: absolute;
+  top: -1px;
+  left: 0;
+}
+
+.folio-metric-card.is-active { --folio-metric-tone: var(--folio-red); }
+.folio-metric-card.is-good { --folio-metric-tone: var(--folio-green); }
+.folio-metric-card.is-warning { --folio-metric-tone: #9a671f; }
+.folio-metric-card.is-danger { --folio-metric-tone: var(--folio-red); }
+.folio-metric-card.is-muted { --folio-metric-tone: var(--folio-faint); }
+
+.folio-metric-card-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--folio-metric-tone);
+}
+
+.folio-metric-card-copy {
+  min-width: 0;
+}
+
+.folio-metric-card-copy > span,
+.folio-metric-card-copy > strong,
+.folio-metric-card-copy > small {
+  display: block;
+}
+
+.folio-metric-card-copy > span {
+  overflow: hidden;
+  color: var(--folio-muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-metric-card-copy > strong {
+  margin-top: 7px;
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 2.25vw, 33px);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-metric-card.has-text-value .folio-metric-card-copy > strong {
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.folio-metric-card-copy > small {
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--folio-faint);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-metric-card.is-danger .folio-metric-card-copy > strong,
+.folio-metric-card.is-warning .folio-metric-card-copy > strong {
+  color: var(--folio-metric-tone);
+}
+
+.folio-status-band,
+.folio-task-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line-strong);
+}
+
+.folio-status-band article,
+.folio-task-summary article {
+  min-width: 0;
+  min-height: 94px;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 10px;
+  border-right: 1px solid var(--folio-line);
+}
+
+.folio-status-band article:last-child,
+.folio-task-summary article:last-child {
+  border-right: 0;
+}
+
+.folio-status-band svg {
+  color: var(--folio-red);
+}
+
+.folio-status-band article > span,
+.folio-task-summary article > span {
+  color: var(--folio-muted);
+  font-size: 13px;
+}
+
+.folio-status-band strong,
+.folio-task-summary strong {
+  grid-column: 1 / -1;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.folio-status-band small,
+.folio-task-summary small {
+  grid-column: 1 / -1;
+  color: var(--folio-faint);
+  font-size: 13px;
+}
+
+.folio-workbench-grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
+  gap: clamp(28px, 4vw, 62px);
+}
+
+.folio-ruled-panel {
+  min-width: 0;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line-strong);
+  position: relative;
+}
+
+.folio-ruled-panel > .folio-panel-heading {
+  padding: 22px 0 18px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-reading-panel {
+  min-height: 388px;
+}
+
+.folio-module-ledger {
+  border-top: 1px solid var(--folio-line-strong);
+}
+
+.folio-module-ledger > .folio-panel-heading {
+  padding: 22px 0 18px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-module-ledger > button {
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 4px;
+  display: grid;
+  grid-template-columns: 22px 56px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  text-align: left;
+  transition: color 180ms ease, padding-left 220ms ease, background-color 180ms ease;
+}
+
+.folio-module-ledger > button:hover {
+  padding-left: 10px;
+  color: var(--folio-ink);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.folio-module-ledger > button strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 13px;
+}
+
+.folio-module-ledger > button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.folio-empty {
+  min-height: 270px;
+  padding: 44px 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.folio-empty::before,
+.folio-empty::after {
+  content: "";
+  width: min(18%, 110px);
+  height: 1px;
+  background: var(--folio-line);
+  position: absolute;
+  top: calc(50% - 56px);
+}
+
+.folio-empty::before {
+  left: 16%;
+}
+
+.folio-empty::after {
+  right: 16%;
+}
+
+.folio-empty-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--folio-line-strong);
+  background: var(--folio-paper);
+  color: var(--folio-red);
+  position: relative;
+  z-index: 1;
+}
+
+.folio-empty strong {
+  margin-top: 18px;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 19px;
+  position: relative;
+  z-index: 1;
+}
+
+.folio-empty p {
+  max-width: 430px;
+  margin: 9px 0 0;
+  color: var(--folio-muted);
+  font-size: 13px;
+  line-height: 1.75;
+  position: relative;
+  z-index: 1;
+}
+
+.folio-empty > button {
+  margin-top: 19px;
+  min-height: 44px;
+  padding: 0 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-red);
+  background: transparent;
+  color: var(--folio-red);
+  font-size: 13px;
+  position: relative;
+  z-index: 1;
+}
+
+.folio-toolbar {
+  min-width: 0;
+  margin-bottom: 28px;
+  padding: 14px 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) repeat(2, minmax(145px, 0.6fr)) auto;
+  align-items: end;
+  gap: 12px;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line-strong);
+  position: relative;
+  z-index: 8;
+}
+
+.folio-toolbar-wide {
+  grid-template-columns: minmax(420px, 1.8fr) repeat(3, minmax(118px, 0.5fr)) 124px 124px;
+}

@@ -19,12 +19,14 @@ Read order for future AI work:
 ## Development Entry
 
 - Root `npm run dev` delegates to `scripts/dev.py`.
-- The stdlib launcher starts FastAPI on port 8001 and Vite on port 5173, preserves `PYTHONPATH`/`VITE_API_PROXY_TARGET`, and terminates both process groups when either side exits or the user presses `Ctrl+C`.
-- `npm run dev -- --check` validates the local backend executable, npm, and frontend dependencies without starting servers.
+- The stdlib launcher starts the API app on port 8001 and Web app on port 5173, preserves `PYTHONPATH`/`VITE_API_PROXY_TARGET`, and terminates both process groups when either side exits or the user presses `Ctrl+C`. `NH_ARCHIVE_API_PORT` and `NH_ARCHIVE_WEB_PORT` provide temporary QA ports.
+- `npm run dev -- --check` validates the local API executable, npm, and Web dependencies without starting servers.
+- Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Startup migrates either legacy `backend/.local-data/` or `apps/api/.local-data/` and rebases managed SQLite paths when the repository moves.
+- `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI, the compiled assets, and a non-root runtime. `compose.yaml` binds the service to localhost by default, persists `/data`, drops Linux capabilities, and uses `/api/health` for container health.
 
-## Backend Map
+## API App Map
 
-Root: `backend/app/`
+Root: `apps/api/app/`
 
 - `config.py`
   - `Settings`: resolves local data paths, `NHENTAI_API_KEY`, base URL, user agent, timeout.
@@ -32,6 +34,7 @@ Root: `backend/app/`
 - `database.py`
   - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `jobs`, `settings`. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
+  - Connections enforce foreign keys, a 5-second busy timeout and NORMAL synchronous mode; schema initialization enables WAL. Query indexes are created only after legacy migrations and cover work files/tags, dictionary references, reading history, task status/order and task logs.
 - `container.py`
   - Composition root for settings, SQLite, the remote client, and service instances. API modules share this single mutable registry; tests replace registry members instead of patching route modules.
 - `api/`
@@ -41,6 +44,7 @@ Root: `backend/app/`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
   - `media_url()` resolves CDN paths through `/api/v2/cdn`; frontend must not guess image URLs.
   - `normalize_remote_error()` standardizes 401/404/422/429.
+  - Network failures, invalid JSON/Unicode responses and non-object error payloads are normalized to `NhentaiApiError`; nested thumbnail payloads keep a scalar `thumbnail.path`.
   - API quota protection:
     - caches cacheable remote GET/selected tag-search calls by request key;
     - uses longer TTLs for CDN/tag/detail/popular responses and short TTLs for feed/search pages;
@@ -54,6 +58,7 @@ Root: `backend/app/`
     - empty query: current latest feed, never the old `pages:>0` search fallback;
     - single remote tag: `/api/v2/galleries/tagged`.
   - Adds local `imported/work_id` state to remote gallery summaries.
+  - Feed and related-card import state is resolved in one batched `works` query per result set, not one query per card.
   - `build_search_query()` appends confirmed remote filters such as `language:japanese`, `tag:"doujinshi"`, and `tag:"manga"`.
   - Enriches cards with real `remote_tags` via `/api/v2/tags/ids` and caches those tags.
   - `cached_tags()` exposes real cached tags for the discover selector; it does not fabricate defaults.
@@ -79,10 +84,13 @@ Root: `backend/app/`
   - `verify_nhentai()`: verifies current effective key through an authenticated remote request.
 - `services/import_service.py`
   - `enqueue_remote_import()`, `run_remote_import()`, `retry_job()`.
+  - Enqueue is idempotent: an active job for the same gallery is reused, and a gallery already in the library returns an immediately completed job instead of leaving an orphaned queued record.
   - Caches imported gallery and real gallery tags before downloading/indexing CBZ.
   - Calls `DictionaryService.link_work_tags()` after ingest so imported works gain real `work_tags`.
+  - Partial download files are removed on success, cancellation and failure; a process crash remains visible as a stale managed tmp file for file maintenance.
 - `services/archive_service.py`
   - `ingest_cbz()`, `list_works()`, `get_work()`, `list_pages()`, `read_page()`.
+  - Archive copies, covers and generated thumbnails use unique same-directory temporary files plus atomic replace. Re-ingest invalidates page thumbnails/stale covers, and page member sizes are indexed from one ZIP directory read rather than reopening the archive for every page. A failed first ingest removes its placeholder work so import idempotency cannot mistake a fileless row for success.
 - `services/reader_service.py`
   - `get_state()`, `update_state()`.
 - `services/library_service.py`
@@ -93,6 +101,10 @@ Root: `backend/app/`
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
   - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
   - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
+- `services/metadata_refresh_service.py`
+  - Read-only preview then explicit apply for up to 50 selected local works. Matching priority is existing remote gallery ID, ComicInfo `Web`, manually supplied gallery ID, then normalized fuzzy title search.
+  - Fuzzy auto-apply requires at least 92% title confidence, a 7-point lead over the next candidate, and matching page count unless title confidence is at least 97%. Ambiguous rows stay review-only until a gallery ID is supplied and previewed again.
+  - Apply fetches fresh remote detail and independently reruns fuzzy candidate ranking on the server; it never trusts confidence/margin values from the browser. It updates remote titles/media identity, replaces stale remote tags, preserves local source ownership and every manual `work_metadata` decision, and isolates failures per work.
 - `services/governance_service.py`
   - Local-only governance reads/writes; never calls the NH API.
   - `queue()`: real queue items, explicit human-review state and automatic reason counts from `works`, `work_files`, `work_tags`, `local_tag_dictionary`, source CBZ ComicInfo presence, and cover file existence. `summary.total` is the unreviewed/stale backlog, not the automatic-issue count.
@@ -104,21 +116,22 @@ Root: `backend/app/`
   - `bulk_preview()` / `bulk_apply()`: selected-work batch actions for fill-missing metadata, opt-in ComicInfo write-back, source Web backfill, and confirming existing dictionary `review/conflict` terms when they are unlocked, not ignored, and already have a Chinese name.
 - `services/export_service.py`
   - Local-only export preview/packaging for **browser download**; never calls the NH API, never mutates source CBZ files, and never writes a second copy to the server. No export records are kept.
-  - `queue()` / `summary()`: real export readiness from `works`, `work_files`, source file existence, and preview blockers/warnings. `summary()` returns only the queue counts (`total`/`ready`/`blocked`/`warnings`).
+  - `queue()` / `summary()`: one aggregate SQLite query resolves real source state, metadata/tag presence and dictionary warnings; CBZ metadata is opened only for still-missing fields. `summary()` returns only the queue counts (`total`/`ready`/`blocked`/`warnings`) and shares the exact same state derivation as the full queue.
   - `preview(work_id, options)`: uses `GovernanceService.work_governance()` so final metadata values come from `work_metadata` when present, then current/source values. Returns source file state, output name, ComicInfo fields, resolved export options, members to keep/write, blockers, and warnings. `options.output_name` is sanitized and forced to `.cbz`; `write_comicinfo` / `keep_json` / `compress` control the preview. No server output path is involved.
   - `build_cbz(work_id, options)`: packages a single work into CBZ **bytes** in memory, honoring `write_comicinfo`, `keep_json`, and `compress`, and returns `(filename, bytes)`; raises `ValueError` when the work has blockers. The original archive is never touched.
   - `build_bundle(items, options)`: packages multiple works into one `.zip` of CBZs (bytes) for a single download, applying shared export options, deduping member names, skipping blocked items, and raising when none can be exported.
 - `services/export_job_service.py`
   - Long-running bulk export owner for `bulk_export` jobs. Selections over `EXPORT_SYNC_THRESHOLD` are packaged in a daemon worker, using `JobService` progress/log/control and `ExportService.build_cbz()`.
-  - Artifacts are temporary `.zip` files under the export-jobs directory, deleted after download and swept after 24h; source CBZ files remain immutable.
+  - Artifacts are temporary `.zip` files under the export-jobs directory, deleted after download and swept after 24h; download/deletion accepts only the exact job-owned path, and source CBZ files remain immutable.
 - `services/file_service.py`
   - Local-only file inventory + deletion over the managed data dir; never calls the NH API.
   - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
-  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Work entries expose structured `tag_items` for real search links while retaining the legacy display-only `tags` list. Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
+  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Source rows are preloaded once and visible-work tags are fetched in one batch. Work entries expose structured `tag_items` for real search links while retaining the legacy display-only `tags` list. Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
   - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
   - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/governance_reviews/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry/pause/resume/cancel/logs/checkpoint`.
+  - `list()` batch-loads work/gallery presentation metadata and tolerates corrupt/non-object `target_json`; startup recovery closes process-owned queued/running/cancelling states while leaving paused jobs resumable.
   - Job payloads include `created_at` / `updated_at`; statuses include `queued/running/paused/completed/failed/cancelled`.
   - Writes durable `job_logs` for creation, stage changes, completion, failures, pause/resume/cancel, and retry.
 - `services/import_service.py`
@@ -128,7 +141,7 @@ Root: `backend/app/`
 - `services/workbench_service.py`
   - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
-  - Small FastAPI application factory: lifespan, CORS, and mounting the `/api` router only.
+  - Small FastAPI application factory: lifespan (interrupted-job recovery and export-artifact sweep), CORS, and mounting the `/api` router only.
 
 ## API Status
 
@@ -175,6 +188,8 @@ Implemented:
 - `POST /api/works/{work_id}/governance/translate`
 - `POST /api/governance/bulk/preview`
 - `POST /api/governance/bulk/apply`
+- `POST /api/governance/metadata-refresh/preview`
+- `POST /api/governance/metadata-refresh/apply`
 - `GET /api/exports/queue`
 - `GET /api/exports/summary`
 - `GET /api/works/{work_id}/export-preview`
@@ -209,9 +224,9 @@ Implemented:
 - `POST /api/settings/translation/verify`
 - `GET /api/workbench/overview`
 
-## Frontend Map
+## Web App Map
 
-Root: `frontend/src/`
+Root: `apps/web/src/`
 
 - `docs/AGENT_MAP.md`
   - Fast locator for the active demo visual contract, nine module bodies/scenes, ordered CSS layers, formal page owners, and real API entry points. Read this before loading frontend files.
@@ -230,17 +245,17 @@ Root: `frontend/src/`
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
   - Formal tag surfaces use native anchors built by `tagSearchHref()`: primary click may keep the current in-app filtering behavior, while middle/modifier click opens the corresponding discover search in a new tab.
 - `lib/motion/`
-  - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。后续页面动画一律从此取用,禁止写魔法数。
+  - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,禁止写魔法数。
 - `components/effects/`
   - 从 magicui/react-bits 引入并改造后的效果组件落地处。`README.md` 为硬性接入规范(库只作效果来源、token 改造、`.fx-scope` 隔离、reduced-motion 降级)。当前含 `StaggerDemo`、`ShineBorder` 两个验证示例。
 - `styles/tailwind-entry.css`
   - Tailwind v4 入口(方案 A:省略 Preflight、不加前缀、按层导入),`@theme` 将 `app.css` 设计 token 映射为 `--color-*`。在 `main.tsx` 中先于 `app.css` 引入。
 - `lib/api.ts`
   - Typed API wrapper for implemented backend endpoints.
-  - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session.
+  - Discover GET calls use a short in-browser cache and in-flight request reuse to avoid duplicate feed/popular/detail/tag requests within one UI session. Import/library-scan completion, file deletion and dictionary/governance mutations invalidate cached local import/display state so remote cards cannot remain stale after local writes.
   - Dictionary API types and helpers live here: candidates, autocomplete, preview/apply, preview/import bulk rows.
   - Library API types/helpers: `LibrarySummary`, `LibraryWork`, `LibraryTagFilter`, `LibrarySearchParams`, and `library*` request methods (summary/search/recent-added/recent-read/continue-reading/tag-filters). Library calls are not run through the discover session cache.
-  - Governance API types/helpers: queue, aggregate, explicit review approve/reopen, metadata translation suggestions, bulk preview/apply (fill missing metadata, write-back, confirm dictionary terms), and apply payload/result. Governance calls are local-only and not run through the discover session cache.
+  - Governance API types/helpers: queue, aggregate, explicit review approve/reopen, metadata translation suggestions, bulk preview/apply (fill missing metadata, write-back, confirm dictionary terms), remote metadata refresh preview/apply, and apply payload/result. Remote refresh invalidates discover cache only after a successful write.
   - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), `enqueueBulkExport` for task-center bulk artifacts, and persisted preset settings. Export calls are local-only and not run through the discover session cache.
   - Job API type/helpers: `Job` (including `created_at` / `updated_at`, `paused/cancelled/cancelling` statuses and bulk-export target fields), `JobLog`, `jobs()`, `jobLogs()`, `pauseJob()`, `resumeJob()`, `cancelJob()`, `retryJob()`, delete/clear, and bulk-export download URL.
 - `vite.config.ts`
@@ -251,8 +266,12 @@ Root: `frontend/src/`
 - `components/layout/RouteFallback.tsx`
   - Honest, data-free loading surfaces for lazy formal routes and the immersive reader. `RouteFallback.css` owns the paper-sheet loop and reduced-motion fallback; it must not duplicate page titles, metrics, or fake content.
 - `components/layout/TaskDock.tsx`
-  - Polls real `/api/jobs` only while the document is visible; renders only when jobs are running/queued/failed or an error exists.
+  - Polls real `/api/jobs` only while the document is visible and schedules the next poll only after the previous request settles. The initial poll also uses a clearable zero-delay timer so React StrictMode can dispose its exploratory mount without issuing a duplicate request. It renders running/queued/paused/cancelling jobs, retryable failures, or a polling error so resumable/in-flight work cannot disappear from the global surface; `apps/web/e2e/taskdock.spec.ts` protects non-overlap plus hidden/visible behavior against a deliberately slow real response.
   - `TaskDock.css` owns its compact Folio live ledger, custom ARIA progress, responsive position above fixed action bars, and reduced-motion behavior. Retriable failures reuse the same `canRetry` boundary as the task center and expose guarded busy/error state.
+- `components/folio/ui/FolioPrimitives.tsx`
+  - Shared Folio search, field, toggle, empty-state and custom-select controls. The select popup is a native button group with `aria-pressed` state rather than an incomplete listbox implementation; Escape and selection both restore focus to the trigger.
+- `components/folio/ui/FolioMetricGrid.tsx`
+  - Shared real-data summary/status entries for formal routes. It owns icon/value/detail composition, semantic status tones, staggered entry and responsive two-column layout; entries remain flat and non-interactive within the Folio paper-and-rule system, while joined cells stay reserved for genuine record tables.
 - `styles/app.css`
   - Base-only root tokens/reset/form inheritance/shared spin/reduced-motion layer. The former legacy topbar, navigation, page, card, drawer, preview-modal, default pager/tag scroller, TaskDock and reader selectors have been removed or moved to direct component owners.
 - `components/discover/DiscoverPage.tsx`
@@ -271,6 +290,7 @@ Root: `frontend/src/`
   - Cover-first Folio card: title, author/group, page/language/ID, draggable tag row. Author/language labels use dictionary `display`; language skips generic `translated`.
 - `components/discover/TagFilterSelector.tsx`
   - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected options stay at the top, and one fixed clear action removes all selected tags. It opens on content `tag` results only; author/group/parody/character/category/language live in a separate “作者与作品信息” scope. Mobile gives selected chips their own full-width row so the first chip cannot sit under the trigger.
+  - Candidate scopes and the files/tasks/export segmented filters are filter button groups with `aria-pressed`; they are not tabs because they do not own tab panels.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.
 - `components/discover/TagScroller.tsx`
   - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support. Tags are native search anchors; drag suppression applies only to the primary pointer so middle/modifier navigation remains intact.
@@ -396,7 +416,7 @@ Root: `frontend/src/`
 
 ## Data Directory
 
-Default: `backend/.local-data/`
+Default: repository-level `.local-data/`
 
 - `archive.db`: SQLite database.
 - `library/{work_id}.cbz`: imported source archive.
@@ -410,12 +430,12 @@ Default: `backend/.local-data/`
 Backend:
 
 ```bash
-PYTHONPATH=backend pytest backend/tests -q
+PYTHONPATH=apps/api pytest apps/api/tests -q
 ```
 
 Frontend:
 
 ```bash
-cd frontend
+cd apps/web
 npm run build
 ```

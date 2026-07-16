@@ -1,0 +1,27 @@
+name: nh-archive
+
+services:
+  app:
+    image: ghcr.io/dormiveglia0/nhentai-archive:${IMAGE_TAG:-latest}
+    build:
+      context: .
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${NH_ARCHIVE_BIND:-127.0.0.1}:${NH_ARCHIVE_PORT:-8001}:8000"
+    environment:
+      NHENTAI_API_KEY: ${NHENTAI_API_KEY:-}
+      NH_ARCHIVE_REQUEST_TIMEOUT: ${NH_ARCHIVE_REQUEST_TIMEOUT:-30}
+    user: "${NH_ARCHIVE_UID:-10001}:${NH_ARCHIVE_GID:-10001}"
+    volumes:
+      - "${NH_ARCHIVE_DATA_PATH:-nh-archive-data}:/data"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  nh-archive-data:
