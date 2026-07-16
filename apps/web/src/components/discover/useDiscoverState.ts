@@ -41,6 +41,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   const initialPageRef = useRef(restored.page);
   const currentPageRef = useRef(restored.page);
   const lastFilterKeyRef = useRef<string | null>(null);
+  const historyPageRef = useRef<number | null>(null);
   const restoreScrollRef = useRef(restored.scrollY);
   const initialTagSeenRef = useRef(initialTagKey);
   const feedRequestRef = useRef(0);
@@ -102,9 +103,11 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   useEffect(() => {
     const previousKey = lastFilterKeyRef.current;
     const filterChanged = previousKey !== null && previousKey !== filterKey;
-    const nextPage = previousKey === null ? initialPageRef.current : filterChanged ? 1 : currentPageRef.current;
+    const historyPage = historyPageRef.current;
+    const nextPage = historyPage ?? (previousKey === null ? initialPageRef.current : filterChanged ? 1 : currentPageRef.current);
+    historyPageRef.current = null;
     lastFilterKeyRef.current = filterKey;
-    if (filterChanged) {
+    if (filterChanged && historyPage === null) {
       currentPageRef.current = 1;
       setPage(1);
       restoreScrollRef.current = 0;
@@ -135,6 +138,41 @@ export function useDiscoverState(initialTag?: RemoteTag) {
       window.history.scrollRestoration = previous;
     };
   }, []);
+
+  useEffect(() => {
+    const restoreHistoryEntry = (event: PopStateEvent) => {
+      if (!canReplaceDiscoverHash(window.location.hash)) return;
+      const next = readDiscoverState(event.state);
+      const nextFilterKey = discoverFilterKey({
+        activeQuery: next.submittedQuery,
+        kind: next.kind,
+        language: next.language,
+        selectedTags: next.selectedTags,
+        sort: next.sort,
+        surface: SURFACE,
+        unimportedOnly: next.unimportedOnly,
+      });
+      const filtersChanged = nextFilterKey !== filterKey;
+
+      historyPageRef.current = filtersChanged ? next.page : null;
+      currentPageRef.current = next.page;
+      restoreScrollRef.current = next.scrollY;
+      setQuery(next.query);
+      setSubmittedQuery(next.submittedQuery);
+      setLanguage(next.language);
+      setKind(next.kind);
+      setSort(next.sort);
+      setUnimportedOnly(next.unimportedOnly);
+      setSelectedTags(next.selectedTags);
+      setPage(next.page);
+      scrollDiscoverTo(next.scrollY);
+      collapsePopular();
+
+      if (!filtersChanged) void loadFeed(next.page);
+    };
+    window.addEventListener("popstate", restoreHistoryEntry);
+    return () => window.removeEventListener("popstate", restoreHistoryEntry);
+  }, [collapsePopular, filterKey, loadFeed]);
 
   useEffect(() => {
     persistDiscoverState(currentDiscoverState({
@@ -276,8 +314,10 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   function loadPage(nextPage: number) {
     collapsePopular();
     const boundedPage = Math.max(1, nextPage);
+    const current = snapshot();
+    persistDiscoverState(current, false);
     currentPageRef.current = boundedPage;
-    persistDiscoverState({ ...snapshot(), page: boundedPage, scrollY: 0 }, true);
+    persistDiscoverState({ ...current, page: boundedPage, scrollY: 0 }, true, "push");
     scrollDiscoverTo(0);
     void loadFeed(boundedPage);
   }
@@ -341,24 +381,36 @@ function displayTag(tag: TagFilter) {
   return tag.display || tag.name || tag.slug || String(tag.id);
 }
 
-function readDiscoverState(): PersistedDiscoverState {
+function readDiscoverState(historyState: unknown = window.history.state): PersistedDiscoverState {
   try {
-    return readDiscoverStateFrom(window.location.hash, window.sessionStorage.getItem(DISCOVER_STATE_KEY));
+    const saved = historyState && typeof historyState === "object"
+      ? (historyState as Record<string, unknown>)[DISCOVER_STATE_KEY]
+      : null;
+    const raw = saved ? JSON.stringify(saved) : window.sessionStorage.getItem(DISCOVER_STATE_KEY);
+    return readDiscoverStateFrom(window.location.hash, raw);
   } catch {
     return readDiscoverStateFrom(window.location.hash, null);
   }
 }
 
-function persistDiscoverState(state: PersistedDiscoverState, syncUrl: boolean) {
+function persistDiscoverState(state: PersistedDiscoverState, syncUrl: boolean, historyMode: "replace" | "push" = "replace") {
   try {
     window.sessionStorage.setItem(DISCOVER_STATE_KEY, JSON.stringify(state));
   } catch {
     // Session storage only preserves navigation context; unavailable storage is non-fatal.
   }
-  if (syncUrl && canReplaceDiscoverHash(window.location.hash)) {
-    const nextHash = serializeDiscoverHash(state);
-    if (window.location.hash !== nextHash) window.history.replaceState(null, "", nextHash);
+  const currentHistory = window.history.state;
+  const nextHistory = {
+    ...(currentHistory && typeof currentHistory === "object" ? currentHistory : {}),
+    [DISCOVER_STATE_KEY]: state,
+  };
+  const nextHash = syncUrl && canReplaceDiscoverHash(window.location.hash) ? serializeDiscoverHash(state) : undefined;
+  if (historyMode === "push" && nextHash && window.location.hash !== nextHash) {
+    window.history.pushState(nextHistory, "", nextHash);
+    return;
   }
+  if (nextHash) window.history.replaceState(nextHistory, "", nextHash);
+  else window.history.replaceState(nextHistory, "");
 }
 
 function currentDiscoverState(state: Omit<PersistedDiscoverState, "scrollY">): PersistedDiscoverState {

@@ -30,13 +30,21 @@ export function useReaderChrome() {
         reveal();
       });
     };
-    window.addEventListener("pointermove", onActivity, { passive: true });
-    window.addEventListener("pointerdown", onActivity, { passive: true });
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") onActivity();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (event.pointerType !== "mouse" && target?.closest(".reader-webtoon")) return;
+      onActivity();
+    };
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("keydown", onActivity);
     reveal();
     return () => {
-      window.removeEventListener("pointermove", onActivity);
-      window.removeEventListener("pointerdown", onActivity);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onActivity);
       if (timer.current) window.clearTimeout(timer.current);
       if (activityFrame.current !== null) window.cancelAnimationFrame(activityFrame.current);
