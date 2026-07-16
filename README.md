@@ -41,28 +41,18 @@ Set `NH_ARCHIVE_DATA_DIR` to move the library outside the repo.
 
 ## Docker Compose
 
-Build and start the app at `http://127.0.0.1:8001`:
+Start the app at `http://127.0.0.1:8001`:
 
 ```bash
-docker compose up -d --build
-```
-
-Compose uses the published `ghcr.io/dormiveglia0/nhentai-archive:latest` image and a persistent named volume. To reuse the repository's existing data, run with the host user and bind the current data directory:
-
-```bash
-NH_ARCHIVE_DATA_PATH=./.local-data \
-NH_ARCHIVE_UID=$(id -u) \
-NH_ARCHIVE_GID=$(id -g) \
 docker compose up -d
 ```
+
+Compose uses the published `ghcr.io/dormiveglia0/nhentai-archive:latest` image and a persistent named volume.
 
 Optional settings can be placed in an ignored `.env` file:
 
 ```dotenv
 NHENTAI_API_KEY=
-NH_ARCHIVE_BIND=127.0.0.1
-NH_ARCHIVE_PORT=8001
-IMAGE_TAG=latest
 ```
 
 Update or stop the service with:
