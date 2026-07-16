@@ -15,6 +15,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 - Run the complete development stack with root `npm run dev`; do not require users to manage separate API/Web terminals. `npm run dev -- --check` is the non-starting environment check.
 - Deployable code lives in `apps/api/` and `apps/web/`; runtime state belongs in root `.local-data/`. Do not restore top-level `backend/` / `frontend/` folders or place user archives inside either app.
 - The same SQLite may cross host and Compose runtimes. Preserve startup rebasing for legacy `.local-data/...` and container `/data/...` paths, and never rewrite a managed path unless its target exists under the active data root.
+- Keep `apps/api/tests/conftest.py` test-data isolation. A plain pytest run must not initialize, migrate or rebase the Compose database under root `.local-data/`.
 - Backend startup is split by responsibility: `main.py` creates the app, `container.py` assembles dependencies, `api/<domain>.py` owns HTTP routes, and `services/` owns behavior. Extend the matching domain router instead of rebuilding a monolithic entrypoint.
 - Shared frontend metric entries, pagination, tag scrolling, and work shelves live in `components/folio/ui/`; shared presentation formatting and job rules live in `lib/format.ts` and `lib/jobs.ts`. Feature folders are not cross-feature utility buckets.
 - All primary modules are real pages: discover, library, reader, history, governance, dictionary, export, files, tasks, settings, and workbench.

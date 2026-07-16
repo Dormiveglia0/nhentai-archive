@@ -272,7 +272,7 @@ Root: `apps/web/src/`
 - `components/folio/ui/FolioPrimitives.tsx`
   - Shared Folio search, field, toggle, empty-state and custom-select controls. The select popup is a native button group with `aria-pressed` state rather than an incomplete listbox implementation; Escape and selection both restore focus to the trigger.
 - `components/folio/ui/FolioMetricGrid.tsx`
-  - Shared real-data summary/status entries for formal routes. It owns icon/value/detail composition, semantic status tones, staggered entry and responsive two-column layout; entries remain flat and non-interactive within the Folio paper-and-rule system, while joined cells stay reserved for genuine record tables.
+  - Shared real-data summary/status entries for formal routes. It owns icon/value/detail composition, semantic status tones, staggered entry and responsive layout; entries use separated light-paper panels without hover or shadow, while joined cells stay reserved for genuine record tables. The six-item library summary becomes a compact 3×2 grid at 560px and below.
 - `styles/app.css`
   - Base-only root tokens/reset/form inheritance/shared spin/reduced-motion layer. The former legacy topbar, navigation, page, card, drawer, preview-modal, default pager/tag scroller, TaskDock and reader selectors have been removed or moved to direct component owners.
 - `components/discover/DiscoverPage.tsx`
@@ -427,6 +427,8 @@ Default: repository-level `.local-data/`
 - `exports/`: legacy export directory (still created by config/settings, but no longer written to — export now streams downloads to the browser).
 
 ## Verification
+
+`apps/api/tests/conftest.py` assigns a stdlib temporary `NH_ARCHIVE_DATA_DIR` before test modules import the application. Keep this isolation: collecting API tests must never initialize or rebase the root `.local-data/archive.db` used by Compose.
 
 Backend:
 

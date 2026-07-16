@@ -306,6 +306,37 @@
     align-items: center;
   }
 
+  .folio-page-library .folio-page-head {
+    min-height: 154px;
+    padding-top: 23px;
+    padding-bottom: 21px;
+  }
+
+  :is(
+    .folio-page-governance,
+    .folio-page-dictionary,
+    .folio-page-tasks,
+    .folio-page-export,
+    .folio-page-files,
+    .folio-page-settings
+  ) .folio-page-head {
+    min-height: 146px;
+    padding-top: 21px;
+    padding-bottom: 19px;
+  }
+
+  :is(
+    .folio-page-library,
+    .folio-page-governance,
+    .folio-page-dictionary,
+    .folio-page-tasks,
+    .folio-page-export,
+    .folio-page-files,
+    .folio-page-settings
+  ) .folio-page-copy h1 {
+    font-size: 39px;
+  }
+
   .folio-page-head::before {
     left: 20px;
   }
@@ -353,7 +384,7 @@
 
   .folio-metric-card {
     min-height: 96px;
-    padding: 13px 0 11px;
+    padding: 13px 10px 11px;
     grid-template-columns: 22px minmax(0, 1fr);
     gap: 8px;
   }
@@ -603,7 +634,43 @@
   }
 }
 
+@media (max-width: 560px) {
+  .folio-library-summary .folio-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .folio-library-summary .folio-metric-card {
+    min-height: 88px;
+    padding: 10px;
+    display: block;
+  }
+
+  .folio-library-summary .folio-metric-card-icon {
+    width: 18px;
+    height: 18px;
+    margin-bottom: 5px;
+  }
+
+  .folio-library-summary .folio-metric-card-copy > span {
+    font-size: 11px;
+  }
+
+  .folio-library-summary .folio-metric-card-copy > strong {
+    margin-top: 4px;
+    font-size: 20px;
+  }
+}
+
 @media (max-width: 350px) {
+  .folio-library-summary .folio-metric-card {
+    padding-inline: 8px;
+  }
+
+  .folio-library-summary .folio-metric-card-copy > strong {
+    font-size: 17px;
+  }
+
   .folio-command-bar button,
   .folio-primary-button {
     padding-right: 8px;
