@@ -25,10 +25,12 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && chown app:app /data
 COPY apps/api/ ./apps/api/
 COPY --from=web-build /build/apps/web/dist/ ./apps/web/dist/
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod -R a+rX /app/apps
 
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+ENTRYPOINT ["docker-entrypoint"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

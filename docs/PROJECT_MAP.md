@@ -22,7 +22,7 @@ Read order for future AI work:
 - The stdlib launcher starts the API app on port 8001 and Web app on port 5173, preserves `PYTHONPATH`/`VITE_API_PROXY_TARGET`, and terminates both process groups when either side exits or the user presses `Ctrl+C`. `NH_ARCHIVE_API_PORT` and `NH_ARCHIVE_WEB_PORT` provide temporary QA ports.
 - `npm run dev -- --check` validates the local API executable, npm, and Web dependencies without starting servers.
 - Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Startup migrates either legacy `backend/.local-data/` or `apps/api/.local-data/` and rebases managed SQLite paths when the repository moves.
-- `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI, the compiled assets, and a non-root runtime. `compose.yaml` binds the service to localhost by default, persists `/data`, drops Linux capabilities, and uses `/api/health` for container health.
+- `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI and the compiled assets. `compose.yaml` binds host `./.local-data` to `/data`; its entrypoint runs the app as that directory's owner while retaining only the startup UID/GID-switch capabilities. SQLite stores API keys and application settings, while `library/` is both the final remote-download directory and the local-import scan directory. `/api/health` provides container health.
 
 ## API App Map
 

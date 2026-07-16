@@ -10,7 +10,7 @@ import type { SettingsVM } from "./useSettingsState";
 
 const PATH_LABELS: Record<string, string> = {
   data_dir: "数据目录",
-  library_dir: "馆藏目录",
+  library_dir: "下载 / 本地导入目录",
   covers_dir: "封面目录",
   page_cache_dir: "页面缓存目录",
   export_dir: "兼容导出目录",

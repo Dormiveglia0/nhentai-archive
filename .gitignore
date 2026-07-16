@@ -9,7 +9,8 @@ apps/web/playwright-report/
 test-results/
 playwright-report/
 apps/web/tsconfig.tsbuildinfo
-.local-data/
+.local-data/*
+!.local-data/.gitkeep
 apps/api/.pytest_cache/
 __pycache__/
 .venv/

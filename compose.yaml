@@ -5,12 +5,11 @@ services:
     image: ghcr.io/dormiveglia0/nhentai-archive:latest
     init: true
     restart: unless-stopped
+    user: "0:0"
     ports:
-      - "127.0.0.1:8001:8000"
-    environment:
-      NHENTAI_API_KEY: ${NHENTAI_API_KEY:-}
+      - "4349:8000"
     volumes:
-      - nh-archive-data:/data
+      - ./.local-data:/data
     read_only: true
     tmpfs:
       - /tmp
@@ -18,6 +17,6 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-
-volumes:
-  nh-archive-data:
+    cap_add:
+      - SETUID
+      - SETGID
