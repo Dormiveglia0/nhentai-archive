@@ -11,8 +11,8 @@ import "./GalleryHero.css";
 function useCoverSource(detail: GalleryDetail) {
   const coverSources = useMemo(() => Array.from(new Set([
     detail.imported && detail.work_id ? `/api/works/${detail.work_id}/cover` : null,
-    detail.cover?.url,
     detail.thumbnail?.url,
+    detail.cover?.url,
   ].filter((value): value is string => Boolean(value)))), [detail.cover?.url, detail.imported, detail.thumbnail?.url, detail.work_id]);
   const [sourceIndex, setSourceIndex] = useState(0);
 

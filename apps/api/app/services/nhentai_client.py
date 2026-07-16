@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -119,6 +120,7 @@ class NhentaiClient:
     def media_url(self, path: str | None, thumbnail: bool = False) -> str | None:
         if not path:
             return None
+        path = re.sub(r"(\.(?:jpe?g|png|webp|gif|avif))(?:\1)+(?=$|[?#])", r"\1", path, flags=re.IGNORECASE)
         if path.startswith("http://") or path.startswith("https://"):
             return path
         cdn = self._cdn_config()

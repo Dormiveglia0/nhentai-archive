@@ -751,11 +751,13 @@
 
 .folio-discover-card-tags a,
 .folio-discover-card-tags > span {
+  min-width: 27px;
   min-height: 27px;
   padding: 0 7px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);

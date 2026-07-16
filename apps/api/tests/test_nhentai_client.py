@@ -156,3 +156,15 @@ def test_client_normalizes_network_and_invalid_json_failures(monkeypatch):
     with pytest.raises(NhentaiApiError) as invalid:
         client.latest(page=2, per_page=24)
     assert invalid.value.code == "invalid_response"
+
+
+def test_media_url_repairs_repeated_image_extensions_from_upstream():
+    client = NhentaiClient("https://api.example", "tests")
+    client._cdn = {
+        "image_servers": ["https://i.example"],
+        "thumb_servers": ["https://t.example"],
+    }
+
+    assert client.media_url("galleries/42/cover.webp.webp") == "https://i.example/galleries/42/cover.webp"
+    assert client.media_url("galleries/42/thumb.jpg.jpg", thumbnail=True) == "https://t.example/galleries/42/thumb.jpg"
+    assert client.media_url("https://cdn.example/1.png.png?size=2") == "https://cdn.example/1.png?size=2"

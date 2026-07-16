@@ -48,7 +48,7 @@ export function TasksPage() {
       </section>
 
       <FadeIn className="folio-tasks-layout" y={8}>
-        <main className="folio-tasks-main">
+        <section className="folio-tasks-main" aria-label="任务列表">
           <TaskList
             jobs={tasks.visibleJobs}
             focusId={tasks.focus?.id ?? null}
@@ -64,7 +64,7 @@ export function TasksPage() {
             onCancel={(id) => void tasks.cancelJob(id)}
             onDelete={(id) => void tasks.deleteJob(id)}
           />
-        </main>
+        </section>
         <TaskInspector
           job={tasks.focus}
           logs={tasks.logs}

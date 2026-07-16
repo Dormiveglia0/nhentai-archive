@@ -8,9 +8,10 @@ type Props = {
   onPickTag?: (tag: RemoteTag) => void;
   displayTag?: (tag: RemoteTag) => string;
   className: string;
+  limit?: number;
 };
 
-export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, className }: Props) {
+export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, className, limit = 6 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const startScroll = useRef(0);
@@ -69,11 +70,14 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
       {tags.length === 0 ? (
         <span>标签未缓存</span>
       ) : (
-        tags.slice(0, 22).map((tag) => (
-          <a key={tag.id} href={tagSearchHref(tag)} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
-            {displayTag(tag)}
-          </a>
-        ))
+        <>
+          {tags.slice(0, limit).map((tag) => (
+            <a key={tag.id} href={tagSearchHref(tag)} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
+              {displayTag(tag)}
+            </a>
+          ))}
+          {tags.length > limit ? <span aria-label={`另有 ${tags.length - limit} 个标签`}>+{tags.length - limit}</span> : null}
+        </>
       )}
     </div>
   );

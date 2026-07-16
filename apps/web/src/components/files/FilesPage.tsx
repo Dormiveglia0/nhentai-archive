@@ -1,6 +1,7 @@
 import { AlertCircle, CircleCheck } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-import { FadeIn } from "../../lib/motion";
+import { FadeIn, usePrefersReducedMotion } from "../../lib/motion";
 import { IconPager } from "../folio/ui/IconPager";
 import { FileDeleteDialog } from "./FileDeleteDialog";
 import { FileDetailPanel } from "./FileDetailPanel";
@@ -13,11 +14,21 @@ import "./FilesPage.css";
 
 export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
   const files = useFilesState();
+  const reduceMotion = usePrefersReducedMotion();
+  const sideRef = useRef<HTMLDivElement>(null);
   const entries = files.inventory?.result ?? [];
   const focus = entries.find((entry) => entry.id === files.focusId) ?? null;
   const total = files.inventory?.total ?? 0;
   const perPage = files.inventory?.per_page ?? 50;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+  useEffect(() => {
+    if (!files.focusId || window.matchMedia("(max-width: 900px)").matches) return;
+    const frame = window.requestAnimationFrame(() => {
+      sideRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [files.focusId, reduceMotion]);
 
   return (
     <section className="folio-page-body folio-files-page">
@@ -52,10 +63,10 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
       />
 
       <FadeIn className="folio-files-layout" y={8}>
-        <main className="folio-files-main">
+        <section className="folio-files-main" aria-labelledby="folio-files-list-title">
           <header className="folio-files-column-head">
             <span>Managed inventory</span>
-            <h2>文件清单</h2>
+            <h2 id="folio-files-list-title">文件清单</h2>
             <p>数据库索引与受管目录的实时对照。</p>
           </header>
           <FileList
@@ -67,8 +78,8 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             loading={files.loading}
           />
           <IconPager className="folio-files-pager" page={files.page} totalPages={totalPages} loading={files.loading} onPage={files.setPage} />
-        </main>
-        <div className="folio-files-side">
+        </section>
+        <div ref={sideRef} className="folio-files-side">
           <FileDetailPanel
             focus={focus}
             blurCovers={blurCovers}

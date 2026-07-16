@@ -11,6 +11,8 @@ playwright-report/
 apps/web/tsconfig.tsbuildinfo
 .local-data/*
 !.local-data/.gitkeep
+backend/.local-data/
+apps/api/.local-data/
 apps/api/.pytest_cache/
 __pycache__/
 .venv/

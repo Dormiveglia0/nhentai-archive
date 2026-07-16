@@ -21,7 +21,7 @@ Read order for future AI work:
 - Root `npm run dev` delegates to `scripts/dev.py`.
 - The stdlib launcher starts the API app on port 8001 and Web app on port 5173, preserves `PYTHONPATH`/`VITE_API_PROXY_TARGET`, and terminates both process groups when either side exits or the user presses `Ctrl+C`. `NH_ARCHIVE_API_PORT` and `NH_ARCHIVE_WEB_PORT` provide temporary QA ports.
 - `npm run dev -- --check` validates the local API executable, npm, and Web dependencies without starting servers.
-- Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Startup migrates either legacy `backend/.local-data/` or `apps/api/.local-data/` and rebases managed SQLite paths when the repository moves.
+- Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Startup migrates either legacy `backend/.local-data/` or `apps/api/.local-data/` and rebases managed SQLite paths when the repository moves or the same database crosses the Compose `/data` and host `.local-data` boundary.
 - `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI and the compiled assets. `compose.yaml` binds host `./.local-data` to `/data`; its entrypoint runs the app as that directory's owner while retaining only the startup UID/GID-switch capabilities. SQLite stores API keys and application settings, while `library/` is both the final remote-download directory and the local-import scan directory. `/api/health` provides container health.
 
 ## API App Map
@@ -35,6 +35,7 @@ Root: `apps/api/app/`
   - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `jobs`, `settings`. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
   - Connections enforce foreign keys, a 5-second busy timeout and NORMAL synchronous mode; schema initialization enables WAL. Query indexes are created only after legacy migrations and cover work files/tags, dictionary references, reading history, task status/order and task logs.
+  - Startup path rebasing recognizes both legacy repository `.local-data/...` and Compose `/data/...` paths, but rewrites only when the equivalent file exists under the active managed root.
 - `container.py`
   - Composition root for settings, SQLite, the remote client, and service instances. API modules share this single mutable registry; tests replace registry members instead of patching route modules.
 - `api/`
@@ -42,7 +43,7 @@ Root: `apps/api/app/`
   - `schemas.py` owns HTTP request models; `shared.py` owns remote API error translation. Business logic remains in `services/`.
 - `services/nhentai_client.py`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
-  - `media_url()` resolves CDN paths through `/api/v2/cdn`; frontend must not guess image URLs.
+  - `media_url()` resolves CDN paths through `/api/v2/cdn`, normalizes duplicate upstream image suffixes such as `.webp.webp`, and leaves the frontend free of URL guessing.
   - `normalize_remote_error()` standardizes 401/404/422/429.
   - Network failures, invalid JSON/Unicode responses and non-object error payloads are normalized to `NhentaiApiError`; nested thumbnail payloads keep a scalar `thumbnail.path`.
   - API quota protection:
@@ -66,7 +67,7 @@ Root: `apps/api/app/`
 - `services/dictionary_service.py`
   - `summary()`: counts unconfigured/configured/ignored/review/suggested terms from real tables.
   - `autocomplete(q, limit)`: local dictionary, aliases, cached `remote_tags`, then real remote tag search only when no local/cache hit exists.
-  - `candidates(q, status, limit, offset, tag_type)`: real remote tag candidate pool with impact count and configured/ignored state; searches original text, slug, Chinese name, and aliases; also exposes local-only dictionary rows so bad imports can be selected and removed.
+  - `candidates(q, status, limit, offset, tag_type)`: real remote tag candidate pool with impact count and configured/ignored state; searches original text, slug, Chinese name, and aliases; also exposes local-only dictionary rows so bad imports can be selected and removed. Direct remote-id, normalized-name and normalized-slug dictionary matches use separate indexed joins, avoiding the former `OR` join's N×M fallback scan.
   - `evidence(remote_tag_id, dictionary_id)`: real related works, co-tags, remote tag info, and local status history.
   - `preview_apply(payload)`: calculates conflicts, affected real works, samples, and tag update counts without writes.
   - `apply(payload)`: writes/updates `local_tag_dictionary`, `tag_aliases`, remote mapping, and related `work_tags`; if `remote_tag_id` is omitted it resolves a cached remote tag by normalized original text and type.
@@ -292,8 +293,8 @@ Root: `apps/web/src/`
   - Real cached multi-select tag picker plus dictionary-aware autocomplete; Chinese input can search immediately, duplicate matches are collapsed by remote tag id, selected options stay at the top, and one fixed clear action removes all selected tags. It opens on content `tag` results only; author/group/parody/character/category/language live in a separate “作者与作品信息” scope. Mobile gives selected chips their own full-width row so the first chip cannot sit under the trigger.
   - Candidate scopes and the files/tasks/export segmented filters are filter button groups with `aria-pressed`; they are not tabs because they do not own tab panels.
   - Only terms with real remote tag IDs can be selected for discover remote filtering.
-- `components/discover/TagScroller.tsx`
-  - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support. Tags are native search anchors; drag suppression applies only to the primary pointer so middle/modifier navigation remains intact.
+- `components/folio/ui/TagScroller.tsx`
+  - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support. Summary cards expose at most six native search anchors plus a non-interactive remainder count; drag suppression applies only to the primary pointer so middle/modifier navigation remains intact.
   - Uses `tag.display || tag.name || tag.slug || id`, so dictionary display names flow without rewriting card logic.
 - `components/discover/PopularFan.tsx`
   - Real `/api/discover/popular` editorial cover fan between the Folio heading and search workbench.
@@ -385,7 +386,7 @@ Root: `apps/web/src/`
   - `exportHelpers.tsx` — shared render utilities: `Cover`, export item status classification, and status labels.
   - Export delivers files to the user via the browser (`api.downloadExport` / `api.downloadExportBundle` fetch a blob and trigger a save); nothing is written to a server output directory and no history is kept. Original CBZs are never modified.
 - `components/files/` — file maintenance module:
-  - `FilesPage.tsx` — direct Folio composition for real overview, filters, semantic file list, pager, focused detail, cleanup preview, delete confirmation dialog and directory-scan preview. It imports no demo code.
+  - `FilesPage.tsx` — direct Folio composition for real overview, filters, semantic file list, pager, focused detail, cleanup preview, delete confirmation dialog and directory-scan preview. Desktop selection scrolls the existing side detail into view when it would otherwise sit below the first viewport; mobile keeps the bounded drawer. It imports no demo code.
   - `FilesPage.css` — production-only metric, toolbar, custom scrollbar, list/detail/maintenance rail and four-viewport responsive layout. Desktop keeps detail beside the inventory; 900px and below open focused detail as a bounded bottom operation drawer. Replaced global `.files-*` rules were removed from `styles/app.css`.
   - `useFilesState.ts` — owns one guarded file-operation state for delete preview/cleanup/delete/scan preview/scan enqueue; inventory requests retain latest-filter semantics and clamp invalid pages after deletion. Scan enqueue submits the exact paths from the visible preview instead of recalculating them.
   - `FileDeleteDialog.tsx` — native modal confirmation shared by single, batch and cleanup deletion; it stays viewport-visible, defaults focus to cancel, restores the triggering control, and shows warnings or execution failures in place.
