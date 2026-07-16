@@ -330,3 +330,46 @@
   letter-spacing: 0.04em;
   line-height: 1.7;
 }
+
+@media (min-width: 901px) {
+  .folio-page-library .folio-page-head {
+    min-height: 198px;
+    padding-top: 30px;
+    padding-bottom: 26px;
+  }
+
+  .folio-page-library .folio-page-body,
+  :is(
+    .folio-page-governance,
+    .folio-page-dictionary,
+    .folio-page-tasks,
+    .folio-page-export,
+    .folio-page-files
+  ) .folio-page-body {
+    padding-top: 34px;
+  }
+
+  :is(
+    .folio-page-governance,
+    .folio-page-dictionary,
+    .folio-page-tasks,
+    .folio-page-export,
+    .folio-page-files,
+    .folio-page-settings
+  ) .folio-page-head {
+    min-height: 176px;
+    padding-top: 26px;
+    padding-bottom: 24px;
+  }
+
+  :is(
+    .folio-page-governance,
+    .folio-page-dictionary,
+    .folio-page-tasks,
+    .folio-page-export,
+    .folio-page-files,
+    .folio-page-settings
+  ) .folio-page-copy h1 {
+    font-size: clamp(46px, 4.5vw, 64px);
+  }
+}

@@ -44,8 +44,18 @@ def test_database_rebases_missing_managed_paths_after_repo_move(tmp_path):
         "INSERT INTO work_files (work_id, kind, path) VALUES (?, 'source_cbz', ?)",
         (work_id, "/old/repo/backend/.local-data/library/work.cbz"),
     )
+    container_work_id = db.execute(
+        "INSERT INTO works (title, source, cover_path) VALUES ('Container work', 'remote', ?)",
+        ("/data/covers/1.jpg",),
+    ).lastrowid
+    db.execute(
+        "INSERT INTO work_files (work_id, kind, path) VALUES (?, 'source_cbz', ?)",
+        (container_work_id, "/data/library/work.cbz"),
+    )
 
     db.rebase_managed_paths(data_dir)
 
     assert db.fetchone("SELECT cover_path FROM works WHERE id = ?", (work_id,))["cover_path"] == str(covers / "1.jpg")
     assert db.fetchone("SELECT path FROM work_files WHERE work_id = ?", (work_id,))["path"] == str(library / "work.cbz")
+    assert db.fetchone("SELECT cover_path FROM works WHERE id = ?", (container_work_id,))["cover_path"] == str(covers / "1.jpg")
+    assert db.fetchone("SELECT path FROM work_files WHERE work_id = ?", (container_work_id,))["path"] == str(library / "work.cbz")

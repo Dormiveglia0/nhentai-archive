@@ -42,10 +42,10 @@ export function ExportPage({ initialWorkId, blurCovers }: { initialWorkId?: numb
         <>
           <ExportToolbar query={exports.query} statusFilter={exports.statusFilter} onQueryChange={exports.setQuery} onStatusFilterChange={exports.setStatusFilter} multiSelect={exports.multiSelect} onToggleMultiSelect={exports.toggleMultiSelect} onSelectReady={exports.selectReady} onClear={exports.clearSelected} />
           <div className="folio-export-layout">
-            <main className="folio-export-source">
-              <header className="folio-export-column-head"><span>Local collection</span><h2>选择作品</h2><p>{exports.visibleItems.length} 项匹配当前条件</p></header>
+            <section className="folio-export-source" aria-labelledby="folio-export-source-title">
+              <header className="folio-export-column-head"><span>Local collection</span><h2 id="folio-export-source-title">选择作品</h2><p>{exports.visibleItems.length} 项匹配当前条件</p></header>
               {exports.visibleItems.length ? <ExportWorkList items={exports.visibleItems} selectedIds={exports.selectedIds} focusId={exports.focusId} multiSelect={exports.multiSelect} blurCovers={blurCovers} onPick={exports.pickItem} /> : <FolioEmptyState icon={Archive} title="没有匹配的作品" copy={exports.query ? "调整搜索词或筛选条件后重试。" : "当前筛选条件下没有真实条目。"} />}
-            </main>
+            </section>
             <ExportInspector focusItem={focusItem} preview={exports.preview} selectedItems={exports.selectedItems} selectedSize={exports.selectedSize} exportOptions={exports.exportOptions} previewLoading={exports.previewLoading} downloading={exports.downloading} blurCovers={blurCovers} outputNames={exports.outputNames} onRename={exports.renameOutput} onSetOption={exports.setExportOption} onRefresh={() => void exports.refreshPreview()} onDownload={() => void exports.downloadSelected()} onDownloadOne={(id) => void exports.downloadOne(id)} />
           </div>
         </>

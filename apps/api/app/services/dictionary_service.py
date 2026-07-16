@@ -281,62 +281,78 @@ class DictionaryService:
         if q:
             where.append(
                 """(
-                lower(COALESCE(r.name, '')) LIKE ?
-                OR lower(COALESCE(r.slug, '')) LIKE ?
-                OR lower(COALESCE(d.zh_name, '')) LIKE ?
+                lower(COALESCE(c.name, '')) LIKE ?
+                OR lower(COALESCE(c.slug, '')) LIKE ?
+                OR lower(COALESCE(c.zh_name, '')) LIKE ?
                 OR EXISTS (
                   SELECT 1 FROM tag_aliases a
-                  WHERE a.dictionary_id = d.id AND a.normalized_key LIKE ?
+                  WHERE a.dictionary_id = c.dictionary_id AND a.normalized_key LIKE ?
                 )
               )"""
             )
             params.extend([f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"])
         if status == "unconfigured":
-            where.append(f"d.id IS NULL AND COALESCE(r.type, 'tag') NOT IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})")
+            where.append(f"c.dictionary_id IS NULL AND COALESCE(c.type, 'tag') NOT IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})")
         elif status == "configured":
-            where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'configured'")
+            where.append("c.dictionary_id IS NOT NULL AND c.ignored = 0 AND c.status = 'configured'")
         elif status == "ignored":
             where.append(
                 f"""(
-                d.ignored = 1
-                OR d.status = 'ignored'
-                OR (d.id IS NULL AND COALESCE(r.type, 'tag') IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL}))
+                c.ignored = 1
+                OR c.status = 'ignored'
+                OR (c.dictionary_id IS NULL AND COALESCE(c.type, 'tag') IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL}))
               )"""
             )
         elif status == "review":
-            where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'review'")
+            where.append("c.dictionary_id IS NOT NULL AND c.ignored = 0 AND c.status = 'review'")
         elif status == "suggested":
-            where.append("d.id IS NOT NULL AND d.ignored = 0 AND d.status = 'suggested'")
+            where.append("c.dictionary_id IS NOT NULL AND c.ignored = 0 AND c.status = 'suggested'")
         if tag_type != "all":
-            where.append("COALESCE(r.type, d.tag_type) = ?")
+            where.append("COALESCE(c.type, c.dictionary_tag_type) = ?")
             params.append(tag_type)
         sql = f"""
+            WITH candidate_base AS (
+              SELECT
+                r.remote_id,
+                r.type,
+                r.name,
+                r.slug,
+                r.cached_at,
+                COALESCE(direct.id, named.id, slugged.id) AS dictionary_id,
+                COALESCE(direct.tag_type, named.tag_type, slugged.tag_type) AS dictionary_tag_type,
+                COALESCE(direct.zh_name, named.zh_name, slugged.zh_name) AS zh_name,
+                COALESCE(direct.status, named.status, slugged.status) AS status,
+                COALESCE(direct.ignored, named.ignored, slugged.ignored) AS ignored
+              FROM remote_tags r
+              LEFT JOIN local_tag_dictionary direct ON direct.remote_tag_id = r.remote_id
+              LEFT JOIN local_tag_dictionary named ON direct.id IS NULL
+                AND named.remote_tag_id IS NULL
+                AND named.ignored = 0
+                AND named.normalized_key = lower(COALESCE(r.name, ''))
+                AND named.tag_type = COALESCE(r.type, named.tag_type)
+              LEFT JOIN local_tag_dictionary slugged ON direct.id IS NULL
+                AND named.id IS NULL
+                AND slugged.remote_tag_id IS NULL
+                AND slugged.ignored = 0
+                AND slugged.normalized_key = lower(COALESCE(r.slug, ''))
+                AND slugged.tag_type = COALESCE(r.type, slugged.tag_type)
+            )
             SELECT
-              r.remote_id,
-              r.type,
-              r.name,
-              r.slug,
-              r.cached_at,
-              d.id AS dictionary_id,
-              d.zh_name,
-              d.status,
-              d.ignored,
+              c.remote_id,
+              c.type,
+              c.name,
+              c.slug,
+              c.cached_at,
+              c.dictionary_id,
+              c.zh_name,
+              c.status,
+              c.ignored,
               COUNT(DISTINCT wt.work_id) AS impact_work_count
-            FROM remote_tags r
-            LEFT JOIN local_tag_dictionary d ON d.remote_tag_id = r.remote_id
-              OR (
-                d.remote_tag_id IS NULL
-                AND d.ignored = 0
-                AND d.tag_type = COALESCE(r.type, d.tag_type)
-                AND (
-                  d.normalized_key = lower(COALESCE(r.name, ''))
-                  OR d.normalized_key = lower(COALESCE(r.slug, ''))
-                )
-              )
-            LEFT JOIN work_tags wt ON wt.remote_tag_id = r.remote_id
+            FROM candidate_base c
+            LEFT JOIN work_tags wt ON wt.remote_tag_id = c.remote_id
             WHERE {' AND '.join(where)}
-            GROUP BY r.remote_id, d.id
-            ORDER BY d.id IS NOT NULL, r.cached_at DESC
+            GROUP BY c.remote_id, c.dictionary_id
+            ORDER BY c.dictionary_id IS NOT NULL, c.cached_at DESC
             LIMIT ? OFFSET ?
         """
         params.extend([max(1, min(limit, 100)), max(0, offset)])

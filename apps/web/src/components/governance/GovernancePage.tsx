@@ -60,7 +60,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
             onToggleSelected={gov.toggleSelected}
           />
 
-          <main className="folio-governance-editor">
+          <section className="folio-governance-editor" aria-label={gov.bulkMode ? "批量治理编辑区" : "单部治理编辑区"}>
             <header className="folio-governance-modebar">
               <div>
                 <span>{gov.bulkMode ? "Batch workflow" : "Review workflow"}</span>
@@ -142,7 +142,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 ) : null}
               </>
             )}
-          </main>
+          </section>
 
           <GovernanceSourceRail aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} />
         </div>

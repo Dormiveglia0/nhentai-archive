@@ -359,11 +359,15 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
 
 def _rebased_path(value: str, root: Path) -> str | None:
     path = Path(value).expanduser()
-    if path.exists() or ".local-data" not in path.parts:
+    if ".local-data" in path.parts:
+        marker = path.parts.index(".local-data")
+        relative = path.parts[marker + 1 :]
+    elif path.is_absolute() and len(path.parts) > 2 and path.parts[1] == "data":
+        relative = path.parts[2:]
+    else:
         return None
-    marker = path.parts.index(".local-data")
-    candidate = root.joinpath(*path.parts[marker + 1 :])
-    return str(candidate) if candidate.exists() else None
+    candidate = root.joinpath(*relative)
+    return str(candidate) if candidate != path and candidate.exists() else None
 
 
 def _add_column_if_missing(

@@ -105,6 +105,26 @@ def test_dictionary_candidates_searches_chinese_and_dedupes_remote_tags(tmp_path
     assert result[0]["display"] == "雪融"
 
 
+def test_dictionary_candidates_match_local_only_dictionary_by_remote_name_or_slug(tmp_path):
+    db, _client, service = make_service(tmp_path)
+    insert_remote_tag(db, remote_id=101, name="snow melt")
+    insert_remote_tag(db, remote_id=102, name="winter", tag_type="tag")
+    db.execute("UPDATE remote_tags SET slug = 'winter-snow' WHERE remote_id = 102")
+    db.execute(
+        """
+        INSERT INTO local_tag_dictionary
+          (original_text, normalized_key, zh_name, tag_type, status, ignored, source)
+        VALUES
+          ('snow melt', 'snow melt', '雪融', 'tag', 'configured', 0, 'manual'),
+          ('winter-snow', 'winter-snow', '冬雪', 'tag', 'configured', 0, 'manual')
+        """
+    )
+
+    result = service.candidates(status="configured", limit=10)["result"]
+
+    assert {item["id"]: item["display"] for item in result} == {101: "雪融", 102: "冬雪"}
+
+
 def test_dictionary_preview_apply_does_not_write_then_apply_updates_work_tags(tmp_path):
     db, _client, service = make_service(tmp_path)
     insert_remote_tag(db)
