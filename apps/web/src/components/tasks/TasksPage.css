@@ -1,0 +1,941 @@
+.folio-tasks-page {
+  min-width: 0;
+}
+
+.folio-tasks-page .spin {
+  animation: folio-tasks-spin 0.9s linear infinite;
+}
+
+.folio-tasks-summary {
+  margin-bottom: 28px;
+}
+
+.folio-tasks-message {
+  min-height: 44px;
+  margin: -10px 0 20px;
+  padding: 9px 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-left: 2px solid #4c6d56;
+  background: linear-gradient(90deg, rgba(76, 109, 86, 0.09), transparent 70%);
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-tasks-message.is-error {
+  border-left-color: var(--folio-red);
+  background: linear-gradient(90deg, var(--folio-red-soft), transparent 70%);
+}
+
+.folio-tasks-message > span {
+  width: 6px;
+  height: 6px;
+  background: #4c6d56;
+  transform: rotate(45deg);
+}
+
+.folio-tasks-message svg {
+  color: var(--folio-red);
+}
+
+.folio-tasks-message p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.folio-tasks-toolbar {
+  min-width: 0;
+  margin-bottom: 24px;
+  padding: 0 0 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.44fr) auto;
+  align-items: end;
+  gap: 14px;
+  border-bottom: 1px solid var(--folio-line-strong);
+}
+
+.folio-tasks-tabs {
+  min-width: 0;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.folio-tasks-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.folio-tasks-tabs button {
+  min-width: max-content;
+  min-height: 44px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-bottom: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 12px;
+  position: relative;
+}
+
+.folio-tasks-tabs button.is-active {
+  color: var(--folio-ink);
+}
+
+.folio-tasks-tabs button > span:not(.folio-tasks-tab-active),
+.folio-tasks-tabs button > small {
+  position: relative;
+  z-index: 1;
+}
+
+.folio-tasks-tabs button > small {
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--folio-line);
+  border-radius: 50%;
+  font-family: Georgia, serif;
+  font-size: 12px;
+}
+
+.folio-tasks-tab-active {
+  height: 2px;
+  background: var(--folio-red);
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+}
+
+.folio-tasks-toolbar > .folio-search-field {
+  min-width: 0;
+}
+
+.folio-tasks-toolbar-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.folio-tasks-toolbar-actions button {
+  min-width: 74px;
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--folio-line-strong);
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 12px;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.folio-tasks-toolbar-actions button:hover:not(:disabled) {
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+  transform: translateY(-1px);
+}
+
+.folio-tasks-toolbar-actions button.is-danger:hover:not(:disabled) {
+  border-color: var(--folio-red);
+  background: var(--folio-red);
+}
+
+.folio-tasks-toolbar-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.32;
+}
+
+.folio-tasks-layout {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 0.31fr);
+  align-items: start;
+  gap: clamp(24px, 3vw, 42px);
+}
+
+.folio-tasks-main {
+  min-width: 0;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line-strong);
+}
+
+.folio-tasks-loading {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  color: var(--folio-muted);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+}
+
+.folio-tasks-main > .folio-empty {
+  min-height: 360px;
+}
+
+.folio-tasks-table {
+  min-width: 0;
+}
+
+.folio-tasks-table-head {
+  min-height: 42px;
+  padding: 0 10px;
+  display: grid;
+  grid-template-columns: minmax(125px, 0.9fr) minmax(150px, 1.25fr) minmax(80px, 0.65fr) minmax(90px, 0.65fr) minmax(80px, 0.55fr) minmax(150px, 0.9fr);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--folio-line);
+  color: var(--folio-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.folio-tasks-table-head > span:last-child {
+  text-align: center;
+}
+
+.folio-tasks-row-list,
+.folio-tasks-row-motion {
+  min-width: 0;
+  display: block;
+}
+
+.folio-tasks-row {
+  min-width: 0;
+  min-height: 72px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(150px, 0.9fr);
+  align-items: stretch;
+  gap: 10px;
+  border-bottom: 1px solid var(--folio-line);
+  position: relative;
+  transition: background-color 180ms ease;
+}
+
+.folio-tasks-row::before {
+  content: "";
+  width: 2px;
+  background: var(--folio-red);
+  position: absolute;
+  inset: 0 auto 0 0;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-tasks-row:hover,
+.folio-tasks-row.is-focused {
+  background: linear-gradient(90deg, var(--folio-red-soft), transparent 76%);
+}
+
+.folio-tasks-row.is-focused::before {
+  transform: scaleY(1);
+}
+
+.folio-tasks-row-main {
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(125px, 0.9fr) minmax(150px, 1.25fr) minmax(80px, 0.65fr) minmax(90px, 0.65fr) minmax(80px, 0.55fr);
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--folio-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.folio-tasks-kind,
+.folio-tasks-target {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.folio-tasks-kind-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--folio-line);
+  color: var(--folio-muted);
+}
+
+.folio-tasks-row.is-ok .folio-tasks-kind-icon {
+  border-color: rgba(76, 109, 86, 0.35);
+  color: #4c6d56;
+}
+
+.folio-tasks-row.is-warn .folio-tasks-kind-icon {
+  border-color: rgba(154, 103, 31, 0.35);
+  color: #9a671f;
+}
+
+.folio-tasks-row.is-bad .folio-tasks-kind-icon {
+  border-color: rgba(173, 56, 46, 0.4);
+  color: var(--folio-red);
+}
+
+.folio-tasks-kind > span:last-child,
+.folio-tasks-target > span:last-child,
+.folio-tasks-stage,
+.folio-tasks-time {
+  min-width: 0;
+}
+
+.folio-tasks-kind strong,
+.folio-tasks-kind small,
+.folio-tasks-target strong,
+.folio-tasks-target small,
+.folio-tasks-stage strong,
+.folio-tasks-stage small,
+.folio-tasks-time strong,
+.folio-tasks-time small {
+  display: block;
+}
+
+.folio-tasks-kind strong,
+.folio-tasks-target strong,
+.folio-tasks-stage strong,
+.folio-tasks-time strong {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-tasks-kind small,
+.folio-tasks-target small,
+.folio-tasks-stage small,
+.folio-tasks-time small {
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--folio-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-tasks-target img,
+.folio-tasks-cover-empty {
+  width: 34px;
+  height: 46px;
+  flex: 0 0 34px;
+  object-fit: cover;
+  background: var(--folio-paper-deep);
+}
+
+.folio-tasks-stage.is-failed strong {
+  color: var(--folio-red);
+}
+
+.folio-tasks-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.folio-tasks-progress > span {
+  height: 5px;
+  display: block;
+  overflow: hidden;
+  background: var(--folio-line);
+  position: relative;
+}
+
+.folio-tasks-progress > span i {
+  height: 100%;
+  display: block;
+  background: #4c6d56;
+  transition: width 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-tasks-row.is-bad .folio-tasks-progress > span i {
+  background: var(--folio-red);
+}
+
+.folio-tasks-progress em {
+  color: var(--folio-muted);
+  font-family: Georgia, serif;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.folio-tasks-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.folio-tasks-row-actions button,
+.folio-tasks-row-actions a {
+  min-height: 32px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-muted);
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.folio-tasks-row-actions button:hover:not(:disabled),
+.folio-tasks-row-actions a:hover {
+  border-color: var(--folio-ink);
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+}
+
+.folio-tasks-row-actions .is-danger:hover:not(:disabled) {
+  border-color: var(--folio-red);
+  background: var(--folio-red);
+}
+
+.folio-tasks-row-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.32;
+}
+
+.folio-tasks-inspector {
+  min-width: 0;
+  max-height: calc(100vh - 116px);
+  overflow-y: auto;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line-strong);
+  position: sticky;
+  top: 18px;
+  scrollbar-width: none;
+}
+
+.folio-tasks-inspector::-webkit-scrollbar {
+  display: none;
+}
+
+.folio-tasks-inspector-empty {
+  min-height: 360px;
+  padding: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--folio-muted);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.folio-tasks-inspector-head {
+  min-height: 102px;
+  padding: 18px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-tasks-inspector-head > div > span {
+  color: var(--folio-red);
+  font-family: Georgia, serif;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.folio-tasks-inspector-head h2 {
+  margin: 8px 0 0;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 21px;
+}
+
+.folio-tasks-inspector-head p {
+  margin: 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-tasks-inspector-head p i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.folio-tasks-inspector-head p.is-ok { color: #4c6d56; }
+.folio-tasks-inspector-head p.is-warn { color: #9a671f; }
+.folio-tasks-inspector-head p.is-bad { color: var(--folio-red); }
+
+.folio-tasks-inspector-head > strong {
+  color: var(--folio-muted);
+  font-family: Georgia, serif;
+  font-size: 13px;
+}
+
+.folio-tasks-progress-detail {
+  min-height: 154px;
+  padding: 18px 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-tasks-progress-ring {
+  width: 92px;
+  height: 92px;
+  padding: 6px;
+  border-radius: 50%;
+  background: conic-gradient(var(--folio-red) var(--task-progress), var(--folio-line) 0);
+  position: relative;
+}
+
+.folio-tasks-progress-ring::before {
+  content: "";
+  border: 1px solid var(--folio-line-strong);
+  border-radius: 50%;
+  background: var(--folio-paper);
+  position: absolute;
+  inset: 7px;
+}
+
+.folio-tasks-progress-ring > span {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset: 15px;
+  z-index: 1;
+}
+
+.folio-tasks-progress-ring strong,
+.folio-tasks-progress-ring small {
+  display: block;
+  text-align: center;
+}
+
+.folio-tasks-progress-ring strong {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.folio-tasks-progress-ring small {
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-tasks-progress-detail > div:last-child > span,
+.folio-tasks-progress-detail > div:last-child > strong,
+.folio-tasks-progress-detail > div:last-child > small {
+  display: block;
+}
+
+.folio-tasks-progress-detail > div:last-child > span {
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-tasks-progress-detail > div:last-child > strong {
+  margin-top: 8px;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+}
+
+.folio-tasks-progress-detail > div:last-child > small {
+  margin-top: 7px;
+  color: var(--folio-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.folio-tasks-inspector-section {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-tasks-inspector-section:last-child {
+  border-bottom: 0;
+}
+
+.folio-tasks-inspector-section > h3 {
+  margin: 0 0 13px;
+  color: var(--folio-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+.folio-tasks-inspector-work {
+  min-width: 0;
+  min-height: 74px;
+  margin-bottom: 12px;
+  padding: 7px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--folio-line);
+}
+
+.folio-tasks-inspector-work img,
+.folio-tasks-inspector-work > span {
+  width: 42px;
+  height: 58px;
+  object-fit: cover;
+  background: var(--folio-paper-deep);
+}
+
+.folio-tasks-inspector-work div {
+  min-width: 0;
+}
+
+.folio-tasks-inspector-work strong,
+.folio-tasks-inspector-work small {
+  display: block;
+}
+
+.folio-tasks-inspector-work strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-tasks-inspector-work small {
+  margin-top: 7px;
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-tasks-kv {
+  margin: 0;
+}
+
+.folio-tasks-kv > div {
+  min-height: 31px;
+  padding: 5px 0;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-tasks-kv dt {
+  color: var(--folio-muted);
+  font-size: 12px;
+}
+
+.folio-tasks-kv dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  text-align: right;
+}
+
+.folio-tasks-boundary {
+  margin: 0;
+  color: var(--folio-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.folio-tasks-boundary + .folio-tasks-boundary {
+  margin-top: 8px;
+}
+
+.folio-tasks-inspector-link {
+  min-height: 40px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--folio-red);
+  background: var(--folio-red);
+  color: var(--folio-paper-bright);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.folio-tasks-error-card {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  border-left: 2px solid var(--folio-red);
+  background: var(--folio-red-soft);
+  color: var(--folio-red);
+}
+
+.folio-tasks-error-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.folio-tasks-error-card small {
+  grid-column: 2;
+  font-size: 12px;
+}
+
+.folio-tasks-inspector-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.folio-tasks-inspector-actions button {
+  min-height: 38px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.folio-tasks-inspector-actions button:hover:not(:disabled) {
+  border-color: var(--folio-ink);
+  background: var(--folio-ink);
+  color: var(--folio-paper-bright);
+}
+
+.folio-tasks-inspector-actions button.is-danger:hover:not(:disabled) {
+  border-color: var(--folio-red);
+  background: var(--folio-red);
+}
+
+.folio-tasks-inspector-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.28;
+}
+
+.folio-tasks-log {
+  max-height: 300px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(23, 24, 21, 0.35) transparent;
+}
+
+.folio-tasks-log li {
+  min-height: 45px;
+  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-tasks-log time {
+  color: var(--folio-muted);
+  font-family: Georgia, serif;
+  font-size: 12px;
+}
+
+.folio-tasks-log span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.folio-tasks-log li.is-error span {
+  color: var(--folio-red);
+}
+
+@keyframes folio-tasks-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1180px) {
+  .folio-tasks-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.5fr);
+  }
+
+  .folio-tasks-toolbar-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .folio-tasks-layout {
+    grid-template-columns: minmax(0, 1fr) 278px;
+    gap: 24px;
+  }
+
+  .folio-tasks-table-head,
+  .folio-tasks-row-main {
+    grid-template-columns: minmax(112px, 0.9fr) minmax(120px, 1.1fr) minmax(72px, 0.62fr) minmax(76px, 0.64fr) minmax(70px, 0.55fr);
+  }
+
+  .folio-tasks-table-head {
+    grid-template-columns: minmax(112px, 0.9fr) minmax(120px, 1.1fr) minmax(72px, 0.62fr) minmax(76px, 0.64fr) minmax(70px, 0.55fr) 108px;
+  }
+
+  .folio-tasks-row {
+    grid-template-columns: minmax(0, 1fr) 108px;
+  }
+
+  .folio-tasks-row-actions button,
+  .folio-tasks-row-actions a {
+    width: 32px;
+    padding: 0;
+  }
+
+  .folio-tasks-row-actions span span,
+  .folio-tasks-row-actions button span,
+  .folio-tasks-row-actions a span {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .folio-tasks-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .folio-tasks-inspector {
+    max-height: none;
+    position: static;
+  }
+
+  .folio-tasks-progress-detail {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+
+  .folio-tasks-inspector-actions {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .folio-tasks-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .folio-tasks-tabs {
+    margin: 0 -20px;
+    padding: 0 20px;
+  }
+
+  .folio-tasks-tabs button {
+    min-height: 48px;
+  }
+
+  .folio-tasks-toolbar-actions {
+    grid-column: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  }
+
+  .folio-tasks-table-head {
+    display: none;
+  }
+
+  .folio-tasks-row {
+    padding: 12px 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .folio-tasks-row-main {
+    padding: 0 6px;
+    grid-template-columns: minmax(0, 1fr) 86px;
+    gap: 12px;
+  }
+
+  .folio-tasks-target {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .folio-tasks-stage {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+  }
+
+  .folio-tasks-progress {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .folio-tasks-time {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .folio-tasks-time small {
+    margin-top: 0;
+  }
+
+  .folio-tasks-row-actions {
+    padding: 9px 6px 0;
+    justify-content: flex-start;
+    border-top: 1px solid var(--folio-line);
+  }
+
+  .folio-tasks-row-actions button,
+  .folio-tasks-row-actions a {
+    width: auto;
+    min-width: 42px;
+    padding: 0 8px;
+  }
+
+  .folio-tasks-row-actions span span,
+  .folio-tasks-row-actions button span,
+  .folio-tasks-row-actions a span {
+    display: inline;
+  }
+
+  .folio-tasks-inspector-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .folio-tasks-toolbar-actions button {
+    padding: 0 8px;
+  }
+
+  .folio-tasks-inspector-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-tasks-progress > span i {
+    animation: none;
+    transition: none;
+  }
+}

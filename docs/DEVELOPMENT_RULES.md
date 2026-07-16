@@ -10,14 +10,14 @@
 
 ## Design Rules
 
-- The maintained visual source is `frontend/src/components/folio/`, `/demo`, and each formal route's feature-local CSS; use `docs/AGENT_MAP.md` to find the owner.
+- The maintained visual source is `apps/web/src/components/folio/`, `/demo`, and each formal route's feature-local CSS; use `docs/AGENT_MAP.md` to find the owner.
 - Keep the Doujin Archive Gallery system: warm paper background, black editorial headings, terracotta primary actions, top global bar, secondary nav, right inspectors, and bottom task dock.
 - If a module is visually unfinished, prefer a clear boundary screen over a decorative fake dashboard.
 - Do not add adult sample assets to the repository. Non-explicit line art or empty-state graphics are allowed.
 
 ## Architecture Rules
 
-- Keep `backend/app/main.py` limited to application creation, middleware, and lifespan hooks. Put HTTP adapters in `backend/app/api/<domain>.py`, request models in `api/schemas.py`, dependency assembly in `container.py`, and business behavior in `services/`.
+- Keep `apps/api/app/main.py` limited to application creation, middleware, and lifespan hooks. Put HTTP adapters in `apps/api/app/api/<domain>.py`, request models in `api/schemas.py`, dependency assembly in `container.py`, and business behavior in `services/`.
 - Keep frontend feature state and page composition in its feature folder. Move genuinely reused visual components to `components/folio/` and cross-feature formatting/navigation helpers to `lib/`; do not make one feature folder another feature's utility library.
 
 ## Documentation Rules

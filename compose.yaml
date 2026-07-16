@@ -1,0 +1,22 @@
+name: nh-archive
+
+services:
+  app:
+    image: ghcr.io/dormiveglia0/nhentai-archive:latest
+    init: true
+    restart: unless-stopped
+    user: "0:0"
+    ports:
+      - "4349:8000"
+    volumes:
+      - ./.local-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID

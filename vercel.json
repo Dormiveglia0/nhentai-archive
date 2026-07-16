@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm --prefix frontend ci",
-  "buildCommand": "npm --prefix frontend run build",
-  "outputDirectory": "frontend/dist",
+  "installCommand": "npm --prefix apps/web ci",
+  "buildCommand": "npm --prefix apps/web run build",
+  "outputDirectory": "apps/web/dist",
   "redirects": [
     { "source": "/", "destination": "/demo", "permanent": false }
   ],

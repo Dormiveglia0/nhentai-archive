@@ -1,0 +1,51 @@
+from app.database import Database
+
+
+def test_database_enables_concurrency_pragmas_and_query_indexes(tmp_path):
+    db = Database(tmp_path / "archive.db")
+    db.init_schema()
+
+    with db.connect() as conn:
+        journal_mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        foreign_keys = conn.execute("PRAGMA foreign_keys").fetchone()[0]
+        busy_timeout = conn.execute("PRAGMA busy_timeout").fetchone()[0]
+        index_names = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'index'"
+            ).fetchall()
+        }
+
+    assert journal_mode == "wal"
+    assert foreign_keys == 1
+    assert busy_timeout == 5000
+    assert {
+        "idx_work_files_work_kind_created",
+        "idx_jobs_status_updated",
+        "idx_jobs_updated",
+    } <= index_names
+
+
+def test_database_rebases_missing_managed_paths_after_repo_move(tmp_path):
+    data_dir = tmp_path / ".local-data"
+    library = data_dir / "library"
+    covers = data_dir / "covers"
+    library.mkdir(parents=True)
+    covers.mkdir()
+    (library / "work.cbz").write_bytes(b"cbz")
+    (covers / "1.jpg").write_bytes(b"cover")
+    db = Database(data_dir / "archive.db")
+    db.init_schema()
+    work_id = db.execute(
+        "INSERT INTO works (title, source, cover_path) VALUES ('Work', 'local', ?)",
+        ("/old/repo/backend/.local-data/covers/1.jpg",),
+    ).lastrowid
+    db.execute(
+        "INSERT INTO work_files (work_id, kind, path) VALUES (?, 'source_cbz', ?)",
+        (work_id, "/old/repo/backend/.local-data/library/work.cbz"),
+    )
+
+    db.rebase_managed_paths(data_dir)
+
+    assert db.fetchone("SELECT cover_path FROM works WHERE id = ?", (work_id,))["cover_path"] == str(covers / "1.jpg")
+    assert db.fetchone("SELECT path FROM work_files WHERE work_id = ?", (work_id,))["path"] == str(library / "work.cbz")
