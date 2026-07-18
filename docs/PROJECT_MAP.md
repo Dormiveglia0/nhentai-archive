@@ -262,9 +262,9 @@ Root: `apps/web/src/`
 - `lib/useGridColumns.ts`
   - A `ResizeObserver` counts the actual computed CSS grid tracks instead of guessing card width from `window.innerWidth`. Page sizes are derived only after measurement and remain divisible by the active column count.
 - `lib/navigation.ts`
-  - Hash route parser, `navigate()`, and `tagSearchHref()` as the single URL builder for tag-search anchors.
+  - Hash route parser, `navigate()`, `tagSearchHref()` for remote discovery, plus `libraryTagHref()` / `librarySearchHref()` for local-library drill-down anchors.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
-  - Formal tag surfaces use native anchors built by `tagSearchHref()`: primary click may keep the current in-app filtering behavior, while middle/modifier click opens the corresponding discover search in a new tab.
+  - Formal tag surfaces keep native anchor semantics: discovery/remote-reader contexts use `tagSearchHref()`, while library/statistics contexts use `libraryTagHref()` so middle/modifier click preserves the owning data scope in a new tab.
 - `lib/motion/`
   - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,禁止写魔法数。
 - `components/effects/`
@@ -331,7 +331,7 @@ Root: `apps/web/src/`
   - `SettingsPage.tsx` — direct Folio composition with six horizontal chapters, unique section headings, animated chapter transitions, real sync/dirty state, inline feedback, and a viewport-fixed reload/save rail. It imports no demo state and has no left navigation.
   - `SettingsPage.css` — production-only settings layout, metrics, manifests, storage paths, fixed action rail, 1024/390/320 responsive rules, and reduced-motion fallback. Replaced settings deck/rail/form/export-recipe rules were removed from `styles/app.css`.
   - `useSettingsState.ts` — all real config state/actions, password-change drafts/action, latest-request and unmount protection, complete dirty comparison, secret-draft reset, and load/save/verify/clear flows. Hydration also synchronizes saved privacy/cover defaults into `ArchiveApp`, so cover blur changes apply to other routes without a reload. Validation actions only run against saved config.
-  - `ConnectionSection` / `TranslationSection` / `PreferencesSection` / `ExportDefaultsSection` / `DataSection` / `StorageSection` — shared Folio fields/selects/toggles over real settings, auth, runtime, library, and file APIs. `PreferencesSection` owns the current/new/confirmation password controls; data/storage fetch only when their chapter is active. `settingsHelpers` owns only `StatusDot`.
+  - `ConnectionSection` / `TranslationSection` / `PreferencesSection` / `ExportDefaultsSection` / `DataSection` / `StorageSection` — shared Folio fields/selects/toggles over real settings, auth, runtime, library, and file APIs. `PreferencesSection` owns the current/new/confirmation password controls; data/storage fetch only when their chapter is active. `ReadingStatisticsReport` owns period comparison, activity/rhythm, local work/session rankings and collection distributions without fabricating pre-tracking data. `settingsHelpers` owns only `StatusDot`.
 - `components/dictionary/DictionaryPage.tsx`
   - Direct Folio composition for `#dictionary`: real summary, candidate pool, editor, evidence/preview ledger, fixed viewport command bar, and accessible bulk-import modal. It imports no demo code and contains no API orchestration.
 - `components/dictionary/useDictionaryState.ts`
@@ -365,7 +365,7 @@ Root: `apps/web/src/`
 - `components/library/WorkCard.tsx`
   - Cover-first card with direct semantic controls: read status, source/language, author/group, page/ID, custom progress, content-only Tag row, and reader action. The Tag row filters strictly to `type=tag`; on mobile it becomes a centered two-column, three-row keyword grid instead of repeating author/language metadata or hiding useful tags. Language display skips generic translation markers and prefers a concrete language tag. Selection buttons are not nested; double-clicking the cover opens the reader.
 - `components/library/WorkInspector.tsx`
-  - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress, tags, reader, governance, and export routes.
+  - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress and local tag drill-downs. Its action grid keeps reader full-width, governance/export together, and favorite/delete together on the final row.
 - `components/library/ContinueReadingRow.tsx`
   - Horizontal shelf for 继续阅读 / 最近添加; renders nothing when no real rows. The shared primary-pointer capture/threshold logic provides press-drag scrolling without accidental card activation in both library and workbench.
 - `components/library/libraryHelpers.ts`

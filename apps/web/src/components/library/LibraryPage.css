@@ -1229,7 +1229,6 @@
 }
 
 .folio-library-inspector-actions button.folio-work-delete-trigger {
-  grid-column: 1 / -1;
   border-color: rgba(173, 56, 46, 0.62);
   color: var(--folio-red);
 }

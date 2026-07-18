@@ -74,12 +74,12 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Single-password gate, persistent session, change-password flow, and lock action | `auth/AuthGate.tsx` + `auth/AuthGate.css`; `settings/PreferencesSection.tsx` + `useSettingsState.ts`; `App.tsx` keeps every formal/demo route behind it |
 | Hash dispatch and route-level code splitting | `App.tsx` |
 | Folio/immersive-reader loading states | `layout/RouteFallback.tsx` + `layout/RouteFallback.css` |
-| Tag-search URL + middle/modifier-click contract | `lib/navigation.ts::tagSearchHref()`; each formal tag owner must render a native anchor |
+| Tag-search URL + middle/modifier-click contract | `lib/navigation.ts::tagSearchHref()` for remote discovery and `libraryTagHref()` for local-library drill-downs; each owner must render a native anchor |
 | Back-button history contract | `lib/navigation.ts::goBack()`; visible “返回” controls pop browser history and must not synthesize a destination entry |
 | Reader failed-image retry fan-out | `reader/ReaderViewport.tsx` owns the shared retry token; `ReaderImage.tsx` retries only instances currently in an error state |
 | Actual grid-track measurement and whole-row page sizes | `lib/useGridColumns.ts`; library rounds its 24-item target up to a full row, discover requests four measured rows |
 | Local favorites | `works.favorite`; library `WorkCard`/`WorkInspector` and reader `ReaderInfoPanel` mutate it through `api.setWorkFavorite()`; it is intentionally distinct from the remote gallery metric named `favorites` |
-| Reading-time sessions and reports | `reader/useReadingSession.ts` records visible foreground time through session APIs; `settings/ReadingStatisticsReport.tsx` renders the local-only report from `api.libraryStatistics()` |
+| Reading-time sessions and reports | `reader/useReadingSession.ts` records visible foreground time with secure-context fallbacks; `settings/ReadingStatisticsReport.tsx` renders period comparison, activity/rhythm, rankings and local collection distribution from `api.libraryStatistics()` |
 
 `apps/web/src/styles/app.css` is now a base-only file (root tokens, reset, form inheritance, shared spin utility, reduced-motion override). Do not put feature or shell selectors back into it.
 
@@ -123,7 +123,7 @@ Update one row to `migrated` only when its real page renders Folio structure dir
 - Change page background: `folio/shell/ModuleBackdrop.tsx` + matching atmosphere rules in `folio/styles/base.css`.
 - Change a select/input/toggle everywhere: `folio/ui/FolioPrimitives.tsx` + the owning shared CSS layer.
 - Change route loading or split boundaries: `App.tsx` + `layout/RouteFallback.*`; keep `ArchiveShell` eager and readers outside it.
-- Change tag navigation: update `lib/navigation.ts::tagSearchHref()` once, then preserve native `<a>` semantics in the feature owner; pointer-drag code may suppress only a completed primary-pointer drag.
+- Change tag navigation: update the matching `lib/navigation.ts` builder (`tagSearchHref()` for discovery, `libraryTagHref()` for local-library scope), then preserve native `<a>` semantics in the feature owner; pointer-drag code may suppress only a completed primary-pointer drag.
 - Migrate one real page: keep its existing hook/service, rewrite its JSX with Folio structure, add feature-local CSS, delete only the old selectors that page no longer uses, and never fetch in scene components.
 
 ## Verification

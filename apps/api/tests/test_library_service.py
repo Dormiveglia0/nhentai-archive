@@ -248,4 +248,18 @@ def test_favorites_and_statistics_use_reading_sessions(tmp_path):
     assert stats["top_authors"][0]["reading_seconds"] == 240
     assert stats["top_authors"][0]["reading_sessions"] == 3
     assert stats["top_tags"][0]["display"] == "story"
+    assert {row["display"] for row in stats["top_tags"]} == {"story", "action"}
+    assert next(row for row in stats["top_tags"] if row["display"] == "action")["favorite_count"] == 0
+    assert stats["top_tags"][0]["share_percent"] == 50.0
+    assert len(stats["weekdays"]) == 7
+    assert len(stats["hours"]) == 24
+    assert len(stats["recent_sessions"]) == 3
     assert sum(day["sessions"] for day in stats["activity"]) == 3
+
+    db.execute("UPDATE reading_sessions SET started_at = datetime('now', '-45 days') WHERE id = ?", (third["id"],))
+    filtered = library.statistics(days=30)
+    assert filtered["overview"]["total_seconds"] == 150
+    assert filtered["overview"]["sessions"] == 2
+    assert filtered["period"]["previous_total_seconds"] == 90
+    assert [row["id"] for row in filtered["top_by_time"]] == [a]
+    assert {row["display"] for row in filtered["top_tags"]} == {"story", "action"}

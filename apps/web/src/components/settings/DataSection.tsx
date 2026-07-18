@@ -7,7 +7,7 @@ import { usePrefersReducedMotion } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
 import { FolioMetricGrid, type FolioMetricItem } from "../folio/ui/FolioMetricGrid";
 import { formatBytes } from "../../lib/format";
-import { ReadingStatisticsReport } from "./ReadingStatisticsReport";
+import { CollectionStatistics, ReadingStatisticsReport } from "./ReadingStatisticsReport";
 
 type Metric = {
   label: string;
@@ -22,21 +22,24 @@ export function DataSection() {
   const [library, setLibrary] = useState<LibrarySummary | null>(null);
   const [files, setFiles] = useState<FileOverview | null>(null);
   const [statistics, setStatistics] = useState<ReadingStatistics | null>(null);
+  const [statisticsDays, setStatisticsDays] = useState(30);
+  const [statisticsLoading, setStatisticsLoading] = useState(true);
+  const [statisticsError, setStatisticsError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const requestRef = useRef(0);
+  const statisticsRequestRef = useRef(0);
 
   useEffect(() => {
     let alive = true;
     const requestId = ++requestRef.current;
     setLoading(true);
     setError(null);
-    Promise.all([api.librarySummary(), api.filesOverview(), api.libraryStatistics(30)])
-      .then(([libraryPayload, filePayload, statisticsPayload]) => {
+    Promise.all([api.librarySummary(), api.filesOverview()])
+      .then(([libraryPayload, filePayload]) => {
         if (!alive || requestId !== requestRef.current) return;
         setLibrary(libraryPayload);
         setFiles(filePayload);
-        setStatistics(statisticsPayload);
       })
       .catch((exc: Error) => {
         if (alive && requestId === requestRef.current) setError(exc.message);
@@ -49,6 +52,28 @@ export function DataSection() {
       requestRef.current += 1;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    const requestId = ++statisticsRequestRef.current;
+    setStatisticsLoading(true);
+    setStatisticsError(null);
+    setStatistics(null);
+    api.libraryStatistics(statisticsDays)
+      .then((payload) => {
+        if (alive && requestId === statisticsRequestRef.current) setStatistics(payload);
+      })
+      .catch((exc: Error) => {
+        if (alive && requestId === statisticsRequestRef.current) setStatisticsError(exc.message);
+      })
+      .finally(() => {
+        if (alive && requestId === statisticsRequestRef.current) setStatisticsLoading(false);
+      });
+    return () => {
+      alive = false;
+      if (requestId === statisticsRequestRef.current) statisticsRequestRef.current += 1;
+    };
+  }, [statisticsDays]);
 
   const readingMetrics: Metric[] = [
     { label: "已读", value: library?.completed ?? null, icon: CheckCircle2 },
@@ -85,13 +110,21 @@ export function DataSection() {
   }));
 
   return (
-    <section className="folio-settings-section" aria-label="本地馆藏概览" aria-busy={loading}>
+    <section className="folio-settings-section" aria-label="本地馆藏概览" aria-busy={loading || statisticsLoading}>
       {error ? (
         <div className="folio-settings-fetch-error" role="alert">
           <AlertTriangle size={18} />
           <span><strong>无法读取馆藏概览</strong><small>{error}</small></span>
         </div>
       ) : null}
+
+      <ReadingStatisticsReport
+        statistics={statistics}
+        loading={statisticsLoading}
+        error={statisticsError}
+        periodDays={statisticsDays}
+        onPeriodDays={setStatisticsDays}
+      />
 
       <div className="folio-settings-data-dashboard">
         <m.article
@@ -153,7 +186,7 @@ export function DataSection() {
         </m.section>
       </div>
 
-      <ReadingStatisticsReport statistics={statistics} loading={loading} />
+      <CollectionStatistics statistics={statistics} loading={statisticsLoading} />
 
       <section className="folio-settings-maintenance" aria-label="馆藏维护状态">
         <header>

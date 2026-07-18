@@ -2,7 +2,7 @@ import { BookOpen, Download, Heart, Info, PenTool, X } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
-import { pageHref, tagSearchHref } from "../../lib/navigation";
+import { libraryTagHref, pageHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { WorkDeleteAction } from "../folio/ui/WorkDeleteAction";
 import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
@@ -69,7 +69,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
                 {tags.slice(0, 18).map((tag) => (
                   <a
                     key={tag.id}
-                    href={tagSearchHref(tag)}
+                    href={libraryTagHref(tag)}
                     onClick={(event) => {
                       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
                       event.preventDefault();

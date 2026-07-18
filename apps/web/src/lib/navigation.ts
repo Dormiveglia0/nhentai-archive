@@ -105,6 +105,33 @@ export function tagSearchHref(tag: {
   return `#discover${query ? `?q=${encodeURIComponent(query)}` : ""}`;
 }
 
+export function librarySearchHref(query: string) {
+  const params = new URLSearchParams();
+  if (query.trim()) params.set("q", query.trim());
+  return `#library${params.size ? `?${params.toString()}` : ""}`;
+}
+
+export function libraryTagHref(tag: {
+  id?: number | null;
+  type?: string | null;
+  name?: string | null;
+  slug?: string | null;
+  display?: string | null;
+}) {
+  const params = new URLSearchParams();
+  const id = Number(tag.id);
+  if (Number.isFinite(id) && id > 0) params.set("tag_id", String(id));
+  if (tag.type) params.set("tag_type", tag.type);
+  if (tag.name) params.set("tag_name", tag.name);
+  if (tag.slug) params.set("tag_slug", tag.slug);
+  if (tag.display) params.set("tag_display", tag.display);
+  if (!params.has("tag_id")) {
+    const query = tag.name || tag.slug || tag.display;
+    return librarySearchHref(query || "");
+  }
+  return `#library?${params.toString()}`;
+}
+
 function tagQuery(tag: RemoteTag & { excluded?: boolean }) {
   const query = new URLSearchParams();
   query.set("tag_id", String(tag.id));

@@ -231,14 +231,33 @@ export type ReadingTagRank = {
   id?: number | null;
   display: string;
   work_count: number;
+  share_percent: number;
   favorite_count: number;
   reading_seconds: number;
   reading_sessions: number;
 };
 
+export type ReadingSessionRank = {
+  id: number;
+  work_id: number;
+  title: string;
+  title_japanese?: string | null;
+  pretty_title?: string | null;
+  started_at: string;
+  duration_seconds: number;
+  last_page_index: number;
+};
+
 export type ReadingStatistics = {
   period_days: number;
   timezone_offset_minutes: number;
+  period: {
+    start_date: string;
+    end_date: string;
+    previous_total_seconds: number;
+    previous_sessions: number;
+    seconds_change_percent?: number | null;
+  };
   overview: {
     total_seconds: number;
     sessions: number;
@@ -249,10 +268,17 @@ export type ReadingStatistics = {
     average_session_seconds: number;
     longest_session_seconds: number;
     tracking_since?: string | null;
+    all_time_seconds: number;
+    all_time_sessions: number;
+    all_time_works_read: number;
   };
   activity: Array<{ date: string; seconds: number; sessions: number; works: number }>;
+  weekdays: Array<{ weekday: number; seconds: number; sessions: number }>;
+  hours: Array<{ hour: number; seconds: number; sessions: number }>;
   top_by_time: ReadingWorkRank[];
   top_by_sessions: ReadingWorkRank[];
+  recent_sessions: ReadingSessionRank[];
+  collection_total_works: number;
   top_authors: ReadingTagRank[];
   top_tags: ReadingTagRank[];
 };

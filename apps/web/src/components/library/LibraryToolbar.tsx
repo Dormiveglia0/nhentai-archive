@@ -3,7 +3,7 @@ import { m } from "motion/react";
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { LibrarySummary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
-import { tagSearchHref } from "../../lib/navigation";
+import { libraryTagHref } from "../../lib/navigation";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { LibraryTagFilter } from "./LibraryTagFilter";
 import { READ_STATUS_OPTIONS, SORT_OPTIONS, SOURCE_OPTIONS } from "./libraryHelpers";
@@ -124,7 +124,7 @@ export function LibraryToolbar(props: Props) {
           <span>已选标签</span>
           {props.tags.map((tag) => (
             <span key={tag.id} className="folio-library-active-tag">
-              <a href={tagSearchHref(tag)}>{tag.display}</a>
+              <a href={libraryTagHref(tag)}>{tag.display}</a>
               <button type="button" aria-label={`移除标签 ${tag.display}`} onClick={() => props.onTags(props.tags.filter((item) => item.id !== tag.id))}><X size={12} /></button>
             </span>
           ))}

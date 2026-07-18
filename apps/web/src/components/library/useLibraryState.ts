@@ -9,7 +9,28 @@ import {
 } from "../../lib/api";
 import type { LibraryView } from "./LibraryToolbar";
 
+function initialLocationFilters() {
+  const [route, rawQuery = ""] = window.location.hash.replace(/^#/, "").split("?");
+  if (route !== "library") return { q: "", tags: [] as LibraryTagFilter[] };
+  const query = new URLSearchParams(rawQuery);
+  const id = Number(query.get("tag_id"));
+  if (!Number.isFinite(id) || id <= 0) return { q: query.get("q") || "", tags: [] as LibraryTagFilter[] };
+  return {
+    q: query.get("q") || "",
+    tags: [{
+      id,
+      type: query.get("tag_type") || undefined,
+      name: query.get("tag_name") || undefined,
+      slug: query.get("tag_slug") || undefined,
+      display: query.get("tag_display") || query.get("tag_name") || query.get("tag_slug") || String(id),
+      count: 0,
+    }],
+  };
+}
+
 export function useLibraryState(perPage: number) {
+  const initialFilters = useRef<ReturnType<typeof initialLocationFilters> | null>(null);
+  if (initialFilters.current === null) initialFilters.current = initialLocationFilters();
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [continueReading, setContinueReading] = useState<LibraryWork[]>([]);
   const [recentAdded, setRecentAdded] = useState<LibraryWork[]>([]);
@@ -18,12 +39,12 @@ export function useLibraryState(perPage: number) {
   const [numPages, setNumPages] = useState(1);
   const [selected, setSelected] = useState<LibraryWork | null>(null);
 
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => initialFilters.current?.q ?? "");
   const [language, setLanguage] = useState("all");
   const [readStatus, setReadStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [sort, setSort] = useState("recent_updated");
-  const [tags, setTags] = useState<LibraryTagFilter[]>([]);
+  const [tags, setTags] = useState<LibraryTagFilter[]>(() => initialFilters.current?.tags ?? []);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [view, setView] = useState<LibraryView>("grid");
   const [page, setPage] = useState(1);

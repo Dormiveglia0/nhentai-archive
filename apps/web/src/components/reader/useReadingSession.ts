@@ -3,6 +3,24 @@ import { useEffect, useRef } from "react";
 import { api } from "../../lib/api";
 
 const SYNC_INTERVAL_MS = 15_000;
+let fallbackSessionSequence = 0;
+
+function createSessionKey() {
+  try {
+    const randomUUID = globalThis.crypto?.randomUUID;
+    if (typeof randomUUID === "function") return randomUUID.call(globalThis.crypto);
+    const getRandomValues = globalThis.crypto?.getRandomValues;
+    if (typeof getRandomValues === "function") {
+      const values = new Uint32Array(2);
+      getRandomValues.call(globalThis.crypto, values);
+      return `reader-${Date.now().toString(36)}-${values[0].toString(36)}${values[1].toString(36)}`;
+    }
+  } catch {
+    // Reading analytics must never prevent the reader itself from opening.
+  }
+  fallbackSessionSequence += 1;
+  return `reader-${Date.now().toString(36)}-${fallbackSessionSequence.toString(36)}`;
+}
 
 export function useReadingSession(workId: number | null, pageIndex: number) {
   const pageRef = useRef(pageIndex);
@@ -10,7 +28,7 @@ export function useReadingSession(workId: number | null, pageIndex: number) {
   pageRef.current = pageIndex;
 
   if (keyRef.current.workId !== workId) {
-    keyRef.current = { workId, key: workId === null ? "" : crypto.randomUUID() };
+    keyRef.current = { workId, key: workId === null ? "" : createSessionKey() };
   }
   const sessionKey = keyRef.current.key;
 

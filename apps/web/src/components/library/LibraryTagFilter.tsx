@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { api, type LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
 import { duration, ease } from "../../lib/motion";
-import { tagSearchHref } from "../../lib/navigation";
+import { libraryTagHref } from "../../lib/navigation";
 
 type Props = {
   selected: LibraryTagFilterItem[];
@@ -118,7 +118,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
                 return (
                   <a
                     key={tag.id}
-                    href={tagSearchHref(tag)}
+                    href={libraryTagHref(tag)}
                     className={active ? "is-active" : ""}
                     aria-current={active ? "true" : undefined}
                     onClick={(event) => {
