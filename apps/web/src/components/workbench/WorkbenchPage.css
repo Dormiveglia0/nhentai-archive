@@ -141,7 +141,7 @@
 .folio-workbench-module-cell dt { color: var(--folio-muted); font-size: 12px; }
 .folio-workbench-module-cell dd { margin: 4px 0 0; font-size: 15px; font-variant-numeric: tabular-nums; }
 
-.folio-workbench-module-cell article > button {
+.folio-workbench-module-cell article > a {
   width: max-content;
   padding: 6px 0;
   display: inline-flex;
@@ -152,9 +152,10 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
 }
 
-.folio-workbench-module-cell article > button:hover {
+.folio-workbench-module-cell article > a:hover {
   gap: 10px;
   border-color: var(--folio-red);
   color: var(--folio-red);

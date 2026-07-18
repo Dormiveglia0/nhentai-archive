@@ -190,6 +190,15 @@
   margin-top: 0;
 }
 
+.folio-settings-password-grid {
+  margin-top: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.folio-settings-password-actions {
+  margin-top: 18px;
+}
+
 .folio-settings-translate-test {
   margin-top: 16px;
   display: grid;
@@ -417,7 +426,7 @@
   line-height: 0.9;
 }
 
-.folio-settings-data-total span {
+.folio-settings-data-total > span {
   color: var(--folio-muted);
   font-size: 12px;
 }
@@ -539,7 +548,7 @@
 .folio-settings-reading-metrics article:nth-child(2) svg { color: var(--folio-red); }
 .folio-settings-reading-metrics article:nth-child(3) svg { color: var(--folio-muted); }
 
-.folio-settings-reading-metrics span {
+.folio-settings-reading-metrics article > span {
   color: var(--folio-muted);
   font-size: 11px;
 }
@@ -906,6 +915,10 @@
     gap: 6px;
   }
 
+  .folio-settings-password-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .folio-settings-actions {
     left: 0;
   }
@@ -928,6 +941,10 @@
 
   .folio-settings-inline-actions > .folio-line-button {
     flex: 1 1 calc(50% - 5px);
+  }
+
+  .folio-settings-password-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .folio-settings-action-hint {

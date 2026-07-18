@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowLeft, Check, RotateCw } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 
 import { FadeIn } from "../../lib/motion";
+import { goBack, pageHref } from "../../lib/navigation";
 import { GalleryHero } from "./gallery/GalleryHero";
 import { GalleryPagePreview } from "./gallery/GalleryPagePreview";
 import { GalleryRelated } from "./gallery/GalleryRelated";
@@ -16,7 +17,7 @@ type Props = {
 };
 
 export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
-  const gallery = useGalleryDetail(galleryId, returnTo);
+  const gallery = useGalleryDetail(galleryId);
   const backLabel = returnTo?.startsWith("reader/")
     ? "返回阅读器"
     : returnTo === "files"
@@ -28,7 +29,7 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
   return (
     <section className="folio-page-body folio-gallery-page">
       <header className="folio-gallery-context">
-        <button type="button" onClick={gallery.goBack}>
+        <button type="button" onClick={goBack}>
           <ArrowLeft size={15} />
           {backLabel}
         </button>
@@ -65,8 +66,11 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
             blurCovers={blurCovers}
             importing={gallery.importing}
             queued={gallery.queued}
-            onRead={gallery.read}
+            readHref={gallery.detail.imported && gallery.detail.work_id
+              ? pageHref({ name: "reader", workId: gallery.detail.work_id })
+              : pageHref({ name: "readerRemote", galleryId: gallery.detail.gallery_id })}
             onEnqueue={() => void gallery.enqueue()}
+            onDeleted={gallery.reload}
           />
           <GalleryTags detail={gallery.detail} />
           <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />

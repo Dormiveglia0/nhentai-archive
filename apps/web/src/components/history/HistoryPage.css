@@ -24,6 +24,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
 }
 
 .folio-history-context button:hover,
@@ -148,6 +149,7 @@
   background: transparent;
   color: var(--folio-ink);
   text-align: left;
+  text-decoration: none;
   position: relative;
   overflow: hidden;
   transition: padding 260ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms ease;

@@ -1,10 +1,12 @@
 import { BookOpen, CalendarDays, Download, Hash, Heart, Images, LoaderCircle, PenTool } from "lucide-react";
 import { m } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import type { GalleryDetail } from "../../../lib/api";
 import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
-import { navigate } from "../../../lib/navigation";
+import { pageHref } from "../../../lib/navigation";
+import { AmbientCover } from "../../folio/ui/AmbientCover";
+import { WorkDeleteAction } from "../../folio/ui/WorkDeleteAction";
 import { formatUploadDate } from "./galleryDetailModel";
 import "./GalleryHero.css";
 
@@ -30,19 +32,23 @@ export function GalleryHero({
   blurCovers,
   importing,
   queued,
-  onRead,
+  readHref,
   onEnqueue,
+  onDeleted,
 }: {
   detail: GalleryDetail;
   title: string;
   blurCovers: boolean;
   importing: boolean;
   queued: boolean;
-  onRead: () => void;
+  readHref: string;
   onEnqueue: () => void;
+  onDeleted: () => void;
 }) {
   const reduceMotion = usePrefersReducedMotion();
   const { src, onError } = useCoverSource(detail);
+  const coverSize = detail.cover?.width && detail.cover.height ? detail.cover : detail.thumbnail;
+  const coverRatio = coverSize?.width && coverSize.height ? coverSize.width / coverSize.height : 3 / 4;
 
   return (
     <section className={`folio-gallery-hero${blurCovers ? " is-private" : ""}`}>
@@ -51,6 +57,7 @@ export function GalleryHero({
       <div className="folio-gallery-hero-stage">
         <m.div
           className="folio-gallery-cover-stage"
+          style={{ "--gallery-cover-ratio": coverRatio } as CSSProperties}
           initial={{ opacity: 0, x: reduceMotion ? 0 : -26, rotate: reduceMotion ? 0 : -1.4 }}
           animate={{ opacity: 1, x: 0, rotate: 0 }}
           transition={{ duration: duration.slow, ease: ease.standard }}
@@ -58,7 +65,13 @@ export function GalleryHero({
           <span className="folio-gallery-cover-register" aria-hidden="true"><i /><i /><i /><i /></span>
           <div className="folio-gallery-cover-slot">
             {src ? (
-              <img className={blurCovers ? "is-blurred" : ""} src={src} alt="作品封面" onError={onError} />
+              <AmbientCover
+                className="folio-gallery-cover-artwork"
+                src={src}
+                alt="作品封面"
+                privateBlur={blurCovers}
+                onError={onError}
+              />
             ) : (
               <span className="folio-gallery-cover-empty">暂无封面</span>
             )}
@@ -88,15 +101,18 @@ export function GalleryHero({
           </dl>
 
           <div className="folio-gallery-actions">
-            <button className="is-primary" type="button" onClick={onRead}>
+            <a className="is-primary" href={readHref}>
               <BookOpen size={17} />
               <span>{detail.imported ? "阅读本地" : "在线阅读"}</span>
-            </button>
+            </a>
             {detail.imported && detail.work_id ? (
-              <button type="button" onClick={() => navigate({ name: "governance", workId: detail.work_id! })}>
-                <PenTool size={16} />
-                <span>治理元数据</span>
-              </button>
+              <>
+                <a href={pageHref({ name: "governance", workId: detail.work_id })}>
+                  <PenTool size={16} />
+                  <span>治理元数据</span>
+                </a>
+                <WorkDeleteAction workId={detail.work_id} title={title} onDeleted={onDeleted} />
+              </>
             ) : (
               <button type="button" onClick={onEnqueue} disabled={importing || queued} aria-busy={importing}>
                 {importing ? <LoaderCircle className="folio-gallery-spinner" size={16} /> : <Download size={16} />}

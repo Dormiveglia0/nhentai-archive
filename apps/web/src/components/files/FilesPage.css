@@ -543,7 +543,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.folio-files-side .folio-files-detail-actions button {
+.folio-files-side .folio-files-detail-actions :is(button, a) {
   justify-content: center;
 }
 
@@ -711,7 +711,7 @@
   gap: 7px;
 }
 
-.folio-files-detail-actions button {
+.folio-files-detail-actions :is(button, a) {
   min-height: 40px;
   padding: 0 11px;
   display: inline-flex;
@@ -721,14 +721,15 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
-.folio-files-detail-actions button svg:last-child {
+.folio-files-detail-actions :is(button, a) svg:last-child {
   color: var(--folio-muted);
 }
 
-.folio-files-detail-actions button:hover:not(:disabled) {
+.folio-files-detail-actions :is(button, a):hover:not(:disabled) {
   border-color: var(--folio-ink);
   background: var(--folio-ink);
   color: var(--folio-paper-bright);
@@ -1276,7 +1277,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .folio-files-detail-actions button {
+  .folio-files-detail-actions :is(button, a) {
     justify-content: center;
   }
 

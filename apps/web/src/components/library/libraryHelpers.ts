@@ -16,7 +16,14 @@ export function authorLine(work: LibraryWork): string {
 }
 
 export function languageLabel(work: LibraryWork): string {
-  return tagOfType(work.tags, "language")?.display || "语言未标注";
+  const language = work.tags?.find((tag) => tag.type === "language" && !isTranslationMarker(tag));
+  if (language?.display) return language.display;
+  if (work.language && !work.language.toLowerCase().includes("translat")) return work.language;
+  return "语言未标注";
+}
+
+function isTranslationMarker(tag: LibraryTag): boolean {
+  return [tag.name, tag.slug, tag.display].filter(Boolean).join(" ").toLowerCase().includes("translat");
 }
 
 export function readStatusLabel(work: LibraryWork): { label: string; tone: "unread" | "reading" | "done" } {

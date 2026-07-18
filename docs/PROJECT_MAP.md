@@ -21,8 +21,8 @@ Read order for future AI work:
 - Root `npm run dev` delegates to `scripts/dev.py`.
 - The stdlib launcher starts the API app on port 8001 and Web app on port 5173, preserves `PYTHONPATH`/`VITE_API_PROXY_TARGET`, and terminates both process groups when either side exits or the user presses `Ctrl+C`. `NH_ARCHIVE_API_PORT` and `NH_ARCHIVE_WEB_PORT` provide temporary QA ports.
 - `npm run dev -- --check` validates the local API executable, npm, and Web dependencies without starting servers.
-- Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Startup migrates either legacy `backend/.local-data/` or `apps/api/.local-data/` and rebases managed SQLite paths when the repository moves or the same database crosses the Compose `/data` and host `.local-data` boundary.
-- `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI and the compiled assets. `compose.yaml` binds host `./.local-data` to `/data`; its entrypoint runs the app as that directory's owner while retaining only the startup UID/GID-switch capabilities. SQLite stores API keys and application settings, while `library/` is both the final remote-download directory and the local-import scan directory. `/api/health` provides container health.
+- Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Managed source/cover paths are stored portably as `library/...` and `covers/...`; each runtime resolves them against its active data root. Startup migrates legacy absolute values to that portable form, so the same SQLite can cross the Compose `/data` and host `.local-data` boundary without path flipping.
+- `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI and the compiled assets. `compose.yaml` declares `build: .` so `docker compose up -d --build` includes the current checkout, and binds host `./.local-data` to `/data`; its entrypoint runs as that directory's owner while retaining only startup UID/GID-switch capabilities. `/api/health` provides container health.
 
 ## API App Map
 
@@ -35,12 +35,15 @@ Root: `apps/api/app/`
   - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `jobs`, `settings`. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
   - Connections enforce foreign keys, a 5-second busy timeout and NORMAL synchronous mode; schema initialization enables WAL. Query indexes are created only after legacy migrations and cover work files/tags, dictionary references, reading history, task status/order and task logs.
-  - Startup path rebasing recognizes both legacy repository `.local-data/...` and Compose `/data/...` paths, but rewrites only when the equivalent file exists under the active managed root.
+  - Startup path migration recognizes legacy repository `.local-data/...` and Compose `/data/...` values, persists only `library/...` / `covers/...`, and resolves returned path fields against the current runtime root.
 - `container.py`
   - Composition root for settings, SQLite, the remote client, and service instances. API modules share this single mutable registry; tests replace registry members instead of patching route modules.
 - `api/`
-  - Domain routers for discover, dictionary, library, governance, exports, files, works/reader state, jobs, settings, and system/workbench endpoints.
-  - `schemas.py` owns HTTP request models; `shared.py` owns remote API error translation. Business logic remains in `services/`.
+  - Domain routers for auth, discover, dictionary, library, governance, exports, files, works/reader state, jobs, settings, and system/workbench endpoints.
+  - `auth.py` owns first-run setup, login, password change, logout and status. `schemas.py` owns HTTP request models; `shared.py` owns remote API error translation and the router-wide authentication dependency. Business logic remains in `services/`.
+- `services/auth_service.py`
+  - Single-password access without accounts or users. Any non-empty password is accepted without character-combination rules, then stored as a salted stdlib `scrypt` verifier; only SHA-256-derived session keys are persisted in the existing `settings` table.
+  - Sessions last 90 days and survive process/container restarts. Password change verifies the current password, revokes every old session, and issues one replacement session to the current browser. Five failed login/change attempts within five minutes temporarily rate-limit that client.
 - `services/nhentai_client.py`
   - Remote API wrapper: `latest`, `popular`, `random`, `search`, `tagged`, `gallery`, `tag_search`, `tags_by_ids`, `download_url`, `download_file`, `user`.
   - `media_url()` resolves CDN paths through `/api/v2/cdn`, normalizes duplicate upstream image suffixes such as `.webp.webp`, and leaves the frontend free of URL guessing.
@@ -60,7 +63,7 @@ Root: `apps/api/app/`
     - single remote tag: `/api/v2/galleries/tagged`.
   - Adds local `imported/work_id` state to remote gallery summaries.
   - Feed and related-card import state is resolved in one batched `works` query per result set, not one query per card.
-  - `build_search_query()` appends confirmed remote filters such as `language:japanese`, `tag:"doujinshi"`, and `tag:"manga"`.
+  - `build_search_query()` appends confirmed remote filters such as `language:japanese`, `category:doujinshi`, and `category:manga`; selected remote tags retain their real quoted namespace (`artist:"..."`, `tag:"..."`, `parody:"..."`, etc.) and excluded terms retain the signed form (`-tag:"..."`).
   - Enriches cards with real `remote_tags` via `/api/v2/tags/ids` and caches those tags.
   - `cached_tags()` exposes real cached tags for the discover selector; it does not fabricate defaults.
   - Joins `local_tag_dictionary` by `remote_tag_id` to emit dictionary `display` names for discover tags when mappings exist.
@@ -88,7 +91,7 @@ Root: `apps/api/app/`
   - Enqueue is idempotent: an active job for the same gallery is reused, and a gallery already in the library returns an immediately completed job instead of leaving an orphaned queued record.
   - Caches imported gallery and real gallery tags before downloading/indexing CBZ.
   - Calls `DictionaryService.link_work_tags()` after ingest so imported works gain real `work_tags`.
-  - Partial download files are removed on success, cancellation and failure; a process crash remains visible as a stale managed tmp file for file maintenance.
+  - Partial download files are removed on success, cancellation and failure; a process crash remains visible as a stale managed tmp file for file maintenance. CBZ transfer reports real downloaded/total bytes into the job row and maps that transfer across the 15–90% progress segment before indexing.
 - `services/archive_service.py`
   - `ingest_cbz()`, `list_works()`, `get_work()`, `list_pages()`, `read_page()`.
   - Archive copies, covers and generated thumbnails use unique same-directory temporary files plus atomic replace. Re-ingest invalidates page thumbnails/stale covers, and page member sizes are indexed from one ZIP directory read rather than reopening the archive for every page. A failed first ingest removes its placeholder work so import idempotency cannot mistake a fileless row for success.
@@ -97,7 +100,7 @@ Root: `apps/api/app/`
 - `services/library_service.py`
   - Local-only library reads; queries only `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`. Never calls NH API.
   - `work(work_id)`: one full local work record through the same `WORK_COLUMNS`/`WORK_JOINS` and `_attach_tags()` path as library search. The reader therefore receives real author/group/parody/character/content/category/language tags without a remote lookup.
-  - `summary()`: real total/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped).
+  - `summary()`: real total/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped); generic `translated`/`translate*` markers are excluded because they are not languages.
   - `search(q, page, per_page, sort, read_status, source, language, tag_ids)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`.
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
   - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
@@ -127,7 +130,7 @@ Root: `apps/api/app/`
 - `services/file_service.py`
   - Local-only file inventory + deletion over the managed data dir; never calls the NH API.
   - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
-  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Source rows are preloaded once and visible-work tags are fetched in one batch. Work entries expose structured `tag_items` for real search links while retaining the legacy display-only `tags` list. Paths normalized via `_abs()` (relative resolved against cwd, then `.resolve()`).
+  - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Source rows are preloaded once and visible-work tags are fetched in one batch. Work entries expose structured `tag_items`; portable DB paths arrive already resolved against the active data root, and `_abs()` normalizes them before filesystem checks.
   - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
   - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/governance_reviews/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
@@ -142,13 +145,18 @@ Root: `apps/api/app/`
 - `services/workbench_service.py`
   - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
-  - Small FastAPI application factory: lifespan (interrupted-job recovery and export-artifact sweep), CORS, and mounting the `/api` router only.
+  - Small FastAPI application factory: lifespan (interrupted-job recovery and export-artifact sweep), CORS, static Web mounting, and authentication enforcement for `/api` except health/auth bootstrap endpoints.
 
 ## API Status
 
 Implemented:
 
 - `GET /api/health`
+- `GET /api/auth/status`
+- `POST /api/auth/setup`
+- `POST /api/auth/login`
+- `POST /api/auth/change`
+- `POST /api/auth/logout`
 - `GET /api/discover/latest`
 - `GET /api/discover/feed?page=&per_page=&q=&sort=&language=&type=&tag_id=&tag_names=&unimported_only=`
 - `GET /api/discover/tagged?tag_id=&page=&per_page=&sort=&unimported_only=`
@@ -238,9 +246,14 @@ Root: `apps/web/src/`
   - Public `/demo` content only: preview navigation/state, nine demo page bodies, and the demo command bar. Formal routes must not import this directory.
 
 - `App.tsx`
-  - Hash route composition and route-level `React.lazy` boundaries. `ArchiveShell` stays in the initial shell while every primary/secondary page, both readers, and `/demo` load as independent chunks.
+  - `AuthGate` resolves access before hash route composition or route-level `React.lazy` boundaries mount. `ArchiveShell` stays in the initial shell while every primary/secondary page, both readers, and `/demo` load as independent chunks.
   - All primary and secondary routes are real pages: discover/gallery/library/history/readers/governance/dictionary/export/files/tasks/settings/workbench. No route remains a boundary screen.
   - Local and remote readers render directly as immersive viewports; all other routes render through `ArchiveShell`.
+- `components/auth/AuthGate.tsx`
+  - First visit creates any non-empty access password without character-combination rules; later visits accept that password and retain a 90-day HttpOnly/SameSite session. App content never mounts behind the gate, and any protected-request 401 returns the surface to login.
+  - The top-right lock action revokes the current session. No username, account list, localStorage token, password recovery flow, or auth dependency is introduced.
+- `lib/useGridColumns.ts`
+  - A `ResizeObserver` counts the actual computed CSS grid tracks instead of guessing card width from `window.innerWidth`. Page sizes are derived only after measurement and remain divisible by the active column count.
 - `lib/navigation.ts`
   - Hash route parser, `navigate()`, and `tagSearchHref()` as the single URL builder for tag-search anchors.
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
@@ -279,10 +292,10 @@ Root: `apps/web/src/`
   - Direct Folio composition for `#discover`: real popular band, combined keyword/tag query, custom filters, one responsive card grid, notices and pager. It imports no demo code and contains no API orchestration.
   - Card/random/popular selection navigates to the real gallery detail route; import actions enqueue the existing real import flow.
 - `components/discover/useDiscoverState.ts`
-  - Owns restored query/filter/page/scroll state, current `.folio-scroll` persistence, responsive page sizing, stale feed-request invalidation, one-shot StrictMode-safe popular loading, remote search, random navigation and import actions.
-  - Multiple tags retain their original remote names/ids; a single tag-only query uses `tag_id`, while combined keyword/tag filters use remote query tokens. A missing remote `total` remains explicit instead of being fabricated.
+  - Owns restored query/filter/page/scroll state, current `.folio-scroll` persistence, measured four-row page sizing, stale feed-request invalidation, one-shot StrictMode-safe popular loading, remote search, random navigation and import actions.
+  - Multiple tags retain their original remote names/ids/types; a single tag-only query uses `tag_id`, while combined keyword/tag filters preserve the remote namespace (`artist:`, `tag:`, `parody:`, etc.). A missing remote `total` remains explicit instead of being fabricated.
 - `components/discover/DiscoverPage.css`
-  - Production-only popular fan, query composer, custom filter row, result card grid/pager and four-viewport responsive layout. Replaced legacy discover/tag-picker/popular-fan selectors were removed from `styles/app.css`.
+  - Production-only ranked editorial wall, query composer, custom filter row, result card grid/pager and four-viewport responsive layout. Desktop popular works form one five-poster shelf with titles below the artwork; mobile uses five fully visible compact poster columns with no horizontal scrolling. Replaced legacy discover/tag-picker/popular-fan selectors were removed from `styles/app.css`.
 - `components/discover/DiscoverToolbar.tsx`
   - Keyword/Gallery ID input plus visible multi-tag chips, icon-only random action, equal-height query action, custom Folio language/type/sort menus and unimported toggle. Discover has no duplicate list-view mode; upload/scan are not toolbar modes.
 - `components/discover/DiscoverFeed.tsx`
@@ -296,22 +309,22 @@ Root: `apps/web/src/`
 - `components/folio/ui/TagScroller.tsx`
   - Pointer-drag horizontal tag row with hidden scrollbar and click-to-filter support. Summary cards expose at most six native search anchors plus a non-interactive remainder count; drag suppression applies only to the primary pointer so middle/modifier navigation remains intact.
   - Uses `tag.display || tag.name || tag.slug || id`, so dictionary display names flow without rewriting card logic.
+- `components/folio/ui/AmbientCover.tsx`
+  - Shared primary-cover frame for popular, gallery hero, and reader info. The foreground always uses `contain`; a non-semantic duplicate supplies the blurred/dimmed ambient fill so mismatched ratios do not create dead bands or crop meaningful artwork.
 - `components/discover/PopularFan.tsx`
-  - Real `/api/discover/popular` editorial cover fan between the Folio heading and search workbench.
-  - Scroll progress drives the animation: covers follow a rightward semicircle arc, rotate, clip out through the right/bottom edge on down-scroll, and reverse on up-scroll.
-  - `cardStyle()` uses trigonometric semicircle coordinates; do not replace it with linear scale/translate interpolation.
-  - It binds to the actual `.folio-scroll` container. Mobile uses a touch-driven circular fan carousel; native image drag is disabled so pointer capture remains stable.
-  - Do not restore bordered/shadowed window styling, popover/floating mode, close buttons, or large metadata/action blocks inside the fan.
+  - Real `/api/discover/popular` five-item ranked editorial showcase between the Folio heading and search workbench. It has no viewport state, drag state or fabricated entries; every cover, title, count, import state and action comes from the real payload.
+  - Desktop renders five portrait frames with copy below the image; mobile keeps all five in one non-scrolling row with compact 30px import rails.
+  - Cards expose only real title/page/favorite/import state and never fabricate badges or statistics.
 - `components/discover/GalleryDetailPage.tsx` + `components/discover/gallery/`
   - Direct route-local gallery composition split into real data/model, fixed-slot hero, full-width tag ledger, initial page preview, keyboard/focus-restoring lightbox, and related works. It imports no demo state.
-  - Cover and lightbox geometry use `object-fit: contain`; the lightbox stage derives a clamped width from the active page ratio instead of leaving a wide black viewport around portrait pages. Variable tag counts never share the cover column. Related results are capped at five and render as one five-column desktop row / five compact mobile rows, so the fixed five-item payload cannot orphan its last card. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
+  - The hero cover slot uses `AmbientCover`: the meaningful foreground stays `contain`, while the same-image ambient layer fills ratio gaps without losing edge content. The page lightbox remains `contain` and derives a clamped width from the active page ratio. Variable tag counts never share the cover column. Related results are capped at five and render as one five-column desktop row / five compact mobile rows, so the fixed five-item payload cannot orphan its last card. Import state has latest-request/unmount protection and a fixed-width busy/queued action.
 - `components/discover/IconPager.tsx`
   - Icon-only first/previous/input/next/last pagination.
 - `components/settings/` — refactored settings module:
   - `SettingsPage.tsx` — direct Folio composition with six horizontal chapters, unique section headings, animated chapter transitions, real sync/dirty state, inline feedback, and a viewport-fixed reload/save rail. It imports no demo state and has no left navigation.
   - `SettingsPage.css` — production-only settings layout, metrics, manifests, storage paths, fixed action rail, 1024/390/320 responsive rules, and reduced-motion fallback. Replaced settings deck/rail/form/export-recipe rules were removed from `styles/app.css`.
-  - `useSettingsState.ts` — all real config state/actions, latest-request and unmount protection, complete dirty comparison, secret-draft reset, and load/save/verify/clear flows. Hydration also synchronizes saved privacy/cover defaults into `ArchiveApp`, so cover blur changes apply to other routes without a reload. Validation actions only run against saved config.
-  - `ConnectionSection` / `TranslationSection` / `PreferencesSection` / `ExportDefaultsSection` / `DataSection` / `StorageSection` — shared Folio fields/selects/toggles over real settings, runtime, library, and file APIs. Data/storage fetch only when their chapter is active; unresolved values render as `—`, never fabricated zeroes. `settingsHelpers` owns only `StatusDot`.
+  - `useSettingsState.ts` — all real config state/actions, password-change drafts/action, latest-request and unmount protection, complete dirty comparison, secret-draft reset, and load/save/verify/clear flows. Hydration also synchronizes saved privacy/cover defaults into `ArchiveApp`, so cover blur changes apply to other routes without a reload. Validation actions only run against saved config.
+  - `ConnectionSection` / `TranslationSection` / `PreferencesSection` / `ExportDefaultsSection` / `DataSection` / `StorageSection` — shared Folio fields/selects/toggles over real settings, auth, runtime, library, and file APIs. `PreferencesSection` owns the current/new/confirmation password controls; data/storage fetch only when their chapter is active. `settingsHelpers` owns only `StatusDot`.
 - `components/dictionary/DictionaryPage.tsx`
   - Direct Folio composition for `#dictionary`: real summary, candidate pool, editor, evidence/preview ledger, fixed viewport command bar, and accessible bulk-import modal. It imports no demo code and contains no API orchestration.
 - `components/dictionary/useDictionaryState.ts`
@@ -333,7 +346,7 @@ Root: `apps/web/src/`
 - `components/library/LibraryPage.tsx`
   - Direct Folio composition for `#library`: real summary, custom filter workbench, optional shelves, result index, batch tray, cards, pager, and inspector. It contains no API orchestration and imports no demo code.
 - `components/library/useLibraryState.ts`
-  - Owns the existing real summary/shelf/search flow, stale-request invalidation, filters, paging, focused work, and cross-page multi-selection. Independent overview requests still run in parallel.
+  - Owns the existing real summary/shelf/search flow, stale-request invalidation, filters, paging, focused work, and cross-page multi-selection. The grid passes a measured whole-row page size: for example, five columns request 25 rather than the incomplete hardcoded 24. Independent overview requests still run in parallel.
 - `components/library/LibraryPage.css`
   - Production-only library layout and responsive behavior. Mobile work details use an opaque bottom sheet with a backdrop; all replaced legacy library/inspector/batch rules were removed from `styles/app.css`.
 - `components/library/LibrarySummaryStrip.tsx`
@@ -343,7 +356,7 @@ Root: `apps/web/src/`
 - `components/library/LibraryTagFilter.tsx`
   - Multi-select tag picker backed by `/api/library/tag-filters` (local used tags only, debounced search, dictionary display names). Does not call NH API.
 - `components/library/WorkCard.tsx`
-  - Cover-first card with direct semantic controls: read status, source/language, author/group, page/ID, custom progress, draggable tag row, and reader action. Selection buttons are not nested; double-clicking the cover opens the reader.
+  - Cover-first card with direct semantic controls: read status, source/language, author/group, page/ID, custom progress, content-only Tag row, and reader action. The Tag row filters strictly to `type=tag`; on mobile it becomes a centered two-column, three-row keyword grid instead of repeating author/language metadata or hiding useful tags. Language display skips generic translation markers and prefers a concrete language tag. Selection buttons are not nested; double-clicking the cover opens the reader.
 - `components/library/WorkInspector.tsx`
   - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress, tags, reader, governance, and export routes.
 - `components/library/ContinueReadingRow.tsx`

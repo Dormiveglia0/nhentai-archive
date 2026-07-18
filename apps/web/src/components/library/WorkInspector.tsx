@@ -2,8 +2,9 @@ import { BookOpen, Download, Info, PenTool, X } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
-import { navigate, tagSearchHref } from "../../lib/navigation";
+import { pageHref, tagSearchHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
+import { WorkDeleteAction } from "../folio/ui/WorkDeleteAction";
 import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
 
 type Props = {
@@ -11,9 +12,10 @@ type Props = {
   blurCovers: boolean;
   onClose: () => void;
   onPickTag: (tag: LibraryTag) => void;
+  onDeleted: () => void;
 };
 
-export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
+export function WorkInspector({ work, blurCovers, onClose, onPickTag, onDeleted }: Props) {
   if (!work) {
     return (
       <aside className="folio-library-inspector is-empty" aria-label="作品详情">
@@ -81,12 +83,13 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag }: Props) {
           )}
 
           <div className="folio-library-inspector-actions">
-            <button type="button" className="is-primary" onClick={() => navigate({ name: "reader", workId: work.id })}>
+            <a className="is-primary" href={pageHref({ name: "reader", workId: work.id })}>
               <BookOpen size={17} />
               {(work.progress_percent ?? 0) > 0 && !work.completed ? "继续阅读" : "开始阅读"}
-            </button>
-            <button type="button" onClick={() => navigate({ name: "governance", workId: work.id })}><PenTool size={16} />进入治理</button>
-            <button type="button" onClick={() => navigate({ name: "export", workId: work.id })}><Download size={16} />导出 CBZ</button>
+            </a>
+            <a href={pageHref({ name: "governance", workId: work.id })}><PenTool size={16} />进入治理</a>
+            <a href={pageHref({ name: "export", workId: work.id })}><Download size={16} />导出 CBZ</a>
+            <WorkDeleteAction workId={work.id} title={title} onDeleted={onDeleted} />
           </div>
         </FadeIn>
       </aside>

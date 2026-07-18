@@ -18,8 +18,11 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="NH Archive", version="0.1.0", lifespan=lifespan)
+def create_app(enforce_auth: bool | None = None) -> FastAPI:
+    app = FastAPI(title="NH Archive", version="0.2.0", lifespan=lifespan)
+    should_enforce_auth = enforce_auth if enforce_auth is not None else os.environ.get("NH_ARCHIVE_AUTH_DISABLED", "").lower() not in {"1", "true", "yes"}
+    app.state.enforce_auth = should_enforce_auth
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],

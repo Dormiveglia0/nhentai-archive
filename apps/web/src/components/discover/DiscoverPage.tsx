@@ -1,4 +1,5 @@
 import type { RemoteTag } from "../../lib/api";
+import { useGridColumns } from "../../lib/useGridColumns";
 import { DiscoverFeed } from "./DiscoverFeed";
 import { DiscoverToolbar } from "./DiscoverToolbar";
 import { PopularFan } from "./PopularFan";
@@ -6,7 +7,8 @@ import { useDiscoverState } from "./useDiscoverState";
 import "./DiscoverPage.css";
 
 export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; initialTag?: RemoteTag }) {
-  const discover = useDiscoverState(initialTag);
+  const [gridRef, gridColumns] = useGridColumns();
+  const discover = useDiscoverState(initialTag, gridColumns * 4);
 
   return (
     <section className="folio-page-body folio-discover-page">
@@ -14,8 +16,8 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
         loading={discover.popularLoading}
         items={discover.popularItems}
         blurCovers={blurCovers}
-        collapseSignal={discover.popularCollapseSignal}
         onOpen={discover.openDetail}
+        hrefFor={discover.detailHref}
         onImport={discover.enqueueGalleryId}
       />
 
@@ -37,6 +39,7 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
       />
 
       <DiscoverFeed
+        gridRef={gridRef}
         items={discover.items}
         total={discover.total}
         page={discover.page}
@@ -46,6 +49,7 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
         notice={discover.notice}
         blurCovers={blurCovers}
         onOpen={discover.openDetail}
+        hrefFor={discover.detailHref}
         onImport={discover.enqueueGalleryId}
         onPickTag={discover.pickTag}
         onPage={discover.loadPage}

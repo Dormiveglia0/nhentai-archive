@@ -1,5 +1,5 @@
 import type { GovernanceAggregate, GovernanceTag } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { pageHref } from "../../lib/navigation";
 import { GovernanceTagItem } from "./GovernanceTagItem";
 
 export function GovernanceTagBoard({
@@ -20,9 +20,9 @@ export function GovernanceTagBoard({
           <span>Tags</span>
           <h2>标签</h2>
         </div>
-        <button className="folio-line-button" type="button" onClick={() => navigate({ name: "dictionary" })}>
+        <a className="folio-line-button" href={pageHref({ name: "dictionary" })}>
           管理词典
-        </button>
+        </a>
       </header>
       {aggregate.tags.groups.length ? (
         <div className="folio-governance-tag-groups">

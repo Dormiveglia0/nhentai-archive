@@ -1,7 +1,7 @@
-import { AlertTriangle, ArrowLeft, EyeOff, RotateCw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { navigate } from "../../lib/navigation";
+import { goBack } from "../../lib/navigation";
 import {
   arrowDelta,
   clamp,
@@ -25,21 +25,19 @@ import "./ReaderPage.css";
 
 type Props = {
   source: ReaderSource;
-  privacyMode: boolean;
 };
 
 const FIT_ORDER: Fit[] = ["height", "width", "original"];
 
 function isInteractiveTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, button, [role='slider'], [contenteditable='true']"));
+  return target instanceof HTMLElement && Boolean(target.closest("a, input, textarea, select, button, [role='slider'], [contenteditable='true']"));
 }
 
-export function ReaderPage({ source, privacyMode }: Props) {
+export function ReaderPage({ source }: Props) {
   const data = useReaderData(source);
   const { prefs, setMode, setDirection, setFit } = useReaderPrefs();
   const { visible: chromeVisible, setPinned, reveal, hide } = useReaderChrome();
   const [zoom, setZoom] = useState(1);
-  const [masked, setMasked] = useState(false);
   const [activePanel, setActivePanel] = useState<ReaderPanel>("none");
   const [jumpOpen, setJumpOpen] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
@@ -47,7 +45,6 @@ export function ReaderPage({ source, privacyMode }: Props) {
   useEffect(() => {
     setZoom(1);
     setActivePanel("none");
-    setMasked(false);
     setJumpOpen(false);
     setUiError(null);
   }, [data.sourceKey]);
@@ -57,9 +54,9 @@ export function ReaderPage({ source, privacyMode }: Props) {
   }, [activePanel, jumpOpen, setPinned]);
 
   useEffect(() => {
-    document.title = privacyMode ? "NH Archive" : data.title;
+    document.title = data.title;
     return () => { document.title = "NH Archive"; };
-  }, [privacyMode, data.title]);
+  }, [data.title]);
 
   useEffect(() => {
     if (!uiError) return;
@@ -67,7 +64,6 @@ export function ReaderPage({ source, privacyMode }: Props) {
     return () => window.clearTimeout(timer);
   }, [uiError]);
 
-  const goBack = useCallback(() => navigate({ name: data.isRemote ? "discover" : "library" }), [data.isRemote]);
   const flip = useCallback((delta: number) => data.setPage(data.pageIndex + delta), [data.pageIndex, data.setPage]);
   const jump = useCallback((pageIndex: number) => data.setPage(pageIndex), [data.setPage]);
   const zoomBy = useCallback((steps: number) => {
@@ -126,9 +122,6 @@ export function ReaderPage({ source, privacyMode }: Props) {
       } else if (key.toLowerCase() === "f") {
         event.preventDefault();
         void toggleFullscreen();
-      } else if (key.toLowerCase() === "h") {
-        event.preventDefault();
-        setMasked((value) => !value);
       } else if (key.toLowerCase() === "t") {
         event.preventDefault();
         openPanel("thumbnails");
@@ -177,20 +170,12 @@ export function ReaderPage({ source, privacyMode }: Props) {
         direction={prefs.direction}
         fit={prefs.fit}
         zoom={zoom}
-        masked={masked}
         isRemote={data.isRemote}
         loading={data.loading}
         onFlip={flip}
         onJump={jump}
         onToggleChrome={toggleChrome}
       />
-
-      {masked ? (
-        <button className="reader-privacy-curtain" type="button" onClick={() => setMasked(false)}>
-          <EyeOff size={22} />
-          <span><strong>页面已遮罩</strong><small>点击恢复阅读 · H</small></span>
-        </button>
-      ) : null}
 
       {feedbackError ? <div className="reader-feedback is-error" role="alert"><AlertTriangle size={15} /><span>{feedbackError}</span></div> : null}
       {!feedbackError && data.notice ? <div className="reader-feedback is-success" role="status"><span>{data.notice}</span></div> : null}
@@ -204,7 +189,6 @@ export function ReaderPage({ source, privacyMode }: Props) {
         mode={prefs.mode}
         direction={prefs.direction}
         fit={prefs.fit}
-        masked={masked}
         importing={data.importing}
         queued={data.queued}
         activePanel={activePanel}
@@ -214,7 +198,6 @@ export function ReaderPage({ source, privacyMode }: Props) {
         onToggleDirection={toggleDirection}
         onCycleFit={cycleFit}
         onZoom={zoomBy}
-        onToggleMask={() => setMasked((value) => !value)}
         onToggleFullscreen={() => void toggleFullscreen()}
         onOpenPanel={openPanel}
         onOpenJump={() => setJumpOpen(true)}

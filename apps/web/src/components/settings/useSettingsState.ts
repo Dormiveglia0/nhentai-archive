@@ -4,14 +4,15 @@ import { api, type SettingsSummary } from "../../lib/api";
 import type { SettingsSection } from "../folio/config";
 
 export function useSettingsState(
-  onPrivacyModeChange: (value: boolean) => void,
   onBlurCoversChange: (value: boolean) => void,
 ) {
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
   const [section, setSection] = useState<SettingsSection>("connection");
 
   const [apiKey, setApiKey] = useState("");
-  const [privacyDefault, setPrivacyDefault] = useState(true);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [blurDefault, setBlurDefault] = useState(true);
   const [readerMode, setReaderMode] = useState<"single" | "scroll">("single");
 
@@ -31,9 +32,7 @@ export function useSettingsState(
   const hydrate = useCallback((payload: SettingsSummary) => {
     const mt = payload.machine_translation;
     setSettings(payload);
-    setPrivacyDefault(payload.privacy.privacy_mode_default);
     setBlurDefault(payload.privacy.blur_covers_default);
-    onPrivacyModeChange(payload.privacy.privacy_mode_default);
     onBlurCoversChange(payload.privacy.blur_covers_default);
     setReaderMode(payload.reader.default_mode);
     setMtProvider(mt?.provider ?? "google_free");
@@ -41,7 +40,7 @@ export function useSettingsState(
     setMtTargetLang(mt?.target_lang === "zh-TW" ? "zh-TW" : "zh-CN");
     setMtBatchLimit(mt?.batch_limit ?? 20);
     setExportDefaults(payload.export.default_options);
-  }, [onBlurCoversChange, onPrivacyModeChange]);
+  }, [onBlurCoversChange]);
 
   const execute = useCallback(async <T,>(action: () => Promise<T>, onSuccess: (result: T) => void) => {
     const requestId = ++requestRef.current;
@@ -69,6 +68,9 @@ export function useSettingsState(
         hydrate(payload);
         setApiKey("");
         setDeeplKey("");
+        setCurrentPassword("");
+        setNewPassword("");
+        setPasswordConfirmation("");
       },
     );
   }, [execute, hydrate]);
@@ -86,7 +88,7 @@ export function useSettingsState(
     await execute(
       () => api.updateSettings({
         nhentai_api_key: apiKey.trim() || undefined,
-        privacy: { privacy_mode_default: privacyDefault, blur_covers_default: blurDefault },
+        privacy: { blur_covers_default: blurDefault },
         reader: { default_mode: readerMode },
         machine_translation: {
           provider: mtProvider,
@@ -104,7 +106,7 @@ export function useSettingsState(
         setMessage("设置已保存，运行态配置已更新。");
       },
     );
-  }, [apiKey, blurDefault, deeplKey, deeplPlan, execute, exportDefaults, hydrate, mtBatchLimit, mtProvider, mtTargetLang, privacyDefault, readerMode]);
+  }, [apiKey, blurDefault, deeplKey, deeplPlan, execute, exportDefaults, hydrate, mtBatchLimit, mtProvider, mtTargetLang, readerMode]);
 
   const clearKey = useCallback(async () => {
     await execute(
@@ -116,6 +118,28 @@ export function useSettingsState(
       },
     );
   }, [execute, hydrate]);
+
+  const changePassword = useCallback(async () => {
+    if (!currentPassword || !newPassword) {
+      setMessage(null);
+      setError("当前密码和新密码不能为空。");
+      return;
+    }
+    if (newPassword !== passwordConfirmation) {
+      setMessage(null);
+      setError("两次输入的新密码不一致。");
+      return;
+    }
+    await execute(
+      () => api.authChangePassword(currentPassword, newPassword),
+      () => {
+        setCurrentPassword("");
+        setNewPassword("");
+        setPasswordConfirmation("");
+        setMessage("访问密码已修改，其他设备需要使用新密码重新登录。");
+      },
+    );
+  }, [currentPassword, execute, newPassword, passwordConfirmation]);
 
   const clearDeeplKey = useCallback(async () => {
     await execute(
@@ -170,7 +194,6 @@ export function useSettingsState(
     return Boolean(
       apiKey.trim()
       || deeplKey.trim()
-      || privacyDefault !== settings.privacy.privacy_mode_default
       || blurDefault !== settings.privacy.blur_covers_default
       || readerMode !== settings.reader.default_mode
       || mtProvider !== (mt?.provider ?? "google_free")
@@ -181,7 +204,7 @@ export function useSettingsState(
       || exportDefaults.keep_json !== defaults.keep_json
       || exportDefaults.compress !== defaults.compress
     );
-  }, [apiKey, blurDefault, deeplKey, deeplPlan, exportDefaults, mtBatchLimit, mtProvider, mtTargetLang, privacyDefault, readerMode, settings]);
+  }, [apiKey, blurDefault, deeplKey, deeplPlan, exportDefaults, mtBatchLimit, mtProvider, mtTargetLang, readerMode, settings]);
 
   return {
     settings,
@@ -189,8 +212,12 @@ export function useSettingsState(
     setSection,
     apiKey,
     setApiKey,
-    privacyDefault,
-    setPrivacyDefault,
+    currentPassword,
+    setCurrentPassword,
+    newPassword,
+    setNewPassword,
+    passwordConfirmation,
+    setPasswordConfirmation,
     blurDefault,
     setBlurDefault,
     readerMode,
@@ -214,6 +241,7 @@ export function useSettingsState(
     load,
     save,
     clearKey,
+    changePassword,
     clearDeeplKey,
     verify,
     verifyTranslation,

@@ -56,8 +56,10 @@ def test_failed_download_removes_partial_temp_file(tmp_path):
         def download_url(self, gallery_id):
             return {"url": f"https://example.invalid/{gallery_id}.cbz"}
 
-        def download_file(self, _url, destination):
+        def download_file(self, _url, destination, progress=None):
             Path(destination).write_bytes(b"partial")
+            if progress:
+                progress(5, 10)
             raise OSError("connection lost")
 
     class CacheStub:
@@ -74,4 +76,5 @@ def test_failed_download_removes_partial_temp_file(tmp_path):
     imports.run_remote_import(job["id"], 42)
 
     assert jobs.get(job["id"])["status"] == "failed"
+    assert jobs.get(job["id"])["progress"] == {"current": 5, "total": 10, "percent": 53}
     assert not (settings.tmp_dir / "nhentai-42.cbz").exists()

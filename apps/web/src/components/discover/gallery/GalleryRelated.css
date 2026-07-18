@@ -36,6 +36,7 @@
   background: var(--folio-paper-deep);
   color: var(--folio-ink);
   position: relative;
+  text-decoration: none;
 }
 
 .folio-gallery-related-media img,
@@ -71,7 +72,7 @@
   align-content: start;
 }
 
-.folio-gallery-related-copy > button {
+.folio-gallery-related-copy > a {
   min-width: 0;
   padding: 0;
   display: grid;
@@ -82,9 +83,10 @@
   background: transparent;
   color: var(--folio-ink);
   text-align: left;
+  text-decoration: none;
 }
 
-.folio-gallery-related-copy > button strong,
+.folio-gallery-related-copy > a strong,
 .folio-gallery-related-copy > small {
   display: block;
   overflow: hidden;
@@ -92,15 +94,15 @@
   white-space: nowrap;
 }
 
-.folio-gallery-related-copy > button strong {
+.folio-gallery-related-copy > a strong {
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 14px;
   font-weight: 600;
 }
 
-.folio-gallery-related-copy > button svg { color: var(--folio-red); opacity: .45; }
-.folio-gallery-related-copy > button:hover { color: var(--folio-red); }
-.folio-gallery-related-copy > button:hover svg { opacity: 1; transform: translate(2px, -2px); }
+.folio-gallery-related-copy > a svg { color: var(--folio-red); opacity: .45; }
+.folio-gallery-related-copy > a:hover { color: var(--folio-red); }
+.folio-gallery-related-copy > a:hover svg { opacity: 1; transform: translate(2px, -2px); }
 
 .folio-gallery-related-copy > small {
   margin-top: 7px;

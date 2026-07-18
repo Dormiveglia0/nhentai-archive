@@ -18,12 +18,14 @@ export function FolioEmptyState({
   title,
   copy,
   action,
+  actionHref,
   onAction,
 }: {
   icon: typeof Settings;
   title: string;
   copy: string;
   action?: string;
+  actionHref?: string;
   onAction?: () => void;
 }) {
   return (
@@ -31,7 +33,8 @@ export function FolioEmptyState({
       <div className="folio-empty-mark"><Icon size={23} /></div>
       <strong>{title}</strong>
       <p>{copy}</p>
-      {action && onAction ? <button type="button" onClick={onAction}>{action}<ArrowRight size={14} /></button> : null}
+      {action && actionHref ? <a href={actionHref}>{action}<ArrowRight size={14} /></a> : null}
+      {action && !actionHref && onAction ? <button type="button" onClick={onAction}>{action}<ArrowRight size={14} /></button> : null}
     </div>
   );
 }

@@ -10,6 +10,7 @@ type ShelledPageName = Exclude<Page["name"], "reader" | "readerRemote">;
 type Props = {
   activePage: ShelledPageName;
   scrollKey: string;
+  onLogout: () => Promise<void>;
   children: ReactNode;
 };
 
@@ -33,6 +34,7 @@ function chromeRoute(activePage: ShelledPageName): { page: FolioPageId; heading?
 export function ArchiveShell({
   activePage,
   scrollKey,
+  onLogout,
   children
 }: Props) {
   const route = chromeRoute(activePage);
@@ -44,6 +46,7 @@ export function ArchiveShell({
         heading={route.heading}
         onNavigate={(name: FolioPageId) => navigate({ name } as Parameters<typeof navigate>[0])}
         scrollKey={scrollKey}
+        onLogout={onLogout}
       >
         {children}
       </FolioChrome>

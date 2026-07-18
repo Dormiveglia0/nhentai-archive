@@ -1,3 +1,4 @@
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { m } from "motion/react";
 
 import { usePrefersReducedMotion } from "../../lib/motion";
@@ -7,14 +8,68 @@ import type { SettingsVM } from "./useSettingsState";
 export function PreferencesSection({ vm }: { vm: SettingsVM }) {
   const reduceMotion = usePrefersReducedMotion();
   return (
-    <section className="folio-settings-section" aria-label="隐私与阅读偏好配置">
+    <section className="folio-settings-section" aria-label="访问与阅读配置">
+      <div className="folio-settings-subhead">
+        <h3><KeyRound size={16} />修改访问密码</h3>
+        <span>任意非空密码，不限制字符组合</span>
+      </div>
+      <div className="folio-field-matrix folio-settings-password-grid">
+        <label className="folio-field">
+          <span>当前密码</span>
+          <input
+            type="password"
+            value={vm.currentPassword}
+            onChange={(event) => vm.setCurrentPassword(event.target.value)}
+            autoComplete="current-password"
+            maxLength={256}
+          />
+          <i />
+        </label>
+        <label className="folio-field">
+          <span>新密码</span>
+          <input
+            type="password"
+            value={vm.newPassword}
+            onChange={(event) => vm.setNewPassword(event.target.value)}
+            autoComplete="new-password"
+            maxLength={256}
+          />
+          <i />
+        </label>
+        <label className="folio-field">
+          <span>再次输入新密码</span>
+          <input
+            type="password"
+            value={vm.passwordConfirmation}
+            onChange={(event) => vm.setPasswordConfirmation(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              void vm.changePassword();
+            }}
+            autoComplete="new-password"
+            maxLength={256}
+          />
+          <i />
+        </label>
+      </div>
+      <div className="folio-settings-inline-actions folio-settings-password-actions">
+        <button
+          className="folio-line-button"
+          type="button"
+          onClick={() => void vm.changePassword()}
+          disabled={vm.loading || !vm.currentPassword || !vm.newPassword}
+        >
+          <ShieldCheck size={15} />
+          修改密码
+        </button>
+        <span className="folio-settings-action-hint">修改后当前设备保持登录，其他设备的会话会失效。</span>
+      </div>
+
+      <div className="folio-settings-subhead">
+        <h3>封面与阅读默认值</h3>
+      </div>
       <div className="folio-toggle-list folio-settings-toggle-list">
-        <FolioToggleRow
-          label="隐私模式默认开启"
-          copy="页面切换时保持敏感信息收敛。"
-          checked={vm.privacyDefault}
-          onChange={vm.setPrivacyDefault}
-        />
         <FolioToggleRow
           label="封面模糊默认开启"
           copy="媒体内容在主动操作前保持模糊。"
@@ -37,7 +92,7 @@ export function PreferencesSection({ vm }: { vm: SettingsVM }) {
         </div>
       </div>
 
-      <p className="folio-settings-note">这里只保存默认值；阅读器内的临时切换不会覆盖此处配置。</p>
+      <p className="folio-settings-note">这里只保存默认值；阅读器内仍可随时临时切换阅读方式。</p>
     </section>
   );
 }

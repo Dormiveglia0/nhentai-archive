@@ -25,6 +25,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
 }
 
 .folio-gallery-context button:hover,
@@ -169,7 +170,7 @@
     gap: 36px;
   }
 
-  .folio-gallery-cover-stage { height: 322px; }
+  .folio-gallery-cover-stage { width: min(100%, calc(322px * var(--gallery-cover-ratio, 0.75))); }
   .folio-gallery-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .folio-gallery-related-list { grid-template-columns: minmax(0, 1fr); }
 }
@@ -200,8 +201,7 @@
   }
 
   .folio-gallery-cover-stage {
-    width: min(250px, 76vw);
-    height: 320px;
+    width: min(250px, 76vw, calc(320px * var(--gallery-cover-ratio, 0.75)));
     justify-self: center;
     grid-row: 2;
   }
@@ -212,7 +212,7 @@
   .folio-gallery-hero-copy h1 { font-size: clamp(28px, 9vw, 40px); }
   .folio-gallery-facts { text-align: left; }
   .folio-gallery-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .folio-gallery-actions button { min-width: 0; }
+  .folio-gallery-actions :is(button, a) { min-width: 0; }
 
   .folio-gallery-section-head {
     align-items: flex-start;
@@ -226,6 +226,8 @@
   }
 
   .folio-gallery-tag-group h3 { margin-top: 0; }
+  .folio-gallery-tag-group a { padding: 0 11px; }
+  .folio-gallery-tag-group a svg { display: none; }
   .folio-gallery-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .folio-gallery-preview-loading { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 

@@ -66,6 +66,7 @@
   background: transparent;
   color: var(--folio-ink);
   text-align: left;
+  text-decoration: none;
 }
 
 .folio-shelf-cover {
@@ -170,6 +171,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 13px;
+  text-decoration: none;
 }
 
 .folio-query-tags {
@@ -732,4 +734,108 @@
   color: var(--folio-muted);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 13px;
+}
+
+.folio-work-delete-inline-error {
+  grid-column: 1 / -1;
+  color: var(--folio-red);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.folio-work-delete-dialog {
+  max-height: min(640px, calc(100dvh - 32px));
+  overflow: auto;
+  color: var(--folio-ink);
+  overscroll-behavior: contain;
+}
+
+.folio-work-delete-dialog::backdrop {
+  background: rgba(23, 24, 21, 0.46);
+  backdrop-filter: blur(5px);
+}
+
+.folio-work-delete-dialog > header > span {
+  color: var(--folio-red);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.folio-work-delete-title {
+  margin-top: 20px;
+  display: block;
+  overflow: hidden;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-work-delete-warnings {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  list-style: none;
+}
+
+.folio-work-delete-warnings li {
+  min-height: 34px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(154, 103, 31, 0.08);
+  color: #80601f;
+  font-size: 12px;
+}
+
+.folio-work-delete-dialog .folio-work-delete-error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--folio-red);
+  background: var(--folio-red-soft);
+  color: var(--folio-red);
+}
+
+.folio-modal.folio-work-delete-dialog > .folio-work-delete-actions {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(96px, 0.6fr);
+  gap: 8px;
+}
+
+.folio-work-delete-actions button {
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--folio-line-strong);
+  background: transparent;
+  color: var(--folio-ink);
+}
+
+.folio-work-delete-actions button.is-danger {
+  border-color: var(--folio-red);
+  background: var(--folio-red);
+  color: var(--folio-paper-bright);
+}
+
+.folio-work-delete-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+@media (max-width: 520px) {
+  .folio-work-delete-dialog {
+    padding: 26px 20px;
+  }
+
+  .folio-modal.folio-work-delete-dialog > .folio-work-delete-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

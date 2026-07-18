@@ -97,7 +97,7 @@ class ArchiveService:
                     INSERT INTO work_files (work_id, kind, path, size_bytes, sha256)
                     VALUES (?, 'source_cbz', ?, ?, ?)
                     """,
-                    (work_id, str(stored_path), stored_path.stat().st_size, digest),
+                    (work_id, self.db.managed_path(stored_path), stored_path.stat().st_size, digest),
                 )
                 for index, (member, size) in enumerate(page_entries, start=1):
                     media_type = mimetypes.guess_type(member)[0] or "application/octet-stream"
@@ -120,7 +120,7 @@ class ArchiveService:
                         title_japanese,
                         pretty_title,
                         len(page_members),
-                        str(cover_path) if cover_path else None,
+                        self.db.managed_path(cover_path) if cover_path else None,
                         work_id,
                     ),
                 )

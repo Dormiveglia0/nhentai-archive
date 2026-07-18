@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from app.config import load_settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
+from app.services.auth_service import AuthService
 from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.export_job_service import ExportJobService
@@ -52,6 +53,7 @@ def build_services() -> SimpleNamespace:
     return SimpleNamespace(
         settings=settings,
         db=db,
+        auth=AuthService(db),
         client=client,
         jobs=jobs,
         archive=archive,

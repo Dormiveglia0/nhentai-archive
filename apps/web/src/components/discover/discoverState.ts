@@ -75,6 +75,7 @@ export function serializeDiscoverHash(state: PersistedDiscoverState): string {
     if (tag.name) params.set("tag_name", tag.name);
     if (tag.slug) params.set("tag_slug", tag.slug);
     if (tag.display) params.set("tag_display", tag.display);
+    if (tag.excluded) params.set("tag_excluded", "true");
   }
   return `#discover?${params.toString()}`;
 }
@@ -95,6 +96,7 @@ export function discoverFilterKey(input: DiscoverFilterKeyInput): string {
       name: tag.name,
       slug: tag.slug,
       type: tag.type,
+      excluded: Boolean(tag.excluded),
     })),
     sort: input.sort,
     surface: input.surface,
@@ -146,6 +148,7 @@ function readDiscoverHashState(base: PersistedDiscoverState, hash: string): Pers
           name: params.get("tag_name") || undefined,
           slug: params.get("tag_slug") || undefined,
           display: params.get("tag_display") || undefined,
+          excluded: params.get("tag_excluded") === "true",
         }]
       : base.selectedTags,
   };

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type GallerySummary, type RemoteTag } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { navigate, pageHref } from "../../lib/navigation";
 import {
   canReplaceDiscoverHash,
   discoverFilterKey,
@@ -14,7 +14,7 @@ import type { TagFilter } from "./discoverTypes";
 
 const SURFACE = "feed" as const;
 
-export function useDiscoverState(initialTag?: RemoteTag) {
+export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: number) {
   const restored = useMemo(readDiscoverState, []);
   const [query, setQuery] = useState(restored.query);
   const [submittedQuery, setSubmittedQuery] = useState(restored.submittedQuery);
@@ -24,19 +24,16 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   const [unimportedOnly, setUnimportedOnly] = useState(restored.unimportedOnly);
   const [selectedTags, setSelectedTags] = useState<TagFilter[]>(() => initialTag ? [initialTag] : restored.selectedTags);
   const [page, setPage] = useState(restored.page);
-  const [perPage, setPerPage] = useState(discoverPerPage);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState<number | null>(0);
   const [items, setItems] = useState<GallerySummary[]>([]);
-  const [popularCollapseSignal, setPopularCollapseSignal] = useState(0);
   const [popularLoading, setPopularLoading] = useState(false);
   const [popularItems, setPopularItems] = useState<GallerySummary[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const activeQuery = submittedQuery;
-  const collapsePopular = useCallback(() => setPopularCollapseSignal((value) => value + 1), []);
   const initialTagKey = initialTag?.id ?? null;
   const initialPageRef = useRef(restored.page);
   const currentPageRef = useRef(restored.page);
@@ -59,6 +56,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   );
 
   const loadFeed = useCallback(async (nextPage: number, queryOverride?: string) => {
+    if (perPage < 1) return;
     const request = ++feedRequestRef.current;
     setLoading(true);
     setError(null);
@@ -87,7 +85,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
       currentPageRef.current = nextPage;
       setPage(nextPage);
       if (selectedTags.length) {
-        setNotice(`已按词典标签「${selectedTags.map(displayTag).join(" / ")}」筛选；远端查询使用原始 tag 标识。`);
+        setNotice(tagFilterNotice(selectedTags));
       } else if (payload.reason === "min_query_length") {
         setNotice("请输入关键词，或使用语言、类型、tag 组成远端查询。");
       }
@@ -101,6 +99,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   }, [activeQuery, kind, language, perPage, selectedTags, sort, unimportedOnly]);
 
   useEffect(() => {
+    if (perPage < 1) return;
     const previousKey = lastFilterKeyRef.current;
     const filterChanged = previousKey !== null && previousKey !== filterKey;
     const historyPage = historyPageRef.current;
@@ -118,17 +117,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
 
   useEffect(() => () => {
     feedRequestRef.current += 1;
-  }, []);
-
-  useEffect(() => {
-    function updatePageSize() {
-      setPerPage((current) => {
-        const next = discoverPerPage();
-        return current === next ? current : next;
-      });
-    }
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
   }, []);
 
   useEffect(() => {
@@ -166,13 +154,11 @@ export function useDiscoverState(initialTag?: RemoteTag) {
       setSelectedTags(next.selectedTags);
       setPage(next.page);
       scrollDiscoverTo(next.scrollY);
-      collapsePopular();
-
       if (!filtersChanged) void loadFeed(next.page);
     };
     window.addEventListener("popstate", restoreHistoryEntry);
     return () => window.removeEventListener("popstate", restoreHistoryEntry);
-  }, [collapsePopular, filterKey, loadFeed]);
+  }, [filterKey, loadFeed]);
 
   useEffect(() => {
     persistDiscoverState(currentDiscoverState({
@@ -232,8 +218,7 @@ export function useDiscoverState(initialTag?: RemoteTag) {
     setSelectedTags([initialTag]);
     currentPageRef.current = 1;
     setPage(1);
-    collapsePopular();
-  }, [collapsePopular, initialTag, initialTagKey]);
+  }, [initialTag, initialTagKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,14 +239,16 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   }, []);
 
   function openDetail(id: number) {
-    collapsePopular();
     const state = snapshot();
     persistDiscoverState(state, true);
     navigate({ name: "gallery", galleryId: id, returnTo: serializeDiscoverHash(state).replace(/^#/, "") });
   }
 
+  function detailHref(id: number) {
+    return pageHref({ name: "gallery", galleryId: id, returnTo: serializeDiscoverHash(snapshot()).replace(/^#/, "") });
+  }
+
   async function openRandom() {
-    collapsePopular();
     setLoading(true);
     setError(null);
     try {
@@ -275,7 +262,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   }
 
   async function submitToolbar() {
-    collapsePopular();
     const nextQuery = query.trim();
     if (/^\d+$/.test(nextQuery)) {
       navigate({ name: "gallery", galleryId: Number(nextQuery) });
@@ -291,7 +277,6 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   }
 
   async function enqueueGalleryId(galleryId: number) {
-    collapsePopular();
     setLoading(true);
     setError(null);
     try {
@@ -305,21 +290,21 @@ export function useDiscoverState(initialTag?: RemoteTag) {
   }
 
   function pickTag(tag: RemoteTag) {
-    collapsePopular();
-    setSelectedTags((current) => current.some((item) => item.id === tag.id) ? current : [...current, tag]);
+    setSelectedTags((current) => current.some((item) => item.id === tag.id && !item.excluded)
+      ? current
+      : [...current.filter((item) => item.id !== tag.id), { ...tag, excluded: false }]);
     currentPageRef.current = 1;
     setPage(1);
   }
 
   function loadPage(nextPage: number) {
-    collapsePopular();
     const boundedPage = Math.max(1, nextPage);
     const current = snapshot();
     persistDiscoverState(current, false);
     currentPageRef.current = boundedPage;
     persistDiscoverState({ ...current, page: boundedPage, scrollY: 0 }, true, "push");
-    scrollDiscoverTo(0);
-    void loadFeed(boundedPage);
+    scrollDiscoverFeedToTop();
+    void loadFeed(boundedPage).then(scrollDiscoverFeedToTop);
   }
 
   function snapshot(): PersistedDiscoverState {
@@ -351,34 +336,45 @@ export function useDiscoverState(initialTag?: RemoteTag) {
     loading,
     error,
     notice,
-    popularCollapseSignal,
     popularLoading,
     popularItems,
     openDetail,
+    detailHref,
     openRandom,
     enqueueGalleryId,
     submitToolbar,
     pickTag,
     loadPage,
-    setQuery: (value: string) => { collapsePopular(); setQuery(value); },
-    setLanguage: (value: string) => { collapsePopular(); setLanguage(value); },
-    setKind: (value: string) => { collapsePopular(); setKind(value); },
-    setSort: (value: string) => { collapsePopular(); setSort(value); },
-    setUnimportedOnly: (value: boolean) => { collapsePopular(); setUnimportedOnly(value); },
-    setSelectedTags: (tags: TagFilter[]) => { collapsePopular(); setSelectedTags(tags); },
+    setQuery,
+    setLanguage,
+    setKind,
+    setSort,
+    setUnimportedOnly,
+    setSelectedTags,
   };
 }
 
 function shouldUseTagged(tags: TagFilter[], query: string, language: string, kind: string) {
-  return tags.length === 1 && !query.trim() && language === "all" && kind === "all";
+  return tags.length === 1 && !tags[0].excluded && !query.trim() && language === "all" && kind === "all";
 }
 
 function tagQueryValue(tag: TagFilter) {
-  return tag.name || tag.slug || "";
+  const value = tag.name || tag.slug || "";
+  const clause = value && tag.type ? `${tag.type}:${value}` : value;
+  return clause && tag.excluded ? `-${clause}` : clause;
 }
 
 function displayTag(tag: TagFilter) {
   return tag.display || tag.name || tag.slug || String(tag.id);
+}
+
+function tagFilterNotice(tags: TagFilter[]) {
+  const included = tags.filter((tag) => !tag.excluded).map(displayTag);
+  const excluded = tags.filter((tag) => tag.excluded).map(displayTag);
+  return [
+    included.length ? `包含「${included.join(" / ")}」` : "",
+    excluded.length ? `排除「${excluded.join(" / ")}」` : "",
+  ].filter(Boolean).join("；") + "；远端查询使用原始 tag 标识。";
 }
 
 function readDiscoverState(historyState: unknown = window.history.state): PersistedDiscoverState {
@@ -431,10 +427,8 @@ function scrollDiscoverTo(top: number) {
   else window.scrollTo({ top, behavior: "auto" });
 }
 
-function discoverPerPage() {
-  const workspaceGutter = 76;
-  const cardWidth = 224;
-  const gap = 16;
-  const usableWidth = Math.max(cardWidth, window.innerWidth - workspaceGutter);
-  return Math.max(1, Math.floor((usableWidth + gap) / (cardWidth + gap))) * 4;
+function scrollDiscoverFeedToTop() {
+  window.requestAnimationFrame(() => {
+    document.querySelector<HTMLElement>(".folio-discover-feed")?.scrollIntoView({ block: "start", behavior: "auto" });
+  });
 }

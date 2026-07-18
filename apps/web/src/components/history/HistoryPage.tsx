@@ -2,7 +2,7 @@ import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, Clock3, History, R
 import type { CSSProperties } from "react";
 
 import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
+import { goBack, pageHref } from "../../lib/navigation";
 import { IconPager } from "../folio/ui/IconPager";
 import { FolioMetricGrid } from "../folio/ui/FolioMetricGrid";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
@@ -25,7 +25,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
   return (
     <section className="folio-page-body folio-history-page">
       <header className="folio-history-context">
-        <button type="button" onClick={() => navigate({ name: "library" })}>
+        <button type="button" onClick={goBack}>
           <ArrowLeft size={15} />
           返回我的库
         </button>
@@ -54,7 +54,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
             title="还没有阅读轨迹"
             copy="打开任意已入库作品后，这里会按真实日期记录阅读进度。"
             action="浏览我的库"
-            onAction={() => navigate({ name: "library" })}
+            actionHref={pageHref({ name: "library" })}
           />
         </section>
       ) : null}
@@ -74,10 +74,9 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
                   const percent = Math.max(0, Math.min(100, entry.progress_percent));
                   return (
                     <StaggerItem key={`${entry.id}-${entry.date}`} className="folio-history-row-wrap">
-                      <button
+                      <a
                         className="folio-history-row"
-                        type="button"
-                        onClick={() => navigate({ name: "reader", workId: entry.id })}
+                        href={pageHref({ name: "reader", workId: entry.id })}
                       >
                         <span className="folio-history-cover">
                           {entry.cover_path ? (
@@ -102,7 +101,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
                           <i style={{ "--folio-history-progress": `${percent}%` } as CSSProperties}><span /></i>
                         </span>
                         <ArrowUpRight className="folio-history-open" size={17} />
-                      </button>
+                      </a>
                     </StaggerItem>
                   );
                 })}

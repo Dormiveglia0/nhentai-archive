@@ -19,8 +19,8 @@ export type GalleryDetail = {
   gallery_id: number;
   media_id?: string;
   title: { english?: string; japanese?: string; pretty?: string };
-  cover?: { path?: string; url?: string };
-  thumbnail?: { path?: string; url?: string };
+  cover?: { path?: string; url?: string; width?: number; height?: number };
+  thumbnail?: { path?: string; url?: string; width?: number; height?: number };
   tags: Array<{ id: number; type: string; name: string; slug: string; display?: string }>;
   page_count: number;
   pages?: Array<{ index?: number; path?: string; url?: string; width?: number; height?: number }>;
@@ -785,6 +785,12 @@ export type NhentaiRuntimeStats = {
   cdn_configured: boolean;
 };
 
+export type AuthStatus = {
+  configured: boolean;
+  authenticated: boolean;
+  session_days: number;
+};
+
 export type SettingsSummary = {
   nhentai: {
     base_url: string;
@@ -802,7 +808,6 @@ export type SettingsSummary = {
   };
   storage: Record<string, string>;
   privacy: {
-    privacy_mode_default: boolean;
     blur_covers_default: boolean;
   };
   reader: {
@@ -838,6 +843,7 @@ export type DiscoverSearchParams = {
 };
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
+export const AUTH_REQUIRED_EVENT = "nh-archive-auth-required";
 const DISCOVER_CACHE = new Map<string, { expiresAt: number; value: unknown; promise?: Promise<unknown> }>();
 let completedImportJobs = "";
 
@@ -853,6 +859,9 @@ function clearDiscoverCache<T>(value: T): T {
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options);
   if (!response.ok) {
+    if (response.status === 401 && url !== "/api/auth/login") {
+      window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
+    }
     let message = `${response.status} ${response.statusText}`;
     try {
       const payload = await response.json();
@@ -882,6 +891,7 @@ function filenameFromDisposition(header: string | null, fallback: string): strin
 async function downloadFile(url: string, options: RequestInit, fallbackName: string): Promise<string> {
   const response = await fetch(url, options);
   if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
     let message = `${response.status} ${response.statusText}`;
     try {
       const payload = await response.json();
@@ -941,6 +951,23 @@ async function jobsWithCacheCoherence(): Promise<{ result: Job[] }> {
 }
 
 export const api = {
+  authStatus: () => request<AuthStatus>("/api/auth/status"),
+  authSetup: (password: string) => request<AuthStatus>("/api/auth/setup", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ password }),
+  }),
+  authLogin: (password: string) => request<AuthStatus>("/api/auth/login", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ password }),
+  }),
+  authChangePassword: (currentPassword: string, newPassword: string) => request<AuthStatus>("/api/auth/change", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  }),
+  authLogout: () => request<{ ok: boolean }>("/api/auth/logout", { method: "POST", headers: JSON_HEADERS }),
   latest: (page = 1, perPage = 24) =>
     cachedDiscoverRequest<{ result: GallerySummary[]; total: number; num_pages?: number; per_page?: number }>(
       `/api/discover/latest?page=${page}&per_page=${perPage}`

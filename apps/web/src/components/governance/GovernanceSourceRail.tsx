@@ -1,7 +1,7 @@
 import { ArrowRight, CheckCircle2, Database, FileArchive, Tags } from "lucide-react";
 
 import type { GovernanceAggregate } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { goBack, navigate, pageHref } from "../../lib/navigation";
 import { formatBytes } from "../../lib/format";
 
 export function GovernanceSourceRail({
@@ -29,10 +29,11 @@ export function GovernanceSourceRail({
               <ul>
                 {aggregate.recommended_actions.map((action) => (
                   <li key={action.code}>
-                    <button type="button" onClick={() => runAction(action.code)}>
-                      <span>{action.label}</span>
-                      <ArrowRight size={14} />
-                    </button>
+                    {actionHref(action.code) ? (
+                      <a href={actionHref(action.code)}><span>{action.label}</span><ArrowRight size={14} /></a>
+                    ) : (
+                      <button type="button" onClick={() => runAction(action.code)}><span>{action.label}</span><ArrowRight size={14} /></button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -40,7 +41,7 @@ export function GovernanceSourceRail({
               <div className="folio-governance-source-complete">
                 <CheckCircle2 size={18} />
                 <p>当前作品没有系统待办，仍可人工复核字段。</p>
-                <button type="button" onClick={() => navigate({ name: "library" })}>返回我的库</button>
+                <button type="button" onClick={goBack}>返回我的库</button>
               </div>
             )}
           </section>
@@ -89,6 +90,12 @@ function runAction(code: string) {
   if (code === "untagged" || code === "missing_source" || code === "missing_cover") {
     navigate({ name: "files" });
   }
+}
+
+function actionHref(code: string) {
+  if (code === "dictionary_conflict") return pageHref({ name: "dictionary" });
+  if (code === "untagged" || code === "missing_source" || code === "missing_cover") return pageHref({ name: "files" });
+  return undefined;
 }
 
 function scrollToSection(id: string) {

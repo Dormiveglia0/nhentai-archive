@@ -105,12 +105,22 @@ class JobService:
                     self._log_with_conn(conn, job_id, "error", message)
         return len(rows)
 
-    def mark_running(self, job_id: int, stage: str, current: int = 0, total: int = 0) -> None:
-        self.update_progress(job_id, "running", stage, current, total)
+    def mark_running(
+        self, job_id: int, stage: str, current: int = 0, total: int = 0, percent: int | None = None
+    ) -> None:
+        self.update_progress(job_id, "running", stage, current, total, percent)
 
-    def update_progress(self, job_id: int, status: str, stage: str, current: int, total: int) -> None:
+    def update_progress(
+        self,
+        job_id: int,
+        status: str,
+        stage: str,
+        current: int,
+        total: int,
+        percent: int | None = None,
+    ) -> None:
         current_job = self.checkpoint(job_id)
-        percent = round((current / total) * 100) if total else 0
+        percent = max(0, min(100, percent if percent is not None else round((current / total) * 100) if total else 0))
         with self.db.connect() as conn:
             conn.execute(
                 """

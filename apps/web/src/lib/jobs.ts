@@ -1,4 +1,5 @@
 import type { Job } from "./api";
+import { formatBytes } from "./format";
 
 export type JobStatusFilter = "all" | Job["status"];
 
@@ -162,6 +163,12 @@ export function formatTime(value?: string | null) {
 
 export function formatDurationHint(job: Job) {
   if (job.retry_after && job.status === "failed") return `约 ${job.retry_after} 秒后可重试`;
+  if (job.stage === "downloading_cbz") {
+    const bytes = job.progress.total > 0
+      ? `${formatBytes(job.progress.current)} / ${formatBytes(job.progress.total)}`
+      : `已下载 ${formatBytes(job.progress.current)}`;
+    return job.meta?.page_count ? `${bytes} · ${job.meta.page_count} 页` : bytes;
+  }
   if (job.progress.total > 0) return `${job.progress.current} / ${job.progress.total}`;
   return statusLabel(job.status);
 }

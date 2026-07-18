@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import type { GovernanceTag } from "../../lib/api";
-import { navigate, tagSearchHref } from "../../lib/navigation";
+import { pageHref, tagSearchHref } from "../../lib/navigation";
 
 type Props = {
   tag: GovernanceTag;
@@ -18,7 +18,7 @@ export function GovernanceTagItem({ tag, busy, onApply, onReview }: Props) {
     <span className={`folio-governance-tag is-${tag.state}${editing ? " is-editing" : ""}`}>
       <a href={tagSearchHref({ id: tag.remote_tag_id, type: tag.type, name: tag.name, slug: tag.slug, display: tag.display })}>{tag.display}</a>
       {tag.state === "conflict" ? (
-        <button type="button" onClick={() => navigate({ name: "dictionary" })}>解决冲突</button>
+        <a className="folio-governance-tag-action" href={pageHref({ name: "dictionary" })}>解决冲突</a>
       ) : tag.state === "pending" && tag.dictionary_id ? (
         <button type="button" disabled={busy} onClick={() => void onReview(tag)}>{busy ? "确认中" : "确认译名"}</button>
       ) : tag.state === "unmapped" && tag.remote_tag_id ? (

@@ -866,7 +866,7 @@
   border-top: 1px solid var(--folio-line);
 }
 
-.folio-governance-source-actions li button {
+.folio-governance-source-actions li :is(button, a) {
   width: 100%;
   min-height: 42px;
   padding: 8px 2px;
@@ -879,10 +879,11 @@
   color: var(--folio-muted);
   font-size: 12px;
   text-align: left;
+  text-decoration: none;
   transition: color 180ms ease, padding 180ms ease;
 }
 
-.folio-governance-source-actions li button:hover {
+.folio-governance-source-actions li :is(button, a):hover {
   padding-left: 8px;
   color: var(--folio-red);
 }
@@ -913,6 +914,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
 }
 
 .folio-governance-source-empty {
@@ -960,6 +962,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
   transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
@@ -1398,7 +1401,7 @@
   .folio-governance-cover-frame.is-active::before,
   .folio-governance-queue-card,
   .folio-governance-queue-card::before,
-  .folio-governance-source-actions li button {
+  .folio-governance-source-actions li :is(button, a) {
     animation: none;
     transition: none;
   }

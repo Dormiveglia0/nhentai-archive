@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api, type GalleryDetail } from "../../../lib/api";
-import { navigate } from "../../../lib/navigation";
 import { galleryTitle } from "./galleryDetailModel";
 
-export function useGalleryDetail(galleryId: number, returnTo?: string) {
+export function useGalleryDetail(galleryId: number) {
   const [detail, setDetail] = useState<GalleryDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,21 +50,6 @@ export function useGalleryDetail(galleryId: number, returnTo?: string) {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const goBack = useCallback(() => {
-    if (returnTo) {
-      window.history.replaceState(null, "", `#${returnTo}`);
-      window.dispatchEvent(new Event("hashchange"));
-      return;
-    }
-    navigate({ name: "discover" });
-  }, [returnTo]);
-
-  const read = useCallback(() => {
-    if (!detail) return;
-    if (detail.imported && detail.work_id) navigate({ name: "reader", workId: detail.work_id });
-    else navigate({ name: "readerRemote", galleryId: detail.gallery_id });
-  }, [detail]);
-
   const enqueue = useCallback(async () => {
     if (!detail || importing || queued) return;
     const request = ++importRequest.current;
@@ -93,8 +77,6 @@ export function useGalleryDetail(galleryId: number, returnTo?: string) {
     notice,
     importing,
     queued,
-    goBack,
-    read,
     enqueue,
     reload: () => setRevision((value) => value + 1),
   };

@@ -2,6 +2,7 @@ name: nh-archive
 
 services:
   app:
+    build: .
     image: ghcr.io/dormiveglia0/nhentai-archive:latest
     init: true
     restart: unless-stopped

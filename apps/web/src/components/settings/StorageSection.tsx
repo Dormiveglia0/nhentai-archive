@@ -2,7 +2,7 @@ import { AlertTriangle, Archive, ArrowUpRight, Clock3, FileWarning, Folder, Hard
 import { useEffect, useRef, useState } from "react";
 
 import { api, type FileOverview } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { pageHref } from "../../lib/navigation";
 import { FolioField } from "../folio/ui/FolioPrimitives";
 import { FolioMetricGrid, type FolioMetricItem } from "../folio/ui/FolioMetricGrid";
 import { formatBytes } from "../../lib/format";
@@ -62,10 +62,10 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
 
       <div className="folio-settings-storage-head">
         <div className="folio-settings-subhead"><h3><HardDrive size={16} />磁盘占用</h3></div>
-        <button className="folio-line-button" type="button" onClick={() => navigate({ name: "files" })}>
+        <a className="folio-line-button" href={pageHref({ name: "files" })}>
           打开文件管理
           <ArrowUpRight size={15} />
-        </button>
+        </a>
       </div>
       <FolioMetricGrid ariaLabel="磁盘占用摘要" className="folio-settings-storage-grid" items={usage} />
 

@@ -1,17 +1,18 @@
-import { AlertTriangle, ArrowUpRight, Loader2, Pause, RotateCcw, Target } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Loader2, Pause, RotateCcw, Target, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type Job } from "../../lib/api";
 import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
-import { canRetry, jobTypeLabel, stageLabel, statusLabel, targetLabel } from "../../lib/jobs";
+import { pageHref } from "../../lib/navigation";
+import { canRetry, formatDurationHint, jobTypeLabel, stageLabel, statusLabel, targetLabel } from "../../lib/jobs";
 import "./TaskDock.css";
 
 export function TaskDock() {
   const reduceMotion = usePrefersReducedMotion();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<number | null>(null);
   const requestId = useRef(0);
   const mounted = useRef(true);
@@ -73,9 +74,15 @@ export function TaskDock() {
     [jobs]
   );
   const failedJobs = jobs.filter((job) => job.status === "failed");
-  const shouldRender = Boolean(error) || activeJobs.length > 0 || failedJobs.length > 0;
   const visibleJobs = [...activeJobs, ...failedJobs].slice(0, 2);
   const relevantCount = activeJobs.length + failedJobs.length;
+  const dockKey = error
+    ? `error:${error}`
+    : [...activeJobs, ...failedJobs]
+      .map((job) => `${job.id}:${job.status === "failed" ? "failed" : "active"}`)
+      .sort()
+      .join("|");
+  const shouldRender = Boolean(dockKey) && dismissedKey !== dockKey;
 
   async function retry(job: Job) {
     if (!canRetry(job) || retryingId !== null) return;
@@ -103,12 +110,21 @@ export function TaskDock() {
           exit={{ opacity: 0, x: reduceMotion ? 0 : 18, y: 0 }}
           transition={{ duration: duration.base, ease: ease.standard }}
         >
-          <button className="folio-task-dock-head" type="button" onClick={() => navigate({ name: "tasks" })}>
+          <button
+            className="folio-task-dock-dismiss"
+            type="button"
+            aria-label="隐藏任务进度"
+            onClick={() => setDismissedKey(dockKey)}
+          >
+            <X size={15} />
+          </button>
+
+          <a className="folio-task-dock-head" href={pageHref({ name: "tasks" })}>
             <span className="folio-task-dock-mark" aria-hidden="true"><Target size={17} /><i /></span>
             <span><small>LIVE OPERATIONS</small><strong>任务动态</strong></span>
             <em>{relevantCount}</em>
             <ArrowUpRight size={16} />
-          </button>
+          </a>
 
           {error ? <p className="folio-task-dock-error" role="alert"><AlertTriangle size={15} /><span>{error}</span></p> : null}
 
@@ -124,7 +140,7 @@ export function TaskDock() {
                   </span>
                   <span className="folio-task-dock-copy">
                     <strong>{failed ? `${jobTypeLabel(job.type)}失败` : paused ? statusLabel(job.status) : stageLabel(job.stage)}</strong>
-                    <small title={failed ? job.error ?? targetLabel(job) : targetLabel(job)}>{failed ? job.error ?? targetLabel(job) : targetLabel(job)}</small>
+                    <small title={failed ? job.error ?? targetLabel(job) : targetLabel(job)}>{failed ? job.error ?? targetLabel(job) : job.stage === "downloading_cbz" ? formatDurationHint(job) : targetLabel(job)}</small>
                   </span>
                   {failed ? (
                     canRetry(job) ? <button type="button" onClick={() => void retry(job)} disabled={retryingId !== null}><RotateCcw size={14} />{retryingId === job.id ? "重试中" : "重试"}</button> : null

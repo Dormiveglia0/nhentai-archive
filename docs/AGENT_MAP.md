@@ -5,7 +5,7 @@ Use this file as the first frontend navigation index. Read only the row for the 
 ## Active Frontend Contract
 
 - Visual source of truth: `http://127.0.0.1:5173/demo`, shared system `apps/web/src/components/folio/`, and demo-only bodies in `apps/web/src/components/demo/modules/`.
-- Formal application: hash routes composed by `apps/web/src/App.tsx` and backed by real APIs in `apps/web/src/lib/api.ts`.
+- Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
 - Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
@@ -39,7 +39,7 @@ FrontendDemo.tsx
 | 队列 | `demo/modules/TasksDemo.tsx` | `folio/scenes/TasksScene.tsx` | `tasks/TasksPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-task-*` | `tasks/TasksPage.tsx`, `useTasksState.ts` and feature components | `api.jobs/jobLogs/pause/resume/cancel/retry/delete/clear` |
 | 导出 | `demo/modules/ExportDemo.tsx` | `folio/scenes/ExportScene.tsx` | `export/ExportPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-export-*` | `export/ExportPage.tsx`, `useExportState.ts` and feature components | `api.exportQueue/preview/download/bundle/enqueueBulkExport` |
 | 文件 | `demo/modules/FilesDemo.tsx` | `folio/scenes/FilesScene.tsx` | `files/FilesPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-files-*` | `files/FilesPage.tsx`, `useFilesState.ts`, `FileList.tsx`, `FileDetailPanel.tsx`, `FileDeleteDialog.tsx` | `api.filesOverview/inventory/duplicates/previewDelete/deleteFiles/scanLibraryPreview/enqueueLibraryScan` |
-| 设置 | `demo/modules/SettingsDemo.tsx` | `folio/scenes/SettingsScene.tsx` | `settings/SettingsPage.css`, shared controls in `folio/styles/settings.css`, scene prefix `folio-scene-settings-*` | `settings/SettingsPage.tsx`, `useSettingsState.ts`, section components | `api.settings/updateSettings/verify*/runtime/librarySummary/filesOverview` |
+| 设置 | `demo/modules/SettingsDemo.tsx` | `folio/scenes/SettingsScene.tsx` | `settings/SettingsPage.css`, shared controls in `folio/styles/settings.css`, scene prefix `folio-scene-settings-*` | `settings/SettingsPage.tsx`, `useSettingsState.ts`, section components | `api.settings/updateSettings/verify*/authChangePassword/runtime/librarySummary/filesOverview` |
 
 Paths in the table are relative to `apps/web/src/components/` unless stated otherwise.
 
@@ -65,15 +65,19 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
 | Formal summary/status metric entries and semantic tones | `folio/ui/FolioMetricGrid.tsx` + `folio/styles/workbench.css` |
-| Shared pagination, tag scroller, and work shelf | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx` |
+| Shared pagination, tag scroller, work shelf, and non-cropping cover frame | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx`, `AmbientCover.tsx` |
 | Shared byte and work-title formatting | `lib/format.ts` |
 | Shared job labels, status rules, and action predicates | `lib/jobs.ts` |
 | Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |
 | Demo page dispatch | `demo/modules/DemoPage.tsx` |
 | Live task overlay outside reader routes | `layout/TaskDock.tsx` + `layout/TaskDock.css` |
+| Single-password gate, persistent session, change-password flow, and lock action | `auth/AuthGate.tsx` + `auth/AuthGate.css`; `settings/PreferencesSection.tsx` + `useSettingsState.ts`; `App.tsx` keeps every formal/demo route behind it |
 | Hash dispatch and route-level code splitting | `App.tsx` |
 | Folio/immersive-reader loading states | `layout/RouteFallback.tsx` + `layout/RouteFallback.css` |
 | Tag-search URL + middle/modifier-click contract | `lib/navigation.ts::tagSearchHref()`; each formal tag owner must render a native anchor |
+| Back-button history contract | `lib/navigation.ts::goBack()`; visible “返回” controls pop browser history and must not synthesize a destination entry |
+| Reader failed-image retry fan-out | `reader/ReaderViewport.tsx` owns the shared retry token; `ReaderImage.tsx` retries only instances currently in an error state |
+| Actual grid-track measurement and whole-row page sizes | `lib/useGridColumns.ts`; library rounds its 24-item target up to a full row, discover requests four measured rows |
 
 `apps/web/src/styles/app.css` is now a base-only file (root tokens, reset, form inheritance, shared spin utility, reduced-motion override). Do not put feature or shell selectors back into it.
 

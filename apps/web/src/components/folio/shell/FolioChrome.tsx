@@ -1,8 +1,9 @@
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
+import { pageHref } from "../../../lib/navigation";
 import { FOLIO_PAGES, type FolioPageId } from "../config";
 import { ModuleBackdrop } from "./ModuleBackdrop";
 import { PageHeading } from "./PageHeading";
@@ -19,6 +20,7 @@ export function FolioChrome({
   overlay,
   scrollKey,
   heading,
+  onLogout,
 }: {
   page: FolioPageId;
   onNavigate: (page: FolioPageId) => void;
@@ -27,6 +29,7 @@ export function FolioChrome({
   overlay?: ReactNode;
   scrollKey?: string | number;
   heading?: FolioHeading;
+  onLogout?: () => void | Promise<void>;
 }) {
   const reduceMotion = usePrefersReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -69,12 +72,26 @@ export function FolioChrome({
       <div ref={bindingRef} className="folio-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
 
       <header className="folio-topbar">
-        <button className="folio-brand" type="button" onClick={() => onNavigate("workbench")}>
+        <a
+          className="folio-brand"
+          href={pageHref({ name: "workbench" })}
+          onClick={(event) => {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            onNavigate("workbench");
+          }}
+        >
           <span className="folio-brand-mark" aria-hidden="true"><span className="folio-monogram">NH</span><i /></span>
           <span className="folio-brand-copy"><strong>Archive</strong><small>local collection</small></span>
-        </button>
+        </a>
         <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
         <div className="folio-top-actions">
+          {onLogout ? (
+            <button className="folio-session-button" type="button" aria-label="登出并锁定本地馆藏" title="登出" onClick={() => void onLogout()}>
+              <LogOut size={17} />
+              <span>登出</span>
+            </button>
+          ) : null}
           <button className="folio-menu-button" type="button" aria-label={menuOpen ? "关闭导航" : "打开导航"} aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -91,7 +108,7 @@ export function FolioChrome({
         </AnimatePresence>
         <main ref={scrollRef} className="folio-scroll" onScroll={updateBindingProgress}>
           <AnimatePresence mode="wait" initial={false}>
-            <m.div key={`${page}:${String(scrollKey ?? "")}`} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28, scale: reduceMotion ? 1 : 0.992 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18, scale: reduceMotion ? 1 : 1.006 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
+            <m.div key={`${page}:${String(scrollKey ?? "")}`} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
               {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}
               {children}
             </m.div>

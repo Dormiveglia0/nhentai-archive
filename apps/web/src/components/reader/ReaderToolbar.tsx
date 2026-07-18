@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  EyeOff,
   Image as ImageIcon,
   Info,
   LoaderCircle,
@@ -26,7 +25,6 @@ type ReaderToolbarProps = {
   mode: Mode;
   direction: Direction;
   fit: Fit;
-  masked: boolean;
   importing: boolean;
   queued: boolean;
   activePanel: ReaderPanel;
@@ -36,7 +34,6 @@ type ReaderToolbarProps = {
   onToggleDirection: () => void;
   onCycleFit: () => void;
   onZoom: (delta: number) => void;
-  onToggleMask: () => void;
   onToggleFullscreen: () => void;
   onOpenPanel: (panel: ReaderPanel) => void;
   onOpenJump: () => void;
@@ -55,7 +52,6 @@ export function ReaderToolbar({
   mode,
   direction,
   fit,
-  masked,
   importing,
   queued,
   activePanel,
@@ -65,7 +61,6 @@ export function ReaderToolbar({
   onToggleDirection,
   onCycleFit,
   onZoom,
-  onToggleMask,
   onToggleFullscreen,
   onOpenPanel,
   onOpenJump,
@@ -88,7 +83,7 @@ export function ReaderToolbar({
           }}
         >
           <div className="reader-toolbar-identity">
-            <button type="button" className="reader-back-button" onClick={onBack}>
+            <button className="reader-back-button" type="button" onClick={onBack}>
               <ArrowLeft size={17} />
               <span>{isRemote ? "返回发现" : "返回我的库"}</span>
             </button>
@@ -129,7 +124,6 @@ export function ReaderToolbar({
             ) : null}
 
             <div className="reader-control-group" aria-label="辅助控制">
-              <button type="button" className={masked ? "is-active" : ""} aria-pressed={masked} onClick={onToggleMask} aria-label="隐私遮罩"><EyeOff size={16} /></button>
               <button type="button" onClick={onToggleFullscreen} aria-label="全屏"><Maximize size={16} /></button>
               <button type="button" className={activePanel === "thumbnails" ? "is-active" : ""} aria-pressed={activePanel === "thumbnails"} onClick={() => onOpenPanel("thumbnails")} aria-label="页面索引"><ImageIcon size={16} /></button>
               <button type="button" className={activePanel === "info" ? "is-active" : ""} aria-pressed={activePanel === "info"} onClick={() => onOpenPanel("info")} aria-label="作品信息"><Info size={16} /></button>

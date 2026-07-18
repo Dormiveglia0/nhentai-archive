@@ -9,10 +9,12 @@ type WebtoonViewProps = {
   fit: Fit;
   onReachPage: (pageIndex: number) => void;
   onToggleChrome: () => void;
+  retryToken: number;
+  onRetry: () => void;
   emptyHint: string;
 };
 
-export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome, emptyHint }: WebtoonViewProps) {
+export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome, retryToken, onRetry, emptyHint }: WebtoonViewProps) {
   const itemRefs = useRef<Map<number, HTMLImageElement>>(new Map());
   // -1 哨兵:确保进入 webtoon 时下方“外部跳页”effect 至少滚动一次到当前页,
   // 否则初值等于 pageIndex 会被提前 return,列表停在顶部并把进度回写成第 1 页。
@@ -68,6 +70,8 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
           src={page.src}
           alt={`第 ${page.pageIndex} 页`}
           loading="lazy"
+          retryToken={retryToken}
+          onRetry={onRetry}
         />
       ))}
     </div>

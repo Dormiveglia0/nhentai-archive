@@ -1,4 +1,5 @@
 import { AlertTriangle, Info, Search } from "lucide-react";
+import type { Ref } from "react";
 
 import type { GallerySummary } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
@@ -8,6 +9,7 @@ import type { TagFilter } from "./discoverTypes";
 import { IconPager } from "../folio/ui/IconPager";
 
 type Props = {
+  gridRef: Ref<HTMLDivElement>;
   items: GallerySummary[];
   total: number | null;
   page: number;
@@ -17,6 +19,7 @@ type Props = {
   notice: string | null;
   blurCovers: boolean;
   onOpen: (id: number) => void;
+  hrefFor: (id: number) => string;
   onImport: (id: number) => void;
   onPickTag: (tag: TagFilter) => void;
   onPage: (page: number) => void;
@@ -49,9 +52,10 @@ export function DiscoverFeed(props: Props) {
         />
       ) : null}
 
-      {props.items.length ? (
+      {props.items.length || props.loading ? (
         <div className={props.loading ? "folio-discover-results is-loading" : "folio-discover-results"}>
           <Stagger
+            ref={props.gridRef}
             key={`${props.page}:${props.items.length}:${props.items[0]?.gallery_id ?? "none"}`}
             className="folio-discover-grid"
           >
@@ -61,6 +65,7 @@ export function DiscoverFeed(props: Props) {
                   item={item}
                   blurCovers={props.blurCovers}
                   onOpen={() => props.onOpen(item.gallery_id)}
+                  href={props.hrefFor(item.gallery_id)}
                   onImport={() => props.onImport(item.gallery_id)}
                   onPickTag={props.onPickTag}
                 />

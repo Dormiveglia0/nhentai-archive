@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import type { FileEntry } from "../../lib/api";
 import { duration, ease } from "../../lib/motion";
-import { navigate, tagSearchHref } from "../../lib/navigation";
+import { pageHref, tagSearchHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { entryStatusLabel, entryStatusTone, formatBytes, kindLabel } from "./fileHelpers";
 
@@ -110,20 +110,20 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
       <div className="folio-files-detail-actions">
         {isWork && focus.work_id ? (
           <>
-            <button type="button" onClick={() => navigate({ name: "reader", workId: focus.work_id! })}>
+            <a href={pageHref({ name: "reader", workId: focus.work_id })}>
               <BookOpen size={15} />开始阅读<ArrowUpRight size={13} />
-            </button>
+            </a>
             {focus.remote_gallery_id ? (
-              <button type="button" onClick={() => navigate({ name: "gallery", galleryId: focus.remote_gallery_id!, returnTo: "files" })}>
+              <a href={pageHref({ name: "gallery", galleryId: focus.remote_gallery_id, returnTo: "files" })}>
                 <Images size={15} />作品展示<ArrowUpRight size={13} />
-              </button>
+              </a>
             ) : null}
-            <button type="button" onClick={() => navigate({ name: "governance", workId: focus.work_id })}>
+            <a href={pageHref({ name: "governance", workId: focus.work_id })}>
               <PenLine size={15} />进入治理<ArrowUpRight size={13} />
-            </button>
-            <button type="button" onClick={() => navigate({ name: "export", workId: focus.work_id })}>
+            </a>
+            <a href={pageHref({ name: "export", workId: focus.work_id })}>
               <Download size={15} />进入导出<ArrowUpRight size={13} />
-            </button>
+            </a>
           </>
         ) : null}
         <button type="button" onClick={() => void copyPath()} disabled={path === "—"} aria-live="polite">
