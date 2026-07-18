@@ -309,7 +309,7 @@
   z-index: 1;
 }
 
-.folio-empty > button {
+.folio-empty > :is(button, a) {
   margin-top: 19px;
   min-height: 44px;
   padding: 0 3px;
@@ -321,6 +321,7 @@
   background: transparent;
   color: var(--folio-red);
   font-size: 13px;
+  text-decoration: none;
   position: relative;
   z-index: 1;
 }

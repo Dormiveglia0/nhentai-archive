@@ -85,6 +85,7 @@
   height: 190px;
   margin-bottom: 18px;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   border-top: 1px solid var(--reader-line);
   border-bottom: 1px solid var(--reader-line);
@@ -92,11 +93,8 @@
   overflow: hidden;
 }
 
-.reader-info-cover img {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
-  object-fit: contain;
+.reader-info-cover-artwork {
+  --folio-paper-deep: #171713;
 }
 
 .reader-info-meta h2 {
@@ -210,7 +208,7 @@
   gap: 8px;
 }
 
-.reader-info-actions button {
+.reader-info-actions :is(button, a) {
   min-height: 42px;
   padding: 0 11px;
   display: inline-flex;
@@ -221,13 +219,14 @@
   background: rgba(238,232,218,.035);
   color: var(--reader-paper);
   font-size: 12px;
+  text-decoration: none;
 }
 
-.reader-info-actions button:first-child {
+.reader-info-actions :is(button, a):first-child {
   border-color: var(--reader-red);
 }
 
-.reader-info-actions button:hover:not(:disabled) {
+.reader-info-actions :is(button, a):hover:not(:disabled) {
   border-color: var(--reader-red);
   background: var(--reader-red);
 }

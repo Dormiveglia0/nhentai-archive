@@ -2,7 +2,8 @@ import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 
 import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
-import { navigate } from "../../lib/navigation";
+import { pageHref } from "../../lib/navigation";
+import { completeGridRows, useGridColumns } from "../../lib/useGridColumns";
 import { IconPager } from "../folio/ui/IconPager";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
@@ -15,7 +16,8 @@ import { useLibraryState } from "./useLibraryState";
 import "./LibraryPage.css";
 
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
-  const library = useLibraryState();
+  const [gridRef, gridColumns] = useGridColumns();
+  const library = useLibraryState(completeGridRows(24, gridColumns));
 
   return (
     <section className="folio-page-body folio-library-page">
@@ -55,7 +57,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             title="库里还没有作品"
             copy="先从发现页导入真实作品。导入完成后，这里会显示馆藏、阅读进度、标签与文件状态。"
             action="前往发现页"
-            onAction={() => navigate({ name: "discover" })}
+            actionHref={pageHref({ name: "discover" })}
           />
         </section>
       ) : null}
@@ -77,10 +79,10 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
               />
               <div className="folio-library-result-controls">
                 <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>
-                <button className="folio-library-history-link" type="button" onClick={() => navigate({ name: "history" })}>
+                <a className="folio-library-history-link" href={pageHref({ name: "history" })}>
                   <Clock3 size={14} />
                   <span>阅读历史</span>
-                </button>
+                </a>
                 {library.multiSelect ? (
                   <button type="button" onClick={library.selectAllOnPage} disabled={library.works.length === 0}>
                     选中本页
@@ -129,6 +131,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             ) : (
               <div className={library.loading ? "folio-library-cards is-loading" : "folio-library-cards"}>
                 <Stagger
+                  ref={gridRef}
                   key={`${library.view}:${library.page}:${library.works.length}:${library.works[0]?.id ?? "none"}`}
                   className={library.view === "grid" ? "folio-library-grid" : "folio-library-list"}
                 >
@@ -165,6 +168,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             blurCovers={blurCovers}
             onClose={() => library.setSelected(null)}
             onPickTag={library.pickTag}
+            onDeleted={library.afterBulkAction}
           />
         </div>
       ) : null}

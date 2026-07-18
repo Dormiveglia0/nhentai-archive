@@ -36,7 +36,7 @@
 .folio-task-dock-head {
   width: 100%;
   min-height: 46px;
-  padding: 4px 2px;
+  padding: 4px 38px 4px 2px;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto auto;
   align-items: center;
@@ -46,6 +46,28 @@
   background: transparent;
   color: inherit;
   text-align: left;
+  text-decoration: none;
+}
+
+.folio-task-dock-dismiss {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dock-muted);
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  right: 10px;
+}
+
+.folio-task-dock-dismiss:hover {
+  border-color: var(--dock-line);
+  background: var(--dock-paper-bright);
+  color: var(--dock-red);
 }
 
 .folio-task-dock-mark {

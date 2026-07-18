@@ -29,7 +29,6 @@ class SettingsService:
 
     def get(self) -> dict[str, Any]:
         effective_key, source = self._effective_api_key()
-        privacy_default = self._get("ui.privacy_mode_default", "true") == "true"
         blur_default = self._get("ui.blur_covers_default", "true") == "true"
         reader_mode = self._get("reader.default_mode", "single")
         export_dir = self._storage_path("storage.export_dir", self.settings.export_dir)
@@ -50,7 +49,6 @@ class SettingsService:
                 "export_dir": str(export_dir),
             },
             "privacy": {
-                "privacy_mode_default": privacy_default,
                 "blur_covers_default": blur_default,
             },
             "reader": {
@@ -68,8 +66,6 @@ class SettingsService:
             self._set("nhentai.api_key", api_key.strip())
 
         privacy = payload.get("privacy") or {}
-        if "privacy_mode_default" in privacy:
-            self._set_bool("ui.privacy_mode_default", bool(privacy["privacy_mode_default"]))
         if "blur_covers_default" in privacy:
             self._set_bool("ui.blur_covers_default", bool(privacy["blur_covers_default"]))
 

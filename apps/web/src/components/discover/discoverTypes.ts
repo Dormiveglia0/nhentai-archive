@@ -4,6 +4,7 @@ export type DiscoverSurface = "feed" | "upload" | "scan";
 
 export type TagFilter = RemoteTag & {
   display?: string;
+  excluded?: boolean;
 };
 
 export type DiscoverPagePayload = {

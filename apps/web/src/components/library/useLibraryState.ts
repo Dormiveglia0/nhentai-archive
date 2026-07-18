@@ -9,9 +9,7 @@ import {
 } from "../../lib/api";
 import type { LibraryView } from "./LibraryToolbar";
 
-const PER_PAGE = 24;
-
-export function useLibraryState() {
+export function useLibraryState(perPage: number) {
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [continueReading, setContinueReading] = useState<LibraryWork[]>([]);
   const [recentAdded, setRecentAdded] = useState<LibraryWork[]>([]);
@@ -32,7 +30,7 @@ export function useLibraryState() {
 
   const [multiSelect, setMultiSelect] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestToken = useRef(0);
   const overviewToken = useRef(0);
@@ -66,6 +64,7 @@ export function useLibraryState() {
   }, [loadOverview]);
 
   useEffect(() => {
+    if (perPage < 1) return;
     const current = ++requestToken.current;
     setLoading(true);
     setError(null);
@@ -73,7 +72,7 @@ export function useLibraryState() {
     void api.librarySearch({
       q,
       page,
-      per_page: PER_PAGE,
+      per_page: perPage,
       sort,
       read_status: readStatus,
       source,
@@ -105,7 +104,7 @@ export function useLibraryState() {
     return () => {
       if (requestToken.current === current) requestToken.current += 1;
     };
-  }, [q, page, sort, readStatus, source, language, tags, reloadKey]);
+  }, [q, page, perPage, sort, readStatus, source, language, tags, reloadKey]);
 
   const reload = useCallback(() => {
     setReloadKey((value) => value + 1);

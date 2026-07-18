@@ -1,6 +1,6 @@
 import { ArrowUpRight, FileArchive } from "lucide-react";
 
-import { navigate } from "../../lib/navigation";
+import { pageHref } from "../../lib/navigation";
 import { FolioToggleRow } from "../folio/ui/FolioPrimitives";
 import type { SettingsVM } from "./useSettingsState";
 
@@ -17,10 +17,10 @@ export function ExportDefaultsSection({ vm }: { vm: SettingsVM }) {
           <span>Default recipe</span>
           <strong>作品名.cbz</strong>
         </div>
-        <button className="folio-line-button" type="button" onClick={() => navigate({ name: "export" })}>
+        <a className="folio-line-button" href={pageHref({ name: "export" })}>
           打开导出中心
           <ArrowUpRight size={15} />
-        </button>
+        </a>
       </div>
 
       <div className="folio-toggle-list folio-settings-toggle-list">

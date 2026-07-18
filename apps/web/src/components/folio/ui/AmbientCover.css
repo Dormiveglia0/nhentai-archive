@@ -1,0 +1,63 @@
+.folio-ambient-cover {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--folio-paper-deep, #24241f);
+  position: relative;
+  isolation: isolate;
+}
+
+.folio-ambient-cover-backdrop,
+.folio-ambient-cover-artwork {
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.folio-ambient-cover-backdrop {
+  width: 122%;
+  height: 122%;
+  object-fit: cover;
+  filter: blur(18px) saturate(0.68) brightness(0.66);
+  opacity: 0.64;
+  position: absolute;
+  inset: -11%;
+  transform: scale(1.05);
+}
+
+.folio-ambient-cover::after {
+  content: "";
+  background: linear-gradient(180deg, rgba(23, 24, 21, 0.08), rgba(23, 24, 21, 0.26));
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+}
+
+.folio-ambient-cover-artwork {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(23, 24, 21, 0.2));
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  transition: filter 220ms ease;
+}
+
+.folio-ambient-cover.is-private .folio-ambient-cover-backdrop {
+  filter: blur(24px) saturate(0.38) brightness(0.54);
+  opacity: 0.72;
+}
+
+.folio-ambient-cover.is-private .folio-ambient-cover-artwork {
+  filter: blur(11px) saturate(0.58);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-ambient-cover-artwork { transition: none; }
+}

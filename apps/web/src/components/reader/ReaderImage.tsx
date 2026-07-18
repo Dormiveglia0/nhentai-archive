@@ -1,4 +1,4 @@
-import { CSSProperties, forwardRef, useState } from "react";
+import { CSSProperties, forwardRef, useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
 import "./ReaderPanels.css";
 
@@ -10,6 +10,8 @@ type ReaderImageProps = {
   loading?: "lazy" | "eager";
   /** 供 webtoon 观察当前页用,渲染为 data-page-index */
   pageIndex?: number;
+  retryToken: number;
+  onRetry: () => void;
 };
 
 /**
@@ -18,11 +20,20 @@ type ReaderImageProps = {
  * forwardRef 指向 <img>,供 webtoon 的 IntersectionObserver 收集节点。
  */
 export const ReaderImage = forwardRef<HTMLImageElement, ReaderImageProps>(function ReaderImage(
-  { src, alt, className, style, loading, pageIndex },
+  { src, alt, className, style, loading, pageIndex, retryToken, onRetry },
   ref
 ) {
   const [attempt, setAttempt] = useState(0);
   const [errored, setErrored] = useState(false);
+  const lastRetryToken = useRef(retryToken);
+
+  useEffect(() => {
+    if (lastRetryToken.current === retryToken) return;
+    lastRetryToken.current = retryToken;
+    if (!errored) return;
+    setErrored(false);
+    setAttempt((value) => value + 1);
+  }, [errored, retryToken]);
 
   if (errored) {
     return (
@@ -30,14 +41,10 @@ export const ReaderImage = forwardRef<HTMLImageElement, ReaderImageProps>(functi
         <span>图片加载失败</span>
         <button
           type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            setErrored(false);
-            setAttempt((n) => n + 1);
-          }}
+          onClick={(event) => { event.stopPropagation(); onRetry(); }}
         >
           <RotateCw size={15} />
-          重试
+          重试全部
         </button>
       </div>
     );

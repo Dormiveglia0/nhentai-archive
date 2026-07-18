@@ -59,3 +59,20 @@ def test_database_rebases_missing_managed_paths_after_repo_move(tmp_path):
     assert db.fetchone("SELECT path FROM work_files WHERE work_id = ?", (work_id,))["path"] == str(library / "work.cbz")
     assert db.fetchone("SELECT cover_path FROM works WHERE id = ?", (container_work_id,))["cover_path"] == str(covers / "1.jpg")
     assert db.fetchone("SELECT path FROM work_files WHERE work_id = ?", (container_work_id,))["path"] == str(library / "work.cbz")
+
+    with db.connect() as conn:
+        assert conn.execute("SELECT cover_path FROM works WHERE id = ?", (work_id,)).fetchone()[0] == "covers/1.jpg"
+        assert conn.execute("SELECT path FROM work_files WHERE work_id = ?", (work_id,)).fetchone()[0] == "library/work.cbz"
+
+    container_data = tmp_path / "container-data"
+    (container_data / "library").mkdir(parents=True)
+    (container_data / "covers").mkdir()
+    (container_data / "library" / "work.cbz").write_bytes(b"cbz")
+    (container_data / "covers" / "1.jpg").write_bytes(b"cover")
+    db.rebase_managed_paths(container_data)
+
+    assert db.fetchone("SELECT cover_path FROM works WHERE id = ?", (work_id,))["cover_path"] == str(container_data / "covers" / "1.jpg")
+    assert db.fetchone("SELECT path FROM work_files WHERE work_id = ?", (work_id,))["path"] == str(container_data / "library" / "work.cbz")
+    with db.connect() as conn:
+        assert conn.execute("SELECT cover_path FROM works WHERE id = ?", (work_id,)).fetchone()[0] == "covers/1.jpg"
+        assert conn.execute("SELECT path FROM work_files WHERE work_id = ?", (work_id,)).fetchone()[0] == "library/work.cbz"

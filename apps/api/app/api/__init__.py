@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.api import (
+    auth,
     dictionary,
     discover,
     exports,
@@ -12,11 +13,13 @@ from app.api import (
     system,
     works,
 )
+from app.api.shared import require_authentication
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_authentication)])
 
 for module in (
+    auth,
     system,
     discover,
     dictionary,

@@ -1,6 +1,6 @@
 import { Download, RefreshCw, Save, Tags } from "lucide-react";
 
-import { navigate } from "../../lib/navigation";
+import { pageHref } from "../../lib/navigation";
 
 export function GovernanceActionBar({
   workId,
@@ -34,14 +34,14 @@ export function GovernanceActionBar({
         <i aria-hidden="true"><span /></i>
         <span><strong>同时回写 ComicInfo</strong><small>就地改写源 CBZ，不可撤销</small></span>
       </label>
-      <button className="folio-governance-action" type="button" onClick={() => navigate({ name: "dictionary" })}>
+      <a className="folio-governance-action" href={pageHref({ name: "dictionary" })}>
         <Tags size={16} />
         管理词典
-      </button>
-      <button className="folio-governance-action" type="button" onClick={() => navigate({ name: "export", workId })}>
+      </a>
+      <a className="folio-governance-action" href={pageHref({ name: "export", workId })}>
         <Download size={16} />
         进入导出
-      </button>
+      </a>
       <button className="folio-governance-action" type="button" onClick={() => void onReload()}>
         <RefreshCw size={16} />
         重新读取

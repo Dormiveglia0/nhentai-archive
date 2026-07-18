@@ -82,6 +82,18 @@ def test_summary_counts_only_real_rows(tmp_path):
     assert summary["untagged"] == 3
 
 
+def test_summary_treats_translated_as_a_marker_not_a_language(tmp_path):
+    settings, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    work_id = _import_work(archive, tmp_path, "language", "Language Work", "remote", 111)
+    _link_tags(db, work_id, [
+        {"id": 10, "type": "language", "name": "translated", "slug": "translated"},
+        {"id": 20, "type": "language", "name": "chinese", "slug": "chinese"},
+    ])
+
+    assert [item["value"] for item in library.summary()["languages"]] == ["chinese"]
+
+
 def test_search_filters_and_pagination(tmp_path):
     settings, db, archive = _setup(tmp_path)
     library = LibraryService(db)

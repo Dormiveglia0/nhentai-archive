@@ -73,7 +73,7 @@ export function TaskInspector(props: Props) {
         <div className="folio-tasks-progress-ring" style={{ "--task-progress": `${job.progress.percent * 3.6}deg` } as CSSProperties}>
           <span><strong>{job.progress.percent}%</strong><small>{statusLabel(job.status)}</small></span>
         </div>
-        <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{job.progress.current} / {job.progress.total || "未知"} · {formatDurationHint(job)}</small></div>
+        <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{formatDurationHint(job)}</small></div>
       </section>
 
       <InspectorSection title="目标信息">

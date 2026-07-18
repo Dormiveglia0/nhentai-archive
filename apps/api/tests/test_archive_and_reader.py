@@ -51,6 +51,11 @@ def test_archive_service_indexes_cbz_image_pages_in_natural_order(tmp_path):
     assert [page["page_index"] for page in pages] == [1, 2]
     assert [page["archive_member"] for page in pages] == ["001.png", "002.jpg"]
     assert pages[0]["media_type"] == "image/png"
+    with db.connect() as conn:
+        source_path = conn.execute("SELECT path FROM work_files WHERE work_id = ?", (work_id,)).fetchone()[0]
+        cover_path = conn.execute("SELECT cover_path FROM works WHERE id = ?", (work_id,)).fetchone()[0]
+    assert source_path.startswith("library/")
+    assert cover_path.startswith("covers/")
 
 
 def test_archive_service_generates_and_caches_page_thumbnail(tmp_path):

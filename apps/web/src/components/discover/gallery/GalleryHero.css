@@ -99,9 +99,10 @@
 }
 
 .folio-gallery-cover-stage {
-  width: 100%;
-  height: 352px;
+  width: min(100%, calc(352px * var(--gallery-cover-ratio, 0.75)));
+  aspect-ratio: var(--gallery-cover-ratio, 0.75);
   display: grid;
+  justify-self: center;
   place-items: center;
   position: relative;
 }
@@ -110,31 +111,13 @@
   width: 100%;
   height: 100%;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   border: 1px solid rgba(23, 24, 21, 0.34);
   background: rgba(229, 223, 209, 0.56);
   box-shadow: 12px 14px 0 rgba(23, 24, 21, 0.055), 24px 28px 48px rgba(23, 24, 21, 0.12);
   position: relative;
   overflow: hidden;
-}
-
-.folio-gallery-cover-slot img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  display: block;
-  object-fit: contain;
-  transition: filter 240ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.folio-gallery-cover-stage:hover .folio-gallery-cover-slot img:not(.is-blurred) {
-  transform: scale(1.018);
-}
-
-.folio-gallery-cover-slot img.is-blurred {
-  filter: blur(20px) saturate(0.55);
-  transform: scale(1.1);
 }
 
 .folio-gallery-cover-empty {
@@ -149,6 +132,7 @@
   background: linear-gradient(90deg, transparent, rgba(173, 56, 46, 0.86) 18% 82%, transparent);
   box-shadow: 0 6px 14px rgba(173, 56, 46, 0.12);
   position: absolute;
+  z-index: 3;
   right: 8px;
   left: 8px;
   top: 10%;
@@ -272,7 +256,7 @@
   gap: 10px;
 }
 
-.folio-gallery-actions button {
+.folio-gallery-actions :is(button, a) {
   min-width: 162px;
   min-height: 46px;
   padding: 0 15px;
@@ -284,15 +268,21 @@
   background: rgba(250, 247, 239, 0.58);
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
   transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.folio-gallery-actions button.is-primary {
+.folio-gallery-actions :is(button, a).is-primary {
   background: var(--folio-ink);
   color: var(--folio-paper-bright);
 }
 
-.folio-gallery-actions button:hover:not(:disabled) {
+.folio-gallery-actions button.folio-work-delete-trigger {
+  border-color: rgba(173, 56, 46, 0.62);
+  color: var(--folio-red);
+}
+
+.folio-gallery-actions :is(button, a):hover:not(:disabled) {
   border-color: var(--folio-red);
   background: var(--folio-red);
   color: #fffaf0;

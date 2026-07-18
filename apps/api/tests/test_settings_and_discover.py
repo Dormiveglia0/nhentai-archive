@@ -104,13 +104,25 @@ def test_settings_service_persists_export_presets(tmp_path):
 def test_discover_search_query_adds_real_remote_filters():
     query = build_search_query("snow", language="japanese", kind="manga")
 
-    assert query == 'snow language:japanese tag:"manga"'
+    assert query == "snow language:japanese category:manga"
 
 
 def test_discover_search_query_language_all_adds_no_language_filter():
     query = build_search_query("", language="all", kind="all")
 
     assert query == ""
+
+
+def test_discover_search_query_preserves_real_tag_namespace():
+    query = build_search_query("", language="chinese", kind="doujinshi", tag_names=["artist:carpsukidayo"])
+
+    assert query == 'language:chinese category:doujinshi artist:"carpsukidayo"'
+
+
+def test_discover_search_query_supports_excluded_tags():
+    query = build_search_query("", tag_names=["tag:full color", "-artist:someone"])
+
+    assert query == 'tag:"full color" -artist:"someone"'
 
 
 class FakeDiscoverClient:
@@ -221,6 +233,25 @@ def test_discover_feed_language_filter_uses_remote_language_query(tmp_path):
     assert client.calls == [("search", "language:chinese", 1, 24, "date")]
 
 
+def test_discover_feed_combines_tag_language_and_category_filters(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    service = DiscoverService(db, client)
+
+    service.feed(
+        page=1,
+        per_page=24,
+        language="chinese",
+        kind="manga",
+        tag_id=10,
+        tag_names="tag:full color",
+    )
+
+    assert client.calls == [("search", 'language:chinese category:manga tag:"full color"', 1, 24, "date")]
+
+
 def test_discover_feed_uses_search_for_multiple_tags(tmp_path):
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
     db = Database(settings.database_path)
@@ -228,9 +259,9 @@ def test_discover_feed_uses_search_for_multiple_tags(tmp_path):
     client = FakeDiscoverClient()
     service = DiscoverService(db, client)
 
-    service.feed(page=1, per_page=24, tag_id=10, tag_names="artist name,series name")
+    service.feed(page=1, per_page=24, tag_id=10, tag_names="artist:artist name,parody:series name")
 
-    assert client.calls == [("search", 'tag:"artist name" tag:"series name"', 1, 24, "date")]
+    assert client.calls == [("search", 'artist:"artist name" parody:"series name"', 1, 24, "date")]
 
 
 def test_discover_tagged_passes_real_tag_parameters(tmp_path):

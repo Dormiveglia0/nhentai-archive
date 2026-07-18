@@ -1,5 +1,5 @@
 import { m, AnimatePresence, type HTMLMotionProps, type Variants } from "motion/react";
-import type { PropsWithChildren, ReactNode } from "react";
+import { forwardRef, type PropsWithChildren, type ReactNode } from "react";
 import { duration, ease, stagger } from "./tokens";
 import { usePrefersReducedMotion } from "./useReducedMotion";
 
@@ -74,9 +74,10 @@ const staggerParent: Variants = {
 };
 
 /** 列表/网格容器,子项用 <StaggerItem> 逐项进场。 */
-export function Stagger({ children, className, ...rest }: StaggerProps) {
+export const Stagger = forwardRef<HTMLDivElement, StaggerProps>(function Stagger({ children, className, ...rest }, ref) {
   return (
     <m.div
+      ref={ref}
       {...rest}
       className={className}
       variants={staggerParent}
@@ -86,7 +87,7 @@ export function Stagger({ children, className, ...rest }: StaggerProps) {
       {children}
     </m.div>
   );
-}
+});
 
 /** Stagger 的子项。 */
 export function StaggerItem({ children, className }: DivMotionProps) {

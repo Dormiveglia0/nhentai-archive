@@ -25,7 +25,6 @@ export function SettingsDemo({
   const [provider, setProvider] = useState<"google" | "deepl">("google");
   const [language, setLanguage] = useState<"zh-CN" | "zh-TW">("zh-CN");
   const [batch, setBatch] = useState("20");
-  const [privacy, setPrivacy] = useState(true);
   const [blur, setBlur] = useState(true);
   const [reader, setReader] = useState<"single" | "scroll">("single");
   const [comicInfo, setComicInfo] = useState(true);
@@ -117,7 +116,6 @@ export function SettingsDemo({
           {section === "privacy" ? (
             <>
               <div className="folio-toggle-list">
-                <ToggleRow label="隐私模式默认开启" copy="页面切换时保持敏感信息收敛。" checked={privacy} onChange={setPrivacy} />
                 <ToggleRow label="封面模糊默认开启" copy="媒体内容在主动操作前保持模糊。" checked={blur} onChange={setBlur} />
               </div>
               <div className="folio-segment-field">

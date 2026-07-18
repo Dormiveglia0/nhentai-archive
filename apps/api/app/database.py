@@ -199,6 +199,7 @@ class Database:
     def __init__(self, path: Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._managed_root = self.path.parent.resolve()
 
     def connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=5)
@@ -217,16 +218,20 @@ class Database:
 
     def rebase_managed_paths(self, data_dir: Path) -> None:
         root = Path(data_dir).resolve()
+        self._managed_root = root
         with self.connect() as conn:
             for table, column in (("work_files", "path"), ("works", "cover_path")):
                 for row in conn.execute(f"SELECT id, {column} AS value FROM {table} WHERE {column} IS NOT NULL"):
-                    candidate = _rebased_path(row["value"], root)
-                    if candidate:
-                        conn.execute(f"UPDATE {table} SET {column} = ? WHERE id = ?", (candidate, row["id"]))
+                    portable = _portable_managed_path(row["value"], root)
+                    if portable and portable != row["value"]:
+                        conn.execute(f"UPDATE {table} SET {column} = ? WHERE id = ?", (portable, row["id"]))
             for row in conn.execute("SELECT key, value FROM settings WHERE key = 'storage.export_dir'"):
                 candidate = _rebased_path(row["value"], root)
                 if candidate:
                     conn.execute("UPDATE settings SET value = ? WHERE key = ?", (candidate, row["key"]))
+
+    def managed_path(self, value: str | Path) -> str:
+        return _portable_managed_path(str(value), self._managed_root) or str(value)
 
     def _migrate_legacy_schema(self, conn: sqlite3.Connection) -> None:
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
@@ -346,11 +351,20 @@ class Database:
     def fetchone(self, sql: str, params: Iterable[Any] = ()) -> dict[str, Any] | None:
         with self.connect() as conn:
             row = conn.execute(sql, tuple(params)).fetchone()
-            return dict(row) if row else None
+            return self._resolve_managed_fields(dict(row)) if row else None
 
     def fetchall(self, sql: str, params: Iterable[Any] = ()) -> list[dict[str, Any]]:
         with self.connect() as conn:
-            return [dict(row) for row in conn.execute(sql, tuple(params)).fetchall()]
+            return [self._resolve_managed_fields(dict(row)) for row in conn.execute(sql, tuple(params)).fetchall()]
+
+    def _resolve_managed_fields(self, row: dict[str, Any]) -> dict[str, Any]:
+        for key in ("path", "cover_path", "source_path"):
+            value = row.get(key)
+            if value:
+                relative = _managed_relative_path(str(value), self._managed_root)
+                if relative:
+                    row[key] = str(self._managed_root / relative)
+        return row
 
 
 def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
@@ -368,6 +382,31 @@ def _rebased_path(value: str, root: Path) -> str | None:
         return None
     candidate = root.joinpath(*relative)
     return str(candidate) if candidate != path and candidate.exists() else None
+
+
+def _portable_managed_path(value: str, root: Path) -> str | None:
+    relative = _managed_relative_path(value, root)
+    return relative.as_posix() if relative else None
+
+
+def _managed_relative_path(value: str, root: Path) -> Path | None:
+    path = Path(value).expanduser()
+    relative: Path | None = None
+    if path.is_absolute():
+        try:
+            relative = path.resolve().relative_to(root)
+        except ValueError:
+            pass
+    if relative is None and ".local-data" in path.parts:
+        marker = path.parts.index(".local-data")
+        relative = Path(*path.parts[marker + 1 :])
+    elif relative is None and path.is_absolute() and len(path.parts) > 2 and path.parts[1] == "data":
+        relative = Path(*path.parts[2:])
+    elif relative is None and not path.is_absolute():
+        relative = path
+    if relative is None or not relative.parts or relative.parts[0] not in {"library", "covers"} or ".." in relative.parts:
+        return None
+    return relative
 
 
 def _add_column_if_missing(

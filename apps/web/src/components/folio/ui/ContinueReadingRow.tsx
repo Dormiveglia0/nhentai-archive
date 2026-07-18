@@ -3,7 +3,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import type { LibraryWork } from "../../../lib/api";
 import { workTitle } from "../../../lib/format";
 import { Stagger, StaggerItem } from "../../../lib/motion";
-import { navigate } from "../../../lib/navigation";
+import { pageHref } from "../../../lib/navigation";
 
 type Props = {
   title: string;
@@ -59,10 +59,10 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
       >
         {works.map((work) => (
           <StaggerItem key={work.id} className="folio-shelf-cell">
-            <button
-              type="button"
+            <a
+              href={pageHref({ name: "reader", workId: work.id })}
               className="folio-shelf-item"
-              onClick={() => navigate({ name: "reader", workId: work.id })}
+              draggable={false}
             >
               <div className="folio-shelf-cover">
                 {work.cover_path ? (
@@ -76,7 +76,7 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
               </div>
               <strong title={workTitle(work)}>{workTitle(work)}</strong>
               <small>{work.completed ? "已读" : `${work.progress_percent ?? 0}%`}</small>
-            </button>
+            </a>
           </StaggerItem>
         ))}
       </Stagger>

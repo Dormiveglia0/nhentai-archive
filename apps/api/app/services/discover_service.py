@@ -335,9 +335,33 @@ def build_search_query(query: str, language: str = "all", kind: str = "all", tag
     if language in language_map:
         parts.append(f"language:{language_map[language]}")
     if kind in kind_map:
-        parts.append(f'tag:"{kind_map[kind]}"')
+        parts.append(f"category:{kind_map[kind]}")
     for tag in tag_names or []:
-        safe_tag = tag.replace('"', "").strip()
-        if safe_tag:
-            parts.append(f'tag:"{safe_tag}"')
+        clause = _tag_search_clause(tag)
+        if clause:
+            parts.append(clause)
     return " ".join(parts).strip()
+
+
+def _tag_search_clause(tag: str) -> str:
+    raw = tag.strip()
+    excluded = raw.startswith("-")
+    if excluded:
+        raw = raw[1:].strip()
+    namespace = "tag"
+    value = raw
+    typed_namespace, separator, typed_value = raw.partition(":")
+    if separator and typed_namespace.lower() in {
+        "artist",
+        "category",
+        "character",
+        "group",
+        "language",
+        "parody",
+        "tag",
+    }:
+        namespace = typed_namespace.lower()
+        value = typed_value
+    safe_value = value.replace("\\", "").replace('"', "").strip()
+    clause = f'{namespace}:"{safe_value}"' if safe_value else ""
+    return f"-{clause}" if excluded and clause else clause

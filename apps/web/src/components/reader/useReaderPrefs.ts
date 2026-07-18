@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { api } from "../../lib/api";
 import {
   DEFAULT_PREFS,
   PREFS_KEY,
@@ -24,6 +25,18 @@ export function useReaderPrefs() {
       /* localStorage 不可用时静默降级为仅内存 */
     }
   }, [prefs]);
+
+  useEffect(() => {
+    let active = true;
+    void api.settings().then((settings) => {
+      if (!active) return;
+      setPrefs((current) => ({
+        ...current,
+        mode: settings.reader.default_mode === "scroll" ? "webtoon" : "single",
+      }));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const setMode = useCallback((mode: Mode) => setPrefs((p) => ({ ...p, mode })), []);
   const setDirection = useCallback((direction: Direction) => setPrefs((p) => ({ ...p, direction })), []);

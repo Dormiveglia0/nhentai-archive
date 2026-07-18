@@ -38,7 +38,7 @@
   gap: 12px;
 }
 
-.reader-toolbar button {
+.reader-toolbar :is(button, a) {
   min-width: 40px;
   min-height: 40px;
   padding: 0 10px;
@@ -51,17 +51,18 @@
   background: rgba(238,232,218,.035);
   color: var(--reader-paper);
   font-size: 12px;
+  text-decoration: none;
   white-space: nowrap;
   transition: border-color 170ms ease, background-color 170ms ease, color 170ms ease, transform 220ms cubic-bezier(.22,1,.36,1);
 }
 
-.reader-toolbar button:hover:not(:disabled) {
+.reader-toolbar :is(button, a):hover:not(:disabled) {
   border-color: var(--reader-line-strong);
   background: rgba(238,232,218,.1);
   transform: translateY(-2px);
 }
 
-.reader-toolbar button.is-active {
+.reader-toolbar :is(button, a).is-active {
   border-color: var(--reader-red);
   background: rgba(199,75,62,.2);
   color: #fff4e6;
@@ -277,7 +278,7 @@
   .reader-toolbar::after { width: 112px; left: 10px; }
   .reader-toolbar-identity { grid-template-columns: auto minmax(0, 1fr); }
   .reader-toolbar-controls { width: 100%; justify-content: flex-start; gap: 6px; }
-  .reader-toolbar button { min-width: 42px; min-height: 42px; }
+  .reader-toolbar :is(button, a) { min-width: 42px; min-height: 42px; }
   .reader-back-button span { display: none; }
   .reader-title small { display: none; }
   .reader-control-group button > span { font-size: 12px; }

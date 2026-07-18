@@ -27,7 +27,7 @@ export function ModuleScene({ page }: { page: FolioPageId }) {
   const Scene = SCENES[page];
   return (
     <div className={`folio-scene folio-scene-${page}`} aria-hidden="true">
-      <svg viewBox="0 0 540 230"><Scene /></svg>
+      <svg viewBox="0 0 540 230" preserveAspectRatio="xMaxYMid meet"><Scene /></svg>
     </div>
   );
 }

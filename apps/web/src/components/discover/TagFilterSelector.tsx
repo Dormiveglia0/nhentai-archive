@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search, Tag, X } from "lucide-react";
+import { Check, ChevronDown, Minus, Search, Tag, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
@@ -21,6 +21,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<"tag" | "meta">("tag");
+  const [mode, setMode] = useState<"include" | "exclude">("include");
   const cachedRequested = useRef(false);
   const latestQuery = useRef("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -122,8 +123,10 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
       setError("该词条尚未映射远端 tag，不能用于远端筛选。");
       return;
     }
-    if (selected.some((item) => item.id === tag.id)) remove(tag);
-    else onSelect([...selected, tag]);
+    const excluded = mode === "exclude";
+    const existing = selected.find((item) => item.id === tag.id);
+    if (existing?.excluded === excluded) remove(tag);
+    else onSelect([...selected.filter((item) => item.id !== tag.id), { ...tag, excluded }]);
     setQuery("");
     setSuggestions([]);
   }
@@ -138,7 +141,8 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
         <div className="folio-discover-tag-selection">
           <div className="folio-discover-tag-chips" aria-label="已选远端标签">
             {selected.map((tag) => (
-              <span key={tag.id}>
+              <span key={tag.id} className={tag.excluded ? "is-excluded" : undefined}>
+                <b aria-hidden="true">{tag.excluded ? "−" : "+"}</b>
                 <a href={tagSearchHref(tag)}>{defaultDisplayTag(tag)}</a>
                 <button type="button" aria-label={`移除标签 ${defaultDisplayTag(tag)}`} onClick={() => remove(tag)}><X size={12} /></button>
               </span>
@@ -158,7 +162,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
         onClick={() => setOpen((value) => !value)}
       >
         <Tag size={15} />
-        <strong>{selected.length ? `${selected.length} 个标签` : "添加标签"}</strong>
+        <strong>{selected.length ? `${selected.length} 个条件` : "添加标签"}</strong>
         <ChevronDown size={14} />
       </button>
 
@@ -193,15 +197,21 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
               <button type="button" aria-pressed={scope === "meta"} className={scope === "meta" ? "is-active" : ""} onClick={() => setScope("meta")}>作者与作品信息</button>
             </div>
 
+            <div className="folio-discover-tag-mode" role="group" aria-label="标签筛选关系">
+              <button type="button" aria-pressed={mode === "include"} className={mode === "include" ? "is-active" : ""} onClick={() => setMode("include")}>＋ 包含所选</button>
+              <button type="button" aria-pressed={mode === "exclude"} className={mode === "exclude" ? "is-active is-excluded" : ""} onClick={() => setMode("exclude")}>− 排除所选</button>
+            </div>
+
             <div className="folio-discover-tag-options">
               {error ? <p role="alert">{error}</p> : null}
               {!error && visible.map((tag) => {
-                const active = selected.some((item) => item.id === tag.id);
+                const selectedTag = selected.find((item) => item.id === tag.id);
+                const active = Boolean(selectedTag);
                 return (
                   <a
                     key={tag.id}
                     href={tagSearchHref(tag)}
-                    className={active ? "is-active" : ""}
+                    className={active ? `is-active${selectedTag?.excluded ? " is-excluded" : ""}` : ""}
                     aria-current={active ? "true" : undefined}
                     onClick={(event) => {
                       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -211,7 +221,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
                   >
                     <span><strong>{defaultDisplayTag(tag)}</strong><small>{tag.name || tag.slug || `#${tag.id}`}</small></span>
                     <em>{tagTypeLabel(tag.type)}</em>
-                    {active ? <Check size={15} /> : <i />}
+                    {active ? selectedTag?.excluded ? <Minus size={15} /> : <Check size={15} /> : <i />}
                   </a>
                 );
               })}

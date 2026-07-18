@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import type { WorkbenchOverview } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
-import { navigate, type Page } from "../../lib/navigation";
+import { pageHref, type Page } from "../../lib/navigation";
 import { NumberTicker } from "../effects/NumberTicker";
 import { FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { formatBytes, targetLabel } from "./workbenchHelpers";
@@ -127,9 +127,9 @@ export function WorkbenchModuleCards({ overview }: { overview: WorkbenchOverview
                 ))}
               </dl>
               {card.extra}
-              <button type="button" onClick={() => navigate(card.go)}>
+              <a href={pageHref(card.go)}>
                 {card.goLabel} <ArrowRight size={14} />
-              </button>
+              </a>
             </article>
           </StaggerItem>
         )})}

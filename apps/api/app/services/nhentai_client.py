@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from copy import deepcopy
-from typing import Any
+from typing import Any, Callable
 
 
 @dataclass
@@ -129,16 +129,33 @@ class NhentaiClient:
             return None
         return f"{str(servers[0]).rstrip('/')}/{path.lstrip('/')}"
 
-    def download_file(self, url: str, destination) -> None:
+    def download_file(
+        self,
+        url: str,
+        destination,
+        progress: Callable[[int, int], None] | None = None,
+    ) -> None:
         request = urllib.request.Request(url, headers={"User-Agent": self.user_agent})
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                try:
+                    total = int(response.headers.get("Content-Length") or 0)
+                except (TypeError, ValueError):
+                    total = 0
+                downloaded = 0
+                if progress:
+                    progress(downloaded, total)
                 with open(destination, "wb") as output:
                     while True:
                         chunk = response.read(1024 * 256)
                         if not chunk:
                             break
                         output.write(chunk)
+                        downloaded += len(chunk)
+                        if progress:
+                            progress(downloaded, total)
+                if progress:
+                    progress(downloaded, total or downloaded)
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", "replace")
             raise normalize_remote_error(exc.code, body, _retry_after(exc)) from exc

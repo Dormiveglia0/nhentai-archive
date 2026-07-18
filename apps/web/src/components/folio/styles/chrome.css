@@ -1,7 +1,7 @@
 /* Top bar, navigation, scroll container and shared page heading. */
 .folio-topbar {
   min-width: 0;
-  padding: 0 28px 0 38px;
+  padding: 0 0 0 38px;
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) auto;
   align-items: center;
@@ -37,6 +37,7 @@
   background: transparent;
   color: var(--folio-ink);
   text-align: left;
+  text-decoration: none;
 }
 
 .folio-brand-copy,
@@ -112,20 +113,65 @@
 
 .folio-top-actions {
   grid-column: 3;
+  height: 100%;
   justify-self: end;
+  margin-left: 0;
   display: flex;
   align-items: center;
+  gap: 0;
+  border-left: 1px solid var(--folio-line);
 }
 
-.folio-menu-button {
-  min-height: 44px;
-  border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.56);
+.folio-menu-button,
+.folio-session-button {
+  height: 100%;
+  min-height: 78px;
+  border: 0;
+  background: transparent;
   color: var(--folio-muted);
+  position: relative;
+  overflow: hidden;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.folio-session-button {
+  width: 114px;
+  min-width: 114px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.folio-session-button::after {
+  content: "";
+  height: 2px;
+  background: var(--folio-red);
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.folio-session-button:hover {
+  background: linear-gradient(180deg, rgba(173, 56, 46, 0.035), var(--folio-red-soft));
+  color: var(--folio-red);
+}
+
+.folio-session-button:hover::after,
+.folio-session-button:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 .folio-menu-button {
-  width: 44px;
+  width: 52px;
   padding: 0;
   display: none;
   align-items: center;
@@ -146,7 +192,7 @@
   z-index: 2;
 }
 
-.folio-nav button {
+.folio-nav a {
   width: 100%;
   min-height: 54px;
   padding: 0 2px;
@@ -159,6 +205,7 @@
   background: transparent;
   color: var(--folio-muted);
   text-align: left;
+  text-decoration: none;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -174,14 +221,14 @@
   pointer-events: none;
 }
 
-.folio-nav button > svg,
-.folio-nav button > strong,
+.folio-nav a > svg,
+.folio-nav a > strong,
 .folio-nav-arrow {
   position: relative;
   z-index: 1;
 }
 
-.folio-nav button strong {
+.folio-nav a strong {
   color: inherit;
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 14px;
@@ -194,17 +241,17 @@
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-.folio-nav button:hover,
-.folio-nav button.is-active {
+.folio-nav a:hover,
+.folio-nav a.is-active {
   color: var(--folio-ink);
 }
 
-.folio-nav button:hover {
+.folio-nav a:hover {
   transform: translateY(-2px);
 }
 
-.folio-nav button:hover .folio-nav-arrow,
-.folio-nav button.is-active .folio-nav-arrow {
+.folio-nav a:hover .folio-nav-arrow,
+.folio-nav a.is-active .folio-nav-arrow {
   opacity: 1;
   transform: translateX(0);
 }
@@ -223,7 +270,7 @@
   overflow: hidden;
 }
 
-.folio-topnav button {
+.folio-topnav a {
   min-width: 0;
   min-height: 78px;
   padding: 0 6px;
@@ -235,26 +282,26 @@
   text-align: center;
 }
 
-.folio-topnav button:first-child {
+.folio-topnav a:first-child {
   border-left: 0;
 }
 
-.folio-topnav button:last-child {
+.folio-topnav a:last-child {
   border-right: 0;
 }
 
-.folio-topnav button strong {
+.folio-topnav a strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
 }
 
-.folio-topnav button.is-active {
+.folio-topnav a.is-active {
   padding-left: 6px;
 }
 
-.folio-topnav button:hover {
+.folio-topnav a:hover {
   transform: none;
 }
 
@@ -332,12 +379,6 @@
 }
 
 @media (min-width: 901px) {
-  .folio-page-library .folio-page-head {
-    min-height: 198px;
-    padding-top: 30px;
-    padding-bottom: 26px;
-  }
-
   .folio-page-library .folio-page-body,
   :is(
     .folio-page-governance,
@@ -349,27 +390,4 @@
     padding-top: 34px;
   }
 
-  :is(
-    .folio-page-governance,
-    .folio-page-dictionary,
-    .folio-page-tasks,
-    .folio-page-export,
-    .folio-page-files,
-    .folio-page-settings
-  ) .folio-page-head {
-    min-height: 176px;
-    padding-top: 26px;
-    padding-bottom: 24px;
-  }
-
-  :is(
-    .folio-page-governance,
-    .folio-page-dictionary,
-    .folio-page-tasks,
-    .folio-page-export,
-    .folio-page-files,
-    .folio-page-settings
-  ) .folio-page-copy h1 {
-    font-size: clamp(46px, 4.5vw, 64px);
-  }
 }

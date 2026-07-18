@@ -39,7 +39,7 @@
 }
 
 .folio-governance-section-tools > button,
-.folio-governance-section-head > button {
+.folio-governance-section-head > :is(button, a) {
   min-height: 42px;
 }
 
@@ -534,7 +534,8 @@
 
 .folio-governance-tag > a:hover { color: var(--folio-red); }
 
-.folio-governance-tag button {
+.folio-governance-tag button,
+.folio-governance-tag > a.folio-governance-tag-action {
   min-height: 24px;
   padding: 0 5px;
   border: 0;
@@ -542,6 +543,7 @@
   background: transparent;
   color: var(--folio-red);
   font-size: 12px;
+  text-decoration: none;
 }
 
 .folio-governance-tag button:disabled {

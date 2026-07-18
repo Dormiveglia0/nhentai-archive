@@ -2,7 +2,7 @@ import type { RemoteTag } from "./api";
 
 export type Page =
   | { name: "workbench" }
-  | { name: "discover"; tag?: RemoteTag }
+  | { name: "discover"; tag?: RemoteTag & { excluded?: boolean } }
   | { name: "library" }
   | { name: "reader"; workId: number }
   | { name: "readerRemote"; galleryId: number }
@@ -49,6 +49,7 @@ export function pageFromLocation(): Page {
           name: query.get("tag_name") || undefined,
           slug: query.get("tag_slug") || undefined,
           display: query.get("tag_display") || undefined,
+          excluded: query.get("tag_excluded") === "true",
         },
       };
     }
@@ -58,6 +59,14 @@ export function pageFromLocation(): Page {
 }
 
 export function navigate(page: Page) {
+  window.location.hash = pageHref(page).slice(1);
+}
+
+export function goBack() {
+  window.history.back();
+}
+
+export function pageHref(page: Page) {
   const hash =
     page.name === "reader"
       ? `reader/${page.workId}`
@@ -72,7 +81,7 @@ export function navigate(page: Page) {
             : page.name === "discover" && page.tag
               ? `discover?${tagQuery(page.tag)}`
             : page.name;
-  window.location.hash = hash;
+  return `#${hash}`;
 }
 
 export function tagSearchHref(tag: {
@@ -96,12 +105,13 @@ export function tagSearchHref(tag: {
   return `#discover${query ? `?q=${encodeURIComponent(query)}` : ""}`;
 }
 
-function tagQuery(tag: RemoteTag) {
+function tagQuery(tag: RemoteTag & { excluded?: boolean }) {
   const query = new URLSearchParams();
   query.set("tag_id", String(tag.id));
   if (tag.type) query.set("tag_type", tag.type);
   if (tag.name) query.set("tag_name", tag.name);
   if (tag.slug) query.set("tag_slug", tag.slug);
   if (tag.display) query.set("tag_display", tag.display);
+  if (tag.excluded) query.set("tag_excluded", "true");
   return query.toString();
 }

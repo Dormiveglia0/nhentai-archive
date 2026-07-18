@@ -8,7 +8,7 @@ import { FolioChrome } from "../folio/shell/FolioChrome";
 import { DemoPage } from "./modules/DemoPage";
 import { DemoCommandBar } from "./ui/DemoCommandBar";
 
-export function FrontendDemo() {
+export function FrontendDemo({ onLogout }: { onLogout: () => Promise<void> }) {
   const [page, setPage] = useState<FolioPageId>("workbench");
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("connection");
   const [settingsRevision, setSettingsRevision] = useState(0);
@@ -39,6 +39,7 @@ export function FrontendDemo() {
       page={page}
       onNavigate={setPage}
       scrollKey={settingsSection}
+      onLogout={onLogout}
       footer={<DemoCommandBar page={page} onNavigate={setPage} onResetSettings={resetSettings} announce={setNotice} />}
       overlay={
         <AnimatePresence>

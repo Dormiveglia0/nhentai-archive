@@ -2,7 +2,7 @@ import { ArrowUpRight, Layers3 } from "lucide-react";
 
 import type { GalleryDetail } from "../../../lib/api";
 import { Stagger, StaggerItem } from "../../../lib/motion";
-import { navigate, tagSearchHref } from "../../../lib/navigation";
+import { pageHref, tagSearchHref } from "../../../lib/navigation";
 import { defaultDisplayTag } from "../../folio/ui/TagScroller";
 import "./GalleryRelated.css";
 
@@ -10,8 +10,8 @@ export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; 
   const related = detail.related.slice(0, 5);
   if (!related.length) return null;
 
-  function openGallery(galleryId: number) {
-    navigate({
+  function galleryHref(galleryId: number) {
+    return pageHref({
       name: "gallery",
       galleryId,
       returnTo: window.location.hash.replace(/^#/, ""),
@@ -31,17 +31,17 @@ export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; 
           return (
             <StaggerItem key={item.gallery_id} className="folio-gallery-related-cell">
               <article className="folio-gallery-related-card">
-                <button className="folio-gallery-related-media" type="button" onClick={() => openGallery(item.gallery_id)} aria-label={`打开作品详情：${relatedTitle}`}>
+                <a className="folio-gallery-related-media" href={galleryHref(item.gallery_id)} aria-label={`打开作品详情：${relatedTitle}`}>
                   {item.thumbnail.url ? (
                     <img className={blurCovers ? "is-blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
                   ) : <span className="folio-gallery-related-empty">NO COVER</span>}
                   <small>{item.imported ? "已入库" : `ID ${item.gallery_id}`}</small>
-                </button>
+                </a>
                 <div className="folio-gallery-related-copy">
-                  <button type="button" onClick={() => openGallery(item.gallery_id)}>
+                  <a href={galleryHref(item.gallery_id)}>
                     <strong title={relatedTitle}>{relatedTitle}</strong>
                     <ArrowUpRight size={15} />
-                  </button>
+                  </a>
                   <small>{item.page_count} 页</small>
                   {contentTags.length ? (
                     <span className="folio-gallery-related-tags">

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -124,22 +125,33 @@ class ImportService:
         tmp_path: Path | None = None
         try:
             self.jobs.checkpoint(job_id)
-            self.jobs.mark_running(job_id, "fetching_gallery", 1, 5)
+            self.jobs.mark_running(job_id, "fetching_gallery", 1, 5, 5)
             gallery = self.client.gallery(gallery_id, include="related")
             self.discover.cache_gallery(gallery)
             self.discover.cache_tags(gallery.get("tags", []))
 
             self.jobs.checkpoint(job_id)
-            self.jobs.update_progress(job_id, "running", "requesting_download_url", 2, 5)
+            self.jobs.update_progress(job_id, "running", "requesting_download_url", 2, 5, 10)
             download = self.client.download_url(gallery_id)
 
             self.jobs.checkpoint(job_id)
-            self.jobs.update_progress(job_id, "running", "downloading_cbz", 3, 5)
+            self.jobs.update_progress(job_id, "running", "downloading_cbz", 0, 0, 15)
             tmp_path = self.settings.tmp_dir / f"nhentai-{gallery_id}.cbz"
-            self.client.download_file(download["url"], tmp_path)
+            last_update = 0.0
+
+            def report_download(downloaded: int, total: int) -> None:
+                nonlocal last_update
+                now = time.monotonic()
+                if downloaded != total and now - last_update < 0.4:
+                    return
+                last_update = now
+                percent = 15 + round((downloaded / total) * 75) if total else 15
+                self.jobs.update_progress(job_id, "running", "downloading_cbz", downloaded, total, percent)
+
+            self.client.download_file(download["url"], tmp_path, progress=report_download)
 
             self.jobs.checkpoint(job_id)
-            self.jobs.update_progress(job_id, "running", "indexing_archive", 4, 5)
+            self.jobs.update_progress(job_id, "running", "indexing_archive", 4, 5, 95)
             title = gallery.get("title", {}).get("english") or gallery.get("title", {}).get("pretty") or str(gallery_id)
             work_id = self.archive.ingest_cbz(
                 Path(tmp_path),

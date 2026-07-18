@@ -23,8 +23,8 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
     copy: "选择词典建议使用的服务、目标语言与单次批量边界。",
   },
   privacy: {
-    title: "隐私与阅读偏好",
-    copy: "设置后续页面打开时采用的默认保护方式与阅读布局。",
+    title: "访问与阅读偏好",
+    copy: "修改本地访问密码，并设置媒体封面的默认保护方式与阅读布局。",
   },
   export: {
     title: "CBZ 默认配方",
@@ -41,13 +41,11 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
 };
 
 export function SettingsPage({
-  onPrivacyModeChange,
   onBlurCoversChange,
 }: {
-  onPrivacyModeChange: (value: boolean) => void;
   onBlurCoversChange: (value: boolean) => void;
 }) {
-  const vm = useSettingsState(onPrivacyModeChange, onBlurCoversChange);
+  const vm = useSettingsState(onBlurCoversChange);
   const reduceMotion = usePrefersReducedMotion();
   const current = SECTION_COPY[vm.section];
   const formRef = useRef<HTMLFormElement>(null);

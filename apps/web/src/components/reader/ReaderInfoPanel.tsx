@@ -2,7 +2,8 @@ import { ArrowUpRight, Check, Download, LoaderCircle, Star, X } from "lucide-rea
 import { useEffect, useRef } from "react";
 
 import { FadeInOut, Presence } from "../../lib/motion";
-import { navigate, tagSearchHref } from "../../lib/navigation";
+import { pageHref, tagSearchHref } from "../../lib/navigation";
+import { AmbientCover } from "../folio/ui/AmbientCover";
 import "./ReaderPanels.css";
 
 type ReaderInfoPanelProps = {
@@ -75,7 +76,11 @@ export function ReaderInfoPanel({
           </header>
 
           <div className="reader-info-meta">
-            {coverSrc ? <div className="reader-info-cover"><img src={coverSrc} alt="" draggable={false} /></div> : null}
+            {coverSrc ? (
+              <div className="reader-info-cover">
+                <AmbientCover className="reader-info-cover-artwork" src={coverSrc} alt="" draggable={false} />
+              </div>
+            ) : null}
             <h2>{title}</h2>
             <div className="reader-info-progress">
               <span><strong>{progressPercent}%</strong><small>{isRemote ? "远端只读预览" : "本地阅读进度"}</small></span>
@@ -113,11 +118,11 @@ export function ReaderInfoPanel({
               </button>
             )}
             {galleryId != null ? (
-              <button type="button" onClick={() => navigate({ name: "gallery", galleryId, returnTo })}>
+              <a href={pageHref({ name: "gallery", galleryId, returnTo })}>
                 <span>查看作品展示页</span><ArrowUpRight size={14} />
-              </button>
+              </a>
             ) : null}
-            {!isRemote && workId != null ? <button type="button" onClick={() => navigate({ name: "governance", workId })}>进入元数据治理</button> : null}
+            {!isRemote && workId != null ? <a href={pageHref({ name: "governance", workId })}>进入元数据治理</a> : null}
           </div>
         </FadeInOut>
       ) : null}

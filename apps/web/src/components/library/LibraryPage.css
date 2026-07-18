@@ -432,13 +432,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-.folio-library-result-controls button {
+.folio-library-result-controls > :is(button, a) {
   min-height: 38px;
   padding: 0 12px;
   border: 1px solid var(--folio-line);
   background: transparent;
   color: var(--folio-muted);
   font-size: 12px;
+  text-decoration: none;
 }
 
 .folio-library-result-controls .folio-library-history-link {
@@ -447,7 +448,7 @@
   gap: 7px;
 }
 
-.folio-library-result-controls button:hover:not(:disabled),
+.folio-library-result-controls > :is(button, a):hover:not(:disabled),
 .folio-library-result-controls button.is-active {
   border-color: var(--folio-ink);
   background: var(--folio-ink);
@@ -760,6 +761,7 @@
   background: var(--folio-paper-deep);
   position: relative;
   overflow: hidden;
+  text-decoration: none;
 }
 
 .folio-library-card.is-list .folio-library-cover {
@@ -854,6 +856,7 @@
   font-weight: 600;
   line-height: 1.4;
   text-align: left;
+  text-decoration: none;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -940,6 +943,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
   transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
@@ -1172,7 +1176,7 @@
   gap: 8px;
 }
 
-.folio-library-inspector-actions button {
+.folio-library-inspector-actions :is(button, a) {
   min-height: 42px;
   padding: 0 10px;
   display: inline-flex;
@@ -1183,16 +1187,23 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 12px;
+  text-decoration: none;
 }
 
-.folio-library-inspector-actions button.is-primary {
+.folio-library-inspector-actions :is(button, a).is-primary {
   grid-column: 1 / -1;
   border-color: var(--folio-red);
   background: var(--folio-red);
   color: var(--folio-paper-bright);
 }
 
-.folio-library-inspector-actions button:hover {
+.folio-library-inspector-actions button.folio-work-delete-trigger {
+  grid-column: 1 / -1;
+  border-color: rgba(173, 56, 46, 0.62);
+  color: var(--folio-red);
+}
+
+.folio-library-inspector-actions :is(button, a):hover {
   border-color: var(--folio-ink);
   background: var(--folio-ink);
   color: var(--folio-paper-bright);
@@ -1357,7 +1368,15 @@
   }
 
   .folio-library-card-tags {
-    display: none;
+    gap: 4px;
+  }
+
+  .folio-library-card-tags a,
+  .folio-library-card-tags > span {
+    min-height: 22px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 1.2;
   }
 
   .folio-library-read-action {

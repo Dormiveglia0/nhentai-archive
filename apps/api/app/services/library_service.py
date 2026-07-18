@@ -96,7 +96,9 @@ class LibraryService:
               COUNT(DISTINCT wt.work_id) AS count
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
-            WHERE wt.tag_type = 'language' AND COALESCE(wt.remote_slug, wt.remote_name) IS NOT NULL
+            WHERE wt.tag_type = 'language'
+              AND COALESCE(wt.remote_slug, wt.remote_name) IS NOT NULL
+              AND lower(COALESCE(wt.remote_slug, wt.remote_name, '')) NOT LIKE 'translat%'
             GROUP BY value
             ORDER BY count DESC
             """

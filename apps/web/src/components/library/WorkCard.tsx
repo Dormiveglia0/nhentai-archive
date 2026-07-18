@@ -1,7 +1,7 @@
 import { BookOpen, Check } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
+import { navigate, pageHref } from "../../lib/navigation";
 import { TagScroller } from "../folio/ui/TagScroller";
 import type { LibraryView } from "./LibraryToolbar";
 import { authorLine, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
@@ -32,7 +32,14 @@ export function WorkCard({
   const status = readStatusLabel(work);
   const title = workTitle(work);
   const progress = work.progress_percent ?? 0;
+  const contentTags = (work.tags ?? []).filter((tag) => tag.type === "tag");
   const select = multiSelect ? (onToggle ?? onSelect) : onSelect;
+  const readerHref = pageHref({ name: "reader", workId: work.id });
+  const selectCurrent = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    select();
+  };
   const className = [
     "folio-library-card",
     view === "list" ? "is-list" : "",
@@ -42,15 +49,14 @@ export function WorkCard({
 
   return (
     <article className={className}>
-      <button
-        type="button"
+      <a
+        href={readerHref}
         className="folio-library-cover"
-        onClick={select}
+        onClick={selectCurrent}
         onDoubleClick={() => {
           if (!multiSelect) navigate({ name: "reader", workId: work.id });
         }}
         aria-label={multiSelect ? `${checked ? "取消选择" : "选择"}${title}` : `查看${title}的详情`}
-        aria-pressed={multiSelect ? checked : selected}
       >
         {multiSelect ? (
           <span className={checked ? "folio-library-check is-on" : "folio-library-check"} aria-hidden="true">
@@ -64,7 +70,7 @@ export function WorkCard({
         )}
         {work.completed ? <span className="folio-library-read-mark" aria-label="已读"><Check size={13} /></span> : null}
         <span className={`folio-library-status tone-${status.tone}`}>{status.label}</span>
-      </button>
+      </a>
 
       <div className="folio-library-card-body">
         <div className="folio-library-card-meta">
@@ -72,9 +78,9 @@ export function WorkCard({
           <em>{languageLabel(work)}</em>
         </div>
 
-        <button type="button" className="folio-library-card-title" onClick={select} aria-pressed={multiSelect ? checked : selected}>
+        <a href={readerHref} className="folio-library-card-title" onClick={selectCurrent}>
           {title}
-        </button>
+        </a>
         <p title={authorLine(work)}>{authorLine(work)}</p>
         <small>{work.page_count} 页{work.remote_gallery_id ? ` · Gallery ${work.remote_gallery_id}` : ""}</small>
 
@@ -91,14 +97,15 @@ export function WorkCard({
 
         <TagScroller
           className="folio-library-card-tags"
-          tags={(work.tags ?? []) as LibraryTag[]}
+          tags={contentTags as LibraryTag[]}
+          emptyLabel="暂无内容 Tag"
           onPickTag={(tag) => onPickTag(tag as LibraryTag)}
         />
 
-        <button type="button" className="folio-library-read-action" onClick={() => navigate({ name: "reader", workId: work.id })}>
+        <a className="folio-library-read-action" href={readerHref}>
           <BookOpen size={15} />
           {progress > 0 && !work.completed ? "继续阅读" : "开始阅读"}
-        </button>
+        </a>
       </div>
     </article>
   );

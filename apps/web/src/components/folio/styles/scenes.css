@@ -1,7 +1,7 @@
 /* All module header scene styling; scene TSX is split per module. */
 .folio-scene {
   width: min(48vw, 620px);
-  height: 228px;
+  height: 100%;
   color: rgba(23, 24, 21, 0.31);
   position: absolute;
   right: clamp(26px, 4vw, 70px);
@@ -611,4 +611,3 @@
   transform-origin: center;
   animation: folio-scene-settings-status-check 6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
-
