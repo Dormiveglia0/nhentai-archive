@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS works (
   language TEXT,
   page_count INTEGER NOT NULL DEFAULT 0,
   cover_path TEXT,
+  favorite INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -141,6 +142,17 @@ CREATE TABLE IF NOT EXISTS reading_history (
   opened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS reading_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_key TEXT NOT NULL UNIQUE,
+  work_id INTEGER NOT NULL REFERENCES works(id) ON DELETE CASCADE,
+  started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ended_at TEXT,
+  duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK(duration_seconds >= 0),
+  last_page_index INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,
@@ -174,6 +186,8 @@ CREATE TABLE IF NOT EXISTS settings (
 INDEXES = """
 CREATE INDEX IF NOT EXISTS idx_work_files_work_kind_created
   ON work_files(work_id, kind, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_works_favorite_updated
+  ON works(favorite, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_work_tags_remote_work
   ON work_tags(remote_tag_id, work_id);
 CREATE INDEX IF NOT EXISTS idx_work_tags_dictionary
@@ -186,6 +200,10 @@ CREATE INDEX IF NOT EXISTS idx_reading_history_work_opened
   ON reading_history(work_id, opened_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reading_history_opened_work
   ON reading_history(opened_at DESC, work_id);
+CREATE INDEX IF NOT EXISTS idx_reading_sessions_work_started
+  ON reading_sessions(work_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reading_sessions_started
+  ON reading_sessions(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_status_updated
   ON jobs(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_updated
@@ -234,6 +252,9 @@ class Database:
         return _portable_managed_path(str(value), self._managed_root) or str(value)
 
     def _migrate_legacy_schema(self, conn: sqlite3.Connection) -> None:
+        works_columns = _table_columns(conn, "works")
+        _add_column_if_missing(conn, "works", works_columns, "favorite", "INTEGER NOT NULL DEFAULT 0")
+
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:
             legacy = _rename_legacy_table(conn, "local_tag_dictionary")

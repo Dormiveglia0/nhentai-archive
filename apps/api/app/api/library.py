@@ -22,10 +22,11 @@ def search(
     source: str = "all",
     language: str = "all",
     tag_ids: str = "",
+    favorite_only: bool = False,
 ):
     ids = [int(value) for value in tag_ids.split(",") if value.strip().isdigit()]
     return services.library.search(
-        q, page, per_page, sort, read_status, source, language, ids
+        q, page, per_page, sort, read_status, source, language, ids, favorite_only
     )
 
 
@@ -52,6 +53,11 @@ def tag_filters(q: str = "", limit: int = 40):
 @router.get("/reading-history")
 def reading_history(page: int = 1, per_page: int = 30):
     return services.library.reading_history(page, per_page)
+
+
+@router.get("/statistics")
+def statistics(days: int = 30, timezone_offset_minutes: int = 0):
+    return services.library.statistics(days, timezone_offset_minutes)
 
 
 @router.post("/scan/preview")

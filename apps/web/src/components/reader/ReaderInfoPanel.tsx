@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, Download, LoaderCircle, Star, X } from "lucide-react";
+import { ArrowUpRight, Check, Download, Heart, LoaderCircle, Star, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { FadeInOut, Presence } from "../../lib/motion";
@@ -16,10 +16,12 @@ type ReaderInfoPanelProps = {
   importing: boolean;
   queued: boolean;
   completed: boolean;
+  favorite: boolean;
   workId: number | null;
   galleryId: number | null;
   returnTo: string;
   onMarkCompleted: () => void;
+  onToggleFavorite: () => void;
   onImport: () => void;
   onClose: () => void;
   onHoverChange: (hovering: boolean) => void;
@@ -35,10 +37,12 @@ export function ReaderInfoPanel({
   importing,
   queued,
   completed,
+  favorite,
   workId,
   galleryId,
   returnTo,
   onMarkCompleted,
+  onToggleFavorite,
   onImport,
   onClose,
   onHoverChange,
@@ -107,10 +111,16 @@ export function ReaderInfoPanel({
 
           <div className="reader-info-actions">
             {!isRemote ? (
-              <button type="button" onClick={onMarkCompleted} disabled={completed}>
-                {completed ? <Check size={16} /> : <Star size={16} />}
-                <span>{completed ? "已标记读完" : "标记为已读"}</span>
-              </button>
+              <>
+                <button type="button" onClick={onMarkCompleted} disabled={completed}>
+                  {completed ? <Check size={16} /> : <Star size={16} />}
+                  <span>{completed ? "已标记读完" : "标记为已读"}</span>
+                </button>
+                <button className={favorite ? "is-favorite" : ""} type="button" onClick={onToggleFavorite} aria-pressed={favorite}>
+                  <Heart size={16} fill={favorite ? "currentColor" : "none"} />
+                  <span>{favorite ? "已收藏" : "收藏作品"}</span>
+                </button>
+              </>
             ) : (
               <button type="button" onClick={onImport} disabled={importing || queued} aria-busy={importing}>
                 {importing ? <LoaderCircle className="reader-loading-icon" size={16} /> : queued ? <Check size={16} /> : <Download size={16} />}

@@ -4,6 +4,10 @@
   padding-bottom: 128px;
 }
 
+.folio-settings-page.is-readonly {
+  padding-bottom: 34px;
+}
+
 .folio-settings-page > .folio-settings-nav {
   margin: 0 calc(clamp(26px, 4vw, 70px) * -1);
   padding: 0 clamp(26px, 4vw, 70px);
@@ -688,6 +692,274 @@
   font-variant-numeric: tabular-nums;
 }
 
+.folio-settings-reading-report {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--folio-line-strong);
+  scroll-margin-top: 92px;
+}
+
+.folio-settings-report-head,
+.folio-settings-report-head > div,
+.folio-settings-report-head > div > span {
+  display: flex;
+  align-items: center;
+}
+
+.folio-settings-report-head {
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.folio-settings-report-head > div {
+  gap: 10px;
+}
+
+.folio-settings-report-head > div > svg {
+  color: var(--folio-red);
+}
+
+.folio-settings-report-head > div > span {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.folio-settings-report-head strong {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 16px;
+}
+
+.folio-settings-report-head small,
+.folio-settings-report-head em {
+  color: var(--folio-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.folio-settings-report-head em {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.12em;
+}
+
+.folio-settings-stat-metrics {
+  margin-top: 16px;
+}
+
+.folio-settings-activity {
+  margin-top: 20px;
+  padding: 17px 0 12px;
+  border-top: 1px solid var(--folio-line);
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-settings-activity > header,
+.folio-settings-activity > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.folio-settings-activity > header span {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.folio-settings-activity > header strong,
+.folio-settings-activity > footer {
+  color: var(--folio-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.folio-settings-activity-bars {
+  height: 112px;
+  margin: 16px 0 9px;
+  padding: 9px 8px 0;
+  display: grid;
+  grid-template-columns: repeat(30, minmax(2px, 1fr));
+  align-items: end;
+  gap: clamp(2px, 0.35vw, 5px);
+  background: repeating-linear-gradient(to top, transparent 0 27px, rgba(23, 24, 21, 0.055) 27px 28px);
+}
+
+.folio-settings-activity-bars i {
+  width: 100%;
+  min-height: 3px;
+  display: block;
+  background: linear-gradient(to top, var(--folio-red), rgba(173, 56, 46, 0.46));
+  transform-origin: bottom;
+}
+
+.folio-settings-activity-bars i.is-empty {
+  background: var(--folio-line-strong);
+}
+
+.folio-settings-work-rankings,
+.folio-settings-affinity-rankings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 54px);
+}
+
+.folio-settings-work-rankings {
+  margin-top: 26px;
+}
+
+.folio-settings-affinity-rankings {
+  margin-top: 28px;
+}
+
+.folio-settings-work-ranking > header,
+.folio-settings-tag-ranking > header {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--folio-line-strong);
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-settings-work-ranking > header span,
+.folio-settings-tag-ranking > header span {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.folio-settings-work-ranking > header small,
+.folio-settings-tag-ranking > header small {
+  color: var(--folio-muted);
+  font: 10px Georgia, "Times New Roman", serif;
+  letter-spacing: 0.08em;
+}
+
+.folio-settings-work-ranking ol,
+.folio-settings-tag-ranking ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folio-settings-work-ranking li {
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-settings-work-ranking li > a {
+  min-height: 72px;
+  padding: 8px 2px;
+  display: grid;
+  grid-template-columns: 26px 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--folio-ink);
+  text-decoration: none;
+  transition: background-color 180ms ease, padding 180ms ease;
+}
+
+.folio-settings-work-ranking li > a:hover {
+  padding-right: 8px;
+  padding-left: 8px;
+  background: var(--folio-red-soft);
+}
+
+.folio-settings-work-ranking li em,
+.folio-settings-tag-ranking li > em {
+  color: var(--folio-red);
+  font: 11px Georgia, "Times New Roman", serif;
+  font-style: normal;
+}
+
+.folio-settings-rank-cover {
+  width: 38px;
+  height: 52px;
+  display: block;
+  background: var(--folio-paper-deep);
+  overflow: hidden;
+}
+
+.folio-settings-work-ranking li > a > span:nth-child(3) {
+  min-width: 0;
+}
+
+.folio-settings-work-ranking li strong,
+.folio-settings-work-ranking li small {
+  display: block;
+}
+
+.folio-settings-work-ranking li strong {
+  overflow: hidden;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-settings-work-ranking li small {
+  margin-top: 4px;
+  color: var(--folio-muted);
+  font-size: 10px;
+}
+
+.folio-settings-work-ranking li b {
+  color: var(--folio-red);
+  font: 12px Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.folio-settings-work-ranking > p,
+.folio-settings-tag-ranking > p {
+  min-height: 76px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border-bottom: 1px solid var(--folio-line);
+  color: var(--folio-muted);
+  font-size: 11px;
+}
+
+.folio-settings-tag-ranking li {
+  min-height: 45px;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--folio-line);
+}
+
+.folio-settings-tag-ranking li > a {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--folio-ink);
+  font-size: 12px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folio-settings-tag-ranking li > a:hover {
+  color: var(--folio-red);
+}
+
+.folio-settings-tag-ranking li > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--folio-red);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.folio-settings-tag-ranking li > small {
+  color: var(--folio-muted);
+  font: 10px Georgia, "Times New Roman", serif;
+  white-space: nowrap;
+}
+
 .folio-settings-fetch-error {
   min-height: 64px;
   margin-bottom: 22px;
@@ -994,6 +1266,36 @@
   .folio-settings-reading-metrics article {
     padding-right: 10px;
     padding-left: 10px;
+  }
+
+  .folio-settings-report-head {
+    align-items: flex-start;
+  }
+
+  .folio-settings-reading-report {
+    scroll-margin-top: 150px;
+  }
+
+  .folio-settings-report-head em {
+    max-width: 108px;
+    text-align: right;
+  }
+
+  .folio-settings-activity-bars {
+    height: 88px;
+    padding-right: 2px;
+    padding-left: 2px;
+    gap: 2px;
+  }
+
+  .folio-settings-work-rankings,
+  .folio-settings-affinity-rankings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+
+  .folio-settings-work-ranking li > a {
+    min-height: 70px;
   }
 
   .folio-settings-maintenance > header {

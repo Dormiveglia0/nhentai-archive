@@ -48,7 +48,9 @@ def test_reading_history_aggregates_same_work_same_day(tmp_path):
     library = LibraryService(db)
     reader = ReaderService(db)
     work_id = _import(archive, tmp_path, "alpha", pages=10)
+    reader.start_session(work_id, "history-session-one", page_index=2)
     reader.update_state(work_id, page_index=2)
+    reader.start_session(work_id, "history-session-two", page_index=5)
     reader.update_state(work_id, page_index=5)
 
     out = library.reading_history()

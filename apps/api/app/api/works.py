@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Response
 from fastapi.responses import FileResponse
 
-from app.api.schemas import ReaderStatePatch
+from app.api.schemas import FavoritePatch, ReaderStatePatch, ReadingSessionPatch, ReadingSessionStart
 from app.container import services
 
 
@@ -70,5 +70,35 @@ def get_reader_state(work_id: int):
 def patch_reader_state(work_id: int, patch: ReaderStatePatch):
     try:
         return services.reader.update_state(work_id, patch.page_index, patch.completed)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch("/{work_id}/favorite")
+def patch_favorite(work_id: int, patch: FavoritePatch):
+    try:
+        return services.library.set_favorite(work_id, patch.favorite)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/{work_id}/reading-sessions")
+def start_reading_session(work_id: int, payload: ReadingSessionStart):
+    try:
+        return services.reader.start_session(work_id, payload.session_key, payload.page_index)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch("/{work_id}/reading-sessions/{session_id}")
+def patch_reading_session(work_id: int, session_id: int, patch: ReadingSessionPatch):
+    try:
+        return services.reader.update_session(
+            work_id,
+            session_id,
+            patch.duration_seconds,
+            patch.page_index,
+            patch.finished,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

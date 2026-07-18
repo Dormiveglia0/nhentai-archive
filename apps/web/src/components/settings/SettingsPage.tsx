@@ -31,8 +31,8 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
     copy: "只定义导出中心的起始选项，单次下载仍可临时调整。",
   },
   data: {
-    title: "本地馆藏概览",
-    copy: "读取真实馆藏与文件清单，集中呈现规模、来源与需要维护的项目。",
+    title: "馆藏与阅读报表",
+    copy: "汇总真实馆藏、收藏、阅读时长、打开次数与内容偏好；不会生成或补写历史数据。",
   },
   storage: {
     title: "存储与路径",
@@ -70,9 +70,10 @@ export function SettingsPage({
   }
 
   const syncLabel = vm.loading ? "正在同步" : vm.dirty ? "有未保存更改" : vm.settings ? "已同步" : "等待配置";
+  const showActions = vm.dirty || (vm.section !== "data" && vm.section !== "storage");
 
   return (
-    <form ref={formRef} className="folio-page-body folio-settings-body folio-settings-page" onSubmit={onSubmit}>
+    <form ref={formRef} className={`folio-page-body folio-settings-body folio-settings-page${showActions ? "" : " is-readonly"}`} onSubmit={onSubmit}>
       <nav className="folio-settings-nav" aria-label="设置章节">
         {SETTINGS_SECTIONS.map((item) => {
           const Icon = item.icon;
@@ -158,25 +159,27 @@ export function SettingsPage({
         </m.section>
       </AnimatePresence>
 
-      <footer className="folio-settings-actions">
-        <div className="folio-settings-action-state">
-          <span className={vm.dirty ? "is-dirty" : ""} />
-          <p>
-            <strong>{vm.dirty ? "设置尚未保存" : "当前配置已同步"}</strong>
-            <small>{vm.dirty ? "保存后立即更新本机运行态" : "敏感值不会在页面中回显"}</small>
-          </p>
-        </div>
-        <div className="folio-settings-action-buttons">
-          <button className="folio-settings-action" type="button" onClick={reload} disabled={vm.loading}>
-            <RefreshCw size={15} className={vm.loading ? "spin" : undefined} />
-            重新读取
-          </button>
-          <button className="folio-settings-action is-primary" type="submit" disabled={vm.loading || !vm.dirty || !vm.settings}>
-            <Save size={15} />
-            保存设置
-          </button>
-        </div>
-      </footer>
+      {showActions ? (
+        <footer className="folio-settings-actions">
+          <div className="folio-settings-action-state">
+            <span className={vm.dirty ? "is-dirty" : ""} />
+            <p>
+              <strong>{vm.dirty ? "设置尚未保存" : "当前配置已同步"}</strong>
+              <small>{vm.dirty ? "保存后立即更新本机运行态" : "敏感值不会在页面中回显"}</small>
+            </p>
+          </div>
+          <div className="folio-settings-action-buttons">
+            <button className="folio-settings-action" type="button" onClick={reload} disabled={vm.loading}>
+              <RefreshCw size={15} className={vm.loading ? "spin" : undefined} />
+              重新读取
+            </button>
+            <button className="folio-settings-action is-primary" type="submit" disabled={vm.loading || !vm.dirty || !vm.settings}>
+              <Save size={15} />
+              保存设置
+            </button>
+          </div>
+        </footer>
+      ) : null}
     </form>
   );
 }

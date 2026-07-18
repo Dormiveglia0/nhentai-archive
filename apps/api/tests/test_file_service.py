@@ -328,6 +328,7 @@ def test_delete_work_cascades_all_tables_and_files(tmp_path):
     db.execute("INSERT INTO governance_reviews (work_id, action, snapshot_hash) VALUES (?, 'approve', 'test')", (drop_id,))
     db.execute("INSERT INTO reader_progress (work_id, page_index, page_count, progress_percent) VALUES (?, 1, 2, 50)", (drop_id,))
     db.execute("INSERT INTO reading_history (work_id, page_index) VALUES (?, 1)", (drop_id,))
+    db.execute("INSERT INTO reading_sessions (client_key, work_id, last_page_index) VALUES ('delete-session', ?, 1)", (drop_id,))
     drop_source = Path(db.fetchone("SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (drop_id,))["path"])
     drop_cover = Path(db.fetchone("SELECT cover_path FROM works WHERE id=?", (drop_id,))["cover_path"])
     keep_source = Path(db.fetchone("SELECT path FROM work_files WHERE work_id=? AND kind='source_cbz'", (keep_id,))["path"])
@@ -341,7 +342,7 @@ def test_delete_work_cascades_all_tables_and_files(tmp_path):
     assert result["errors"] == []
     assert not drop_source.exists()
     assert not drop_cover.exists()
-    for table in ("works", "work_files", "work_pages", "work_tags", "work_metadata", "governance_reviews", "reader_progress", "reading_history"):
+    for table in ("works", "work_files", "work_pages", "work_tags", "work_metadata", "governance_reviews", "reader_progress", "reading_history", "reading_sessions"):
         assert db.fetchone(f"SELECT 1 FROM {table} WHERE work_id=?", (drop_id,)) is None if table != "works" else db.fetchone("SELECT 1 FROM works WHERE id=?", (drop_id,)) is None
     # other work untouched
     assert db.fetchone("SELECT 1 FROM works WHERE id=?", (keep_id,)) is not None

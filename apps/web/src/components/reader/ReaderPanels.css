@@ -233,6 +233,11 @@
 
 .reader-info-actions button:disabled { opacity: .48; }
 
+.reader-info-actions button.is-favorite {
+  border-color: var(--reader-red);
+  color: var(--reader-red-soft);
+}
+
 .reader-thumb-field {
   background: rgba(7,8,7,.82);
   backdrop-filter: blur(18px) saturate(.44);

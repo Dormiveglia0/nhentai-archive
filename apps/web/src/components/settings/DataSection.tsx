@@ -2,11 +2,12 @@ import { AlertTriangle, Archive, BookOpen, CheckCircle2, Circle, Database, Downl
 import { m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-import { api, type FileOverview, type LibrarySummary } from "../../lib/api";
+import { api, type FileOverview, type LibrarySummary, type ReadingStatistics } from "../../lib/api";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
 import { FolioMetricGrid, type FolioMetricItem } from "../folio/ui/FolioMetricGrid";
 import { formatBytes } from "../../lib/format";
+import { ReadingStatisticsReport } from "./ReadingStatisticsReport";
 
 type Metric = {
   label: string;
@@ -20,6 +21,7 @@ export function DataSection() {
   const reduceMotion = usePrefersReducedMotion();
   const [library, setLibrary] = useState<LibrarySummary | null>(null);
   const [files, setFiles] = useState<FileOverview | null>(null);
+  const [statistics, setStatistics] = useState<ReadingStatistics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const requestRef = useRef(0);
@@ -29,11 +31,12 @@ export function DataSection() {
     const requestId = ++requestRef.current;
     setLoading(true);
     setError(null);
-    Promise.all([api.librarySummary(), api.filesOverview()])
-      .then(([libraryPayload, filePayload]) => {
+    Promise.all([api.librarySummary(), api.filesOverview(), api.libraryStatistics(30)])
+      .then(([libraryPayload, filePayload, statisticsPayload]) => {
         if (!alive || requestId !== requestRef.current) return;
         setLibrary(libraryPayload);
         setFiles(filePayload);
+        setStatistics(statisticsPayload);
       })
       .catch((exc: Error) => {
         if (alive && requestId === requestRef.current) setError(exc.message);
@@ -149,6 +152,8 @@ export function DataSection() {
           </div>
         </m.section>
       </div>
+
+      <ReadingStatisticsReport statistics={statistics} loading={loading} />
 
       <section className="folio-settings-maintenance" aria-label="馆藏维护状态">
         <header>

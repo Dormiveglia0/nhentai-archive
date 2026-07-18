@@ -24,6 +24,7 @@ export function useLibraryState(perPage: number) {
   const [source, setSource] = useState("all");
   const [sort, setSort] = useState("recent_updated");
   const [tags, setTags] = useState<LibraryTagFilter[]>([]);
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [view, setView] = useState<LibraryView>("grid");
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
@@ -36,7 +37,7 @@ export function useLibraryState(perPage: number) {
   const overviewToken = useRef(0);
 
   const filtersActive =
-    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || tags.length > 0;
+    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || tags.length > 0 || favoriteOnly;
 
   const loadOverview = useCallback(async () => {
     const current = ++overviewToken.current;
@@ -78,6 +79,7 @@ export function useLibraryState(perPage: number) {
       source,
       language,
       tag_ids: tags.map((tag) => tag.id),
+      favorite_only: favoriteOnly,
     })
       .then((payload) => {
         if (requestToken.current !== current) return;
@@ -104,7 +106,7 @@ export function useLibraryState(perPage: number) {
     return () => {
       if (requestToken.current === current) requestToken.current += 1;
     };
-  }, [q, page, perPage, sort, readStatus, source, language, tags, reloadKey]);
+  }, [q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly, reloadKey]);
 
   const reload = useCallback(() => {
     setReloadKey((value) => value + 1);
@@ -122,6 +124,7 @@ export function useLibraryState(perPage: number) {
     setReadStatus("all");
     setSource("all");
     setTags([]);
+    setFavoriteOnly(false);
     setPage(1);
   }
 
@@ -169,6 +172,17 @@ export function useLibraryState(perPage: number) {
     reload();
   }
 
+  const toggleFavorite = useCallback(async (work: LibraryWork) => {
+    setError(null);
+    try {
+      const updated = await api.setWorkFavorite(work.id, !work.favorite);
+      setSelected((current) => current?.id === updated.id ? updated : current);
+      reload();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : String(exception));
+    }
+  }, [reload]);
+
   return {
     summary,
     continueReading,
@@ -190,6 +204,8 @@ export function useLibraryState(perPage: number) {
     setSort: (value: string) => resetPage(() => setSort(value)),
     tags,
     setTags: (value: LibraryTagFilter[]) => resetPage(() => setTags(value)),
+    favoriteOnly,
+    setFavoriteOnly: (value: boolean) => resetPage(() => setFavoriteOnly(value)),
     view,
     setView,
     page,
@@ -201,6 +217,7 @@ export function useLibraryState(perPage: number) {
     selectAllOnPage,
     clearSelectedIds: () => setSelectedIds(new Set()),
     afterBulkAction,
+    toggleFavorite,
     filtersActive,
     resetFilters,
     pickTag,

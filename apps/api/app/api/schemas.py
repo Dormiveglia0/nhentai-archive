@@ -6,6 +6,21 @@ class ReaderStatePatch(BaseModel):
     completed: bool = False
 
 
+class ReadingSessionStart(BaseModel):
+    session_key: str = Field(min_length=8, max_length=128)
+    page_index: int = 1
+
+
+class ReadingSessionPatch(BaseModel):
+    duration_seconds: int = Field(ge=0)
+    page_index: int = 1
+    finished: bool = False
+
+
+class FavoritePatch(BaseModel):
+    favorite: bool
+
+
 class SettingsPatch(BaseModel):
     nhentai_api_key: str | None = None
     clear_nhentai_api_key: bool = False

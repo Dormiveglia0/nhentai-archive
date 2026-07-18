@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.database import Database
@@ -25,6 +26,7 @@ CARD_TAG_TYPES = ("artist", "group", "parody", "character", "language", "tag", "
 WORK_COLUMNS = """
   w.id, w.remote, w.remote_gallery_id, w.media_id, w.title, w.title_japanese,
   w.pretty_title, w.source, w.language, w.page_count, w.cover_path,
+  COALESCE(w.favorite, 0) AS favorite,
   w.created_at, w.updated_at,
   COALESCE(rp.page_index, 0) AS reader_page_index,
   COALESCE(rp.progress_percent, 0) AS progress_percent,
@@ -59,11 +61,12 @@ class LibraryService:
               COUNT(*) AS total,
               COALESCE(SUM(CASE WHEN rp.progress_percent > 0 AND rp.completed = 0 THEN 1 ELSE 0 END), 0) AS reading,
               COALESCE(SUM(CASE WHEN rp.completed = 1 THEN 1 ELSE 0 END), 0) AS completed,
+              COALESCE(SUM(w.favorite), 0) AS favorites,
               COALESCE(SUM(w.page_count), 0) AS pages
             FROM works w
             LEFT JOIN reader_progress rp ON rp.work_id = w.id
             """
-        ) or {"total": 0, "reading": 0, "completed": 0, "pages": 0}
+        ) or {"total": 0, "reading": 0, "completed": 0, "favorites": 0, "pages": 0}
 
         total = int(totals["total"])
         reading = int(totals["reading"])
@@ -109,6 +112,7 @@ class LibraryService:
             "reading": reading,
             "completed": completed,
             "unread": unread,
+            "favorites": int(totals["favorites"]),
             "untagged": untagged,
             "total_pages": int(totals["pages"]),
             "total_size_bytes": total_size_bytes,
@@ -129,6 +133,7 @@ class LibraryService:
         source: str = "all",
         language: str = "all",
         tag_ids: list[int] | None = None,
+        favorite_only: bool = False,
     ) -> dict[str, Any]:
         page = max(1, int(page))
         per_page = max(1, min(int(per_page), 100))
@@ -137,7 +142,7 @@ class LibraryService:
         source = source if source in SOURCES else "all"
         tag_ids = [int(tid) for tid in (tag_ids or []) if tid is not None]
 
-        where, params = self._build_filters(q, read_status, source, language, tag_ids)
+        where, params = self._build_filters(q, read_status, source, language, tag_ids, favorite_only)
         where_sql = " AND ".join(where) if where else "1 = 1"
 
         total = int(
@@ -171,6 +176,18 @@ class LibraryService:
             (work_id,),
         )
         return self._finalize(rows)[0] if rows else None
+
+    def set_favorite(self, work_id: int, favorite: bool) -> dict[str, Any]:
+        updated = self.db.execute(
+            "UPDATE works SET favorite = ? WHERE id = ?",
+            (int(favorite), work_id),
+        ).rowcount
+        if not updated:
+            raise ValueError(f"Work {work_id} does not exist")
+        work = self.work(work_id)
+        if work is None:
+            raise ValueError(f"Work {work_id} does not exist")
+        return work
 
     def recent_added(self, limit: int = 12) -> dict[str, Any]:
         return {"result": self._top("1 = 1", [], "w.created_at DESC, w.id DESC", limit)}
@@ -289,10 +306,106 @@ class LibraryService:
         ]
         return {"result": result, "total": total, "page": page, "per_page": per_page, "num_pages": num_pages}
 
+    def statistics(self, days: int = 30, timezone_offset_minutes: int = 0, limit: int = 8) -> dict[str, Any]:
+        days = max(1, min(int(days), 365))
+        timezone_offset_minutes = max(-840, min(int(timezone_offset_minutes), 840))
+        timezone_modifier = f"{timezone_offset_minutes:+d} minutes"
+        limit = max(1, min(int(limit), 20))
+        overview = self.db.fetchone(
+            """
+            SELECT
+              COALESCE(SUM(duration_seconds), 0) AS total_seconds,
+              COUNT(*) AS sessions,
+              COUNT(DISTINCT work_id) AS works_read,
+              COUNT(DISTINCT date(started_at, ?)) AS active_days,
+              COALESCE(ROUND(AVG(duration_seconds)), 0) AS average_session_seconds,
+              COALESCE(MAX(duration_seconds), 0) AS longest_session_seconds,
+              MIN(date(started_at, ?)) AS tracking_since
+            FROM reading_sessions
+            """,
+            (timezone_modifier, timezone_modifier),
+        ) or {}
+        favorite_row = self.db.fetchone("SELECT COUNT(*) AS value FROM works WHERE favorite = 1")
+        local_timezone = timezone(timedelta(minutes=timezone_offset_minutes))
+        today = datetime.now(local_timezone).date()
+        start = today - timedelta(days=days - 1)
+        raw_activity = self.db.fetchall(
+            """
+            SELECT date(started_at, ?) AS date,
+                   COALESCE(SUM(duration_seconds), 0) AS seconds,
+                   COUNT(*) AS sessions,
+                   COUNT(DISTINCT work_id) AS works
+            FROM reading_sessions
+            WHERE date(started_at, ?) >= ?
+            GROUP BY date
+            ORDER BY date
+            """,
+            (timezone_modifier, timezone_modifier, start.isoformat()),
+        )
+        activity_by_date = {str(row["date"]): row for row in raw_activity}
+        # ponytail: a session belongs to its start day; split it at midnight only if multi-day precision matters.
+        activity = []
+        for offset in range(days):
+            day = start + timedelta(days=offset)
+            row = activity_by_date.get(day.isoformat(), {})
+            activity.append(
+                {
+                    "date": day.isoformat(),
+                    "seconds": int(row.get("seconds", 0)),
+                    "sessions": int(row.get("sessions", 0)),
+                    "works": int(row.get("works", 0)),
+                }
+            )
+
+        active_dates = {
+            str(row["date"])
+            for row in self.db.fetchall(
+                "SELECT DISTINCT date(started_at, ?) AS date FROM reading_sessions",
+                (timezone_modifier,),
+            )
+        }
+        streak = 0
+        cursor = today if today.isoformat() in active_dates else today - timedelta(days=1)
+        while cursor.isoformat() in active_dates:
+            streak += 1
+            cursor -= timedelta(days=1)
+
+        return {
+            "period_days": days,
+            "timezone_offset_minutes": timezone_offset_minutes,
+            "overview": {
+                "total_seconds": int(overview.get("total_seconds", 0)),
+                "sessions": int(overview.get("sessions", 0)),
+                "works_read": int(overview.get("works_read", 0)),
+                "favorite_count": int(favorite_row["value"] if favorite_row else 0),
+                "active_days": int(overview.get("active_days", 0)),
+                "current_streak_days": streak,
+                "average_session_seconds": int(overview.get("average_session_seconds", 0)),
+                "longest_session_seconds": int(overview.get("longest_session_seconds", 0)),
+                "tracking_since": overview.get("tracking_since"),
+            },
+            "activity": activity,
+            "top_by_time": self._reading_ranking("reading_seconds DESC, reading_sessions DESC", limit),
+            "top_by_sessions": self._reading_ranking("reading_sessions DESC, reading_seconds DESC", limit),
+            "top_authors": self._tag_statistics("artist", "work_count DESC, favorite_count DESC, reading_seconds DESC", limit),
+            "top_tags": self._tag_statistics(
+                "tag",
+                "favorite_count DESC, reading_seconds DESC, work_count DESC",
+                limit,
+                require_favorite=True,
+            ),
+        }
+
     # -- internals -------------------------------------------------------
 
     def _build_filters(
-        self, q: str, read_status: str, source: str, language: str, tag_ids: list[int]
+        self,
+        q: str,
+        read_status: str,
+        source: str,
+        language: str,
+        tag_ids: list[int],
+        favorite_only: bool,
     ) -> tuple[list[str], list[Any]]:
         where: list[str] = []
         params: list[Any] = []
@@ -350,7 +463,64 @@ class LibraryService:
             )
             params.extend([*tag_ids, len(tag_ids)])
 
+        if favorite_only:
+            where.append("w.favorite = 1")
+
         return where, params
+
+    def _reading_ranking(self, order_by: str, limit: int) -> list[dict[str, Any]]:
+        rows = self.db.fetchall(
+            f"""
+            SELECT w.id, w.title, w.title_japanese, w.pretty_title, w.cover_path,
+                   COALESCE(w.favorite, 0) AS favorite,
+                   COALESCE(SUM(rs.duration_seconds), 0) AS reading_seconds,
+                   COUNT(rs.id) AS reading_sessions
+            FROM reading_sessions rs
+            JOIN works w ON w.id = rs.work_id
+            GROUP BY w.id
+            ORDER BY {order_by}, w.id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        for row in rows:
+            row["favorite"] = bool(row["favorite"])
+            row["reading_seconds"] = int(row["reading_seconds"])
+            row["reading_sessions"] = int(row["reading_sessions"])
+        return rows
+
+    def _tag_statistics(
+        self,
+        tag_type: str,
+        order_by: str,
+        limit: int,
+        require_favorite: bool = False,
+    ) -> list[dict[str, Any]]:
+        having_sql = "HAVING COUNT(DISTINCT CASE WHEN w.favorite = 1 THEN w.id END) > 0" if require_favorite else ""
+        rows = self.db.fetchall(
+            f"""
+            SELECT MAX(wt.remote_tag_id) AS id,
+                   MAX(COALESCE(d.zh_name, wt.remote_name, wt.remote_slug)) AS display,
+                   COUNT(DISTINCT wt.work_id) AS work_count,
+                   COUNT(DISTINCT CASE WHEN w.favorite = 1 THEN w.id END) AS favorite_count,
+                   COALESCE(SUM(rs.duration_seconds), 0) AS reading_seconds,
+                   COUNT(DISTINCT rs.id) AS reading_sessions
+            FROM work_tags wt
+            JOIN works w ON w.id = wt.work_id
+            LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
+            LEFT JOIN reading_sessions rs ON rs.work_id = w.id
+            WHERE wt.tag_type = ?
+            GROUP BY COALESCE(CAST(wt.remote_tag_id AS TEXT), wt.remote_slug, wt.remote_name, CAST(wt.id AS TEXT))
+            {having_sql}
+            ORDER BY {order_by}, display COLLATE NOCASE
+            LIMIT ?
+            """,
+            (tag_type, limit),
+        )
+        for row in rows:
+            for key in ("work_count", "favorite_count", "reading_seconds", "reading_sessions"):
+                row[key] = int(row[key])
+        return rows
 
     def _top(self, where_sql: str, params: list[Any], order_by: str, limit: int) -> list[dict[str, Any]]:
         limit = max(1, min(int(limit), 48))
@@ -369,6 +539,7 @@ class LibraryService:
     def _finalize(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for row in rows:
             row["completed"] = bool(row["completed"])
+            row["favorite"] = bool(row["favorite"])
         self._attach_tags(rows)
         return rows
 

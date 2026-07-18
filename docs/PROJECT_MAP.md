@@ -32,7 +32,7 @@ Root: `apps/api/app/`
   - `Settings`: resolves local data paths, `NHENTAI_API_KEY`, base URL, user agent, timeout.
   - Environment API key has priority over DB-stored API key.
 - `database.py`
-  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `jobs`, `settings`. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
+  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `reading_sessions`, `jobs`, `settings`. `works.favorite` is the local favorite flag; `reading_sessions` stores one idempotent reader visit with cumulative foreground seconds. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
   - Connections enforce foreign keys, a 5-second busy timeout and NORMAL synchronous mode; schema initialization enables WAL. Query indexes are created only after legacy migrations and cover work files/tags, dictionary references, reading history, task status/order and task logs.
   - Startup path migration recognizes legacy repository `.local-data/...` and Compose `/data/...` values, persists only `library/...` / `covers/...`, and resolves returned path fields against the current runtime root.
@@ -96,12 +96,15 @@ Root: `apps/api/app/`
   - `ingest_cbz()`, `list_works()`, `get_work()`, `list_pages()`, `read_page()`.
   - Archive copies, covers and generated thumbnails use unique same-directory temporary files plus atomic replace. Re-ingest invalidates page thumbnails/stale covers, and page member sizes are indexed from one ZIP directory read rather than reopening the archive for every page. A failed first ingest removes its placeholder work so import idempotency cannot mistake a fileless row for success.
 - `services/reader_service.py`
-  - `get_state()`, `update_state()`.
+  - `get_state()`, `update_state()` persist page progress without incrementing visit counts.
+  - `start_session()` creates one idempotent local-reader visit and one `reading_history` open; `update_session()` accepts only monotonic cumulative visible-time totals, the latest bounded page, and an optional finished marker.
 - `services/library_service.py`
   - Local-only library reads; queries only `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`. Never calls NH API.
   - `work(work_id)`: one full local work record through the same `WORK_COLUMNS`/`WORK_JOINS` and `_attach_tags()` path as library search. The reader therefore receives real author/group/parody/character/content/category/language tags without a remote lookup.
-  - `summary()`: real total/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped); generic `translated`/`translate*` markers are excluded because they are not languages.
-  - `search(q, page, per_page, sort, read_status, source, language, tag_ids)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`.
+  - `summary()`: real total/favorite/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped); generic `translated`/`translate*` markers are excluded because they are not languages.
+  - `search(q, page, per_page, sort, read_status, source, language, tag_ids, favorite_only)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`; favorite-only is a real `works.favorite` predicate.
+  - `set_favorite(work_id, favorite)`: updates only the local flag and returns the same full local work shape used by the library and reader.
+  - `statistics(days, timezone_offset_minutes, limit)`: real local overview, filled daily activity, most-read works by time/visits, and author/tag affinity. It reads session starts in the browser's local-day boundary, attributes a session to its start day, and never fabricates historical time before session tracking existed.
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
   - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
   - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
@@ -132,7 +135,7 @@ Root: `apps/api/app/`
   - `overview()`: real metrics — work count, source bytes, cover ok/missing, missing source, orphan/stale counts + bytes, reclaimable bytes.
   - `inventory(category, q, status, page, per_page)`: unified file entries — `work` (source CBZ + cover aggregated, status ok/missing_source/missing_cover, size_mismatch flag), `orphan` (loose files in library/covers with no DB reference), `stale` (tmp/exports leftovers). Source rows are preloaded once and visible-work tags are fetched in one batch. Work entries expose structured `tag_items`; portable DB paths arrive already resolved against the active data root, and `_abs()` normalizes them before filesystem checks.
   - `preview_delete(targets)`: read-only; expands `work` targets to all cascaded DB rows (work_tags count, has_progress, has_governance) + source/cover files; reports files_to_delete/works_to_remove/reclaim_bytes + warnings (has_progress/has_governance/already_gone/forbidden_path).
-  - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/governance_reviews/reader_progress/reading_history) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
+  - `delete(targets)`: deletion is the only disk-touching op. `work` target deletes the works row (SQLite `ON DELETE CASCADE` clears work_files/work_pages/work_tags/work_metadata/governance_reviews/reader_progress/reading_history/reading_sessions) + unlinks source CBZ + cover; `orphan`/`stale` unlink the single file. Paths outside managed roots rejected (`_within_managed`). CBZ bytes never modified.
 - `services/job_service.py`
   - `create/list/get/mark_running/update_progress/complete/fail/retry/pause/resume/cancel/logs/checkpoint`.
   - `list()` batch-loads work/gallery presentation metadata and tolerates corrupt/non-object `target_json`; startup recovery closes process-owned queued/running/cancelling states while leaving paused jobs resumable.
@@ -182,12 +185,13 @@ Implemented:
 - `POST /api/dictionary/{id}/review`
 - `DELETE /api/dictionary/{id}`
 - `GET /api/library/summary`
-- `GET /api/library/search?q=&page=&per_page=&sort=&read_status=&source=&language=&tag_ids=`
+- `GET /api/library/search?q=&page=&per_page=&sort=&read_status=&source=&language=&tag_ids=&favorite_only=`
   - `tag_ids` is a comma-separated remote tag id list; non-numeric tokens are ignored. AND semantics.
 - `GET /api/library/recent-added?limit=`
 - `GET /api/library/recent-read?limit=`
 - `GET /api/library/continue-reading?limit=`
 - `GET /api/library/reading-history?page=&per_page=`
+- `GET /api/library/statistics?days=&timezone_offset_minutes=`
 - `GET /api/library/tag-filters?q=&limit=`
 - `POST /api/library/scan/preview`
 - `POST /api/library/scan`
@@ -218,6 +222,9 @@ Implemented:
 - `GET /api/works/{work_id}/pages/{page_index}`
 - `GET /api/works/{work_id}/reader-state`
 - `PATCH /api/works/{work_id}/reader-state`
+- `PATCH /api/works/{work_id}/favorite`
+- `POST /api/works/{work_id}/reading-sessions`
+- `PATCH /api/works/{work_id}/reading-sessions/{session_id}`
 - `GET /api/jobs`
 - `GET /api/jobs/{job_id}`
 - `GET /api/jobs/{job_id}/logs`
