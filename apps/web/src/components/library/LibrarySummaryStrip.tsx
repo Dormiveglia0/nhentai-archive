@@ -1,4 +1,4 @@
-import { BookOpen, CheckCheck, Circle, Database, HardDrive, Tags } from "lucide-react";
+import { BookOpen, CheckCheck, Circle, Database, HardDrive, Heart } from "lucide-react";
 
 import type { LibrarySummary } from "../../lib/api";
 import { NumberTicker } from "../effects/NumberTicker";
@@ -11,11 +11,11 @@ export function LibrarySummaryStrip({ summary }: { summary: LibrarySummary | nul
   }
 
   const metrics = [
-    { label: "总收藏", value: summary.total, icon: Database, tone: "active" },
+    { label: "馆藏总数", value: summary.total, icon: Database, tone: "active" },
+    { label: "已收藏", value: summary.favorites, icon: Heart, tone: summary.favorites ? "warning" : "neutral" },
     { label: "已读", value: summary.completed, icon: CheckCheck, tone: "good" },
     { label: "阅读中", value: summary.reading, icon: BookOpen, tone: "active" },
     { label: "未读", value: summary.unread, icon: Circle, tone: "neutral" },
-    { label: "待补标签", value: summary.untagged, icon: Tags, tone: summary.untagged ? "warning" : "good" },
     { label: "占用容量", value: summary.total_size_bytes, icon: HardDrive, format: formatBytes, tone: "muted" },
   ];
 

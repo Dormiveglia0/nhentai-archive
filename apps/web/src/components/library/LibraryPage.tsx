@@ -36,6 +36,8 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         onSort={library.setSort}
         tags={library.tags}
         onTags={library.setTags}
+        favoriteOnly={library.favoriteOnly}
+        onFavoriteOnly={library.setFavoriteOnly}
         view={library.view}
         onView={library.setView}
         summary={library.summary}
@@ -144,6 +146,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
                         selected={library.selected?.id === work.id}
                         onSelect={() => library.setSelected(work)}
                         onPickTag={library.pickTag}
+                        onToggleFavorite={() => void library.toggleFavorite(work)}
                         multiSelect={library.multiSelect}
                         checked={library.selectedIds.has(work.id)}
                         onToggle={() => library.toggleSelectedId(work.id)}
@@ -168,6 +171,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             blurCovers={blurCovers}
             onClose={() => library.setSelected(null)}
             onPickTag={library.pickTag}
+            onToggleFavorite={(work) => void library.toggleFavorite(work)}
             onDeleted={library.afterBulkAction}
           />
         </div>

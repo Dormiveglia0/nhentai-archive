@@ -417,4 +417,5 @@ def test_database_migrates_legacy_dictionary_tables_without_dropping_data(tmp_pa
     assert service.candidates(limit=10)["result"][0]["display"] == "雪融"
     assert service.autocomplete("融", limit=10)["result"][0]["display"] == "雪融"
     assert discover.cached_tags(10)["result"][0]["display"] == "雪融"
+    assert db.fetchone("SELECT favorite FROM works WHERE id = 7")["favorite"] == 0
     assert db.fetchone("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'local_tag_dictionary_legacy'") is not None

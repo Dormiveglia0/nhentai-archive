@@ -162,6 +162,7 @@ export type LibraryTag = {
 };
 
 export type LibraryWork = Work & {
+  favorite: boolean;
   language?: string | null;
   media_id?: string | null;
   created_at?: string;
@@ -174,6 +175,7 @@ export type LibraryWork = Work & {
 
 export type LibrarySummary = {
   total: number;
+  favorites: number;
   reading: number;
   completed: number;
   unread: number;
@@ -209,6 +211,52 @@ export type ReadingHistoryPage = {
   num_pages: number;
 };
 
+export type ReadingSession = {
+  id: number;
+  client_key: string;
+  work_id: number;
+  started_at: string;
+  updated_at: string;
+  ended_at?: string | null;
+  duration_seconds: number;
+  last_page_index: number;
+};
+
+export type ReadingWorkRank = Pick<LibraryWork, "id" | "title" | "title_japanese" | "pretty_title" | "cover_path" | "favorite"> & {
+  reading_seconds: number;
+  reading_sessions: number;
+};
+
+export type ReadingTagRank = {
+  id?: number | null;
+  display: string;
+  work_count: number;
+  favorite_count: number;
+  reading_seconds: number;
+  reading_sessions: number;
+};
+
+export type ReadingStatistics = {
+  period_days: number;
+  timezone_offset_minutes: number;
+  overview: {
+    total_seconds: number;
+    sessions: number;
+    works_read: number;
+    favorite_count: number;
+    active_days: number;
+    current_streak_days: number;
+    average_session_seconds: number;
+    longest_session_seconds: number;
+    tracking_since?: string | null;
+  };
+  activity: Array<{ date: string; seconds: number; sessions: number; works: number }>;
+  top_by_time: ReadingWorkRank[];
+  top_by_sessions: ReadingWorkRank[];
+  top_authors: ReadingTagRank[];
+  top_tags: ReadingTagRank[];
+};
+
 export type LibraryTagFilter = {
   id: number;
   type?: string;
@@ -228,6 +276,7 @@ export type LibrarySearchParams = {
   source?: string;
   language?: string;
   tag_ids?: number[];
+  favorite_only?: boolean;
 };
 
 export type LibrarySearchResult = {
@@ -1086,12 +1135,17 @@ export const api = {
     query.set("source", params.source ?? "all");
     query.set("language", params.language ?? "all");
     if (params.tag_ids?.length) query.set("tag_ids", params.tag_ids.join(","));
+    query.set("favorite_only", String(Boolean(params.favorite_only)));
     return request<LibrarySearchResult>(`/api/library/search?${query.toString()}`);
   },
   libraryRecentAdded: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-added?limit=${limit}`),
   libraryRecentRead: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-read?limit=${limit}`),
   libraryReadingHistory: (page = 1, per_page = 30) =>
     request<ReadingHistoryPage>(`/api/library/reading-history?page=${page}&per_page=${per_page}`),
+  libraryStatistics: (days = 30) => {
+    const timezoneOffset = -new Date().getTimezoneOffset();
+    return request<ReadingStatistics>(`/api/library/statistics?days=${days}&timezone_offset_minutes=${timezoneOffset}`);
+  },
   libraryContinueReading: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/continue-reading?limit=${limit}`),
   libraryTagFilters: (q = "", limit = 40) =>
     request<{ result: LibraryTagFilter[] }>(`/api/library/tag-filters?q=${encodeURIComponent(q)}&limit=${limit}`),
@@ -1205,6 +1259,25 @@ export const api = {
   work: (id: number) => request<LibraryWork>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
   readerState: (id: number) => request<ReaderState>(`/api/works/${id}/reader-state`),
+  setWorkFavorite: (id: number, favorite: boolean) =>
+    request<LibraryWork>(`/api/works/${id}/favorite`, {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ favorite }),
+    }),
+  startReadingSession: (id: number, sessionKey: string, pageIndex: number) =>
+    request<ReadingSession>(`/api/works/${id}/reading-sessions`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex }),
+    }),
+  updateReadingSession: (id: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false) =>
+    request<ReadingSession>(`/api/works/${id}/reading-sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished }),
+      keepalive,
+    }),
   updateReaderState: (id: number, pageIndex: number, completed = false) =>
     request<ReaderState>(`/api/works/${id}/reader-state`, {
       method: "PATCH",

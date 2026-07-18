@@ -1,4 +1,4 @@
-import { Grid2X2, List, RotateCcw, Search, X } from "lucide-react";
+import { Grid2X2, Heart, List, RotateCcw, Search, X } from "lucide-react";
 import { m } from "motion/react";
 import { type FormEvent, useEffect, useState } from "react";
 
@@ -23,6 +23,8 @@ type Props = {
   onSort: (value: string) => void;
   tags: LibraryTagFilterItem[];
   onTags: (tags: LibraryTagFilterItem[]) => void;
+  favoriteOnly: boolean;
+  onFavoriteOnly: (value: boolean) => void;
   view: LibraryView;
   onView: (view: LibraryView) => void;
   summary: LibrarySummary | null;
@@ -97,6 +99,15 @@ export function LibraryToolbar(props: Props) {
         <FolioSelect label="阅读状态" value={props.readStatus} options={READ_STATUS_OPTIONS} onChange={props.onReadStatus} />
         <FolioSelect label="来源" value={props.source} options={SOURCE_OPTIONS} onChange={props.onSource} />
         <FolioSelect label="排序" value={props.sort} options={SORT_OPTIONS} onChange={props.onSort} />
+        <button
+          type="button"
+          className={`folio-library-favorite-filter${props.favoriteOnly ? " is-active" : ""}`}
+          onClick={() => props.onFavoriteOnly(!props.favoriteOnly)}
+          aria-pressed={props.favoriteOnly}
+        >
+          <Heart size={15} fill={props.favoriteOnly ? "currentColor" : "none"} />
+          收藏 {props.summary?.favorites ?? 0}
+        </button>
         <button
           type="button"
           className="folio-library-reset"

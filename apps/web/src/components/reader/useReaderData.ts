@@ -181,6 +181,21 @@ export function useReaderData(source: ReaderSource) {
 
   const markCompleted = useCallback(() => setPage(pageCount, true), [pageCount, setPage]);
 
+  const toggleFavorite = useCallback(async () => {
+    if (!work) return;
+    setActionError(null);
+    try {
+      const updated = await api.setWorkFavorite(work.id, !work.favorite);
+      if (!mounted.current || currentSourceKey.current !== sourceKey) return;
+      setWork(updated);
+      setNotice(updated.favorite ? "已加入收藏。" : "已取消收藏。");
+    } catch (reason) {
+      if (mounted.current && currentSourceKey.current === sourceKey) {
+        setActionError(reason instanceof Error ? reason.message : String(reason));
+      }
+    }
+  }, [sourceKey, work]);
+
   const importRemote = useCallback(async () => {
     if (stableSource.kind !== "remote" || importing || queued) return;
     const request = ++importRequest.current;
@@ -219,6 +234,7 @@ export function useReaderData(source: ReaderSource) {
     gallery,
     setPage,
     markCompleted,
+    toggleFavorite,
     importRemote,
     reload: () => setRevision((value) => value + 1),
   };

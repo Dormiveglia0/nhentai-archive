@@ -203,3 +203,49 @@ def test_tag_filters_uses_dictionary_display(tmp_path):
     # language tags are excluded from the tag filter pool
     _link_tags(db, a, [{"id": 50, "type": "language", "name": "japanese", "slug": "japanese"}])
     assert all(row["type"] != "language" for row in library.tag_filters()["result"])
+
+
+def test_favorites_and_statistics_use_reading_sessions(tmp_path):
+    _settings, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    reader = ReaderService(db)
+    a = _import_work(archive, tmp_path, "stats-a", "Stats Alpha", "remote", 111, pages=5)
+    b = _import_work(archive, tmp_path, "stats-b", "Stats Beta", "remote", 222, pages=5)
+    _link_tags(db, a, [
+        {"id": 10, "type": "artist", "name": "yamada", "slug": "yamada"},
+        {"id": 20, "type": "tag", "name": "story", "slug": "story"},
+    ])
+    _link_tags(db, b, [
+        {"id": 10, "type": "artist", "name": "yamada", "slug": "yamada"},
+        {"id": 21, "type": "tag", "name": "action", "slug": "action"},
+    ])
+
+    favorited = library.set_favorite(a, True)
+    assert favorited["favorite"] is True
+    assert library.summary()["favorites"] == 1
+    assert [work["id"] for work in library.search(favorite_only=True)["result"]] == [a]
+
+    first = reader.start_session(a, "session-alpha-1", 1)
+    duplicate = reader.start_session(a, "session-alpha-1", 1)
+    assert duplicate["id"] == first["id"]
+    reader.update_session(a, first["id"], 120, 3)
+    assert reader.update_session(a, first["id"], 80, 4, True)["duration_seconds"] == 120
+
+    second = reader.start_session(a, "session-alpha-2", 4)
+    reader.update_session(a, second["id"], 30, 5, True)
+    third = reader.start_session(b, "session-beta-1", 1)
+    reader.update_session(b, third["id"], 90, 2, True)
+
+    stats = library.statistics(days=30)
+    assert stats["overview"]["total_seconds"] == 240
+    assert stats["overview"]["sessions"] == 3
+    assert stats["overview"]["works_read"] == 2
+    assert stats["overview"]["favorite_count"] == 1
+    assert stats["top_by_time"][0]["id"] == a
+    assert stats["top_by_sessions"][0]["reading_sessions"] == 2
+    assert stats["top_authors"][0]["work_count"] == 2
+    assert stats["top_authors"][0]["favorite_count"] == 1
+    assert stats["top_authors"][0]["reading_seconds"] == 240
+    assert stats["top_authors"][0]["reading_sessions"] == 3
+    assert stats["top_tags"][0]["display"] == "story"
+    assert sum(day["sessions"] for day in stats["activity"]) == 3

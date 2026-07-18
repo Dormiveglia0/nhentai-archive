@@ -1,4 +1,4 @@
-import { BookOpen, Check } from "lucide-react";
+import { BookOpen, Check, Heart } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { navigate, pageHref } from "../../lib/navigation";
@@ -13,6 +13,7 @@ type Props = {
   selected: boolean;
   onSelect: () => void;
   onPickTag: (tag: LibraryTag) => void;
+  onToggleFavorite: () => void;
   multiSelect?: boolean;
   checked?: boolean;
   onToggle?: () => void;
@@ -25,6 +26,7 @@ export function WorkCard({
   selected,
   onSelect,
   onPickTag,
+  onToggleFavorite,
   multiSelect = false,
   checked = false,
   onToggle,
@@ -71,6 +73,18 @@ export function WorkCard({
         {work.completed ? <span className="folio-library-read-mark" aria-label="已读"><Check size={13} /></span> : null}
         <span className={`folio-library-status tone-${status.tone}`}>{status.label}</span>
       </a>
+
+      {!multiSelect ? (
+        <button
+          className={`folio-library-favorite${work.favorite ? " is-active" : ""}`}
+          type="button"
+          onClick={onToggleFavorite}
+          aria-label={work.favorite ? `取消收藏${title}` : `收藏${title}`}
+          aria-pressed={work.favorite}
+        >
+          <Heart size={15} fill={work.favorite ? "currentColor" : "none"} />
+        </button>
+      ) : null}
 
       <div className="folio-library-card-body">
         <div className="folio-library-card-meta">

@@ -21,6 +21,7 @@ import { ThumbnailOverlay } from "./ThumbnailOverlay";
 import { useReaderChrome } from "./useReaderChrome";
 import { type ReaderSource, useReaderData } from "./useReaderData";
 import { useReaderPrefs } from "./useReaderPrefs";
+import { useReadingSession } from "./useReadingSession";
 import "./ReaderPage.css";
 
 type Props = {
@@ -41,6 +42,7 @@ export function ReaderPage({ source }: Props) {
   const [activePanel, setActivePanel] = useState<ReaderPanel>("none");
   const [jumpOpen, setJumpOpen] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
+  useReadingSession(data.isRemote ? null : data.work?.id ?? null, data.pageIndex);
 
   useEffect(() => {
     setZoom(1);
@@ -231,10 +233,12 @@ export function ReaderPage({ source }: Props) {
         importing={data.importing}
         queued={data.queued}
         completed={data.completed}
+        favorite={Boolean(data.work?.favorite)}
         workId={data.work?.id ?? null}
         galleryId={data.isRemote ? data.gallery?.gallery_id ?? null : data.work?.remote_gallery_id ?? null}
         returnTo={source.kind === "local" ? `reader/${source.workId}` : `reader/remote/${source.galleryId}`}
         onMarkCompleted={data.markCompleted}
+        onToggleFavorite={data.toggleFavorite}
         onImport={() => void data.importRemote()}
         onClose={() => setActivePanel("none")}
         onHoverChange={setInteractionPinned}

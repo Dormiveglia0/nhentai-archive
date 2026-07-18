@@ -1,4 +1,4 @@
-import { BookOpen, Download, Info, PenTool, X } from "lucide-react";
+import { BookOpen, Download, Heart, Info, PenTool, X } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { FadeIn } from "../../lib/motion";
@@ -12,10 +12,11 @@ type Props = {
   blurCovers: boolean;
   onClose: () => void;
   onPickTag: (tag: LibraryTag) => void;
+  onToggleFavorite: (work: LibraryWork) => void;
   onDeleted: () => void;
 };
 
-export function WorkInspector({ work, blurCovers, onClose, onPickTag, onDeleted }: Props) {
+export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted }: Props) {
   if (!work) {
     return (
       <aside className="folio-library-inspector is-empty" aria-label="作品详情">
@@ -89,6 +90,9 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onDeleted 
             </a>
             <a href={pageHref({ name: "governance", workId: work.id })}><PenTool size={16} />进入治理</a>
             <a href={pageHref({ name: "export", workId: work.id })}><Download size={16} />导出 CBZ</a>
+            <button className={work.favorite ? "is-favorite" : ""} type="button" onClick={() => onToggleFavorite(work)} aria-pressed={work.favorite}>
+              <Heart size={16} fill={work.favorite ? "currentColor" : "none"} />{work.favorite ? "已收藏" : "收藏作品"}
+            </button>
             <WorkDeleteAction workId={work.id} title={title} onDeleted={onDeleted} />
           </div>
         </FadeIn>

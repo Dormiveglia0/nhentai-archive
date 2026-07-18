@@ -52,6 +52,6 @@ export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; descriptio
   { id: "translation", label: "翻译", description: "服务商、语言与批量建议", icon: Languages },
   { id: "privacy", label: "访问与阅读", description: "密码、封面与阅读方式", icon: KeyRound },
   { id: "export", label: "导出", description: "CBZ 打包默认值", icon: Download },
-  { id: "data", label: "数据", description: "馆藏摘要与语言分布", icon: BarChart3 },
+  { id: "data", label: "统计", description: "阅读、偏好与馆藏报表", icon: BarChart3 },
   { id: "storage", label: "存储", description: "目录、源文件与空间", icon: Folder },
 ];

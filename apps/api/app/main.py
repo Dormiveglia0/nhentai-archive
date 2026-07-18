@@ -19,7 +19,7 @@ async def lifespan(_app: FastAPI):
 
 
 def create_app(enforce_auth: bool | None = None) -> FastAPI:
-    app = FastAPI(title="NH Archive", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="NH Archive", version="0.3.0", lifespan=lifespan)
     should_enforce_auth = enforce_auth if enforce_auth is not None else os.environ.get("NH_ARCHIVE_AUTH_DISABLED", "").lower() not in {"1", "true", "yes"}
     app.state.enforce_auth = should_enforce_auth
 
