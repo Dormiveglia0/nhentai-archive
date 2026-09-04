@@ -16,6 +16,13 @@ Read order for future AI work:
 4. `docs/DEVELOPMENT_RULES.md`
 5. The relevant formal component and feature-local CSS from the agent map.
 
+## Repository Boundaries
+
+- `main` is the releasable source of truth: product code, deployment files, documentation, and version-matched automated regression tests only.
+- `apps/api/app/` and `apps/web/src/` are production runtime trees. Test code stays in `apps/api/tests/` and `apps/web/e2e/`; neither path is copied into the final container or imported by Vite.
+- `codex/ui-lab` is the long-lived home for interactive concepts and throwaway visual experiments. Public demo routes, fake application state, QA captures, and unused effect examples do not enter `main`.
+- Generated reports, screenshots, browser traces, local data, caches, and credentials remain ignored and untracked.
+
 ## Development Entry
 
 - Root `npm run dev` delegates to `scripts/dev.py`.
@@ -23,6 +30,7 @@ Read order for future AI work:
 - `npm run dev -- --check` validates the local API executable, npm, and Web dependencies without starting servers.
 - Runtime state lives at repository-root `.local-data/`, outside both deployable apps. Managed source/cover paths are stored portably as `library/...` and `covers/...`; each runtime resolves them against its active data root. Startup migrates legacy absolute values to that portable form, so the same SQLite can cross the Compose `/data` and host `.local-data` boundary without path flipping.
 - `Dockerfile` builds the Web app in a Node stage, then ships only FastAPI and the compiled assets. `compose.yaml` declares `build: .` so `docker compose up -d --build` includes the current checkout, and binds host `./.local-data` to `/data`; its entrypoint runs as that directory's owner while retaining only startup UID/GID-switch capabilities. `/api/health` provides container health.
+- `apps/api/requirements.txt` contains runtime dependencies only. Local development and tests install `apps/api/requirements-dev.txt`, which includes the runtime set plus pytest/httpx.
 
 ## API App Map
 
@@ -248,15 +256,13 @@ Implemented:
 Root: `apps/web/src/`
 
 - `docs/AGENT_MAP.md`
-  - Fast locator for the active demo visual contract, nine module bodies/scenes, ordered CSS layers, formal page owners, and real API entry points. Read this before loading frontend files.
+  - Fast locator for the formal visual contract, module scenes, ordered CSS layers, page owners, and real API entry points. Read this before loading frontend files.
 - `components/folio/`
   - Production-neutral full-screen visual system: page configuration, shell, navigation, animated module scenes/backdrops, shared controls, and ordered CSS layers.
-  - Dependency direction is `demo -> folio` and `formal feature -> folio`; this directory must never import `components/demo/`.
-- `components/demo/`
-  - Public `/demo` content only: preview navigation/state, nine demo page bodies, and the demo command bar. Formal routes must not import this directory.
+  - Dependency direction is `formal feature -> folio`; this directory must never import feature modules.
 
 - `App.tsx`
-  - `AuthGate` resolves access before hash route composition or route-level `React.lazy` boundaries mount. `ArchiveShell` stays in the initial shell while every primary/secondary page, both readers, and `/demo` load as independent chunks.
+  - `AuthGate` resolves access before hash route composition or route-level `React.lazy` boundaries mount. `ArchiveShell` stays in the initial shell while every primary/secondary page and both readers load as independent chunks.
   - All primary and secondary routes are real pages: discover/gallery/library/history/readers/governance/dictionary/export/files/tasks/settings/workbench. No route remains a boundary screen.
   - Local and remote readers render directly as immersive viewports; all other routes render through `ArchiveShell`.
 - `components/auth/AuthGate.tsx`
@@ -271,7 +277,7 @@ Root: `apps/web/src/`
 - `lib/motion/`
   - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,禁止写魔法数。
 - `components/effects/`
-  - 从 magicui/react-bits 引入并改造后的效果组件落地处。`README.md` 为硬性接入规范(库只作效果来源、token 改造、`.fx-scope` 隔离、reduced-motion 降级)。当前含 `StaggerDemo`、`ShineBorder` 两个验证示例。
+  - 可复用且已实际使用的效果组件落地处。`README.md` 为硬性接入规范（库只作效果来源、token 改造、作用域隔离、reduced-motion 降级）；未接入产品的验证示例不进入 `main`。
 - `styles/tailwind-entry.css`
   - Tailwind v4 入口(方案 A:省略 Preflight、不加前缀、按层导入),`@theme` 将 `app.css` 设计 token 映射为 `--color-*`。在 `main.tsx` 中先于 `app.css` 引入。
 - `lib/api.ts`

@@ -8,7 +8,7 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 2. `docs/PROJECT_STATUS.md`
 3. `docs/PROJECT_MAP.md`
 4. `docs/DEVELOPMENT_RULES.md`
-5. The relevant active demo module and formal component listed by the agent map.
+5. The relevant formal component listed by the agent map.
 
 ## What Already Exists
 
@@ -30,10 +30,10 @@ Use this prompt after the feature-complete local loop remains green (`pytest` + 
 
 ## Next Work
 
-- Use `components/folio/` as the production-neutral visual system and `/demo` as its visual regression surface. Never import `components/demo/` from a formal route.
-- All formal routes, including gallery detail, history, and both readers, are directly migrated and browser-verified. Keep feature-local structure/CSS; do not restore legacy-shell adapters or import demo state.
+- Use `components/folio/` as the production-neutral visual system and verify changes on the affected formal route. Keep prototypes on `codex/ui-lab` rather than adding public preview routes to `main`.
+- All formal routes, including gallery detail, history, and both readers, are directly migrated and browser-verified. Keep feature-local structure/CSS and do not restore legacy-shell adapters.
 - The globally orphaned legacy shell/page selectors are removed, `app.css` is base-only, and formal routes already load through route-level lazy boundaries with honest Folio/reader fallbacks. Preserve that split and do not raise warning thresholds.
-- Browser QA against real or user-provided data after each route migration; compare the formal route with `/demo` at desktop and mobile sizes.
+- Browser QA against real or user-provided data after each route change at desktop and mobile sizes.
 - Operational-page migration must preserve task state-machine controls, export download semantics, file-deletion previews/confirmations, and current real-data empty states.
 - File operations have one owner: keep delete/cleanup/scan async state in `files/useFilesState.ts`; deletion must remain preview → viewport-level confirmation, work metadata may be removed only after its managed files are successfully deleted, and scan enqueue must submit the exact paths from the visible preview rather than recomputing targets.
 - Preserve the simplified flows now verified in production: discover is grid-only, its five popular works remain one five-poster shelf on desktop and all five stay simultaneously visible without horizontal scrolling on mobile, every primary popular/detail/reader cover keeps the full artwork over a decorative same-image ambient layer, its tag picker defaults to content tags with author/work metadata in a separate scope, selected tags stay first with one clear-all action, library card Tag rows contain only `type=tag` content terms and never treat `translated` as a language, continuous reader progress is derived from the actual reader scroller, reader info retains grouped local metadata tags and the gallery link, saved cover blur updates `ArchiveApp` immediately, and file rows are directly selectable with desktop-side/mobile-drawer actions.

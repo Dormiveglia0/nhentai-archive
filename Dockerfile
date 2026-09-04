@@ -4,7 +4,8 @@ FROM node:22-bookworm-slim AS web-build
 WORKDIR /build/apps/web
 COPY apps/web/package.json apps/web/package-lock.json ./
 RUN npm ci
-COPY apps/web/ ./
+COPY apps/web/index.html apps/web/tsconfig.json apps/web/vite.config.ts ./
+COPY apps/web/src/ ./src/
 RUN npm run build
 
 FROM python:3.11-slim-bookworm
@@ -23,7 +24,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
     && mkdir -p /data \
     && chown app:app /data
-COPY apps/api/ ./apps/api/
+COPY apps/api/app/ ./apps/api/app/
 COPY --from=web-build /build/apps/web/dist/ ./apps/web/dist/
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod -R a+rX /app/apps

@@ -2,16 +2,12 @@ import { AnimatePresence, m } from "motion/react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { AuthGate } from "./components/auth/AuthGate";
-import { AuthWakeDemo } from "./components/auth/AuthWakeDemo";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { FolioRouteFallback, ReaderRouteFallback } from "./components/layout/RouteFallback";
 import { api } from "./lib/api";
 import { duration, ease, usePrefersReducedMotion } from "./lib/motion";
 import { pageFromLocation, pageHref, type Page } from "./lib/navigation";
 
-const FrontendDemo = lazy(() =>
-  import("./components/demo/FrontendDemo").then((module) => ({ default: module.FrontendDemo })),
-);
 const WorkbenchPage = lazy(() =>
   import("./components/workbench/WorkbenchPage").then((module) => ({ default: module.WorkbenchPage })),
 );
@@ -50,19 +46,7 @@ const ReaderPage = lazy(() =>
 );
 
 export default function App() {
-  if (window.location.pathname === "/auth-concept") return <AuthWakeDemo preview />;
-  return <AuthGate>{(logout) => <AuthenticatedApp onLogout={logout} />}</AuthGate>;
-}
-
-function AuthenticatedApp({ onLogout }: { onLogout: () => Promise<void> }) {
-  const isDemo = window.location.pathname === "/demo" || window.location.hash === "#demo";
-  return isDemo ? (
-    <Suspense fallback={<div role="status" aria-label="正在载入前端演示" style={{ minHeight: "100vh", background: "#f3efe5" }} />}>
-      <FrontendDemo onLogout={onLogout} />
-    </Suspense>
-  ) : (
-    <ArchiveApp onLogout={onLogout} />
-  );
+  return <AuthGate>{(logout) => <ArchiveApp onLogout={logout} />}</AuthGate>;
 }
 
 function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {

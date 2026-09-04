@@ -4,7 +4,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import router
@@ -36,11 +35,6 @@ def create_app(enforce_auth: bool | None = None) -> FastAPI:
         web_root = Path(web_dist)
         if not (web_root / "index.html").is_file():
             raise RuntimeError(f"Web build not found: {web_root}")
-        app.add_api_route(
-            "/demo",
-            lambda: FileResponse(web_root / "index.html"),
-            include_in_schema=False,
-        )
         app.mount("/", StaticFiles(directory=web_root, html=True), name="web")
     return app
 
