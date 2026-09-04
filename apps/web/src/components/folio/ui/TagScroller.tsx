@@ -25,19 +25,22 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
     startX.current = event.clientX;
     startScroll.current = ref.current.scrollLeft;
     dragged.current = false;
-    setIsDragging(true);
-    ref.current.setPointerCapture(event.pointerId);
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
     if (!ref.current || pointerId.current !== event.pointerId) return;
     const delta = event.clientX - startX.current;
-    if (Math.abs(delta) > 4) dragged.current = true;
+    if (Math.abs(delta) > 4 && !dragged.current) {
+      dragged.current = true;
+      setIsDragging(true);
+      ref.current.setPointerCapture(event.pointerId);
+    }
+    if (!dragged.current) return;
     ref.current.scrollLeft = startScroll.current - delta;
   }
 
   function stopDrag(event: PointerEvent<HTMLDivElement>) {
-    if (ref.current && pointerId.current === event.pointerId) {
+    if (ref.current && pointerId.current === event.pointerId && ref.current.hasPointerCapture(event.pointerId)) {
       ref.current.releasePointerCapture(event.pointerId);
     }
     pointerId.current = null;

@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, BookOpen, CheckCircle2, Circle, Database, DownloadCloud, FolderInput, HardDrive, Recycle, Tags } from "lucide-react";
+import { AlertTriangle, Archive, BookOpen, CheckCircle2, Circle, Database, DownloadCloud, FolderInput, HardDrive, Languages, Recycle, Tags } from "lucide-react";
 import { m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -222,19 +222,48 @@ export function DataSection() {
             </div>
           </div>
         </section>
-        <section>
-          <div className="folio-settings-subhead"><h3>语言分布</h3></div>
-          {library?.languages.length ? (
-            <div className="folio-settings-chip-row">
-              {library.languages.slice(0, 12).map((language) => (
-                <span key={language.value}>{language.label}<em>{language.count}</em></span>
-              ))}
-            </div>
-          ) : (
-            <p className="folio-settings-data-empty">{loading ? "正在读取真实分布…" : "当前馆藏没有语言统计"}</p>
-          )}
-        </section>
+        <LanguageDistribution languages={library?.languages ?? []} loading={loading} reduceMotion={reduceMotion} />
       </div>
+    </section>
+  );
+}
+
+function LanguageDistribution({ languages, loading, reduceMotion }: { languages: LibrarySummary["languages"]; loading: boolean; reduceMotion: boolean }) {
+  const visible = languages.slice(0, 10);
+  const total = languages.reduce((sum, language) => sum + language.count, 0);
+  const maxCount = Math.max(1, ...visible.map((language) => language.count));
+
+  return (
+    <section className="folio-settings-language-section">
+      <div className="folio-settings-subhead">
+        <h3><Languages size={16} />语言分布</h3>
+        <span>{visible.length ? `${languages.length} 种 · ${total} 部标注` : "本地元数据"}</span>
+      </div>
+      {visible.length ? (
+        <div className="folio-settings-language-map">
+          {visible.map((language, index) => {
+            const share = Math.round((language.count / Math.max(1, total)) * 100);
+            return (
+              <article key={language.value} className={index === 0 ? "is-leading" : undefined}>
+                <em>{String(index + 1).padStart(2, "0")}</em>
+                <div>
+                  <span><strong>{language.label}</strong><small>{language.count} 部</small></span>
+                  <i role="img" aria-label={`${language.label} ${language.count} 部，占语言标注 ${share}%`}>
+                    <m.b
+                      initial={{ scaleX: reduceMotion ? language.count / maxCount : 0 }}
+                      animate={{ scaleX: language.count / maxCount }}
+                      transition={{ delay: reduceMotion ? 0 : index * 0.05, duration: reduceMotion ? 0 : 0.5 }}
+                    />
+                  </i>
+                </div>
+                <b>{share}%</b>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="folio-settings-data-empty">{loading ? "正在读取真实分布…" : "当前馆藏没有语言统计"}</p>
+      )}
     </section>
   );
 }

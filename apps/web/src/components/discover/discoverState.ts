@@ -129,18 +129,20 @@ function readDiscoverHashState(base: PersistedDiscoverState, hash: string): Pers
   const page = Number(params.get("page"));
   const tagId = Number(params.get("tag_id"));
   const hasTag = Number.isFinite(tagId) && tagId > 0;
+  const standaloneSearch = !hasPage && (hasTag || params.has("q"));
+  const source = standaloneSearch ? defaultDiscoverState() : base;
 
   return {
-    ...base,
-    page: hasPage && Number.isFinite(page) && page > 0 ? page : hasTag ? 1 : base.page,
-    scrollY: hasTag && !hasPage ? 0 : base.scrollY,
-    surface: isDiscoverSurface(params.get("surface")) ? (params.get("surface") as DiscoverSurface) : base.surface,
-    query: params.get("q") ?? base.query,
-    submittedQuery: params.get("q") ?? base.submittedQuery,
-    language: params.get("language") ?? base.language,
-    kind: params.get("kind") ?? base.kind,
-    sort: params.get("sort") ?? base.sort,
-    unimportedOnly: params.get("unimported") === "true" ? true : base.unimportedOnly,
+    ...source,
+    page: hasPage && Number.isFinite(page) && page > 0 ? page : standaloneSearch ? 1 : source.page,
+    scrollY: standaloneSearch ? 0 : source.scrollY,
+    surface: isDiscoverSurface(params.get("surface")) ? (params.get("surface") as DiscoverSurface) : source.surface,
+    query: params.get("q") ?? source.query,
+    submittedQuery: params.get("q") ?? source.submittedQuery,
+    language: params.get("language") ?? source.language,
+    kind: params.get("kind") ?? source.kind,
+    sort: params.get("sort") ?? source.sort,
+    unimportedOnly: params.get("unimported") === "true" ? true : source.unimportedOnly,
     selectedTags: hasTag
       ? [{
           id: tagId,
@@ -150,7 +152,7 @@ function readDiscoverHashState(base: PersistedDiscoverState, hash: string): Pers
           display: params.get("tag_display") || undefined,
           excluded: params.get("tag_excluded") === "true",
         }]
-      : base.selectedTags,
+      : source.selectedTags,
   };
 }
 

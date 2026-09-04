@@ -49,6 +49,9 @@ class DiscoverService:
         payload = self.client.popular()
         return self._map_items(payload, {"total": len(payload), "num_pages": 1, "per_page": len(payload)})
 
+    def open_media(self, path: str, thumbnail: bool = False):
+        return self.client.open_media(path, thumbnail)
+
     def tagged(
         self,
         tag_id: int,
@@ -102,18 +105,18 @@ class DiscoverService:
         cover = payload.get("cover") or {}
         thumbnail = payload.get("thumbnail") or {}
         if isinstance(cover, dict):
-            cover = {**cover, "url": self.client.media_url(cover.get("path"))}
+            cover = {**cover, "url": self.client.media_proxy_url(cover.get("path"))}
         if isinstance(thumbnail, dict):
-            thumbnail = {**thumbnail, "url": self.client.media_url(thumbnail.get("path"), thumbnail=True)}
+            thumbnail = {**thumbnail, "url": self.client.media_proxy_url(thumbnail.get("path"), thumbnail=True)}
         tags = payload.get("tags", [])
         self.cache_tags(tags)
         pages = []
         for index, page in enumerate(payload.get("pages", []), start=1):
             if isinstance(page, dict):
                 path = page.get("path")
-                pages.append({**page, "index": index, "url": self.client.media_url(path)})
+                pages.append({**page, "index": index, "url": self.client.media_proxy_url(path)})
             elif isinstance(page, str):
-                pages.append({"index": index, "path": page, "url": self.client.media_url(page)})
+                pages.append({"index": index, "path": page, "url": self.client.media_proxy_url(page)})
         # Related items only carry tag_ids; resolve them to full tags (and import
         # state) via the same path the feed uses so related cards can show content
         # tags just like the discover cards.
@@ -237,7 +240,9 @@ class DiscoverService:
         imported_work_ids: dict[int, int] | None = None,
     ) -> dict[str, Any]:
         summary = map_gallery_summary(item)
-        summary["thumbnail"]["url"] = self.client.media_url(summary["thumbnail"].get("path"), thumbnail=True)
+        summary["thumbnail"]["url"] = self.client.media_proxy_url(
+            summary["thumbnail"].get("path"), thumbnail=True
+        )
         work_id = (imported_work_ids or {}).get(int(summary["gallery_id"]))
         summary["imported"] = work_id is not None
         summary["work_id"] = work_id
@@ -283,12 +288,12 @@ class DiscoverService:
             }
             for row in cached_rows
         }
-        missing = [tag_id for tag_id in dict.fromkeys(ids) if tag_id not in tag_map][:100]
-        if missing:
+        missing = [tag_id for tag_id in dict.fromkeys(ids) if tag_id not in tag_map]
+        for offset in range(0, len(missing), 100):
             try:
-                tags = self.client.tags_by_ids(missing)
+                tags = self.client.tags_by_ids(missing[offset : offset + 100])
             except NhentaiApiError:
-                return tag_map
+                break
             self.cache_tags(tags)
             for tag in tags:
                 if tag.get("id") is not None:
@@ -297,7 +302,8 @@ class DiscoverService:
                         "type": tag.get("type"),
                         "name": tag.get("name"),
                         "slug": tag.get("slug"),
-            }
+                        "display": tag.get("name") or tag.get("slug") or str(tag["id"]),
+                    }
         return tag_map
 
     def _with_dictionary_display(self, tags: list[dict[str, Any]]) -> list[dict[str, Any]]:

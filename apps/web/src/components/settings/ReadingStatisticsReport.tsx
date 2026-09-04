@@ -50,6 +50,7 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
   const overview = statistics?.overview;
   const activity = statistics?.activity ?? [];
   const period = statistics?.period;
+  const activeCoverage = overview ? overview.active_days / Math.max(1, periodDays) : 0;
 
   return (
     <section className={`folio-reading-atlas${loading ? " is-loading" : ""}`} aria-label="阅读统计与馆藏报表" aria-busy={loading}>
@@ -57,7 +58,7 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
         <div>
           <span className="folio-reading-atlas-kicker"><Activity size={14} />READING ATLAS</span>
           <h2>阅读图谱</h2>
-          <p>把本地阅读记录整理成趋势、节奏与馆藏结构；所有排行都只指向你的本地库。</p>
+          <p>汇总本地与发现页阅读会话，整理成趋势、节奏与作品排行；馆藏构成仍只统计本地库。</p>
         </div>
         <div className="folio-reading-period" aria-label="统计周期">
           {PERIODS.map((periodOption) => (
@@ -77,23 +78,39 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
 
       {error ? <p className="folio-reading-atlas-error" role="alert">{error}</p> : null}
 
-      <section className="folio-reading-pulse" aria-label="周期阅读概览">
-        <div className="folio-reading-pulse-total">
+      <m.section
+        key={periodDays}
+        className="folio-reading-pulse"
+        aria-label="周期阅读概览"
+        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reduceMotion ? 0 : duration.base, ease: ease.standard }}
+      >
+        <m.div
+          className="folio-reading-pulse-total"
+          initial={reduceMotion ? false : { opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: reduceMotion ? 0 : 0.12, duration: reduceMotion ? 0 : duration.base, ease: ease.standard }}
+        >
           <span>{period ? `${formatShortDate(period.start_date)} — ${formatShortDate(period.end_date)}` : `最近 ${periodDays} 天`}</span>
           <strong>{overview ? <NumberTicker value={overview.total_seconds} format={formatDuration} /> : "—"}</strong>
           <TrendLine statistics={statistics} />
-          <span className="folio-reading-pulse-glyph" aria-hidden="true"><Activity size={150} strokeWidth={0.7} /></span>
+          <div className="folio-reading-coverage" aria-label={overview ? `周期内 ${overview.active_days} 个活跃日` : "正在读取活跃覆盖"}>
+            <span>活跃覆盖</span>
+            <i><m.b initial={{ scaleX: reduceMotion ? activeCoverage : 0 }} animate={{ scaleX: activeCoverage }} transition={{ delay: reduceMotion ? 0 : 0.2, duration: reduceMotion ? 0 : duration.slow, ease: ease.standard }} /></i>
+            <em>{overview ? `${overview.active_days} / ${periodDays}` : "—"}</em>
+          </div>
           <footer>
             <span>累计记录 {overview ? formatDuration(overview.all_time_seconds) : "—"}</span>
-            <span>{overview?.tracking_since ? `始于 ${formatDate(overview.tracking_since)}` : "等待首次本地阅读"}</span>
+            <span>{overview?.tracking_since ? `始于 ${formatDate(overview.tracking_since)}` : "等待首次阅读"}</span>
           </footer>
-        </div>
-        <ActivityCalendar activity={activity} />
-      </section>
+        </m.div>
+        <ActivityCalendar key={periodDays} activity={activity} />
+      </m.section>
 
       <div className="folio-reading-metrics" aria-label="周期关键指标">
         <Metric icon={MousePointerClick} label="阅读会话" value={overview?.sessions} detail={overview ? `平均 ${formatDuration(overview.average_session_seconds)}` : "正在读取"} />
-        <Metric icon={BookOpen} label="触达作品" value={overview?.works_read} detail={overview ? `馆藏内有 ${overview.all_time_works_read} 部留下记录` : "正在读取"} />
+        <Metric icon={BookOpen} label="触达作品" value={overview?.works_read} detail={overview ? `累计 ${overview.all_time_works_read} 部作品留下记录` : "正在读取"} />
         <Metric icon={CalendarDays} label="活跃天数" value={overview?.active_days} detail={overview ? `${Math.round((overview.active_days / Math.max(1, periodDays)) * 100)}% 周期覆盖` : "正在读取"} />
         <Metric icon={TimerReset} label="连续阅读" value={overview?.current_streak_days} suffix="天" detail={overview ? `最长单次 ${formatDuration(overview.longest_session_seconds)}` : "正在读取"} />
       </div>
@@ -157,9 +174,9 @@ function ActivityCalendar({ activity }: { activity: ReadingStatistics["activity"
                 className={day.seconds ? "is-active" : "is-empty"}
                 title={`${day.date} · ${formatDuration(day.seconds)} · ${day.sessions} 次`}
                 style={{ "--intensity": intensity, height: `${day.seconds ? intensity * 100 : 3}%` } as CssVars}
-                initial={{ opacity: reduceMotion ? 1 : 0, scaleY: reduceMotion ? 1 : 0 }}
-                animate={{ opacity: 1, scaleY: 1 }}
-                transition={{ delay: reduceMotion ? 0 : Math.min(index, 70) * (stagger.base / 5), duration: reduceMotion ? 0 : duration.base, ease: ease.standard }}
+                initial={{ opacity: reduceMotion ? 1 : 0, scaleY: reduceMotion ? 1 : 0, y: reduceMotion ? 0 : 12 }}
+                animate={{ opacity: 1, scaleY: 1, y: 0 }}
+                transition={reduceMotion ? { duration: 0 } : { delay: Math.min(index, 70) * (stagger.base / 5), type: "spring", stiffness: 230, damping: 22 }}
               />
             );
           })}
@@ -230,7 +247,7 @@ function WorkRanking({ statistics }: { statistics: ReadingStatistics | null }) {
   return (
     <section className="folio-reading-work-ranking">
       <header>
-        <span><strong>作品深读榜</strong><small>点击直接回到本地阅读器</small></span>
+        <span><strong>作品深读榜</strong><small>点击回到对应的本地或远端阅读器</small></span>
         <div aria-label="作品排行口径">
           <button type="button" className={mode === "time" ? "is-active" : ""} onClick={() => setMode("time")}>按时长</button>
           <button type="button" className={mode === "sessions" ? "is-active" : ""} onClick={() => setMode("sessions")}>按次数</button>
@@ -245,21 +262,24 @@ function WorkRanking({ statistics }: { statistics: ReadingStatistics | null }) {
             exit={{ opacity: 0, y: reduceMotion ? 0 : -5 }}
             transition={{ duration: reduceMotion ? 0 : duration.base, ease: ease.standard }}
           >
-            {rows.slice(0, 6).map((row, index) => <WorkRankRow key={row.id} row={row} index={index} mode={mode} />)}
+            {rows.slice(0, 6).map((row, index) => <WorkRankRow key={`${row.source}-${row.id}`} row={row} index={index} mode={mode} />)}
           </m.ol>
         </AnimatePresence>
-      ) : <p className="folio-reading-empty">完成一次本地阅读后，这里才会出现真实排行。</p>}
+      ) : <p className="folio-reading-empty">完成一次阅读后，这里才会出现真实排行。</p>}
     </section>
   );
 }
 
 function WorkRankRow({ row, index, mode }: { row: ReadingWorkRank; index: number; mode: "time" | "sessions" }) {
   const title = row.title_japanese || row.pretty_title || row.title;
+  const href = row.work_id != null
+    ? pageHref({ name: "reader", workId: row.work_id })
+    : pageHref({ name: "readerRemote", galleryId: row.remote_gallery_id ?? row.id });
   return (
     <li className={index === 0 ? "is-leader" : ""}>
-      <a href={pageHref({ name: "reader", workId: row.id })}>
+      <a href={href}>
         <em>{String(index + 1).padStart(2, "0")}</em>
-        {row.cover_path ? <AmbientCover className="folio-reading-rank-cover" src={`/api/works/${row.id}/cover`} alt="" loading="lazy" /> : <span className="folio-reading-rank-cover" />}
+        {row.work_id != null && row.cover_path ? <AmbientCover className="folio-reading-rank-cover" src={`/api/works/${row.work_id}/cover`} alt="" loading="lazy" /> : <span className="folio-reading-rank-cover" />}
         <span><strong>{title}</strong><small>{formatDuration(row.reading_seconds)} · {row.reading_sessions} 次会话</small></span>
         <b>{mode === "time" ? formatDuration(row.reading_seconds) : `${row.reading_sessions} 次`}</b>
         <ArrowUpRight size={14} />
@@ -275,17 +295,19 @@ function RecentSessions({ sessions }: { sessions: ReadingSessionRank[] }) {
       {sessions.length ? (
         <ol>
           {sessions.slice(0, 6).map((session) => (
-            <li key={session.id}>
+            <li key={`${session.source}-${session.id}`}>
               <time>{formatTimestamp(session.started_at)}</time>
               <i />
-              <a href={pageHref({ name: "reader", workId: session.work_id })}>
+              <a href={session.work_id != null
+                ? pageHref({ name: "reader", workId: session.work_id })
+                : pageHref({ name: "readerRemote", galleryId: session.remote_gallery_id! })}>
                 <strong>{session.title_japanese || session.pretty_title || session.title}</strong>
                 <small>{formatDuration(session.duration_seconds)} · 停在第 {session.last_page_index} 页</small>
               </a>
             </li>
           ))}
         </ol>
-      ) : <p className="folio-reading-empty">这个周期还没有本地阅读足迹。</p>}
+      ) : <p className="folio-reading-empty">这个周期还没有阅读足迹。</p>}
     </section>
   );
 }
@@ -317,10 +339,13 @@ function DistributionRanking({ kind, rows, loading }: { kind: "artist" | "tag"; 
 }
 
 function formatDuration(seconds: number) {
-  if (seconds < 60) return `${seconds} 秒`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} 分钟`;
-  const hours = seconds / 3600;
-  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)} 小时`;
+  const wholeSeconds = Math.max(0, Math.round(seconds));
+  if (wholeSeconds < 60) return `${wholeSeconds} 秒`;
+  const totalMinutes = Math.round(wholeSeconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes} 分钟`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes ? `${hours} 小时 ${minutes} 分` : `${hours} 小时`;
 }
 
 function formatDate(value: string) {

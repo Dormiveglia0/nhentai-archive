@@ -319,7 +319,6 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-behavior: smooth;
   scrollbar-width: none;
   position: relative;
 }

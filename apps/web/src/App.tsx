@@ -1,12 +1,13 @@
 import { AnimatePresence, m } from "motion/react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { AuthGate } from "./components/auth/AuthGate";
+import { AuthWakeDemo } from "./components/auth/AuthWakeDemo";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { FolioRouteFallback, ReaderRouteFallback } from "./components/layout/RouteFallback";
 import { api } from "./lib/api";
 import { duration, ease, usePrefersReducedMotion } from "./lib/motion";
-import { pageFromLocation, type Page } from "./lib/navigation";
+import { pageFromLocation, pageHref, type Page } from "./lib/navigation";
 
 const FrontendDemo = lazy(() =>
   import("./components/demo/FrontendDemo").then((module) => ({ default: module.FrontendDemo })),
@@ -49,6 +50,7 @@ const ReaderPage = lazy(() =>
 );
 
 export default function App() {
+  if (window.location.pathname === "/auth-concept") return <AuthWakeDemo preview />;
   return <AuthGate>{(logout) => <AuthenticatedApp onLogout={logout} />}</AuthGate>;
 }
 
@@ -93,39 +95,60 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
     : page.name === "readerRemote"
       ? { kind: "remote" as const, galleryId: page.galleryId }
       : null;
-  const archivePage = page.name === "reader" || page.name === "readerRemote" ? null : page;
+  const lastArchivePage = useRef<Exclude<Page, { name: "reader" } | { name: "readerRemote" }> | null>(
+    page.name === "reader" || page.name === "readerRemote" ? null : page,
+  );
+  const archiveRouteRef = useRef<HTMLDivElement>(null);
+  const readerRouteRef = useRef<HTMLDivElement>(null);
+  const archiveFocusRef = useRef<HTMLElement | null>(null);
+  const archiveFocusPageRef = useRef("");
+  const archivePage = page.name === "reader" || page.name === "readerRemote" ? lastArchivePage.current : page;
+  const readerFocusKey = readerSource
+    ? `${readerSource.kind}:${readerSource.kind === "local" ? readerSource.workId : readerSource.galleryId}`
+    : "";
   const routeTransition = { duration: reduceMotion ? 0 : duration.slow, ease: ease.standard };
   const readerRest = { opacity: 1, x: 0, clipPath: "inset(0% 0% 0% 0%)" };
 
+  useEffect(() => {
+    if (page.name !== "reader" && page.name !== "readerRemote") lastArchivePage.current = page;
+  }, [page]);
+
+  useEffect(() => {
+    const archiveRoute = archiveRouteRef.current;
+    if (readerFocusKey) {
+      archiveFocusRef.current = document.activeElement instanceof HTMLElement && archiveRoute?.contains(document.activeElement)
+        ? document.activeElement
+        : null;
+      archiveFocusPageRef.current = lastArchivePage.current ? pageHref(lastArchivePage.current) : "";
+      if (archiveRoute) archiveRoute.inert = true;
+      readerRouteRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (archiveRoute) archiveRoute.inert = false;
+    const focusTarget = archiveFocusRef.current;
+    const shouldRestore = focusTarget?.isConnected
+      && page.name !== "reader"
+      && page.name !== "readerRemote"
+      && archiveFocusPageRef.current === pageHref(page);
+    archiveFocusRef.current = null;
+    archiveFocusPageRef.current = "";
+    if (shouldRestore) focusTarget.focus({ preventScroll: true });
+  }, [page, readerFocusKey]);
+
   return (
-    <AnimatePresence initial={false} mode="sync">
-      {readerSource ? (
-        <m.div
-          className="app-route-reader"
-          key="reader"
-          initial={reduceMotion ? { opacity: 0 } : { opacity: 1, x: 34, clipPath: "inset(0% 0% 0% 100%)" }}
-          animate={readerRest}
-          exit={reduceMotion ? { opacity: 0 } : { opacity: 1, x: -28, clipPath: "inset(0% 100% 0% 0%)" }}
-          transition={routeTransition}
-          style={{ position: "fixed", zIndex: 200, inset: 0, overflow: "hidden", background: "#0d0e0c" }}
-        >
-          <Suspense fallback={<ReaderRouteFallback />}>
-            <ReaderPage source={readerSource} />
-          </Suspense>
-        </m.div>
-      ) : archivePage ? (
-        <m.div
+    <>
+      {archivePage ? (
+        <div
+          ref={archiveRouteRef}
           className="app-route-archive"
-          key="archive"
-          initial={{ opacity: 0.99 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0.99 }}
-          transition={routeTransition}
+          aria-hidden={readerSource ? true : undefined}
+          style={readerSource ? { pointerEvents: "none" } : undefined}
         >
           <ArchiveShell
             activePage={archivePage.name}
             scrollKey={archivePage.name === "gallery" ? `gallery:${archivePage.galleryId}` : archivePage.name}
             onLogout={onLogout}
+            suspended={Boolean(readerSource)}
           >
             <Suspense fallback={<FolioRouteFallback />}>
               {archivePage.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}
@@ -141,8 +164,30 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
               {archivePage.name === "settings" ? <SettingsPage onBlurCoversChange={setBlurCovers} /> : null}
             </Suspense>
           </ArchiveShell>
-        </m.div>
+        </div>
       ) : null}
-    </AnimatePresence>
+
+      <AnimatePresence initial={false} mode="sync">
+        {readerSource ? (
+          <m.div
+            ref={readerRouteRef}
+            className="app-route-reader"
+            key="reader"
+            role="main"
+            aria-label="阅读器"
+            tabIndex={-1}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 1, x: 34, clipPath: "inset(0% 0% 0% 100%)" }}
+            animate={readerRest}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 1, x: -28, clipPath: "inset(0% 100% 0% 0%)" }}
+            transition={routeTransition}
+            style={{ position: "fixed", zIndex: 200, inset: 0, overflow: "hidden", background: "#0d0e0c", outline: "none" }}
+          >
+            <Suspense fallback={<ReaderRouteFallback />}>
+              <ReaderPage source={readerSource} />
+            </Suspense>
+          </m.div>
+        ) : null}
+      </AnimatePresence>
+    </>
   );
 }

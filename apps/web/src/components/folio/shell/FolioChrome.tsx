@@ -1,6 +1,6 @@
 import { LogOut, Menu, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
 import { pageHref } from "../../../lib/navigation";
@@ -35,7 +35,9 @@ export function FolioChrome({
   const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLElement>(null);
   const bindingRef = useRef<HTMLDivElement>(null);
+  const scrollPositionsRef = useRef(new Map<string, number>());
   const current = FOLIO_PAGES.find((item) => item.id === page) ?? FOLIO_PAGES[0];
+  const routeKey = `${page}:${String(scrollKey ?? "")}`;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -48,14 +50,9 @@ export function FolioChrome({
 
   useEffect(() => {
     setMenuOpen(false);
-    const frame = window.requestAnimationFrame(() => {
-      scrollRef.current?.scrollTo({ top: 0 });
-      updateBindingProgress();
-    });
-    return () => window.cancelAnimationFrame(frame);
   }, [page, scrollKey]);
 
-  function updateBindingProgress() {
+  const updateBindingProgress = useCallback(() => {
     const scroll = scrollRef.current;
     const binding = bindingRef.current;
     if (!scroll || !binding) return;
@@ -64,6 +61,17 @@ export function FolioChrome({
     const offset = max <= 1 ? 0 : (scroll.scrollTop / max) * (1 - size);
     binding.style.setProperty("--folio-scroll-size", String(size));
     binding.style.setProperty("--folio-scroll-offset", String(offset));
+  }, []);
+
+  const restoreRouteScroll = useCallback((node: HTMLDivElement | null) => {
+    if (!node || !scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollPositionsRef.current.get(routeKey) ?? 0;
+    window.requestAnimationFrame(updateBindingProgress);
+  }, [routeKey, updateBindingProgress]);
+
+  function handleScroll() {
+    if (scrollRef.current) scrollPositionsRef.current.set(routeKey, scrollRef.current.scrollTop);
+    updateBindingProgress();
   }
 
   return (
@@ -106,9 +114,9 @@ export function FolioChrome({
             </m.div>
           ) : null}
         </AnimatePresence>
-        <main ref={scrollRef} className="folio-scroll" onScroll={updateBindingProgress}>
+        <main ref={scrollRef} className="folio-scroll" onScroll={handleScroll}>
           <AnimatePresence mode="wait" initial={false}>
-            <m.div key={`${page}:${String(scrollKey ?? "")}`} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
+            <m.div ref={restoreRouteScroll} key={routeKey} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18 }} transition={{ duration: duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
               {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}
               {children}
             </m.div>

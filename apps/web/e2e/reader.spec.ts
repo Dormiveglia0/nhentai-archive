@@ -23,7 +23,9 @@ test("切换到连续滚动模式", async ({ page }) => {
 });
 
 test("连续滚动触摸滑动不会唤出控制栏", async ({ page }) => {
+  await expect.poll(() => page.locator(".reader-webtoon, .reader-single").count()).toBeGreaterThan(0);
   if (!await page.locator(".reader-webtoon").count()) {
+    await revealChrome(page);
     await page.getByRole("button", { name: "单页", exact: true }).click();
   }
   const webtoon = page.locator(".reader-webtoon");
@@ -48,9 +50,12 @@ test("连续滚动触摸滑动不会唤出控制栏", async ({ page }) => {
 });
 
 test("单页模式移动鼠标和侧边翻页不唤出控制栏，只有中间点击会显示", async ({ page }) => {
+  await expect.poll(() => page.locator(".reader-webtoon, .reader-single").count()).toBeGreaterThan(0);
   if (await page.locator(".reader-webtoon").count()) {
+    await revealChrome(page);
     await page.getByRole("button", { name: /连续/ }).click();
   }
+  await expect(page.locator(".reader-single")).toBeVisible();
   await page.mouse.move(720, 500);
   await page.waitForTimeout(2700);
   await expect(page.locator(".reader-toolbar")).toHaveCount(0);
@@ -83,6 +88,36 @@ test("打开和退出阅读器都有可见的擦页转场", async ({ page }) => 
   await page.evaluate((workId) => { window.location.hash = `reader/${workId}`; }, WORK_ID);
   expect(hasIntermediateClip(await sampleReaderClip(page))).toBeTruthy();
   await expect(page.locator(".reader-shell")).toBeVisible();
+});
+
+test("阅读器隔离后台页面并在返回后恢复入口焦点", async ({ page }) => {
+  let jobRequests = 0;
+  await page.route("**/api/jobs", (route) => {
+    jobRequests += 1;
+    return route.fulfill({ json: { result: [] } });
+  });
+  await page.goto("/#library");
+  await expect.poll(() => jobRequests).toBeGreaterThan(0);
+  const entry = page.locator(".folio-library-read-action").first();
+  await expect(entry).toBeVisible();
+  await entry.focus();
+  await entry.click();
+
+  const readerRoute = page.locator(".app-route-reader");
+  const archiveRoute = page.locator(".app-route-archive");
+  await expect(readerRoute).toBeFocused();
+  await expect(readerRoute).toHaveAttribute("role", "main");
+  await expect(archiveRoute).toHaveAttribute("aria-hidden", "true");
+  expect(await archiveRoute.evaluate((node) => (node as HTMLElement).inert)).toBeTruthy();
+  const requestsOnEntry = jobRequests;
+  await page.waitForTimeout(2_800);
+  expect(jobRequests).toBe(requestsOnEntry);
+
+  await revealChrome(page);
+  await page.getByRole("button", { name: "返回我的库" }).click();
+  await expect(page.locator(".folio-library-page")).toBeVisible();
+  expect(await archiveRoute.evaluate((node) => (node as HTMLElement).inert)).toBeFalsy();
+  await expect(entry).toBeFocused();
 });
 
 test("任一失败图片会批量重试当前所有失败页", async ({ page }) => {
@@ -160,6 +195,8 @@ test("打开缩略图浮层并跳页", async ({ page }) => {
 test("打开作品信息面板", async ({ page }) => {
   await page.getByRole("button", { name: "作品信息" }).click();
   await expect(page.getByText("本地阅读进度")).toBeVisible();
+  const actionFonts = await page.locator(".reader-info-actions > :is(button, a)").evaluateAll((items) => items.map((item) => getComputedStyle(item).fontSize));
+  expect(new Set(actionFonts)).toEqual(new Set(["13px"]));
 });
 
 test("底部进度条点击跳页", async ({ page }) => {

@@ -22,18 +22,26 @@ function createSessionKey() {
   return `reader-${Date.now().toString(36)}-${fallbackSessionSequence.toString(36)}`;
 }
 
-export function useReadingSession(workId: number | null, pageIndex: number) {
+export type ReadingSessionSource =
+  | { kind: "local"; id: number }
+  | { kind: "remote"; id: number }
+  | null;
+
+export function useReadingSession(source: ReadingSessionSource, pageIndex: number) {
+  const sourceKey = source ? `${source.kind}:${source.id}` : "";
+  const sourceKind = source?.kind ?? null;
+  const sourceId = source?.id ?? null;
   const pageRef = useRef(pageIndex);
-  const keyRef = useRef<{ workId: number | null; key: string }>({ workId: null, key: "" });
+  const keyRef = useRef<{ sourceKey: string; key: string }>({ sourceKey: "", key: "" });
   pageRef.current = pageIndex;
 
-  if (keyRef.current.workId !== workId) {
-    keyRef.current = { workId, key: workId === null ? "" : createSessionKey() };
+  if (keyRef.current.sourceKey !== sourceKey) {
+    keyRef.current = { sourceKey, key: sourceKey ? createSessionKey() : "" };
   }
   const sessionKey = keyRef.current.key;
 
   useEffect(() => {
-    if (workId === null) return;
+    if (sourceKind === null || sourceId === null) return;
     let alive = true;
     let sessionId: number | null = null;
     let elapsedMs = 0;
@@ -47,7 +55,8 @@ export function useReadingSession(workId: number | null, pageIndex: number) {
     const seconds = () => Math.max(0, Math.floor((elapsedMs + (activeSince === null ? 0 : performance.now() - activeSince)) / 1000));
     const flush = (finished = false, keepalive = false) => {
       if (sessionId === null) return;
-      void api.updateReadingSession(workId, sessionId, seconds(), pageRef.current, finished, keepalive).catch(() => undefined);
+      const update = sourceKind === "local" ? api.updateReadingSession : api.updateRemoteReadingSession;
+      void update(sourceId, sessionId, seconds(), pageRef.current, finished, keepalive).catch(() => undefined);
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
@@ -69,7 +78,8 @@ export function useReadingSession(workId: number | null, pageIndex: number) {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
-    void api.startReadingSession(workId, sessionKey, pageRef.current)
+    const start = sourceKind === "local" ? api.startReadingSession : api.startRemoteReadingSession;
+    void start(sourceId, sessionKey, pageRef.current)
       .then((session) => {
         sessionId = session.id;
         if (!alive) flush(true, true);
@@ -85,5 +95,5 @@ export function useReadingSession(workId: number | null, pageIndex: number) {
       stopClock();
       flush(true, true);
     };
-  }, [sessionKey, workId]);
+  }, [sessionKey, sourceId, sourceKind]);
 }

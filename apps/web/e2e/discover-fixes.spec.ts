@@ -38,14 +38,174 @@ test.describe("界面与封面回归", () => {
     expect(page.url()).toBe(currentUrl);
     await workPage.close();
 
+    await page.getByRole("button", { name: "语言：全部语言" }).click();
+    await page.getByRole("group", { name: "语言选项" }).getByRole("button", { name: "中文" }).click();
+    await page.getByRole("button", { name: "排序：最新发布" }).click();
+    await page.getByRole("group", { name: "排序选项" }).getByRole("button", { name: "总热度" }).click();
+    const filteredUrl = page.url();
+
     const tagLink = page.locator(".folio-discover-card-tags a[href^='#discover?']").first();
     await expect(tagLink).toBeVisible();
     const tagPagePromise = context.waitForEvent("page");
     await tagLink.click({ button: "middle" });
     const tagPage = await tagPagePromise;
     await expect.poll(() => new URL(tagPage.url()).hash).toContain("#discover?");
-    expect(page.url()).toBe(currentUrl);
+    await expect(tagPage.getByRole("button", { name: "语言：全部语言" })).toBeVisible();
+    await expect(tagPage.getByRole("button", { name: "排序：最新发布" })).toBeVisible();
+    expect(page.url()).toBe(filteredUrl);
     await tagPage.close();
+  });
+
+  test("Tag 横向拖动不导航，短按仍会以默认条件立即检索", async ({ page }) => {
+    await page.goto("/#discover");
+    await page.getByRole("button", { name: "语言：全部语言" }).click();
+    await page.getByRole("group", { name: "语言选项" }).getByRole("button", { name: "中文" }).click();
+    await page.getByRole("button", { name: "排序：最新发布" }).click();
+    await page.getByRole("group", { name: "排序选项" }).getByRole("button", { name: "总热度" }).click();
+    const tag = page.locator(".folio-discover-card-tags a").first();
+    await expect(tag).toBeVisible({ timeout: 15_000 });
+    const box = await tag.boundingBox();
+    expect(box).not.toBeNull();
+    const beforeDrag = page.url();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 - 36, box!.y + box!.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect(page.url()).toBe(beforeDrag);
+
+    await tag.click();
+    await expect(page.getByRole("button", { name: "语言：全部语言" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "排序：最新发布" })).toBeVisible();
+    await expect(page.locator(".folio-discover-tag-chips > span")).toHaveCount(1);
+  });
+
+  test("发现卡片完整渲染超过六个内容 Tag", async ({ page }) => {
+    const tags = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 1,
+      type: index === 9 ? "character" : "tag",
+      name: `content-tag-${index + 1}`,
+      slug: `content-tag-${index + 1}`,
+      display: `标签 ${index + 1}`,
+    }));
+    await page.route("**/api/discover/feed?**", (route) => route.fulfill({
+      json: {
+        result: [{
+          remote: "nhentai",
+          gallery_id: 987654,
+          title: "Tag coverage",
+          thumbnail: {},
+          page_count: 12,
+          favorites: 0,
+          tag_ids: tags.map((tag) => tag.id),
+          tags,
+          blacklisted: false,
+          imported: false,
+          work_id: null,
+        }],
+        total: 1,
+        num_pages: 1,
+        per_page: 8,
+      },
+    }));
+    await page.goto("/#discover");
+    await expect(page.locator(".folio-discover-card-tags a")).toHaveCount(10);
+  });
+
+  test("发现作品可直接进入远端阅读器并计入阅读时长", async ({ page, request }) => {
+    await page.setViewportSize({ width: 1280, height: 860 });
+    await page.goto("/#discover");
+    const card = page.locator(".folio-discover-card").first();
+    const read = card.getByRole("link", { name: /^直接阅读/ });
+    await expect(read).toBeVisible({ timeout: 15_000 });
+    await expect(read).toHaveAttribute("href", /^#reader\/remote\/\d+$/);
+    const galleryId = Number((await read.getAttribute("href"))!.split("/").at(-1));
+    const started = page.waitForResponse((response) => response.request().method() === "POST" && new URL(response.url()).pathname === `/api/discover/galleries/${galleryId}/reading-sessions`);
+    await read.click();
+    await expect(page.locator(".reader-shell")).toBeVisible({ timeout: 15_000 });
+    await started;
+    await page.waitForTimeout(1_100);
+    await page.goBack();
+    await expect(page.locator(".folio-discover-page")).toBeVisible();
+    await expect.poll(async () => {
+      const statistics = await (await request.get("/api/library/statistics?days=30")).json();
+      return statistics.recent_sessions.find((row: { source: string; remote_gallery_id: number }) => row.source === "remote" && row.remote_gallery_id === galleryId)?.duration_seconds ?? 0;
+    }).toBeGreaterThan(0);
+  });
+
+  test("阅读器返回保留原页面与滚动位置，不再触发顶部恢复动画", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto("/#discover");
+    await expect(page.locator(".folio-discover-card").first()).toBeVisible({ timeout: 15_000 });
+    const targetScroll = await page.locator(".folio-scroll").evaluate((scroll) => {
+      scroll.scrollTop = Math.min(720, scroll.scrollHeight - scroll.clientHeight);
+      return scroll.scrollTop;
+    });
+    expect(targetScroll).toBeGreaterThan(100);
+    await page.evaluate(() => {
+      const scroll = document.querySelector<HTMLElement>(".folio-scroll")!;
+      (window as typeof window & { __returnScrollSamples?: number[] }).__returnScrollSamples = [scroll.scrollTop];
+      scroll.addEventListener("scroll", () => {
+        (window as typeof window & { __returnScrollSamples?: number[] }).__returnScrollSamples!.push(scroll.scrollTop);
+      });
+    });
+    await page.locator(".folio-discover-card-action.is-read").first().evaluate((link: HTMLElement) => link.click());
+    await expect(page.locator(".reader-shell")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(".app-route-archive")).toHaveCount(1);
+    await page.goBack();
+    await expect(page.locator(".reader-shell")).toHaveCount(0);
+    await expect.poll(() => page.locator(".folio-scroll").evaluate((scroll) => scroll.scrollTop)).toBe(targetScroll);
+    const samples = await page.evaluate(() => (window as typeof window & { __returnScrollSamples?: number[] }).__returnScrollSamples ?? []);
+    expect(Math.min(...samples)).toBeGreaterThan(targetScroll - 2);
+  });
+
+  test("详情页浏览器返回在入场前恢复发现页位置", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto("/#discover");
+    await expect(page.locator(".folio-discover-cover").first()).toBeVisible({ timeout: 15_000 });
+    const targetScroll = await page.locator(".folio-scroll").evaluate((scroll) => {
+      scroll.scrollTop = Math.min(640, scroll.scrollHeight - scroll.clientHeight);
+      return scroll.scrollTop;
+    });
+    expect(targetScroll).toBeGreaterThan(100);
+    await page.locator(".folio-discover-cover").first().evaluate((link: HTMLElement) => link.click());
+    await expect(page.locator(".folio-gallery-page")).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => page.locator(".folio-scroll").evaluate((scroll) => scroll.scrollTop)).toBe(0);
+    await page.goBack();
+    await expect(page.locator(".folio-discover-page")).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => page.locator(".folio-scroll").evaluate((scroll) => scroll.scrollTop)).toBe(targetScroll);
+  });
+
+  test("馆藏标签在组合搜索栏内展示并按内容与元信息分组", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 860 });
+    await page.goto("/#library");
+    const query = page.locator(".folio-library-query");
+    await query.getByRole("button", { name: "添加标签" }).click();
+    const panel = page.locator(".folio-library-tag-panel");
+    const firstTag = panel.locator(".folio-library-tag-options > a").first();
+    await expect(firstTag).toBeVisible({ timeout: 15_000 });
+    await firstTag.click();
+    await expect(query.locator(".folio-library-tag-chips > span")).toHaveCount(1);
+    await expect(page.locator(".folio-library-active-tags")).toHaveCount(0);
+
+    await panel.getByRole("button", { name: "作者与作品信息" }).click();
+    const firstMeta = panel.locator(".folio-library-tag-options > a").first();
+    await expect(firstMeta).toBeVisible();
+    await expect(firstMeta.locator("em")).toContainText(/作者|社团|原作|角色|分类/);
+
+    const [panelBox, searchBox, scopeBox, optionsBox] = await Promise.all([
+      panel.boundingBox(),
+      panel.locator(":scope > label").boundingBox(),
+      panel.locator(".folio-library-tag-scope").boundingBox(),
+      panel.locator(".folio-library-tag-options").boundingBox(),
+    ]);
+    expect(panelBox?.width).toBeLessThanOrEqual(460);
+    expect(searchBox?.width).toBe(scopeBox?.width);
+    expect(scopeBox?.width).toBe(optionsBox?.width);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const [mobilePanelBox, mobileFilterBox] = await Promise.all([panel.boundingBox(), page.locator(".folio-library-tag-filter").boundingBox()]);
+    expect(mobilePanelBox?.width).toBeLessThanOrEqual(mobileFilterBox?.width ?? 0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test("Tag 检索可明确排除条件并发送负向远端查询", async ({ page }) => {
@@ -141,6 +301,7 @@ test.describe("界面与封面回归", () => {
 
   test("移动端五个热门作品同屏，馆藏只展示内容 Tag", async ({ page }) => {
     await page.goto("/#discover");
+    await expect(page.locator(".folio-discover-random")).toHaveCSS("border-left-width", "1px");
     const popular = page.locator(".folio-discover-popular-card");
     await expect(popular).toHaveCount(5, { timeout: 15_000 });
     await page.waitForTimeout(1_200);
@@ -158,9 +319,9 @@ test.describe("界面与封面回归", () => {
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
     expect(geometry.cards.every((card) => card.left >= -1 && card.right <= geometry.viewportWidth + 1)).toBeTruthy();
     expect(geometry.cards.every((card) => card.centerVisible)).toBeTruthy();
+    expect(Math.min(...geometry.cards.map((card) => card.right - card.left))).toBeGreaterThanOrEqual(85);
     await expect(page.locator(".folio-discover-popular-media")).toHaveCount(5);
-    await page.waitForFunction(() => Array.from(document.querySelectorAll<HTMLImageElement>(".folio-discover-popular-artwork .folio-ambient-cover-artwork")).every((image) => image.complete && image.naturalWidth > 0));
-    await expectExactCoverRatios(page.locator(".folio-discover-popular-media"));
+    await expectConfiguredPopularRatios(page.locator(".folio-discover-popular-media"));
     await expect(popular.first()).not.toHaveCSS("animation-name", "none");
     await page.locator(".folio-discover-popular").screenshot({ path: "/tmp/nh-archive-popular-mobile.png" });
 
@@ -186,7 +347,7 @@ test.describe("界面与封面回归", () => {
     }));
     expect(boxes.every((box) => box.width > 120 && box.height > 100)).toBeTruthy();
     expect(Math.max(...boxes.map((box) => box.height)) - Math.min(...boxes.map((box) => box.height))).toBeLessThanOrEqual(6);
-    await expectExactCoverRatios(page.locator(".folio-discover-popular-media"));
+    await expectConfiguredPopularRatios(page.locator(".folio-discover-popular-media"));
     await expect(popular.first()).not.toHaveCSS("animation-name", "none");
     await page.locator(".folio-discover-popular").screenshot({ path: "/tmp/nh-archive-popular-desktop.png" });
   });
@@ -225,6 +386,46 @@ test.describe("界面与封面回归", () => {
     expect(geometry.boxes[2].y).toBeGreaterThan(geometry.boxes[0].y);
     expect(geometry.boxes.at(-1)!.width).toBeLessThan(geometry.gridWidth * 0.55);
     await page.locator(".folio-discover-grid").screenshot({ path: "/tmp/nh-archive-discover-grid-mobile.png" });
+  });
+
+  test("馆藏末页每一行都铺满结果区", async ({ page }) => {
+    await page.setViewportSize({ width: 1180, height: 900 });
+    await page.goto("/#library");
+    await expect(page.locator(".folio-library-card-cell").first()).toBeVisible({ timeout: 15_000 });
+    const lastPage = page.getByRole("button", { name: "最后一页" });
+    if (await lastPage.count()) await lastPage.click();
+    await expect(page.locator(".folio-library-results")).toHaveAttribute("aria-busy", "false");
+
+    await expect.poll(() => page.locator(".folio-library-grid").evaluate((grid) => {
+      const gridBox = grid.getBoundingClientRect();
+      const rows = new Map<number, DOMRect[]>();
+      for (const item of grid.children) {
+        const box = item.getBoundingClientRect();
+        const row = rows.get(Math.round(box.top)) ?? [];
+        row.push(box);
+        rows.set(Math.round(box.top), row);
+      }
+      return [...rows.values()].every((row) =>
+        Math.abs(Math.min(...row.map((box) => box.left)) - gridBox.left) <= 1
+        && Math.abs(Math.max(...row.map((box) => box.right)) - gridBox.right) <= 1,
+      );
+    })).toBeTruthy();
+  });
+
+  test("馆藏文字搜索可一键清除并立即恢复结果", async ({ page }) => {
+    await page.goto("/#library");
+    const input = page.getByRole("searchbox", { name: "搜索馆藏" });
+    await input.fill("no-result-probe");
+    await input.press("Enter");
+    await expect(page.getByText("没有符合条件的作品")).toBeVisible();
+
+    const restored = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/library/search" && url.searchParams.get("q") === "";
+    });
+    await page.getByRole("button", { name: "清除文字搜索" }).click();
+    await restored;
+    await expect(page.locator(".folio-library-card-cell").first()).toBeVisible();
   });
 
   test("所有主页面使用同一页头场景尺寸且切页不缩放", async ({ page }) => {
@@ -324,6 +525,15 @@ test.describe("界面与封面回归", () => {
     expect(Math.abs(geometry.height - geometry.topbarHeight)).toBeLessThanOrEqual(1);
     expect(geometry.width).toBeGreaterThanOrEqual(110);
     expect(Math.abs(geometry.right - geometry.topbarRight)).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileGeometry = await logout.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const topbar = button.closest(".folio-topbar")!.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, topbarTop: topbar.top, topbarBottom: topbar.bottom };
+    });
+    expect(Math.abs(mobileGeometry.top - mobileGeometry.topbarTop)).toBeLessThanOrEqual(1);
+    expect(mobileGeometry.bottom).toBeLessThanOrEqual(mobileGeometry.topbarBottom - 0.5);
   });
 
   test("阅读偏好移除无效隐私模式，两个作品入口均可安全预览删除", async ({ page, request }) => {
@@ -454,5 +664,24 @@ async function expectExactCoverRatios(frames: Locator) {
   }));
   expect(metrics.length).toBeGreaterThan(0);
   expect(metrics.every((item) => Math.abs(item.frame - item.image) <= 0.015)).toBeTruthy();
+  expect(metrics.every((item) => item.padding.every((value) => Number.parseFloat(value) === 0))).toBeTruthy();
+}
+
+async function expectConfiguredPopularRatios(frames: Locator) {
+  const metrics = await frames.evaluateAll((nodes) => nodes.map((node) => {
+    const card = node.closest<HTMLElement>(".folio-discover-popular-card")!;
+    const image = node.querySelector<HTMLImageElement>(".folio-ambient-cover-artwork")!;
+    const imageStyle = getComputedStyle(image);
+    return {
+      frame: node.clientWidth / node.clientHeight,
+      configured: Number.parseFloat(getComputedStyle(card).getPropertyValue("--popular-ratio")),
+      image: image.naturalWidth > 0 ? image.naturalWidth / image.naturalHeight : null,
+      source: image.getAttribute("src"),
+      padding: [imageStyle.paddingTop, imageStyle.paddingRight, imageStyle.paddingBottom, imageStyle.paddingLeft],
+    };
+  }));
+  expect(metrics.length).toBeGreaterThan(0);
+  expect(metrics.every((item) => Boolean(item.source) && Math.abs(item.frame - item.configured) <= 0.015)).toBeTruthy();
+  expect(metrics.every((item) => item.image === null || Math.abs(item.image - item.configured) <= 0.015)).toBeTruthy();
   expect(metrics.every((item) => item.padding.every((value) => Number.parseFloat(value) === 0))).toBeTruthy();
 }

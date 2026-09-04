@@ -153,6 +153,35 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
   last_page_index INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS remote_reading_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_key TEXT NOT NULL UNIQUE,
+  gallery_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  title_japanese TEXT,
+  pretty_title TEXT,
+  page_count INTEGER NOT NULL DEFAULT 0,
+  started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ended_at TEXT,
+  duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK(duration_seconds >= 0),
+  last_page_index INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE VIEW IF NOT EXISTS reading_session_events AS
+SELECT
+  'local' AS source, id, client_key, work_id, NULL AS remote_gallery_id,
+  NULL AS remote_title, NULL AS remote_title_japanese, NULL AS remote_pretty_title,
+  started_at, updated_at, ended_at, duration_seconds, last_page_index
+FROM reading_sessions
+UNION ALL
+SELECT
+  'remote' AS source, r.id, r.client_key, w.id AS work_id, r.gallery_id AS remote_gallery_id,
+  r.title AS remote_title, r.title_japanese AS remote_title_japanese, r.pretty_title AS remote_pretty_title,
+  r.started_at, r.updated_at, r.ended_at, r.duration_seconds, r.last_page_index
+FROM remote_reading_sessions r
+LEFT JOIN works w ON w.remote_gallery_id = r.gallery_id;
+
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,
@@ -204,6 +233,10 @@ CREATE INDEX IF NOT EXISTS idx_reading_sessions_work_started
   ON reading_sessions(work_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reading_sessions_started
   ON reading_sessions(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_remote_reading_sessions_gallery_started
+  ON remote_reading_sessions(gallery_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_remote_reading_sessions_started
+  ON remote_reading_sessions(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_status_updated
   ON jobs(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_updated
@@ -230,6 +263,7 @@ class Database:
     def init_schema(self) -> None:
         with self.connect() as conn:
             conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("DROP VIEW IF EXISTS reading_session_events")
             conn.executescript(SCHEMA)
             self._migrate_legacy_schema(conn)
             conn.executescript(INDEXES)

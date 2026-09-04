@@ -74,14 +74,6 @@ test("阅读图谱支持周期、节奏、馆藏分布和本地钻取并适配�
   expect(works.length).toBeGreaterThan(0);
   const work = works[0];
   await request.patch(`/api/works/${work.id}/favorite`, { data: { favorite: true } });
-  const started = await request.post(`/api/works/${work.id}/reading-sessions`, {
-    data: { session_key: `e2e-statistics-${Date.now()}`, page_index: 1 },
-  });
-  const session = await started.json();
-  await request.patch(`/api/works/${work.id}/reading-sessions/${session.id}`, {
-    data: { duration_seconds: 5_460, page_index: 2, finished: true },
-  });
-
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/#settings");
   await page.getByRole("button", { name: /统计/ }).click();
@@ -90,8 +82,23 @@ test("阅读图谱支持周期、节奏、馆藏分布和本地钻取并适配�
   await expect(report.getByRole("heading", { name: "阅读图谱" })).toBeVisible();
   await expect(report.getByText("作品深读榜")).toBeVisible();
   await expect(report.getByText("最近足迹")).toBeVisible();
-  await expect(report.locator(".folio-reading-work-ranking a").first()).toHaveAttribute("href", `#reader/${work.id}`);
+  await expect(report.locator(".folio-reading-work-ranking a").first()).toHaveAttribute("href", /^#reader\/(?:remote\/)?\d+$/);
   await expect(report.locator(".folio-reading-calendar-grid i")).toHaveCount(30);
+  const durationSamples = await report.locator(".folio-reading-pulse-total > strong").evaluate(async (node) => {
+    const samples: string[] = [];
+    for (let index = 0; index < 20; index += 1) {
+      samples.push(node.textContent ?? "");
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    return samples;
+  });
+  expect(durationSamples.some((value) => /\d+\.\d{2,}/.test(value))).toBeFalsy();
+  const pulseStyle = await report.locator(".folio-reading-pulse").evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { background: style.backgroundColor, borderLeft: style.borderLeftWidth, shadow: style.boxShadow };
+  });
+  expect(pulseStyle).toEqual({ background: "rgba(0, 0, 0, 0)", borderLeft: "0px", shadow: "none" });
+  await expect(report.locator(".folio-reading-pulse-total > strong")).toHaveCSS("white-space", "nowrap");
   await report.getByRole("button", { name: "7 天" }).click();
   await expect(report.locator(".folio-reading-calendar-grid i")).toHaveCount(7);
   await report.getByRole("button", { name: "30 天" }).click();
@@ -99,6 +106,7 @@ test("阅读图谱支持周期、节奏、馆藏分布和本地钻取并适配�
   const collection = page.locator(".folio-collection-map");
   await expect(collection.getByText("作者作品分布")).toBeVisible();
   await expect(collection.getByText("馆藏 Tag 占比")).toBeVisible();
+  await expect(page.locator(".folio-settings-language-map article").first()).toBeVisible();
   const authorLink = collection.locator(".folio-reading-distribution").first().locator("a").first();
   await expect(authorLink).toHaveAttribute("href", /^#library(?:\?|$)/);
   const libraryPagePromise = context.waitForEvent("page");
@@ -111,7 +119,9 @@ test("阅读图谱支持周期、节奏、馆藏分布和本地钻取并适配�
   await expect(page.locator(".folio-settings-actions")).toHaveCount(0);
   await positionReportBelowStickyNav(report);
   await page.waitForTimeout(900);
-  await expect.poll(() => report.locator(".folio-reading-rank-cover img").first().evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBeTruthy();
+  const rankCover = report.locator(".folio-reading-rank-cover .folio-ambient-cover-artwork").first();
+  await rankCover.scrollIntoViewIfNeeded();
+  await expect.poll(() => rankCover.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBeTruthy();
   await page.screenshot({ path: "/tmp/nh-archive-statistics-desktop.png" });
   await report.locator(".folio-reading-deep-dive").scrollIntoViewIfNeeded();
   await page.screenshot({ path: "/tmp/nh-archive-statistics-desktop-lower.png" });

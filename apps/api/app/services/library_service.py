@@ -321,11 +321,14 @@ class LibraryService:
             SELECT
               COALESCE(SUM(duration_seconds), 0) AS total_seconds,
               COUNT(*) AS sessions,
-              COUNT(DISTINCT work_id) AS works_read,
+              COUNT(DISTINCT CASE
+                WHEN work_id IS NOT NULL THEN 'local:' || work_id
+                ELSE 'remote:' || remote_gallery_id
+              END) AS works_read,
               COUNT(DISTINCT date(started_at, ?)) AS active_days,
               COALESCE(ROUND(AVG(duration_seconds)), 0) AS average_session_seconds,
               COALESCE(MAX(duration_seconds), 0) AS longest_session_seconds
-            FROM reading_sessions
+            FROM reading_session_events
             WHERE date(started_at, ?) >= ?
             """,
             (timezone_modifier, timezone_modifier, start.isoformat()),
@@ -334,9 +337,12 @@ class LibraryService:
             """
             SELECT COALESCE(SUM(duration_seconds), 0) AS total_seconds,
                    COUNT(*) AS sessions,
-                   COUNT(DISTINCT work_id) AS works_read,
+                   COUNT(DISTINCT CASE
+                     WHEN work_id IS NOT NULL THEN 'local:' || work_id
+                     ELSE 'remote:' || remote_gallery_id
+                   END) AS works_read,
                    MIN(date(started_at, ?)) AS tracking_since
-            FROM reading_sessions
+            FROM reading_session_events
             """,
             (timezone_modifier,),
         ) or {}
@@ -344,7 +350,7 @@ class LibraryService:
             """
             SELECT COALESCE(SUM(duration_seconds), 0) AS total_seconds,
                    COUNT(*) AS sessions
-            FROM reading_sessions
+            FROM reading_session_events
             WHERE date(started_at, ?) >= ? AND date(started_at, ?) < ?
             """,
             (timezone_modifier, previous_start.isoformat(), timezone_modifier, start.isoformat()),
@@ -357,8 +363,11 @@ class LibraryService:
             SELECT date(started_at, ?) AS date,
                    COALESCE(SUM(duration_seconds), 0) AS seconds,
                    COUNT(*) AS sessions,
-                   COUNT(DISTINCT work_id) AS works
-            FROM reading_sessions
+                   COUNT(DISTINCT CASE
+                     WHEN work_id IS NOT NULL THEN 'local:' || work_id
+                     ELSE 'remote:' || remote_gallery_id
+                   END) AS works
+            FROM reading_session_events
             WHERE date(started_at, ?) >= ?
             GROUP BY date
             ORDER BY date
@@ -383,7 +392,7 @@ class LibraryService:
         active_dates = {
             str(row["date"])
             for row in self.db.fetchall(
-                "SELECT DISTINCT date(started_at, ?) AS date FROM reading_sessions",
+                "SELECT DISTINCT date(started_at, ?) AS date FROM reading_session_events",
                 (timezone_modifier,),
             )
         }
@@ -398,7 +407,7 @@ class LibraryService:
             SELECT (CAST(strftime('%w', datetime(started_at, ?)) AS INTEGER) + 6) % 7 AS weekday,
                    COALESCE(SUM(duration_seconds), 0) AS seconds,
                    COUNT(*) AS sessions
-            FROM reading_sessions
+            FROM reading_session_events
             WHERE date(started_at, ?) >= ?
             GROUP BY weekday
             """,
@@ -419,7 +428,7 @@ class LibraryService:
             SELECT CAST(strftime('%H', datetime(started_at, ?)) AS INTEGER) AS hour,
                    COALESCE(SUM(duration_seconds), 0) AS seconds,
                    COUNT(*) AS sessions
-            FROM reading_sessions
+            FROM reading_session_events
             WHERE date(started_at, ?) >= ?
             GROUP BY hour
             """,
@@ -567,20 +576,33 @@ class LibraryService:
     ) -> list[dict[str, Any]]:
         rows = self.db.fetchall(
             f"""
-            SELECT w.id, w.title, w.title_japanese, w.pretty_title, w.cover_path,
-                   COALESCE(w.favorite, 0) AS favorite,
+            SELECT COALESCE(MAX(w.id), MAX(rs.remote_gallery_id)) AS id,
+                   CASE WHEN MAX(w.id) IS NOT NULL THEN 'local' ELSE 'remote' END AS source,
+                   MAX(w.id) AS work_id,
+                   MAX(rs.remote_gallery_id) AS remote_gallery_id,
+                   COALESCE(MAX(w.title), MAX(rs.remote_title), 'Gallery ' || MAX(rs.remote_gallery_id)) AS title,
+                   COALESCE(MAX(w.title_japanese), MAX(rs.remote_title_japanese)) AS title_japanese,
+                   COALESCE(MAX(w.pretty_title), MAX(rs.remote_pretty_title)) AS pretty_title,
+                   MAX(w.cover_path) AS cover_path,
+                   COALESCE(MAX(w.favorite), 0) AS favorite,
                    COALESCE(SUM(rs.duration_seconds), 0) AS reading_seconds,
                    COUNT(rs.id) AS reading_sessions
-            FROM reading_sessions rs
-            JOIN works w ON w.id = rs.work_id
+            FROM reading_session_events rs
+            LEFT JOIN works w ON w.id = rs.work_id
             WHERE date(rs.started_at, ?) >= ?
-            GROUP BY w.id
-            ORDER BY {order_by}, w.id DESC
+            GROUP BY CASE
+              WHEN w.id IS NOT NULL THEN 'local:' || w.id
+              ELSE 'remote:' || rs.remote_gallery_id
+            END
+            ORDER BY {order_by}, id DESC
             LIMIT ?
             """,
             (timezone_modifier, start_date, limit),
         )
         for row in rows:
+            row["id"] = int(row["id"])
+            row["work_id"] = int(row["work_id"]) if row.get("work_id") is not None else None
+            row["remote_gallery_id"] = int(row["remote_gallery_id"]) if row.get("remote_gallery_id") is not None else None
             row["favorite"] = bool(row["favorite"])
             row["reading_seconds"] = int(row["reading_seconds"])
             row["reading_sessions"] = int(row["reading_sessions"])
@@ -594,10 +616,15 @@ class LibraryService:
     ) -> list[dict[str, Any]]:
         rows = self.db.fetchall(
             """
-            SELECT rs.id, rs.started_at, rs.duration_seconds, rs.last_page_index,
-                   w.id AS work_id, w.title, w.title_japanese, w.pretty_title
-            FROM reading_sessions rs
-            JOIN works w ON w.id = rs.work_id
+            SELECT rs.id,
+                   CASE WHEN w.id IS NOT NULL THEN 'local' ELSE rs.source END AS source,
+                   rs.started_at, rs.duration_seconds, rs.last_page_index,
+                   w.id AS work_id, rs.remote_gallery_id,
+                   COALESCE(w.title, rs.remote_title, 'Gallery ' || rs.remote_gallery_id) AS title,
+                   COALESCE(w.title_japanese, rs.remote_title_japanese) AS title_japanese,
+                   COALESCE(w.pretty_title, rs.remote_pretty_title) AS pretty_title
+            FROM reading_session_events rs
+            LEFT JOIN works w ON w.id = rs.work_id
             WHERE date(rs.started_at, ?) >= ?
             ORDER BY rs.started_at DESC, rs.id DESC
             LIMIT ?
@@ -607,7 +634,8 @@ class LibraryService:
         for row in rows:
             row["duration_seconds"] = int(row["duration_seconds"])
             row["last_page_index"] = int(row["last_page_index"])
-            row["work_id"] = int(row["work_id"])
+            row["work_id"] = int(row["work_id"]) if row.get("work_id") is not None else None
+            row["remote_gallery_id"] = int(row["remote_gallery_id"]) if row.get("remote_gallery_id") is not None else None
         return rows
 
     def _tag_statistics(
@@ -630,7 +658,8 @@ class LibraryService:
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
             LEFT JOIN (
               SELECT work_id, SUM(duration_seconds) AS reading_seconds, COUNT(*) AS reading_sessions
-              FROM reading_sessions
+              FROM reading_session_events
+              WHERE work_id IS NOT NULL
               GROUP BY work_id
             ) rs ON rs.work_id = w.id
             WHERE wt.tag_type = ?

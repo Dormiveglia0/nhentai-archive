@@ -130,7 +130,7 @@
 
 .reader-info-progress small {
   color: var(--reader-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .reader-info-progress > i {
@@ -151,7 +151,7 @@
 .reader-info-meta > p {
   margin: 14px 0 0;
   color: var(--reader-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
 }
 
@@ -185,7 +185,7 @@
 .reader-info-tag-groups li {
   min-height: 29px;
   border: 1px solid var(--reader-line);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -218,7 +218,7 @@
   border: 1px solid var(--reader-line);
   background: rgba(238,232,218,.035);
   color: var(--reader-paper);
-  font-size: 12px;
+  font-size: 13px;
   text-decoration: none;
 }
 

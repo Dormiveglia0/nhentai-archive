@@ -214,7 +214,8 @@ export type ReadingHistoryPage = {
 export type ReadingSession = {
   id: number;
   client_key: string;
-  work_id: number;
+  work_id?: number | null;
+  gallery_id?: number | null;
   started_at: string;
   updated_at: string;
   ended_at?: string | null;
@@ -223,6 +224,9 @@ export type ReadingSession = {
 };
 
 export type ReadingWorkRank = Pick<LibraryWork, "id" | "title" | "title_japanese" | "pretty_title" | "cover_path" | "favorite"> & {
+  source: "local" | "remote";
+  work_id?: number | null;
+  remote_gallery_id?: number | null;
   reading_seconds: number;
   reading_sessions: number;
 };
@@ -239,7 +243,9 @@ export type ReadingTagRank = {
 
 export type ReadingSessionRank = {
   id: number;
-  work_id: number;
+  source: "local" | "remote";
+  work_id?: number | null;
+  remote_gallery_id?: number | null;
   title: string;
   title_japanese?: string | null;
   pretty_title?: string | null;
@@ -1299,6 +1305,19 @@ export const api = {
     }),
   updateReadingSession: (id: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false) =>
     request<ReadingSession>(`/api/works/${id}/reading-sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished }),
+      keepalive,
+    }),
+  startRemoteReadingSession: (galleryId: number, sessionKey: string, pageIndex: number) =>
+    request<ReadingSession>(`/api/discover/galleries/${galleryId}/reading-sessions`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex }),
+    }),
+  updateRemoteReadingSession: (galleryId: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false) =>
+    request<ReadingSession>(`/api/discover/galleries/${galleryId}/reading-sessions/${sessionId}`, {
       method: "PATCH",
       headers: JSON_HEADERS,
       body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished }),

@@ -23,6 +23,7 @@ def test_database_enables_concurrency_pragmas_and_query_indexes(tmp_path):
         "idx_work_files_work_kind_created",
         "idx_works_favorite_updated",
         "idx_reading_sessions_work_started",
+        "idx_remote_reading_sessions_gallery_started",
         "idx_jobs_status_updated",
         "idx_jobs_updated",
     } <= index_names

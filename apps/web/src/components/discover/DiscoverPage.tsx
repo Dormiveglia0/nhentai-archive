@@ -1,5 +1,5 @@
 import type { RemoteTag } from "../../lib/api";
-import { useGridColumns } from "../../lib/useGridColumns";
+import { balanceGridRows, useGridColumns } from "../../lib/useGridColumns";
 import { DiscoverFeed } from "./DiscoverFeed";
 import { DiscoverToolbar } from "./DiscoverToolbar";
 import { PopularFan } from "./PopularFan";
@@ -9,6 +9,7 @@ import "./DiscoverPage.css";
 export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; initialTag?: RemoteTag }) {
   const [gridRef, gridColumns] = useGridColumns();
   const discover = useDiscoverState(initialTag, gridColumns * 4);
+  const gridRows = balanceGridRows(discover.items.length, gridColumns);
 
   return (
     <section className="folio-page-body folio-discover-page">
@@ -35,11 +36,13 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
         onUnimportedOnly={discover.setUnimportedOnly}
         onTags={discover.setSelectedTags}
         onSubmit={discover.submitToolbar}
+        onClearQuery={discover.clearQuery}
         onRandom={discover.openRandom}
       />
 
       <DiscoverFeed
         gridRef={gridRef}
+        gridRows={gridRows}
         items={discover.items}
         total={discover.total}
         page={discover.page}

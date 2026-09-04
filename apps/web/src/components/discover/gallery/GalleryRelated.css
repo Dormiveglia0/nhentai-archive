@@ -74,6 +74,7 @@
 
 .folio-gallery-related-copy > a {
   min-width: 0;
+  min-height: 24px;
   padding: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 16px;

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from app.database import Database
@@ -110,4 +111,68 @@ class ReaderService:
             if not updated:
                 raise ValueError(f"Reading session {session_id} does not exist")
             row = conn.execute("SELECT * FROM reading_sessions WHERE id = ?", (session_id,)).fetchone()
+            return dict(row)
+
+    def start_remote_session(self, gallery_id: int, client_key: str, page_index: int) -> dict[str, Any]:
+        cached = self.db.fetchone("SELECT payload_json FROM remote_galleries WHERE gallery_id = ?", (gallery_id,))
+        if not cached:
+            raise ValueError(f"Remote gallery {gallery_id} is not cached")
+        try:
+            payload = json.loads(cached["payload_json"])
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Remote gallery {gallery_id} cache is invalid") from exc
+        title = payload.get("title") if isinstance(payload.get("title"), dict) else {}
+        english = payload.get("english_title") or title.get("english") or f"Gallery {gallery_id}"
+        japanese = payload.get("japanese_title") or title.get("japanese")
+        pretty = title.get("pretty")
+        page_count = int(payload.get("num_pages") or len(payload.get("pages") or []))
+        bounded_page = max(1, min(page_index, page_count)) if page_count else 0
+
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO remote_reading_sessions (
+                  client_key, gallery_id, title, title_japanese, pretty_title, page_count, last_page_index
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (client_key, gallery_id, english, japanese, pretty, page_count, bounded_page),
+            )
+            row = conn.execute(
+                "SELECT * FROM remote_reading_sessions WHERE client_key = ?",
+                (client_key,),
+            ).fetchone()
+            if row is None or int(row["gallery_id"]) != gallery_id:
+                raise ValueError("Reading session key belongs to another remote gallery")
+            return dict(row)
+
+    def update_remote_session(
+        self,
+        gallery_id: int,
+        session_id: int,
+        duration_seconds: int,
+        page_index: int,
+        finished: bool = False,
+    ) -> dict[str, Any]:
+        session = self.db.fetchone(
+            "SELECT page_count FROM remote_reading_sessions WHERE id = ? AND gallery_id = ?",
+            (session_id, gallery_id),
+        )
+        if not session:
+            raise ValueError(f"Remote reading session {session_id} does not exist")
+        page_count = int(session["page_count"])
+        bounded_page = max(1, min(page_index, page_count)) if page_count else 0
+
+        with self.db.connect() as conn:
+            conn.execute(
+                """
+                UPDATE remote_reading_sessions
+                SET duration_seconds = MAX(duration_seconds, ?),
+                    last_page_index = ?,
+                    ended_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE ended_at END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND gallery_id = ?
+                """,
+                (duration_seconds, bounded_page, int(finished), session_id, gallery_id),
+            )
+            row = conn.execute("SELECT * FROM remote_reading_sessions WHERE id = ?", (session_id,)).fetchone()
             return dict(row)

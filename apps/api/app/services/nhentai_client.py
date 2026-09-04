@@ -22,6 +22,15 @@ class NhentaiApiError(Exception):
         return self.message
 
 
+def _normalize_media_path(path: str) -> str:
+    return re.sub(
+        r"(\.(?:jpe?g|png|webp|gif|avif))(?:\1)+(?=$|[?#])",
+        r"\1",
+        path,
+        flags=re.IGNORECASE,
+    )
+
+
 def normalize_remote_error(status_code: int, body: str, retry_after: int | None = None) -> NhentaiApiError:
     code = "remote_error"
     if status_code == 401:
@@ -120,7 +129,7 @@ class NhentaiClient:
     def media_url(self, path: str | None, thumbnail: bool = False) -> str | None:
         if not path:
             return None
-        path = re.sub(r"(\.(?:jpe?g|png|webp|gif|avif))(?:\1)+(?=$|[?#])", r"\1", path, flags=re.IGNORECASE)
+        path = _normalize_media_path(path)
         if path.startswith("http://") or path.startswith("https://"):
             return path
         cdn = self._cdn_config()
@@ -128,6 +137,39 @@ class NhentaiClient:
         if not servers:
             return None
         return f"{str(servers[0]).rstrip('/')}/{path.lstrip('/')}"
+
+    def media_proxy_url(self, path: str | None, thumbnail: bool = False) -> str | None:
+        if not path:
+            return None
+        parsed = urllib.parse.urlsplit(_normalize_media_path(path))
+        if parsed.scheme and parsed.scheme not in {"http", "https"}:
+            return None
+        safe_path = urllib.parse.urlunsplit(("", "", parsed.path, parsed.query, ""))
+        query = urllib.parse.urlencode({"path": safe_path, "thumbnail": str(thumbnail).lower()})
+        return f"/api/discover/media?{query}"
+
+    def open_media(self, path: str, thumbnail: bool = False):
+        parsed = urllib.parse.urlsplit(path)
+        if parsed.scheme or parsed.netloc or ".." in parsed.path.split("/"):
+            raise NhentaiApiError(400, "invalid_media_path", "Invalid remote media path")
+        url = self.media_url(path, thumbnail)
+        if not url:
+            raise NhentaiApiError(502, "media_unavailable", "Remote media server is unavailable")
+        request = urllib.request.Request(
+            url,
+            headers={"Accept": "image/avif,image/webp,image/*,*/*;q=0.8", "User-Agent": self.user_agent},
+        )
+        try:
+            response = urllib.request.urlopen(request, timeout=self.timeout)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", "replace")
+            raise normalize_remote_error(exc.code, body, _retry_after(exc)) from exc
+        except urllib.error.URLError as exc:
+            raise NhentaiApiError(502, "network_error", f"Remote media failed: {exc.reason}") from exc
+        if not response.headers.get_content_type().startswith("image/"):
+            response.close()
+            raise NhentaiApiError(502, "invalid_media", "Remote media response is not an image")
+        return response
 
     def download_file(
         self,

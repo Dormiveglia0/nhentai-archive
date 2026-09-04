@@ -1,4 +1,4 @@
-import { BookOpen, Download } from "lucide-react";
+import { BookOpen, Download, Library } from "lucide-react";
 
 import type { GallerySummary, RemoteTag } from "../../lib/api";
 import { pageHref } from "../../lib/navigation";
@@ -55,15 +55,24 @@ export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickT
         <small>{item.page_count} 页 · Gallery {item.gallery_id}</small>
         <TagScroller className="folio-discover-card-tags" tags={contentTags} onPickTag={(tag) => onPickTag(tag)} />
 
-        {item.imported && item.work_id ? (
-          <a className="folio-discover-card-action" href={pageHref({ name: "reader", workId: item.work_id })}>
-            <BookOpen size={15} />打开本地
+        <div className="folio-discover-card-actions">
+          <a
+            className="folio-discover-card-action is-read"
+            href={pageHref({ name: "readerRemote", galleryId: item.gallery_id })}
+            aria-label={`直接阅读：${title}`}
+          >
+            <BookOpen size={15} />阅读
           </a>
-        ) : (
-          <button type="button" className="folio-discover-card-action" onClick={onImport}>
-            <Download size={15} />加入队列
-          </button>
-        )}
+          {item.imported && item.work_id ? (
+            <a className="folio-discover-card-action" href={pageHref({ name: "reader", workId: item.work_id })} aria-label={`本地阅读：${title}`}>
+              <Library size={15} />本地
+            </a>
+          ) : (
+            <button type="button" className="folio-discover-card-action" onClick={onImport} aria-label={`加入导入队列：${title}`}>
+              <Download size={15} />入库
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

@@ -1,4 +1,5 @@
 import io
+import json
 import zipfile
 from pathlib import Path
 
@@ -263,3 +264,63 @@ def test_favorites_and_statistics_use_reading_sessions(tmp_path):
     assert filtered["period"]["previous_total_seconds"] == 90
     assert [row["id"] for row in filtered["top_by_time"]] == [a]
     assert {row["display"] for row in filtered["top_tags"]} == {"story", "action"}
+
+
+def test_remote_reader_sessions_contribute_to_reading_statistics(tmp_path):
+    _settings, db, _archive = _setup(tmp_path)
+    reader = ReaderService(db)
+    library = LibraryService(db)
+    db.execute(
+        "INSERT INTO remote_galleries (gallery_id, payload_json) VALUES (?, ?)",
+        (
+            987,
+            json.dumps({
+                "id": 987,
+                "title": {"english": "Remote Alpha", "japanese": "リモート作品"},
+                "num_pages": 12,
+                "pages": [{"path": f"{index}.jpg"} for index in range(12)],
+            }),
+        ),
+    )
+
+    session = reader.start_remote_session(987, "remote-session-alpha", 2)
+    reader.update_remote_session(987, session["id"], 75, 7, True)
+    stats = library.statistics(days=30)
+
+    assert stats["overview"]["total_seconds"] == 75
+    assert stats["overview"]["sessions"] == 1
+    assert stats["overview"]["works_read"] == 1
+    assert stats["top_by_time"][0]["source"] == "remote"
+    assert stats["top_by_time"][0]["remote_gallery_id"] == 987
+    assert stats["top_by_time"][0]["title_japanese"] == "リモート作品"
+    assert stats["recent_sessions"][0]["source"] == "remote"
+    assert stats["recent_sessions"][0]["last_page_index"] == 7
+    assert stats["top_tags"] == []
+
+
+def test_imported_remote_session_resolves_to_local_work_and_cover(tmp_path):
+    _settings, db, archive = _setup(tmp_path)
+    reader = ReaderService(db)
+    library = LibraryService(db)
+    work_id = _import_work(archive, tmp_path, "remote-imported", "Imported Remote", "remote", 988, pages=5)
+    db.execute(
+        "INSERT INTO remote_galleries (gallery_id, payload_json) VALUES (?, ?)",
+        (988, json.dumps({"id": 988, "title": {"english": "Imported Remote"}, "num_pages": 5})),
+    )
+
+    session = reader.start_remote_session(988, "remote-before-import", 1)
+    reader.update_remote_session(988, session["id"], 45, 3, True)
+    local_session = reader.start_session(work_id, "local-after-import", 1)
+    reader.update_session(work_id, local_session["id"], 30, 4, True)
+    stats = library.statistics(days=30)
+
+    assert stats["overview"]["total_seconds"] == 75
+    assert stats["overview"]["sessions"] == 2
+    assert stats["overview"]["works_read"] == 1
+    assert stats["top_by_time"][0]["source"] == "local"
+    assert stats["top_by_time"][0]["work_id"] == work_id
+    assert stats["top_by_time"][0]["reading_seconds"] == 75
+    assert stats["top_by_time"][0]["reading_sessions"] == 2
+    assert stats["top_by_time"][0]["cover_path"]
+    assert stats["recent_sessions"][0]["source"] == "local"
+    assert stats["recent_sessions"][0]["work_id"] == work_id

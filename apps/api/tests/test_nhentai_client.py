@@ -168,3 +168,14 @@ def test_media_url_repairs_repeated_image_extensions_from_upstream():
     assert client.media_url("galleries/42/cover.webp.webp") == "https://i.example/galleries/42/cover.webp"
     assert client.media_url("galleries/42/thumb.jpg.jpg", thumbnail=True) == "https://t.example/galleries/42/thumb.jpg"
     assert client.media_url("https://cdn.example/1.png.png?size=2") == "https://cdn.example/1.png?size=2"
+
+
+def test_media_proxy_url_is_same_origin_and_rejects_absolute_fetch_paths():
+    client = NhentaiClient("https://api.example", "tests")
+
+    assert client.media_proxy_url(
+        "https://t.example/galleries/42/thumb.webp.webp", thumbnail=True
+    ) == "/api/discover/media?path=%2Fgalleries%2F42%2Fthumb.webp&thumbnail=true"
+    with pytest.raises(NhentaiApiError) as error:
+        client.open_media("https://private.example/secret.png")
+    assert error.value.code == "invalid_media_path"

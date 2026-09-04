@@ -42,7 +42,12 @@ export function ReaderPage({ source }: Props) {
   const [activePanel, setActivePanel] = useState<ReaderPanel>("none");
   const [jumpOpen, setJumpOpen] = useState(false);
   const [uiError, setUiError] = useState<string | null>(null);
-  useReadingSession(data.isRemote ? null : data.work?.id ?? null, data.pageIndex);
+  useReadingSession(
+    data.isRemote
+      ? source.kind === "remote" && data.pageCount > 0 ? { kind: "remote", id: source.galleryId } : null
+      : data.work ? { kind: "local", id: data.work.id } : null,
+    data.pageIndex,
+  );
 
   useEffect(() => {
     setZoom(1);

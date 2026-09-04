@@ -3,6 +3,7 @@ import type { Ref } from "react";
 
 import type { GallerySummary } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
+import type { balanceGridRows } from "../../lib/useGridColumns";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { DiscoverCard } from "./DiscoverCard";
 import type { TagFilter } from "./discoverTypes";
@@ -10,6 +11,7 @@ import { IconPager } from "../folio/ui/IconPager";
 
 type Props = {
   gridRef: Ref<HTMLDivElement>;
+  gridRows: ReturnType<typeof balanceGridRows>;
   items: GallerySummary[];
   total: number | null;
   page: number;
@@ -54,13 +56,14 @@ export function DiscoverFeed(props: Props) {
 
       {props.items.length || props.loading ? (
         <div className={props.loading ? "folio-discover-results is-loading" : "folio-discover-results"}>
+          <div ref={props.gridRef} className="folio-discover-grid-measure" aria-hidden="true" />
           <Stagger
-            ref={props.gridRef}
             key={`${props.page}:${props.items.length}:${props.items[0]?.gallery_id ?? "none"}`}
             className="folio-discover-grid"
+            style={props.gridRows.style}
           >
-            {props.items.map((item) => (
-              <StaggerItem key={item.gallery_id} className="folio-discover-card-cell">
+            {props.items.map((item, index) => (
+              <StaggerItem key={item.gallery_id} className={`folio-discover-card-cell${index >= props.gridRows.tailStart ? " is-balanced-tail" : ""}`}>
                 <DiscoverCard
                   item={item}
                   blurCovers={props.blurCovers}

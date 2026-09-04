@@ -15,6 +15,7 @@ export function TaskDock() {
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<number | null>(null);
   const requestId = useRef(0);
+  const pollDelay = useRef(0);
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
@@ -24,8 +25,17 @@ export function TaskDock() {
       if (!mounted.current || request !== requestId.current) return;
       setJobs(payload.result);
       setError(null);
+      pollDelay.current = payload.result.some((job) => (
+        job.status === "running"
+        || job.status === "queued"
+        || job.status === "paused"
+        || job.status === "cancelling"
+      )) ? 2500 : 15000;
     } catch (reason) {
-      if (mounted.current && request === requestId.current) setError(reason instanceof Error ? reason.message : String(reason));
+      if (mounted.current && request === requestId.current) {
+        setError(reason instanceof Error ? reason.message : String(reason));
+        pollDelay.current = 5000;
+      }
     }
   }, []);
 
@@ -44,7 +54,7 @@ export function TaskDock() {
     const poll = async () => {
       timer = null;
       if (!document.hidden) await load();
-      if (!disposed && !document.hidden) timer = window.setTimeout(() => void poll(), 2500);
+      if (!disposed && !document.hidden) timer = window.setTimeout(() => void poll(), pollDelay.current);
     };
     const start = () => {
       if (timer !== null || document.hidden || disposed) return;

@@ -1,4 +1,4 @@
-import { Search, Shuffle, SlidersHorizontal } from "lucide-react";
+import { Search, Shuffle, SlidersHorizontal, X } from "lucide-react";
 import type { FormEvent } from "react";
 
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
@@ -19,6 +19,7 @@ type Props = {
   onUnimportedOnly: (value: boolean) => void;
   onTags: (tags: TagFilter[]) => void;
   onSubmit: () => void;
+  onClearQuery: () => void;
   onRandom: () => void;
 };
 
@@ -53,16 +54,17 @@ export function DiscoverToolbar(props: Props) {
     <section className="folio-discover-toolbar" aria-label="远端检索条件">
       <form onSubmit={submit}>
         <div className="folio-discover-query">
-          <label className="folio-discover-keyword">
+          <div className="folio-discover-keyword">
             <Search size={17} />
             <input
               type="search"
               value={props.query}
-              onChange={(event) => props.onQuery(event.target.value)}
+              onChange={(event) => event.target.value ? props.onQuery(event.target.value) : props.onClearQuery()}
               placeholder="关键字、标题、社团、角色或 Gallery ID"
               aria-label="检索关键字或 Gallery ID"
             />
-          </label>
+            {props.query ? <button className="folio-discover-query-clear" type="button" onClick={props.onClearQuery} aria-label="清除文字搜索"><X size={15} /></button> : null}
+          </div>
           <TagFilterSelector selected={props.selectedTags} onSelect={props.onTags} />
         </div>
 

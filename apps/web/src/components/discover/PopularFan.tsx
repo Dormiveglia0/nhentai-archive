@@ -43,7 +43,7 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
                   role="listitem"
                   style={{
                     "--popular-ratio": coverRatio,
-                    "--popular-mobile-width": `${Math.min(118, Math.max(78, coverRatio * 112))}px`,
+                    "--popular-mobile-width": `${Math.min(138, Math.max(86, coverRatio * 124))}px`,
                   } as CSSProperties}
                 >
                   <a

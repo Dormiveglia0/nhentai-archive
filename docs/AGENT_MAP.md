@@ -49,7 +49,7 @@ Paths in the table are relative to `apps/web/src/components/` unless stated othe
 | --- | --- | --- | --- | --- |
 | `#history` | `history/HistoryPage.tsx` | `history/useHistoryState.ts`, `history/historyHelpers.ts` | `history/HistoryPage.css` | `api.libraryReadingHistory()` |
 | `#gallery/{id}` | `discover/GalleryDetailPage.tsx`, `discover/gallery/GalleryHero.tsx`, `GalleryTags.tsx`, `GalleryPagePreview.tsx`, `GalleryLightbox.tsx`, `GalleryRelated.tsx` | `discover/gallery/useGalleryDetail.ts`, `galleryDetailModel.ts` | feature-local files under `discover/gallery/` | `api.gallery/related/importGallery()` |
-| `#reader/{workId}`, `#reader/remote/{galleryId}` | `reader/ReaderPage.tsx`, `ReaderViewport.tsx`, `WebtoonView.tsx`, `ReaderToolbar.tsx`, `ReaderScrubber.tsx`, `ReaderInfoPanel.tsx` | `reader/useReaderData.ts`, `useReadingSession.ts`, `useReaderChrome.ts`, `useReaderPrefs.ts`, `readerHelpers.ts` | `reader/ReaderPage.css`, `ReaderToolbar.css`, `ReaderPanels.css` | `api.work` (full local tags), `pages/readerState/updateReaderState/startReadingSession/updateReadingSession/setWorkFavorite/gallery/importGallery()` |
+| `#reader/{workId}`, `#reader/remote/{galleryId}` | `reader/ReaderPage.tsx`, `ReaderViewport.tsx`, `WebtoonView.tsx`, `ReaderToolbar.tsx`, `ReaderScrubber.tsx`, `ReaderInfoPanel.tsx` | `reader/useReaderData.ts`, `useReadingSession.ts`, `useReaderChrome.ts`, `useReaderPrefs.ts`, `readerHelpers.ts` | `reader/ReaderPage.css`, `ReaderToolbar.css`, `ReaderPanels.css` | `api.work` (full local tags), `pages/readerState/updateReaderState/startReadingSession/updateReadingSession/startRemoteReadingSession/updateRemoteReadingSession/setWorkFavorite/gallery/importGallery()` |
 
 Gallery/history render inside `FolioChrome`. Both readers intentionally bypass the application chrome and own an immersive fixed viewport; do not reintroduce the old shell underneath them.
 
@@ -79,7 +79,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Reader failed-image retry fan-out | `reader/ReaderViewport.tsx` owns the shared retry token; `ReaderImage.tsx` retries only instances currently in an error state |
 | Actual grid-track measurement and whole-row page sizes | `lib/useGridColumns.ts`; library rounds its 24-item target up to a full row, discover requests four measured rows |
 | Local favorites | `works.favorite`; library `WorkCard`/`WorkInspector` and reader `ReaderInfoPanel` mutate it through `api.setWorkFavorite()`; it is intentionally distinct from the remote gallery metric named `favorites` |
-| Reading-time sessions and reports | `reader/useReadingSession.ts` records visible foreground time with secure-context fallbacks; `settings/ReadingStatisticsReport.tsx` renders period comparison, activity/rhythm, rankings and local collection distribution from `api.libraryStatistics()` |
+| Reading-time sessions and reports | `reader/useReadingSession.ts` records visible foreground time for local and cached remote galleries with secure-context fallbacks; local sessions also create reading history while remote sessions never write local progress. `settings/ReadingStatisticsReport.tsx` renders their shared period/activity/ranking view plus local-only collection distribution from `api.libraryStatistics()` |
 
 `apps/web/src/styles/app.css` is now a base-only file (root tokens, reset, form inheritance, shared spin utility, reduced-motion override). Do not put feature or shell selectors back into it.
 

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search, Tags } from "lucide-react";
+import { Check, ChevronDown, Search, Tags, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -17,6 +17,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
   const [options, setOptions] = useState<LibraryTagFilterItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<"tag" | "meta">("tag");
   const rootRef = useRef<HTMLDivElement>(null);
   const latest = useRef("");
   const panelId = useId();
@@ -71,9 +72,25 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
     }
   }
 
+  const visibleOptions = options.filter((tag) => matchesScope(tag, scope));
+
   return (
     <div ref={rootRef} className={open ? "folio-library-tag-filter is-open" : "folio-library-tag-filter"}>
-      <span>标签</span>
+      {selected.length ? (
+        <div className="folio-library-tag-selection" aria-label="已选本地标签">
+          <div className="folio-library-tag-chips">
+            {selected.map((tag) => (
+              <span key={tag.id} className={(tag.type || "tag") === "tag" ? undefined : "is-meta"}>
+                <b>{tagTypeLabel(tag.type)}</b>
+                <a href={libraryTagHref(tag)}>{tag.display}</a>
+                <button type="button" aria-label={`移除标签 ${tag.display}`} onClick={() => toggle(tag)}><X size={12} /></button>
+              </span>
+            ))}
+          </div>
+          <button type="button" className="folio-library-tag-clear" onClick={() => onChange([])}><X size={13} />清空</button>
+        </div>
+      ) : null}
+
       <button
         type="button"
         aria-haspopup="dialog"
@@ -82,7 +99,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
         onClick={() => setOpen((value) => !value)}
       >
         <Tags size={16} />
-        <strong>{selected.length ? `${selected.length} 个标签` : "选择本地标签"}</strong>
+        <strong>{selected.length ? `${selected.length} 个条件` : "添加标签"}</strong>
         <ChevronDown size={15} />
       </button>
 
@@ -111,9 +128,14 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
               {loading ? <span role="status">检索中</span> : null}
             </label>
 
+            <div className="folio-library-tag-scope" role="group" aria-label="本地标签候选分类">
+              <button type="button" aria-pressed={scope === "tag"} className={scope === "tag" ? "is-active" : ""} onClick={() => setScope("tag")}>内容标签</button>
+              <button type="button" aria-pressed={scope === "meta"} className={scope === "meta" ? "is-active" : ""} onClick={() => setScope("meta")}>作者与作品信息</button>
+            </div>
+
             <div className="folio-library-tag-options">
               {error ? <p role="alert">{error}</p> : null}
-              {!error && options.map((tag) => {
+              {!error && visibleOptions.map((tag) => {
                 const active = selected.some((item) => item.id === tag.id);
                 return (
                   <a
@@ -127,17 +149,25 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
                       toggle(tag);
                     }}
                   >
-                    <span><strong>{tag.display}</strong><small>{tag.type || "tag"}</small></span>
-                    <em>{tag.count}</em>
+                    <span><strong>{tag.display}</strong><small>{tag.name || tag.slug || `#${tag.id}`}</small></span>
+                    <em>{tagTypeLabel(tag.type)} · {tag.count}</em>
                     {active ? <Check size={15} /> : <i />}
                   </a>
                 );
               })}
-              {!error && !loading && options.length === 0 ? <p>没有匹配的本地标签</p> : null}
+              {!error && !loading && visibleOptions.length === 0 ? <p>这个分类没有匹配的本地标签</p> : null}
             </div>
           </m.div>
         ) : null}
       </AnimatePresence>
     </div>
   );
+}
+
+function matchesScope(tag: LibraryTagFilterItem, scope: "tag" | "meta") {
+  return scope === "tag" ? (tag.type || "tag") === "tag" : (tag.type || "tag") !== "tag";
+}
+
+function tagTypeLabel(type?: string) {
+  return ({ artist: "作者", group: "社团", parody: "原作", character: "角色", category: "分类", language: "语言", tag: "标签" } as Record<string, string>)[type || "tag"] || type || "标签";
 }

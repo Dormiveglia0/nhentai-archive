@@ -4,6 +4,7 @@ import { api, type GallerySummary, type RemoteTag } from "../../lib/api";
 import { navigate, pageHref } from "../../lib/navigation";
 import {
   canReplaceDiscoverHash,
+  defaultDiscoverState,
   discoverFilterKey,
   DISCOVER_STATE_KEY,
   type PersistedDiscoverState,
@@ -141,6 +142,12 @@ export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: num
         unimportedOnly: next.unimportedOnly,
       });
       const filtersChanged = nextFilterKey !== filterKey;
+      const returningFromReader = Boolean(document.querySelector(".app-route-reader"));
+
+      if (returningFromReader && !filtersChanged) {
+        restoreScrollRef.current = 0;
+        return;
+      }
 
       historyPageRef.current = filtersChanged ? next.page : null;
       currentPageRef.current = next.page;
@@ -215,6 +222,10 @@ export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: num
     initialTagSeenRef.current = initialTagKey;
     setQuery("");
     setSubmittedQuery("");
+    setLanguage("all");
+    setKind("all");
+    setSort("date");
+    setUnimportedOnly(false);
     setSelectedTags([initialTag]);
     currentPageRef.current = 1;
     setPage(1);
@@ -276,6 +287,14 @@ export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: num
     setSubmittedQuery(nextQuery);
   }
 
+  function clearQuery() {
+    setQuery("");
+    if (!submittedQuery) return;
+    currentPageRef.current = 1;
+    setPage(1);
+    setSubmittedQuery("");
+  }
+
   async function enqueueGalleryId(galleryId: number) {
     setLoading(true);
     setError(null);
@@ -290,9 +309,14 @@ export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: num
   }
 
   function pickTag(tag: RemoteTag) {
-    setSelectedTags((current) => current.some((item) => item.id === tag.id && !item.excluded)
-      ? current
-      : [...current.filter((item) => item.id !== tag.id), { ...tag, excluded: false }]);
+    const defaults = defaultDiscoverState();
+    setQuery(defaults.query);
+    setSubmittedQuery(defaults.submittedQuery);
+    setLanguage(defaults.language);
+    setKind(defaults.kind);
+    setSort(defaults.sort);
+    setUnimportedOnly(defaults.unimportedOnly);
+    setSelectedTags([{ ...tag, excluded: false }]);
     currentPageRef.current = 1;
     setPage(1);
   }
@@ -343,6 +367,7 @@ export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: num
     openRandom,
     enqueueGalleryId,
     submitToolbar,
+    clearQuery,
     pickTag,
     loadPage,
     setQuery,

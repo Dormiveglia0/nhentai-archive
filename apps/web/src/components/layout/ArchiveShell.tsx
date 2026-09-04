@@ -11,6 +11,7 @@ type Props = {
   activePage: ShelledPageName;
   scrollKey: string;
   onLogout: () => Promise<void>;
+  suspended?: boolean;
   children: ReactNode;
 };
 
@@ -35,6 +36,7 @@ export function ArchiveShell({
   activePage,
   scrollKey,
   onLogout,
+  suspended = false,
   children
 }: Props) {
   const route = chromeRoute(activePage);
@@ -50,7 +52,7 @@ export function ArchiveShell({
       >
         {children}
       </FolioChrome>
-      {activePage === "tasks" ? null : <TaskDock />}
+      {activePage === "tasks" || suspended ? null : <TaskDock />}
     </>
   );
 }

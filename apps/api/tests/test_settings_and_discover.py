@@ -144,6 +144,9 @@ class FakeDiscoverClient:
     def media_url(self, path, thumbnail=False):
         return f"https://cdn.example/{path}" if path else None
 
+    def media_proxy_url(self, path, thumbnail=False):
+        return f"/api/discover/media?path={path}&thumbnail={str(thumbnail).lower()}" if path else None
+
     def tags_by_ids(self, ids):
         return []
 
@@ -207,6 +210,43 @@ def test_discover_feed_batches_import_state_lookup(tmp_path, monkeypatch):
         (101, 7),
         (102, None),
     ]
+
+
+def test_discover_feed_resolves_all_tags_in_bounded_batches(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = FakeDiscoverClient()
+    requested: list[list[int]] = []
+
+    def tags_by_ids(ids):
+        requested.append(ids)
+        return [
+            {"id": value, "type": "tag", "name": f"tag-{value}", "slug": f"tag-{value}"}
+            for value in ids
+        ]
+
+    client.tags_by_ids = tags_by_ids
+    client.latest = lambda page, per_page: {
+        "result": [
+            {
+                "id": index + 1,
+                "title": {"english": f"Gallery {index + 1}"},
+                "thumbnail": {"path": f"{index + 1}.jpg"},
+                "tag_ids": list(range(index * 10 + 1, index * 10 + 11)),
+            }
+            for index in range(12)
+        ],
+        "num_pages": 1,
+        "per_page": per_page,
+        "total": 12,
+    }
+
+    payload = DiscoverService(db, client).latest(page=1, per_page=12)
+
+    assert [len(batch) for batch in requested] == [100, 20]
+    assert len(payload["result"][-1]["tags"]) == 10
+    assert payload["result"][-1]["tags"][-1]["id"] == 120
 
 
 def test_discover_feed_without_filters_ignores_sort_fallback_and_uses_latest(tmp_path):
@@ -287,7 +327,7 @@ def test_discover_gallery_maps_remote_page_urls(tmp_path):
     payload = service.gallery(321)
 
     assert client.calls == [("gallery", 321, "related")]
-    assert payload["pages"][0]["url"] == "https://cdn.example/001.jpg"
+    assert payload["pages"][0]["url"] == "/api/discover/media?path=001.jpg&thumbnail=false"
     assert payload["pages"][0]["path"] == "001.jpg"
 
 

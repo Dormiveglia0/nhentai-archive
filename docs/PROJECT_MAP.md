@@ -32,7 +32,7 @@ Root: `apps/api/app/`
   - `Settings`: resolves local data paths, `NHENTAI_API_KEY`, base URL, user agent, timeout.
   - Environment API key has priority over DB-stored API key.
 - `database.py`
-  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `reading_sessions`, `jobs`, `settings`. `works.favorite` is the local favorite flag; `reading_sessions` stores one idempotent reader visit with cumulative foreground seconds. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
+  - Tables: `works`, `work_files`, `work_pages`, `remote_galleries`, `remote_tags`, `local_tag_dictionary`, `tag_aliases`, `work_tags`, `work_metadata`, `governance_reviews`, `reader_progress`, `reading_history`, `reading_sessions`, `remote_reading_sessions`, `jobs`, `settings`. `works.favorite` is the local favorite flag; the two reading-session tables store idempotent local/remote visits with cumulative foreground seconds and feed the shared `reading_session_events` view. `governance_reviews` is an append-only human-review ledger with snapshot hashes; export remains a stream-to-browser download and keeps no records. (The legacy `export_records` table is no longer created or used — existing databases may still carry an unused copy.)
   - Legacy migrations include dictionary/work tag shape upgrades.
   - Connections enforce foreign keys, a 5-second busy timeout and NORMAL synchronous mode; schema initialization enables WAL. Query indexes are created only after legacy migrations and cover work files/tags, dictionary references, reading history, task status/order and task logs.
   - Startup path migration recognizes legacy repository `.local-data/...` and Compose `/data/...` values, persists only `library/...` / `covers/...`, and resolves returned path fields against the current runtime root.
@@ -98,13 +98,14 @@ Root: `apps/api/app/`
 - `services/reader_service.py`
   - `get_state()`, `update_state()` persist page progress without incrementing visit counts.
   - `start_session()` creates one idempotent local-reader visit and one `reading_history` open; `update_session()` accepts only monotonic cumulative visible-time totals, the latest bounded page, and an optional finished marker.
+  - `start_remote_session()` snapshots one cached gallery into an idempotent remote visit; `update_remote_session()` applies the same monotonic visible-time and bounded-page rules without creating local progress or history.
 - `services/library_service.py`
   - Local-only library reads; queries only `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`. Never calls NH API.
   - `work(work_id)`: one full local work record through the same `WORK_COLUMNS`/`WORK_JOINS` and `_attach_tags()` path as library search. The reader therefore receives real author/group/parody/character/content/category/language tags without a remote lookup.
   - `summary()`: real total/favorite/reading/completed/unread/untagged counts, total pages, total source-CBZ bytes, source breakdown, and language facets (from `work_tags` type `language`, dictionary `display` when mapped); generic `translated`/`translate*` markers are excluded because they are not languages.
   - `search(q, page, per_page, sort, read_status, source, language, tag_ids, favorite_only)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`; favorite-only is a real `works.favorite` predicate.
   - `set_favorite(work_id, favorite)`: updates only the local flag and returns the same full local work shape used by the library and reader.
-  - `statistics(days, timezone_offset_minutes, limit)`: real local overview, filled daily activity, most-read works by time/visits, and author/tag affinity. It reads session starts in the browser's local-day boundary, attributes a session to its start day, and never fabricates historical time before session tracking existed.
+  - `statistics(days, timezone_offset_minutes, limit)`: real local + remote reading overview, filled daily activity and most-read works by time/visits; author/tag affinity and collection shares remain local-library-only. It reads session starts in the browser's local-day boundary, attributes a session to its start day, resolves pre-import remote sessions to the later local work, and never fabricates historical time before tracking existed.
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
   - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
   - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
@@ -169,6 +170,8 @@ Implemented:
 - `GET /api/discover/galleries/{gallery_id}`
   - Detail payload includes `pages[]` with resolved `url` values when the remote API returns page paths. These URLs are consumed only by the remote reader route, not by the detail modal.
 - `POST /api/discover/galleries/{gallery_id}/import`
+- `POST /api/discover/galleries/{gallery_id}/reading-sessions`
+- `PATCH /api/discover/galleries/{gallery_id}/reading-sessions/{session_id}`
 - `GET /api/discover/tags/autocomplete`
 - `GET /api/discover/tags/cached`
 - `GET /api/dictionary/summary`
@@ -279,6 +282,7 @@ Root: `apps/web/src/`
   - Governance API types/helpers: queue, aggregate, explicit review approve/reopen, metadata translation suggestions, bulk preview/apply (fill missing metadata, write-back, confirm dictionary terms), remote metadata refresh preview/apply, and apply payload/result. Remote refresh invalidates discover cache only after a successful write.
   - Export API types/helpers: queue, preview, `downloadExport` / `downloadExportBundle` (blob fetch + browser save), `enqueueBulkExport` for task-center bulk artifacts, and persisted preset settings. Export calls are local-only and not run through the discover session cache.
   - Job API type/helpers: `Job` (including `created_at` / `updated_at`, `paused/cancelled/cancelling` statuses and bulk-export target fields), `JobLog`, `jobs()`, `jobLogs()`, `pauseJob()`, `resumeJob()`, `cancelJob()`, `retryJob()`, delete/clear, and bulk-export download URL.
+  - Reader-session helpers cover both local works and cached remote galleries; both send monotonic visible foreground time, while only local sessions have reader progress/history APIs.
 - `vite.config.ts`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
@@ -376,7 +380,7 @@ Root: `apps/web/src/`
 - `components/reader/ReaderPage.tsx`
   - Immersive fixed-viewport reader outside `ArchiveShell`, with discriminated sources:
     - local `workId`: reads indexed CBZ pages and persists progress;
-    - remote `galleryId`: reads remote `pages[].url` from gallery detail, does not save local progress, exposes import queue action.
+    - remote `galleryId`: reads remote `pages[].url` from gallery detail, records visible-time sessions without local progress/history, and exposes the import queue action.
   - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. `WebtoonView` observes the actual reader scroller through a center band, so tall continuous pages update current-page progress reliably.
   - `ReaderToolbar` hides single-page direction controls in continuous mode; `ReaderScrubber` provides keyboard/touch progress without a native slider. `ReaderInfoPanel` groups real author/group, parody/character, content, category and language tags, retains the real gallery-display link, and contains no duplicate reader settings. `ThumbnailOverlay` clips its own width so large page counts cannot create a document-level horizontal scrollbar. `ThumbnailOverlay` and `ReaderJumpDialog` remain focus-restoring modal surfaces.
 - `components/governance/GovernancePage.tsx`

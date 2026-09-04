@@ -3,7 +3,6 @@ import { m } from "motion/react";
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { LibrarySummary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
-import { libraryTagHref } from "../../lib/navigation";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { LibraryTagFilter } from "./LibraryTagFilter";
 import { READ_STATUS_OPTIONS, SORT_OPTIONS, SOURCE_OPTIONS } from "./libraryHelpers";
@@ -44,6 +43,16 @@ export function LibraryToolbar(props: Props) {
     props.onQ(draft.trim());
   }
 
+  function changeDraft(value: string) {
+    setDraft(value);
+    if (!value && props.q) props.onQ("");
+  }
+
+  function clearSearch() {
+    setDraft("");
+    if (props.q) props.onQ("");
+  }
+
   const languageOptions = [
     { value: "all", label: "全部语言" },
     ...(props.summary?.languages ?? []).map((item) => ({
@@ -54,22 +63,25 @@ export function LibraryToolbar(props: Props) {
 
   return (
     <section className="folio-library-toolbar" aria-label="馆藏搜索与筛选">
-      <form className="folio-library-search" onSubmit={submit}>
-        <label>
-          <Search size={17} />
-          <input
-            type="search"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="搜索标题、作者、标签或画廊 ID"
-            aria-label="搜索馆藏"
-          />
-          <i />
-        </label>
-        <button type="submit"><Search size={15} />检索</button>
-      </form>
+      <div className="folio-library-query">
+        <form className="folio-library-search" onSubmit={submit}>
+          <div className="folio-library-search-field">
+            <Search size={17} />
+            <input
+              type="search"
+              value={draft}
+              onChange={(event) => changeDraft(event.target.value)}
+              placeholder="搜索标题、作者、标签或画廊 ID"
+              aria-label="搜索馆藏"
+            />
+            {draft ? <button className="folio-library-search-clear" type="button" onClick={clearSearch} aria-label="清除文字搜索"><X size={15} /></button> : null}
+            <i />
+          </div>
+          <button type="submit"><Search size={15} />检索</button>
+        </form>
 
-      <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
+        <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
+      </div>
 
       <div className="folio-view-switch folio-library-view-switch" aria-label="馆藏视图方式">
         <button
@@ -118,19 +130,6 @@ export function LibraryToolbar(props: Props) {
           重置筛选
         </button>
       </div>
-
-      {props.tags.length ? (
-        <div className="folio-library-active-tags" aria-label="已选标签">
-          <span>已选标签</span>
-          {props.tags.map((tag) => (
-            <span key={tag.id} className="folio-library-active-tag">
-              <a href={libraryTagHref(tag)}>{tag.display}</a>
-              <button type="button" aria-label={`移除标签 ${tag.display}`} onClick={() => props.onTags(props.tags.filter((item) => item.id !== tag.id))}><X size={12} /></button>
-            </span>
-          ))}
-          <button type="button" className="is-clear" onClick={() => props.onTags([])}>全部清除</button>
-        </div>
-      ) : null}
     </section>
   );
 }

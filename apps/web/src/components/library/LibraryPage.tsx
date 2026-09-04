@@ -3,7 +3,7 @@ import { AnimatePresence, m } from "motion/react";
 
 import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
 import { pageHref } from "../../lib/navigation";
-import { completeGridRows, useGridColumns } from "../../lib/useGridColumns";
+import { balanceGridRows, completeGridRows, useGridColumns } from "../../lib/useGridColumns";
 import { IconPager } from "../folio/ui/IconPager";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
@@ -18,6 +18,7 @@ import "./LibraryPage.css";
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
   const [gridRef, gridColumns] = useGridColumns();
   const library = useLibraryState(completeGridRows(24, gridColumns));
+  const gridRows = balanceGridRows(library.works.length, gridColumns);
 
   return (
     <section className="folio-page-body folio-library-page">
@@ -132,13 +133,14 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
               </div>
             ) : (
               <div className={library.loading ? "folio-library-cards is-loading" : "folio-library-cards"}>
+                <div ref={gridRef} className="folio-library-grid-measure" aria-hidden="true" />
                 <Stagger
-                  ref={gridRef}
                   key={`${library.view}:${library.page}:${library.works.length}:${library.works[0]?.id ?? "none"}`}
                   className={library.view === "grid" ? "folio-library-grid" : "folio-library-list"}
+                  style={library.view === "grid" ? gridRows.style : undefined}
                 >
-                  {library.works.map((work) => (
-                    <StaggerItem key={work.id} className="folio-library-card-cell">
+                  {library.works.map((work, index) => (
+                    <StaggerItem key={work.id} className={`folio-library-card-cell${library.view === "grid" && index >= gridRows.tailStart ? " is-balanced-tail" : ""}`}>
                       <WorkCard
                         work={work}
                         view={library.view}

@@ -58,7 +58,7 @@ export function useLibraryState(perPage: number) {
   const overviewToken = useRef(0);
 
   const filtersActive =
-    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || tags.length > 0 || favoriteOnly;
+    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || sort !== "recent_updated" || tags.length > 0 || favoriteOnly;
 
   const loadOverview = useCallback(async () => {
     const current = ++overviewToken.current;
@@ -144,26 +144,22 @@ export function useLibraryState(perPage: number) {
     setLanguage("all");
     setReadStatus("all");
     setSource("all");
+    setSort("recent_updated");
     setTags([]);
     setFavoriteOnly(false);
     setPage(1);
   }
 
   function pickTag(tag: LibraryTag) {
-    resetPage(() => setTags((current) => {
-      if (current.some((item) => item.id === tag.id)) return current;
-      return [
-        ...current,
-        {
-          id: tag.id,
-          type: tag.type,
-          name: tag.name,
-          slug: tag.slug,
-          display: tag.display,
-          count: 0,
-        },
-      ];
-    }));
+    resetFilters();
+    setTags([{
+      id: tag.id,
+      type: tag.type,
+      name: tag.name,
+      slug: tag.slug,
+      display: tag.display,
+      count: 0,
+    }]);
   }
 
   function toggleMultiSelect() {
