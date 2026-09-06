@@ -29,12 +29,25 @@ test("我的库标签拖动后可用键盘筛选，中键保持本地范围", as
   await expect(page.locator(".folio-library-tag-selection a")).toHaveAttribute("href", href!);
 });
 
-test("真实摘要在动效切换时保持实际数值，离屏场景暂停", async ({ page }) => {
+test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async ({ page }) => {
   const response = await page.request.get("/api/workbench/overview");
   const overview = await response.json();
+  await page.addInitScript(() => {
+    const samples: number[] = [];
+    Object.assign(window, { metricFrames: samples });
+    const start = performance.now();
+    function sample() {
+      const text = document.querySelector(".folio-workbench-summary .fx-scope")?.textContent;
+      if (text) samples.push(Number(text.replaceAll(",", "")));
+      if (performance.now() - start < 4_000) requestAnimationFrame(sample);
+    }
+    requestAnimationFrame(sample);
+  });
   await page.goto("/#workbench");
   const total = page.locator(".folio-workbench-summary .fx-scope").first();
   await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));
+  const frames = await page.evaluate(() => (window as unknown as { metricFrames: number[] }).metricFrames);
+  expect(frames.some((value) => value > 0 && value < overview.library.total)).toBe(true);
   for (const reducedMotion of ["reduce", "no-preference"] as const) {
     await page.emulateMedia({ reducedMotion });
     await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));

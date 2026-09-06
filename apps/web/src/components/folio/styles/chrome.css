@@ -282,18 +282,6 @@
   text-align: center;
 }
 
-.folio-topnav::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(100% / 9);
-  background: var(--folio-red-soft);
-  border-bottom: 2px solid var(--folio-red);
-  transform: translateX(calc(var(--folio-nav-index) * 100%));
-  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  pointer-events: none;
-}
-.folio-topnav .folio-nav-active { display: none; }
 .folio-topnav a > svg { transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms ease; }
 .folio-topnav a:hover > svg, .folio-topnav a:focus-visible > svg { transform: translateY(-3px); color: var(--folio-red); }
 

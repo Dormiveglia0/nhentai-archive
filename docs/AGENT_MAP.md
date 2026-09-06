@@ -8,7 +8,7 @@ Use this file as the first frontend navigation index. Read only the row for the 
 - Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
 - Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
-- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login shares the Folio paper, brand masthead, thin rules and vermilion with the authenticated app; no standalone card or welcome slogans.
+- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Preserve the original Folio login wake sequence (focus registration, scan, line convergence and app reveal); no standalone card or welcome slogans.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
 
 ## Demo Dependency Map
@@ -60,7 +60,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | --- | --- |
 | Page ids, labels, descriptions, icons, settings section definitions | `folio/config.ts` |
 | Full-screen grid, topbar, mobile drawer, page transition, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
-| Top navigation item animation | `folio/shell/PageNavigation.tsx` + `styles/chrome.css`; native CSS indicator, keyboard-contained mobile navigation in `FolioChrome.tsx` |
+| Top navigation item animation | `folio/shell/PageNavigation.tsx` + `styles/chrome.css`; Motion layout spring indicator with `domMax`, keyboard-contained mobile navigation in `FolioChrome.tsx` |
 | Standard title composition and scene placement | `folio/shell/PageHeading.tsx`; pauses decorative scene animations when the heading is outside the viewport |
 | Large background atmosphere and discover radar hits | `folio/shell/ModuleBackdrop.tsx` + `folio/styles/base.css` |
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |

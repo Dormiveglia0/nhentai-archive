@@ -138,7 +138,7 @@ export function FolioChrome({
         </AnimatePresence>
         <main ref={scrollRef} className="folio-scroll" tabIndex={-1} onScroll={handleScroll}>
           <AnimatePresence mode="wait" initial={false}>
-            <m.div key={routeKey} className="folio-page" initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -6, transition: { duration: reduceMotion ? 0 : duration.fast, ease: ease.exit } }} transition={{ duration: reduceMotion ? 0 : duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
+            <m.div key={routeKey} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 28 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -18 }} transition={{ duration: reduceMotion ? 0 : duration.base, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
               {/* Keep refs below AnimatePresence: Motion reads props.ref, which warns in React 18. */}
               <div ref={restoreRouteScroll}>
                 {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}

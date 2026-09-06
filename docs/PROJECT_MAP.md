@@ -260,7 +260,7 @@ Root: `apps/web/src/`
   - All primary and secondary routes are real pages: discover/gallery/library/history/readers/governance/dictionary/export/files/tasks/settings/workbench. No route remains a boundary screen.
   - Local and remote readers render directly as immersive viewports; all other routes render through `ArchiveShell`.
 - `components/auth/AuthGate.tsx` → `AuthWakeDemo.tsx` / `AuthWakeDemo.css`
-  - Shared production/preview login uses the integrated Folio paper login with the existing brand masthead, thin ruled password row and vermilion; no standalone card or welcome slogans, native labeled password field, password reveal, setup confirmation/back, inline errors, offline retry and visible submitting state. Successful authentication preloads the app inertly, then reveals it and moves focus into the active main/reader. The unused `AuthGate.css` was removed.
+  - Shared production/preview login retains the original Folio wake sequence: muted decorative shell, focus registration lines, password underline, hover fill, error movement, scan convergence to the topbar, then app and navigation reveal. Native labels (also on mobile), setup confirmation/back, inline errors, offline retry and visible submitting state remain. Only successful authentication mounts the actual app inertly; focus moves into main/reader after the scan completes. There are no welcome slogans or artwork overlays; the unused `AuthGate.css` remains deleted.
   - First visit creates any non-empty access password without character-combination rules; later visits accept that password and retain a 90-day HttpOnly/SameSite session. App content only mounts after successful authentication, and any protected-request 401 returns the surface to login.
   - The top-right lock action revokes the current session. No username, account list, localStorage token, password recovery flow, or auth dependency is introduced.
 - `lib/useGridColumns.ts`
@@ -270,10 +270,10 @@ Root: `apps/web/src/`
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
   - Formal tag surfaces keep native anchor semantics: discovery/remote-reader contexts use `tagSearchHref()`, while library/statistics contexts use `libraryTagHref()` so middle/modifier click preserves the owning data scope in a new tab.
 - `lib/motion/`
-  - `MotionProvider` sets the user reduced-motion policy globally; shared list entrance delay is capped at 180ms and disabled under reduced motion. Header scenes pause offscreen; page exits use the faster exit token.
+  - `MotionProvider` uses `domMax` for the shared navigation layout spring and respects user reduced-motion settings. Lists keep their original 50ms stagger, pages retain the horizontal entrance/exit, and header scenes pause offscreen. Do not remove visible animations as a performance shortcut.
   - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,禁止写魔法数。
 - `components/effects/NumberTicker.tsx`
-  - Shows the actual formatted value immediately, with a short opacity transition on changes; no per-frame count-up, intermediate totals or reduced-motion reset to zero.
+  - Restores the original spring count-up when entering the viewport and settles on the actual formatted value. Under reduced motion, jump both spring and source to the actual value so switching the preference back cannot reset the display to zero.
 - `components/effects/`
   - 从 magicui/react-bits 引入并改造后的效果组件落地处。`README.md` 为硬性接入规范(库只作效果来源、token 改造、`.fx-scope` 隔离、reduced-motion 降级)。当前含 `StaggerDemo`、`ShineBorder` 两个验证示例。
 - `styles/tailwind-entry.css`

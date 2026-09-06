@@ -11,6 +11,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 
 import { api, AUTH_REQUIRED_EVENT, type AuthStatus } from "../../lib/api";
 import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
+import { FOLIO_PAGES } from "../folio/config";
+import { WorkbenchScene } from "../folio/scenes/WorkbenchScene";
 import { FolioChrome } from "../folio/shell/FolioChrome";
 import "../folio/Folio.css";
 import "./AuthWakeDemo.css";
@@ -37,6 +39,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [phase, setPhase] = useState<AuthPhase>(preview ? "ready" : "loading");
   const [capsLock, setCapsLock] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const loadStatus = useCallback(async () => {
     if (preview) return;
@@ -82,7 +85,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
 
   useEffect(() => {
     if (phase !== "success") return;
-    const timer = window.setTimeout(() => setPhase("awake"), reduceMotion ? 0 : 260);
+    const timer = window.setTimeout(() => setPhase("awake"), reduceMotion ? 0 : 760);
     return () => window.clearTimeout(timer);
   }, [phase, reduceMotion]);
 
@@ -94,6 +97,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
   const fieldLabel = setup ? (confirming ? "再次输入" : "设置密码") : "访问密码";
   const actionLabel = setup ? (confirming ? "确认并进入" : "继续") : "登录";
   const realApp = Boolean(status?.authenticated && children && !preview);
+  const revealApp = realApp || (preview && (phase === "success" || awake));
 
   useEffect(() => {
     if (!awake) return;
@@ -192,52 +196,58 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
 
   return (
     <div
-      className={`folio folio-no-command auth-wake-demo auth-wake-${phase}${realApp ? " has-real-app" : ""}`}
+      className={`folio folio-no-command auth-wake-demo auth-wake-${phase}${focused ? " is-focused" : ""}${revealApp ? " has-real-app" : ""}`}
       aria-busy={phase === "loading" || locked}
     >
-      {realApp ? (
+      <div className="folio-binding auth-wake-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
+      {revealApp ? (
         <div className="auth-wake-real-app" aria-hidden={!awake} ref={(node) => { appRef.current = node; if (node) node.inert = !awake; }}>
-          {children?.(logout)}
+          {realApp ? children?.(logout) : (
+            <FolioChrome page="workbench" onNavigate={(page) => window.location.assign(`/demo#${page}`)} onLogout={logout}>
+              <section className="folio-page-body auth-wake-preview">
+                <BookOpen size={28} aria-hidden="true" /><h2>已登录</h2>
+                <p>选择导航查看页面。</p>
+              </section>
+            </FolioChrome>
+          )}
         </div>
-      ) : awake && preview ? (
-        <FolioChrome page="workbench" onNavigate={(page) => window.location.assign(`/demo#${page}`)} onLogout={logout}>
-          <section className="folio-page-body auth-wake-preview">
-            <BookOpen size={28} aria-hidden="true" />
-            <h2>已登录</h2>
-            <p>选择导航查看页面。</p>
-          </section>
-        </FolioChrome>
-      ) : null}
-
-      {!awake ? (
-        <div className="auth-wake-portal">
-          <header className="auth-wake-masthead">
-            <div className="folio-brand">
-              <span className="folio-brand-mark" aria-hidden="true"><span className="folio-monogram">NH</span><i /></span>
-              <span className="folio-brand-copy"><strong>Archive</strong><small>local collection</small></span>
+      ) : (
+        <div className="auth-wake-backdrop" aria-hidden="true">
+          <header className="auth-wake-topbar">
+            <div className="auth-wake-brand">
+              <span className="auth-wake-brand-mark"><span>NH</span><i /></span>
+              <span className="auth-wake-brand-copy"><strong>Archive</strong><small>local collection</small></span>
+            </div>
+            <div className="auth-wake-nav">
+              {FOLIO_PAGES.map((item, index) => {
+                const Icon = item.icon;
+                return <span key={item.id} className={index === 0 ? "is-active" : ""}><Icon size={17} /><strong>{item.label}</strong></span>;
+              })}
             </div>
           </header>
-          <main className="auth-wake-stage">
-
-            {phase === "loading" ? (
-              <div className="auth-wake-connecting" role="status"><LoaderCircle size={22} className="spin" /><span>正在连接…</span></div>
+          <section className="auth-wake-shell">
+            <header className="auth-wake-page-head">
+              <div><h2>{FOLIO_PAGES[0].title}</h2><p>{FOLIO_PAGES[0].description}</p></div>
+              <div className="auth-wake-scene"><svg viewBox="0 0 540 230" preserveAspectRatio="xMaxYMid meet"><WorkbenchScene /></svg></div>
+            </header>
+            <div className="auth-wake-page-body"><div className="auth-wake-shell-loading"><span /><span /><span /><span /></div></div>
+          </section>
+        </div>
+      )}
+      <div className="auth-wake-registration" aria-hidden="true"><span /><span /><span /><span /></div>
+      {!awake ? (
+        phase === "loading" ? (
+          <div className="auth-wake-connecting" role="status"><LoaderCircle size={22} className="spin" /><span>正在连接…</span></div>
+        ) : (
+          <section className="auth-wake-access" aria-label="访问控制">
+            <header><h1>登录</h1><strong role="status">{stateLabel}</strong></header>
+            {phase === "offline" ? (
+              <div className="auth-wake-status" role="alert"><span>{statusError}</span><button type="button" onClick={() => void loadStatus()}>重新连接</button></div>
             ) : (
-              <section className="auth-wake-access" aria-label="访问控制">
-                <header className="auth-wake-access-head">
-                  <h1>{phase === "offline" ? "连接失败" : setup ? (confirming ? "确认密码" : "设置密码") : "登录"}</h1>
-                  <span role="status">{stateLabel}</span>
-                </header>
-                {setup ? <p className="auth-wake-instruction">{confirming ? "再次输入密码。" : "首次使用，请设置访问密码。"}</p> : null}
-
-                {phase === "offline" ? (
-                  <div className="auth-wake-status" role="alert">
-                    <p>{statusError}</p>
-                    <button type="button" onClick={() => void loadStatus()}>重新连接 <ArrowRight size={17} /></button>
-                  </div>
-                ) : (
                   <form onSubmit={submit} aria-busy={locked}>
-                    <label className="auth-wake-label" htmlFor="auth-wake-password">{fieldLabel}</label>
                     <div className="auth-wake-field">
+                      <label className="auth-wake-field-label" htmlFor="auth-wake-password">{fieldLabel}</label>
+                      <span className="auth-wake-input-wrap">
                       <input
                         id="auth-wake-password"
                         name="password"
@@ -255,7 +265,8 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                         aria-invalid={phase === "error"}
                         onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))}
                         onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))}
-                        onBlur={() => setCapsLock(false)}
+                        onFocus={() => setFocused(true)}
+                        onBlur={() => { setCapsLock(false); setFocused(false); }}
                         onChange={(event) => {
                           if (confirming) setConfirmation(event.target.value);
                           else setPassword(event.target.value);
@@ -263,6 +274,8 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                           if (phase === "error") setPhase("ready");
                         }}
                       />
+                      <i aria-hidden="true" />
+                      </span>
                       <button
                         className="auth-wake-reveal"
                         type="button"
@@ -276,6 +289,10 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                       >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
+                    <button className="auth-wake-submit" type="submit" disabled={locked} aria-label={actionLabel}>
+                      <span>{phase === "submitting" ? "正在验证…" : phase === "success" ? "已验证，正在进入" : confirming ? "确认" : actionLabel}</span>
+                      {phase === "submitting" ? <LoaderCircle size={19} className="spin" /> : phase === "success" ? <Check size={19} /> : <ArrowRight size={19} />}
+                    </button>
                     </div>
                     <div id="auth-wake-feedback" className="auth-wake-feedback" aria-live="polite">
                       <AnimatePresence initial={false} mode="wait">
@@ -284,10 +301,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                         ) : capsLock ? <p key="caps">大写锁定已开启</p> : null}
                       </AnimatePresence>
                     </div>
-                    <button className="auth-wake-submit" type="submit" disabled={locked} aria-label={actionLabel}>
-                      <span>{phase === "submitting" ? "正在验证…" : phase === "success" ? "已验证，正在进入" : confirming ? "确认" : actionLabel}</span>
-                      {phase === "submitting" ? <LoaderCircle size={19} className="spin" /> : phase === "success" ? <Check size={19} /> : <ArrowRight size={19} />}
-                    </button>
+
                     <div className="auth-wake-form-foot">
                       {preview ? <p id="auth-wake-hint">演示密码：archive</p> : null}
                       {confirming ? <button type="button" disabled={locked} onClick={() => {
@@ -300,12 +314,11 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                       }}>返回修改</button> : null}
                     </div>
                   </form>
-                )}
-              </section>
             )}
-          </main>
-        </div>
+          </section>
+        )
       ) : null}
+      <div className="auth-wake-scan" aria-hidden="true"><i /></div>
     </div>
   );
 }

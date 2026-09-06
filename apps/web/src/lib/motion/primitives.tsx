@@ -70,7 +70,7 @@ export function FadeInOut({
 
 const staggerParent: Variants = {
   hidden: {},
-  show: { transition: { delayChildren: (index: number) => Math.min(index * stagger.base, duration.fast) } },
+  show: { transition: { staggerChildren: stagger.base } },
 };
 
 /** 列表/网格容器,子项用 <StaggerItem> 逐项进场。 */

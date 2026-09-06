@@ -74,3 +74,29 @@ test("界面唤醒演示尊重减少动态效果设置", async ({ page }) => {
   await expect(page.locator(".auth-wake-demo")).toHaveClass(/auth-wake-awake/);
   await expect(page.getByRole("heading", { name: "工作台" })).toBeVisible();
 });
+
+test("登录扫描线展开到顶栏，页面随后渐亮进入", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/auth-concept");
+  await page.getByLabel("访问密码", { exact: true }).fill("archive");
+  const frames = await page.evaluate(() => new Promise<Array<{ success: boolean; awake: boolean; y: number; width: number; opacity: number }>>((resolve) => {
+    const samples: Array<{ success: boolean; awake: boolean; y: number; width: number; opacity: number }> = [];
+    const start = performance.now();
+    document.querySelector<HTMLButtonElement>(".auth-wake-submit")!.click();
+    function sample() {
+      const gate = document.querySelector(".auth-wake-demo")!;
+      const line = document.querySelector(".auth-wake-scan")!.getBoundingClientRect();
+      const app = document.querySelector(".auth-wake-real-app");
+      samples.push({ success: gate.classList.contains("auth-wake-success"), awake: gate.classList.contains("auth-wake-awake"), y: line.y, width: line.width, opacity: app ? Number(getComputedStyle(app).opacity) : 0 });
+      if (performance.now() - start < 1_800) requestAnimationFrame(sample);
+      else resolve(samples);
+    }
+    requestAnimationFrame(sample);
+  }));
+  const flight = frames.filter((frame) => frame.success);
+  expect(flight.length).toBeGreaterThan(3);
+  expect(flight[0].y - flight.at(-1)!.y).toBeGreaterThan(100);
+  expect(flight.at(-1)!.width - flight[0].width).toBeGreaterThan(200);
+  expect(frames.some((frame) => frame.awake && frame.opacity > 0.15 && frame.opacity < 0.9)).toBe(true);
+  await expect(page.locator(".auth-wake-real-app")).toHaveCSS("opacity", "1");
+});
