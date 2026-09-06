@@ -260,7 +260,7 @@ Root: `apps/web/src/`
   - All primary and secondary routes are real pages: discover/gallery/library/history/readers/governance/dictionary/export/files/tasks/settings/workbench. No route remains a boundary screen.
   - Local and remote readers render directly as immersive viewports; all other routes render through `ArchiveShell`.
 - `components/auth/AuthGate.tsx` → `AuthWakeDemo.tsx` / `AuthWakeDemo.css`
-  - Shared production/preview login uses the compact charcoal-and-red login layout with no welcome slogans, native labeled password field, password reveal, setup confirmation/back, inline errors, offline retry and visible submitting state. Successful authentication preloads the app inertly, then reveals it and moves focus into the active main/reader. The unused `AuthGate.css` was removed.
+  - Shared production/preview login uses the integrated Folio paper login with the existing brand masthead, thin ruled password row and vermilion; no standalone card or welcome slogans, native labeled password field, password reveal, setup confirmation/back, inline errors, offline retry and visible submitting state. Successful authentication preloads the app inertly, then reveals it and moves focus into the active main/reader. The unused `AuthGate.css` was removed.
   - First visit creates any non-empty access password without character-combination rules; later visits accept that password and retain a 90-day HttpOnly/SameSite session. App content only mounts after successful authentication, and any protected-request 401 returns the surface to login.
   - The top-right lock action revokes the current session. No username, account list, localStorage token, password recovery flow, or auth dependency is introduced.
 - `lib/useGridColumns.ts`

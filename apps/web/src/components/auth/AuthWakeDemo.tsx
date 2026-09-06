@@ -5,7 +5,6 @@ import {
   BookOpen,
   Check,
   LoaderCircle,
-  LockKeyhole,
 } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
@@ -187,7 +186,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
           ? "再次确认"
           : setup
             ? "首次设置"
-            : "未登录";
+            : "";
 
   const errorMessage = formError ?? "访问验证失败，请重试";
 
@@ -212,11 +211,13 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
 
       {!awake ? (
         <div className="auth-wake-portal">
+          <header className="auth-wake-masthead">
+            <div className="folio-brand">
+              <span className="folio-brand-mark" aria-hidden="true"><span className="folio-monogram">NH</span><i /></span>
+              <span className="folio-brand-copy"><strong>Archive</strong><small>local collection</small></span>
+            </div>
+          </header>
           <main className="auth-wake-stage">
-            <header className="auth-wake-brand">
-              <span className="auth-wake-logo" aria-label="NH Archive">nh<span>archive</span><i /></span>
-              <span className="auth-wake-category">成人漫画库</span>
-            </header>
 
             {phase === "loading" ? (
               <div className="auth-wake-connecting" role="status"><LoaderCircle size={22} className="spin" /><span>正在连接…</span></div>
@@ -237,7 +238,6 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                   <form onSubmit={submit} aria-busy={locked}>
                     <label className="auth-wake-label" htmlFor="auth-wake-password">{fieldLabel}</label>
                     <div className="auth-wake-field">
-                      <LockKeyhole size={18} aria-hidden="true" />
                       <input
                         id="auth-wake-password"
                         name="password"
@@ -285,7 +285,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                       </AnimatePresence>
                     </div>
                     <button className="auth-wake-submit" type="submit" disabled={locked} aria-label={actionLabel}>
-                      <span>{phase === "submitting" ? "正在验证…" : phase === "success" ? "已验证，正在进入" : actionLabel}</span>
+                      <span>{phase === "submitting" ? "正在验证…" : phase === "success" ? "已验证，正在进入" : confirming ? "确认" : actionLabel}</span>
                       {phase === "submitting" ? <LoaderCircle size={19} className="spin" /> : phase === "success" ? <Check size={19} /> : <ArrowRight size={19} />}
                     </button>
                     <div className="auth-wake-form-foot">

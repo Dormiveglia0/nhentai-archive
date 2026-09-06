@@ -8,7 +8,7 @@ Use this file as the first frontend navigation index. Read only the row for the 
 - Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
 - Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
-- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login uses a compact charcoal/red form with no welcome slogans.
+- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login shares the Folio paper, brand masthead, thin rules and vermilion with the authenticated app; no standalone card or welcome slogans.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
 
 ## Demo Dependency Map

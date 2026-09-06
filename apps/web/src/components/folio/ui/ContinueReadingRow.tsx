@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { LibraryWork } from "../../../lib/api";
@@ -114,13 +114,12 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
                 ) : (
                   <span className="folio-cover-fallback">NO COVER</span>
                 )}
-                <span className="folio-shelf-open" aria-hidden="true"><BookOpen size={18} /><span>打开阅读</span></span>
                 {(work.progress_percent ?? 0) > 0 ? (
                   <span className="folio-shelf-progress" style={{ width: `${work.progress_percent ?? 0}%` }} />
                 ) : null}
               </div>
               <strong title={workTitle(work)}>{workTitle(work)}</strong>
-              <small><span>{work.completed ? "已读完 · 再读一次" : (work.progress_percent ?? 0) > 0 ? `已读 ${work.progress_percent}%` : "开始阅读"}</span><ArrowUpRight size={14} aria-hidden="true" /></small>
+              <small>{work.completed ? "已读完" : (work.progress_percent ?? 0) > 0 ? `已读 ${work.progress_percent}%` : "未读"}</small>
             </a>
           </StaggerItem>
         ))}
