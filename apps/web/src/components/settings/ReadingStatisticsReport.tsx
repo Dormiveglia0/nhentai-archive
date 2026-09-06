@@ -58,7 +58,7 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
         <div>
           <span className="folio-reading-atlas-kicker"><Activity size={14} />READING ATLAS</span>
           <h2>阅读图谱</h2>
-          <p>汇总本地与发现页阅读会话，整理成趋势、节奏与作品排行；馆藏构成仍只统计本地库。</p>
+          <p>查看本地与在线阅读记录，以及我的库的收藏分布。</p>
         </div>
         <div className="folio-reading-period" aria-label="统计周期">
           {PERIODS.map((periodOption) => (
@@ -142,7 +142,7 @@ export function CollectionStatistics({ statistics, loading }: { statistics: Read
 }
 
 function TrendLine({ statistics }: { statistics: ReadingStatistics | null }) {
-  if (!statistics) return <p className="folio-reading-trend">正在读取真实会话…</p>;
+  if (!statistics) return <p className="folio-reading-trend">正在读取会话…</p>;
   const current = statistics.overview.total_seconds;
   const previous = statistics.period.previous_total_seconds;
   const change = statistics.period.seconds_change_percent;
@@ -265,7 +265,7 @@ function WorkRanking({ statistics }: { statistics: ReadingStatistics | null }) {
             {rows.slice(0, 6).map((row, index) => <WorkRankRow key={`${row.source}-${row.id}`} row={row} index={index} mode={mode} />)}
           </m.ol>
         </AnimatePresence>
-      ) : <p className="folio-reading-empty">完成一次阅读后，这里才会出现真实排行。</p>}
+      ) : <p className="folio-reading-empty">完成一次阅读后，这里才会出现排行。</p>}
     </section>
   );
 }

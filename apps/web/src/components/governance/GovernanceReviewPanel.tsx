@@ -23,7 +23,7 @@ export function GovernanceReviewPanel({ aggregate, changedCount, busy, note, onN
         <div>
           <span>Automatic checks + human review</span>
           <h2 id="governance-review-title">检查与核对</h2>
-          <p>系统只负责发现规则问题；“已核对”必须由你确认当前版本，并留下时间记录。</p>
+          <p>检查作品信息后，标记为“已核对”。</p>
         </div>
         <div className="folio-governance-review-badge" data-state={review.state}>
           {approved ? <CheckCircle2 size={17} /> : review.state === "stale" ? <AlertTriangle size={17} /> : <Clock3 size={17} />}
@@ -56,7 +56,7 @@ export function GovernanceReviewPanel({ aggregate, changedCount, busy, note, onN
         <div className="folio-governance-review-copy">
           <ShieldCheck size={20} />
           <div>
-            <strong>{approved ? "当前数据快照已人工核对" : review.state === "stale" ? "核对记录已失效" : "等待人工核对"}</strong>
+            <strong>{approved ? "当前作品信息已核对" : review.state === "stale" ? "核对记录已失效" : "等待人工核对"}</strong>
             <p>
               {approved
                 ? `${formatReviewTime(review.reviewed_at)} 已确认。${issueCount ? `当前仍有 ${issueCount} 项系统提示，视为已在本次核对中知悉。` : "当前没有系统提示。"}`

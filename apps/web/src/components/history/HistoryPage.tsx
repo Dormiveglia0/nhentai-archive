@@ -29,7 +29,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
           <ArrowLeft size={15} />
           返回我的库
         </button>
-        <span>{state.loading && !state.data ? "正在读取真实记录…" : `${(state.data?.total ?? 0).toLocaleString()} 条阅读记录`}</span>
+        <span>{state.loading && !state.data ? "正在读取记录…" : `${(state.data?.total ?? 0).toLocaleString()} 条阅读记录`}</span>
       </header>
 
       <FolioMetricGrid ariaLabel="阅读历史摘要" className="folio-history-summary" items={metrics} />
@@ -52,7 +52,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
           <FolioEmptyState
             icon={History}
             title="还没有阅读轨迹"
-            copy="打开任意已入库作品后，这里会按真实日期记录阅读进度。"
+            copy="打开任意已入库作品后，这里会按日期记录阅读进度。"
             action="浏览我的库"
             actionHref={pageHref({ name: "library" })}
           />

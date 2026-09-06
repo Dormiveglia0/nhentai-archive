@@ -262,7 +262,7 @@ function LanguageDistribution({ languages, loading, reduceMotion }: { languages:
           })}
         </div>
       ) : (
-        <p className="folio-settings-data-empty">{loading ? "正在读取真实分布…" : "当前馆藏没有语言统计"}</p>
+        <p className="folio-settings-data-empty">{loading ? "正在读取分布…" : "当前馆藏没有语言统计"}</p>
       )}
     </section>
   );

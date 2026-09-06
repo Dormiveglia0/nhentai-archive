@@ -27,8 +27,8 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
     { id: "metadata", label: "元数据", count: queue.summary.missing_metadata, description: "标题或语言缺失；其余字段在对照表中人工判断。" },
     { id: "dictionary", label: "词典", count: countMatching(queue, DICTIONARY_REASONS), description: "无标签、未映射、译名待复核或词典冲突。" },
     { id: "files", label: "文件", count: countMatching(queue, FILE_REASONS), description: "源 CBZ、封面或 ComicInfo.xml 不可用。" },
-    { id: "approved", label: "已核对", count: queue.summary.approved, description: "人工确认过当前数据快照；后续变化会自动失效。" },
-    { id: "all", label: "全部", count: queue.result.length, description: "显示全部真实作品，不代表其已经通过审核。" },
+    { id: "approved", label: "已核对", count: queue.summary.approved, description: "已核对的作品；信息更改后需重新核对。" },
+    { id: "all", label: "全部", count: queue.result.length, description: "显示全部作品，不代表其已经通过审核。" },
   ];
   const visibleItems = useMemo(
     () => queue.result.filter((item) => matchesFilter(item, filter)),

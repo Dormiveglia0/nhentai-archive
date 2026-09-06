@@ -53,7 +53,7 @@ export function TasksPage() {
             jobs={tasks.visibleJobs}
             focusId={tasks.focus?.id ?? null}
             loading={tasks.loading}
-            emptyLabel={tasks.jobs.length ? "没有匹配当前筛选条件的任务。" : "导入、扫描、治理或导出开始后，任务会按真实时间顺序出现在这里。"}
+            emptyLabel={tasks.jobs.length ? "没有匹配当前筛选条件的任务。" : "导入、扫描、治理或导出开始后，任务会按时间顺序出现在这里。"}
             retryingId={tasks.retryingId}
             actingId={tasks.actingId}
             onFocus={tasks.focusJob}

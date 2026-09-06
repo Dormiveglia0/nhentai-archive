@@ -8,6 +8,7 @@ Use this file as the first frontend navigation index. Read only the row for the 
 - Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
 - Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
+- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login uses a compact charcoal/red form with no welcome slogans.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
 
 ## Demo Dependency Map
@@ -59,8 +60,8 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | --- | --- |
 | Page ids, labels, descriptions, icons, settings section definitions | `folio/config.ts` |
 | Full-screen grid, topbar, mobile drawer, page transition, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
-| Top navigation item animation | `folio/shell/PageNavigation.tsx` |
-| Standard title composition and scene placement | `folio/shell/PageHeading.tsx` |
+| Top navigation item animation | `folio/shell/PageNavigation.tsx` + `styles/chrome.css`; native CSS indicator, keyboard-contained mobile navigation in `FolioChrome.tsx` |
+| Standard title composition and scene placement | `folio/shell/PageHeading.tsx`; pauses decorative scene animations when the heading is outside the viewport |
 | Large background atmosphere and discover radar hits | `folio/shell/ModuleBackdrop.tsx` + `folio/styles/base.css` |
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
@@ -71,7 +72,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |
 | Demo page dispatch | `demo/modules/DemoPage.tsx` |
 | Live task overlay outside reader routes | `layout/TaskDock.tsx` + `layout/TaskDock.css` |
-| Single-password gate, persistent session, change-password flow, and lock action | `auth/AuthGate.tsx` + `auth/AuthGate.css`; `settings/PreferencesSection.tsx` + `useSettingsState.ts`; `App.tsx` keeps every formal/demo route behind it |
+| Single-password gate, persistent session, change-password flow, and lock action | `auth/AuthGate.tsx` delegates to `auth/AuthWakeDemo.tsx` + `auth/AuthWakeDemo.css`; `settings/PreferencesSection.tsx` + `useSettingsState.ts`; `App.tsx` keeps every formal/demo route behind it |
 | Hash dispatch and route-level code splitting | `App.tsx` |
 | Folio/immersive-reader loading states | `layout/RouteFallback.tsx` + `layout/RouteFallback.css` |
 | Tag-search URL + middle/modifier-click contract | `lib/navigation.ts::tagSearchHref()` for remote discovery and `libraryTagHref()` for local-library drill-downs; each owner must render a native anchor |
@@ -123,7 +124,7 @@ Update one row to `migrated` only when its real page renders Folio structure dir
 - Change page background: `folio/shell/ModuleBackdrop.tsx` + matching atmosphere rules in `folio/styles/base.css`.
 - Change a select/input/toggle everywhere: `folio/ui/FolioPrimitives.tsx` + the owning shared CSS layer.
 - Change route loading or split boundaries: `App.tsx` + `layout/RouteFallback.*`; keep `ArchiveShell` eager and readers outside it.
-- Change tag navigation: update the matching `lib/navigation.ts` builder (`tagSearchHref()` for discovery, `libraryTagHref()` for local-library scope), then preserve native `<a>` semantics in the feature owner; pointer-drag code may suppress only a completed primary-pointer drag.
+- Change tag navigation: update the matching `lib/navigation.ts` builder (`tagSearchHref()` for discovery, `libraryTagHref()` for local-library scope), then preserve native `<a>` semantics in the feature owner; pointer-drag code may suppress only a completed primary-mouse drag; capture after movement exceeds the threshold, preserve keyboard/modifier clicks, and use native touch scrolling.
 - Migrate one real page: keep its existing hook/service, rewrite its JSX with Folio structure, add feature-local CSS, delete only the old selectors that page no longer uses, and never fetch in scene components.
 
 ## Verification

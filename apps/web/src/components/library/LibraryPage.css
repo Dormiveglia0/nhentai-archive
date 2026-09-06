@@ -1006,7 +1006,7 @@
   overflow-x: auto;
   cursor: grab;
   scrollbar-width: none;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 
 .folio-library-card-tags::-webkit-scrollbar {

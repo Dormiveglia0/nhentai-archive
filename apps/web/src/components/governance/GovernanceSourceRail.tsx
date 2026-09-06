@@ -18,7 +18,7 @@ export function GovernanceSourceRail({
       <header>
         <span>Review checklist</span>
         <h2>处理清单</h2>
-        <p>{bulkMode ? "先预览每部作品将发生的变化，再决定是否应用。" : "只列出仍需判断或明确执行的真实问题。"}</p>
+        <p>{bulkMode ? "先预览每部作品将发生的变化，再决定是否应用。" : "查看待处理问题。"}</p>
       </header>
 
       {aggregate ? (

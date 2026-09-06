@@ -27,7 +27,7 @@ export function BulkImportPanel({ onImported }: { onImported: () => void }) {
     try {
       const result = await api.dictionaryBulkImport(parseRows(text));
       setPreview(result);
-      setMessage(`已写入 ${result.summary.imported ?? 0} 条真实词典记录。`);
+      setMessage(`已写入 ${result.summary.imported ?? 0} 条词典记录。`);
       onImported();
     } catch (exc) {
       setMessage(errorMessage(exc));

@@ -23,7 +23,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
         <FolioEmptyState
           icon={Info}
           title="选择一部作品"
-          copy="这里会显示真实封面、来源、文件信息、阅读进度与本地标签。"
+          copy="这里会显示封面、来源、文件信息、阅读进度与本地标签。"
         />
       </aside>
     );

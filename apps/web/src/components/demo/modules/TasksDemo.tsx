@@ -38,7 +38,7 @@ export function TasksDemo() {
       <div className="folio-split-layout">
         <section className="folio-ruled-panel">
           <div className="folio-table-head"><span>任务</span><span>阶段</span><span>进度</span><span>状态</span></div>
-          <EmptyCanvas icon={Workflow} title="没有真实任务" copy="导入、扫描、治理或导出开始后，任务会按时间顺序出现在这里。" />
+          <EmptyCanvas icon={Workflow} title="没有任务" copy="导入、扫描、治理或导出开始后，任务会按时间顺序出现在这里。" />
         </section>
         <aside className="folio-inspector">
           <span>Task log</span>

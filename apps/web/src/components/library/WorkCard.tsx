@@ -1,7 +1,7 @@
 import { BookOpen, Check, Heart } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
-import { navigate, pageHref } from "../../lib/navigation";
+import { libraryTagHref, navigate, pageHref } from "../../lib/navigation";
 import { TagScroller } from "../folio/ui/TagScroller";
 import type { LibraryView } from "./LibraryToolbar";
 import { authorLine, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
@@ -112,6 +112,7 @@ export function WorkCard({
         <TagScroller
           className="folio-library-card-tags"
           tags={contentTags as LibraryTag[]}
+          hrefForTag={libraryTagHref}
           emptyLabel="暂无内容 Tag"
           onPickTag={(tag) => onPickTag(tag as LibraryTag)}
         />

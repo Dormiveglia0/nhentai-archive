@@ -26,7 +26,7 @@ export function FileList({ entries, selected, focusId, onPick, onToggle, loading
       </header>
 
       {loading && entries.length === 0 ? (
-        <FolioEmptyState icon={LoaderCircle} title="正在读取文件清单" copy="正在核对数据库索引与受管目录。" />
+        <FolioEmptyState icon={LoaderCircle} title="正在读取文件清单" copy="正在检查文件状态。" />
       ) : entries.length === 0 ? (
         <FolioEmptyState icon={FolderOpen} title="没有匹配的文件" copy="调整分类、状态或搜索条件后重试。" />
       ) : (

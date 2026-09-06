@@ -50,8 +50,8 @@ type Props = {
 };
 
 export function TaskList(props: Props) {
-  if (props.loading) return <div className="folio-tasks-loading" role="status">正在读取真实任务队列…</div>;
-  if (props.jobs.length === 0) return <FolioEmptyState icon={Workflow} title="没有匹配的真实任务" copy={props.emptyLabel} />;
+  if (props.loading) return <div className="folio-tasks-loading" role="status">正在读取任务队列…</div>;
+  if (props.jobs.length === 0) return <FolioEmptyState icon={Workflow} title="没有匹配的任务" copy={props.emptyLabel} />;
 
   const signature = props.jobs.map((job) => `${job.id}:${job.status}`).join("-");
 

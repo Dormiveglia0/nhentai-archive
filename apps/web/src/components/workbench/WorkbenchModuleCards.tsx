@@ -104,7 +104,7 @@ export function WorkbenchModuleCards({ overview }: { overview: WorkbenchOverview
 
   return (
     <section className="folio-workbench-ledger">
-      <FolioPanelHeading title="模块状态" description="真实摘要与下一步操作。" />
+      <FolioPanelHeading title="管理" description="整理标签、任务和文件。" />
       <Stagger className="folio-workbench-module-list">
         {cards.map((card) => {
           const Icon = card.icon;

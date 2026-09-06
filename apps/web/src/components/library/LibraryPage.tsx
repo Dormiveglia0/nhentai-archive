@@ -58,7 +58,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           <FolioEmptyState
             icon={Library}
             title="库里还没有作品"
-            copy="先从发现页导入真实作品。导入完成后，这里会显示馆藏、阅读进度、标签与文件状态。"
+            copy="从发现页导入漫画，或在文件页扫描本地 CBZ。"
             action="前往发现页"
             actionHref={pageHref({ name: "discover" })}
           />
@@ -78,7 +78,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             <header className="folio-library-results-head">
               <FolioPanelHeading
                 title="馆藏索引"
-                description={library.filtersActive ? "以下结果来自当前真实筛选条件。" : "浏览所有已入库并完成本地索引的作品。"}
+                description={library.filtersActive ? "已按当前条件筛选。" : "全部已收藏的漫画。"}
               />
               <div className="folio-library-result-controls">
                 <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>
@@ -126,7 +126,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
                 <FolioEmptyState
                   icon={Info}
                   title="没有符合条件的作品"
-                  copy="调整搜索、标签或筛选条件，或者重置后查看全部真实馆藏。"
+                  copy="调整搜索、标签或筛选条件，或者重置后查看全部馆藏。"
                   action="重置筛选"
                   onAction={library.resetFilters}
                 />

@@ -23,7 +23,7 @@ export function DiscoverDemo({ announce }: { announce: (message: string) => void
         <div>
           <span>今日热门</span>
           <h2>连接远端源后显示</h2>
-          <p>这里保留真实热门内容的动线与展开位置，不使用示例封面填充。</p>
+          <p>连接漫画来源后查看热门作品。</p>
         </div>
         <div className="folio-popular-lines" aria-hidden="true"><i /><i /><i /><i /></div>
       </section>
@@ -56,7 +56,7 @@ export function DiscoverDemo({ announce }: { announce: (message: string) => void
 
       <section className="folio-ruled-panel">
         <PanelHeading title="检索结果" description={tags.length ? `当前组合 ${tags.length} 个标签与关键字条件。` : "可组合关键字、多个标签、筛选与排序条件。"} />
-        <EmptyCanvas icon={Search} title="等待远端连接" copy="配置连接后，这里会显示真实检索结果、导入状态与分页控件。" />
+        <EmptyCanvas icon={Search} title="等待远端连接" copy="配置连接后，这里会显示检索结果、导入状态与分页控件。" />
         <div className="folio-pager" aria-label="分页">
           <button type="button" disabled aria-label="上一页"><ChevronLeft size={16} /></button>
           <span>— / —</span>
@@ -159,7 +159,7 @@ function DiscoveryQueryComposer({
               />
             </label>
             <button type="button" disabled={!draft.trim()} onClick={addTag}>添加</button>
-            <p>可连续添加多个标签；接入真实词典后这里显示匹配候选。</p>
+            <p>可添加多个标签缩小搜索范围。</p>
           </m.div>
         ) : null}
       </AnimatePresence>

@@ -7,11 +7,12 @@ type Props = {
   tags: RemoteTag[];
   onPickTag?: (tag: RemoteTag) => void;
   displayTag?: (tag: RemoteTag) => string;
+  hrefForTag?: (tag: RemoteTag) => string;
   className: string;
   emptyLabel?: string;
 };
 
-export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, className, emptyLabel = "标签未缓存" }: Props) {
+export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, hrefForTag = tagSearchHref, className, emptyLabel = "标签未缓存" }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const startScroll = useRef(0);
@@ -20,11 +21,12 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
   const [isDragging, setIsDragging] = useState(false);
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (!ref.current || event.button !== 0) return;
+    if (!ref.current || !event.isPrimary || event.button !== 0) return;
+    dragged.current = false;
+    if (event.pointerType !== "mouse" || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     pointerId.current = event.pointerId;
     startX.current = event.clientX;
     startScroll.current = ref.current.scrollLeft;
-    dragged.current = false;
   }
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
@@ -40,6 +42,7 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
   }
 
   function stopDrag(event: PointerEvent<HTMLDivElement>) {
+    if (pointerId.current !== event.pointerId) return;
     if (ref.current && pointerId.current === event.pointerId && ref.current.hasPointerCapture(event.pointerId)) {
       ref.current.releasePointerCapture(event.pointerId);
     }
@@ -49,11 +52,11 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
 
   function pick(event: ReactMouseEvent, tag: RemoteTag) {
     event.stopPropagation();
-    if (dragged.current) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    if (dragged.current && event.detail !== 0) {
       event.preventDefault();
       return;
     }
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     if (!onPickTag) return;
     event.preventDefault();
     onPickTag(tag);
@@ -67,14 +70,16 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, c
       onPointerMove={onPointerMove}
       onPointerUp={stopDrag}
       onPointerCancel={stopDrag}
+      onPointerLeave={stopDrag}
+      onLostPointerCapture={stopDrag}
       onClick={(event) => event.stopPropagation()}
-      aria-label="远端标签"
+      aria-label="作品标签"
     >
       {tags.length === 0 ? (
         <span>{emptyLabel}</span>
       ) : (
         tags.map((tag) => (
-          <a key={tag.id} data-tag-type={tag.type || "tag"} href={tagSearchHref(tag)} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
+          <a key={tag.id} data-tag-type={tag.type || "tag"} href={hrefForTag(tag)} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
             {displayTag(tag)}
           </a>
         ))

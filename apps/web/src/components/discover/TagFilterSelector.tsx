@@ -226,7 +226,7 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
                 );
               })}
               {!error && !loading && !visible.length ? (
-                <p>{canSearchTag(normalizedQuery) ? "没有真实 tag 结果" : "暂无缓存 tag；输入中文或至少两个字符检索"}</p>
+                <p>{canSearchTag(normalizedQuery) ? "没有 tag 结果" : "暂无缓存 tag；输入中文或至少两个字符检索"}</p>
               ) : null}
             </div>
           </m.div>

@@ -24,7 +24,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
     <section className="folio-dictionary-evidence" aria-labelledby="folio-dictionary-evidence-title">
       <header className="folio-dictionary-evidence-head">
         <div><BookOpen size={17} /><strong id="folio-dictionary-evidence-title">应用预览与证据</strong></div>
-        <p>{loading ? "正在读取关联信息…" : "基于当前真实词条、远端标签与本地作品生成。"}</p>
+        <p>{loading ? "正在读取关联信息…" : "查看标签搭配与关联漫画。"}</p>
       </header>
 
       {!hasContext ? (
@@ -54,7 +54,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
                 <div className="folio-dictionary-co-tags">
                   {coTags.map((tag) => <a key={tag.id} href={tagSearchHref(tag)}>{tag.display}<b>{tag.count}</b></a>)}
                 </div>
-              ) : <em>暂无真实搭配标签。</em>}
+              ) : <em>暂无搭配标签。</em>}
             </article>
 
             <article>
@@ -75,7 +75,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
           </div>
 
           <section className="folio-dictionary-related">
-            <header><h3>关联作品</h3><span>{relatedWorks.length} 部真实作品</span></header>
+            <header><h3>关联作品</h3><span>{relatedWorks.length} 部作品</span></header>
             {relatedWorks.length ? (
               <Stagger className="folio-dictionary-work-grid">
                 {relatedWorks.map((work) => (
@@ -87,7 +87,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
                   </StaggerItem>
                 ))}
               </Stagger>
-            ) : <em className="folio-dictionary-related-empty">暂无真实关联作品。</em>}
+            ) : <em className="folio-dictionary-related-empty">暂无关联作品。</em>}
           </section>
         </FadeIn>
       )}

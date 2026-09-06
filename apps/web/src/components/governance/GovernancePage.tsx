@@ -37,14 +37,14 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
         </FadeIn>
       ) : null}
 
-      {gov.loading ? <div className="folio-governance-loading" role="status">正在读取真实治理队列…</div> : null}
+      {gov.loading ? <div className="folio-governance-loading" role="status">正在读取治理队列…</div> : null}
 
       {!gov.loading && gov.queue && gov.queue.result.length === 0 ? (
         <section className="folio-ruled-panel folio-governance-empty">
           <FolioEmptyState
             icon={PenLine}
             title="暂无待编辑作品"
-            copy="当前本地库没有需要治理的真实作品；导入或重新索引 CBZ 后，队列会按实际缺失项自动生成。"
+            copy="当前本地库没有需要治理的作品；导入或重新索引 CBZ 后，队列会按实际缺失项自动生成。"
           />
         </section>
       ) : null}

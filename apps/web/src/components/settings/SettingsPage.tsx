@@ -16,27 +16,27 @@ import "./SettingsPage.css";
 const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
   connection: {
     title: "数据源与连接",
-    copy: "管理远端接口、敏感凭据与当前运行态；密钥只报告配置状态，不会回显明文。",
+    copy: "配置漫画来源与 API 密钥。",
   },
   translation: {
     title: "机器翻译配置",
-    copy: "选择词典建议使用的服务、目标语言与单次批量边界。",
+    copy: "选择翻译服务、目标语言与批量数量。",
   },
   privacy: {
     title: "访问与阅读偏好",
     copy: "修改本地访问密码，并设置媒体封面的默认保护方式与阅读布局。",
   },
   export: {
-    title: "CBZ 默认配方",
+    title: "CBZ 导出默认值",
     copy: "只定义导出中心的起始选项，单次下载仍可临时调整。",
   },
   data: {
     title: "馆藏与阅读报表",
-    copy: "汇总真实馆藏、收藏、阅读时长、打开次数与内容偏好；不会生成或补写历史数据。",
+    copy: "查看阅读时长、作品排行与馆藏分布。",
   },
   storage: {
     title: "存储与路径",
-    copy: "只读核对当前数据目录、源文件占用与可回收空间。",
+    copy: "查看数据目录、文件占用与可回收空间。",
   },
 };
 
@@ -165,7 +165,7 @@ export function SettingsPage({
             <span className={vm.dirty ? "is-dirty" : ""} />
             <p>
               <strong>{vm.dirty ? "设置尚未保存" : "当前配置已同步"}</strong>
-              <small>{vm.dirty ? "保存后立即更新本机运行态" : "敏感值不会在页面中回显"}</small>
+              <small>{vm.dirty ? "更改尚未保存" : "密码与密钥已隐藏"}</small>
             </p>
           </div>
           <div className="folio-settings-action-buttons">

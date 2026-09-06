@@ -34,8 +34,8 @@ export function WorkbenchPage({ blurCovers }: { blurCovers: boolean }) {
                 <ContinueReadingRow title="继续阅读" works={overview.continue_reading} blurCovers={blurCovers} />
               ) : (
                 <section className="folio-ruled-panel folio-workbench-empty-shelf">
-                  <FolioPanelHeading title="继续阅读" description="阅读进度会在打开真实馆藏后回到这里。" />
-                  <FolioEmptyState icon={BookOpen} title="还没有可继续的阅读" copy="从我的库打开作品后，阅读器会自动保存真实进度。" />
+                  <FolioPanelHeading title="继续阅读" description="从上次读到的位置继续。" />
+                  <FolioEmptyState icon={BookOpen} title="还没有可继续的阅读" copy="打开漫画开始阅读，进度会自动保存。" />
                 </section>
               )}
               <ContinueReadingRow title="最近导入" works={overview.recent_added} blurCovers={blurCovers} />

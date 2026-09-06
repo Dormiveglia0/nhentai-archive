@@ -155,14 +155,14 @@ export function ConnectionSection({ vm }: { vm: SettingsVM }) {
       <FolioMetricGrid ariaLabel="连接状态" className="folio-settings-metric-group" items={connectionMetrics} />
 
       <div className="folio-settings-subhead">
-        <h3><Gauge size={16} />运行态与配额</h3>
+        <h3><Gauge size={16} />连接状态与配额</h3>
         <button className="folio-settings-mini-action" type="button" onClick={() => void loadRuntime()} disabled={runtimeLoading}>
           <RefreshCw size={14} className={runtimeLoading ? "spin" : undefined} />
-          刷新运行态
+          刷新状态
         </button>
       </div>
       {runtimeError ? <p className="folio-settings-inline-error" role="alert">{runtimeError}</p> : null}
-      <FolioMetricGrid ariaLabel="运行态与配额" className="folio-settings-metric-group is-runtime" items={runtimeMetrics} />
+      <FolioMetricGrid ariaLabel="连接状态与配额" className="folio-settings-metric-group is-runtime" items={runtimeMetrics} />
 
       <div className={`folio-settings-status-band${nh?.api_key_configured ? " is-ready" : " is-attention"}`}>
         <StatusDot ok={Boolean(nh?.api_key_configured)} />

@@ -1068,7 +1068,7 @@
   overflow-x: auto;
   cursor: grab;
   scrollbar-width: none;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 
 .folio-discover-card-tags::-webkit-scrollbar {

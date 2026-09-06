@@ -68,13 +68,13 @@ export function GalleryPagePreview({ detail, blurCovers }: { detail: GalleryDeta
   return (
     <section className="folio-gallery-preview">
       <header className="folio-gallery-section-head">
-        <div><Images size={18} /><span><h2>页面预览</h2><p>{isLocal ? "读取本地归档中的真实页面。" : "读取远端来源提供的真实页面。"}</p></span></div>
+        <div><Images size={18} /><span><h2>页面预览</h2><p>{isLocal ? "本地页面" : "在线页面"}</p></span></div>
         <small>{pages.length ? `${visiblePages.length} / ${pages.length} 页` : `${detail.page_count || 0} 页`}</small>
       </header>
 
       {loading ? <div className="folio-gallery-preview-loading" role="status" aria-label="正在读取本地页面"><i /><i /><i /><i /></div> : null}
       {error ? <div className="folio-gallery-preview-state is-error" role="alert">{error}</div> : null}
-      {!loading && !error && !pages.length ? <div className="folio-gallery-preview-state">此作品没有可预览的真实页面。</div> : null}
+      {!loading && !error && !pages.length ? <div className="folio-gallery-preview-state">此作品没有可预览的页面。</div> : null}
 
       {pages.length ? (
         <>

@@ -282,6 +282,21 @@
   text-align: center;
 }
 
+.folio-topnav::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(100% / 9);
+  background: var(--folio-red-soft);
+  border-bottom: 2px solid var(--folio-red);
+  transform: translateX(calc(var(--folio-nav-index) * 100%));
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.folio-topnav .folio-nav-active { display: none; }
+.folio-topnav a > svg { transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms ease; }
+.folio-topnav a:hover > svg, .folio-topnav a:focus-visible > svg { transform: translateY(-3px); color: var(--folio-red); }
+
 .folio-topnav a:first-child {
   border-left: 0;
 }
@@ -312,6 +327,8 @@
 .folio-mobile-nav {
   display: none;
 }
+
+.folio-nav-scrim { position: absolute; z-index: 49; inset: 0; background: rgba(23, 24, 21, 0.2); }
 
 .folio-scroll {
   min-width: 0;
@@ -368,6 +385,9 @@
   letter-spacing: -0.075em;
   line-height: 0.95;
 }
+
+
+.folio-page-head.is-offscreen .folio-scene * { animation-play-state: paused !important; }
 
 .folio-page-copy p {
   margin: 17px 0 0;

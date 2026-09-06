@@ -10,7 +10,7 @@ export function GovernanceDemo() {
     <div className="folio-page-body">
       <div className="folio-governance-layout">
         <aside className="folio-queue-rail">
-          <PanelHeading title="待编辑作品" description="真实入库后自动生成队列。" />
+          <PanelHeading title="待编辑作品" description="入库后自动生成队列。" />
           <div className="folio-rail-empty"><PenLine size={20} /><span>暂无待编辑作品</span></div>
         </aside>
 

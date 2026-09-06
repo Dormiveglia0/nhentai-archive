@@ -25,10 +25,23 @@
 .folio-shelf-head {
   min-height: 66px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   border-bottom: 1px solid var(--folio-line);
 }
+
+.folio-shelf-controls { display: flex; gap: 4px; margin-left: auto; }
+.folio-shelf-controls button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--folio-line);
+  background: transparent;
+  color: var(--folio-ink);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.folio-shelf-controls button:hover:not(:disabled) { background: var(--folio-ink); color: var(--folio-paper-bright); }
 
 .folio-shelf-head h2 {
   margin: 0;
@@ -42,18 +55,19 @@
 }
 
 .folio-shelf-track {
-  padding: 18px 0 4px;
+  padding: 20px 4px 6px;
   display: flex;
   gap: 14px;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
   cursor: grab;
-  touch-action: pan-y;
+  touch-action: auto;
 }
 
 .folio-shelf-track::-webkit-scrollbar { display: none; }
 .folio-shelf-track.is-dragging { cursor: grabbing; user-select: none; }
+.folio-shelf-track.is-dragging a { cursor: grabbing; }
 .folio-shelf-cell { flex: 0 0 auto; }
 
 .folio-shelf-item {
@@ -76,19 +90,37 @@
   border: 1px solid var(--folio-line);
   background: var(--folio-paper-deep);
   position: relative;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 240ms ease;
 }
 
-.folio-shelf-cover img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease;
+.folio-shelf-open {
+  position: absolute;
+  z-index: 2;
+  inset: auto 8px 12px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--folio-paper-bright);
+  color: var(--folio-red);
+  font-size: 12px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 180ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.folio-shelf-item:hover .folio-shelf-cover img { transform: scale(1.035); }
+.folio-shelf-item:focus-visible .folio-shelf-open { opacity: 1; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .folio-shelf-track:not(.is-dragging) .folio-shelf-item:hover .folio-shelf-cover {
+    transform: translateY(-4px) rotate(-1deg);
+    box-shadow: 4px 7px 0 var(--folio-red-soft);
+  }
+  .folio-shelf-track:not(.is-dragging) .folio-shelf-item:hover .folio-shelf-open { opacity: 1; transform: none; }
+}
 
 .folio-shelf-progress {
+  z-index: 3;
   height: 4px;
   position: absolute;
   inset: auto auto 0 0;
@@ -107,9 +139,13 @@
 }
 
 .folio-shelf-item small {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: var(--folio-muted);
   font-size: 12px;
 }
+.folio-shelf-item small svg { color: var(--folio-red); }
 
 .folio-library-toolbar {
   grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(120px, 0.58fr)) auto;

@@ -35,7 +35,7 @@ export function DictionaryDemo({ announce }: { announce: (message: string) => vo
       <div className="folio-dictionary-layout">
         <section className="folio-candidate-panel">
           <div className="folio-panel-toolbar">
-            <PanelHeading title="候选术语池" description="只展示真实远端标签与已保存词条。" />
+            <PanelHeading title="候选术语池" description="只展示远端标签与已保存词条。" />
             <button ref={bulkTriggerRef} className="folio-line-button" type="button" onClick={() => setBulkOpen(true)}><Upload size={15} />批量导入</button>
           </div>
           <SearchField value={query} onChange={setQuery} placeholder="搜索原文或中文词条" />
@@ -53,7 +53,7 @@ export function DictionaryDemo({ announce }: { announce: (message: string) => vo
           </div>
           <div className="folio-empty-table">
             <div><span>原文</span><span>类型</span><span>状态</span></div>
-            <p>没有真实候选术语</p>
+            <p>没有候选术语</p>
           </div>
         </section>
 
@@ -66,7 +66,7 @@ export function DictionaryDemo({ announce }: { announce: (message: string) => vo
             <DemoField label="备注" placeholder="标题、系列名或使用说明" />
           </div>
           <div className="folio-editor-actions">
-            <button className="folio-line-button" type="button" onClick={() => announce("当前没有可预览的真实作品。")}>应用预览</button>
+            <button className="folio-line-button" type="button" onClick={() => announce("当前没有可预览的作品。")}>应用预览</button>
             <button className="folio-ink-button" type="button" onClick={() => announce("演示页不会写入本地词典。")}><Save size={15} />保存词条</button>
           </div>
         </section>

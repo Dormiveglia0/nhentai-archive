@@ -23,7 +23,7 @@ function chromeRoute(activePage: ShelledPageName): { page: FolioPageId; heading?
       page: "library",
       heading: {
         title: "阅读轨迹",
-        description: "按真实打开时间回看阅读进度，并从上次停留处继续。",
+        description: "按打开时间回看阅读进度，并从上次停留处继续。",
       },
     };
   }

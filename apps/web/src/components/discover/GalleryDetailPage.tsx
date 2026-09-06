@@ -33,7 +33,7 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
           <ArrowLeft size={15} />
           {backLabel}
         </button>
-        <span>作品档案 · 真实来源</span>
+        <span>作品详情</span>
       </header>
 
       <AnimatePresence mode="wait" initial={false}>

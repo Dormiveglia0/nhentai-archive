@@ -21,7 +21,7 @@ export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; 
   return (
     <section className="folio-gallery-related">
       <header className="folio-gallery-section-head">
-        <div><Layers3 size={18} /><span><h2>相关作品</h2><p>由远端来源返回的真实关联结果。</p></span></div>
+        <div><Layers3 size={18} /><span><h2>相关作品</h2><p>更多相关漫画。</p></span></div>
         <small>{related.length} 项</small>
       </header>
       <Stagger className="folio-gallery-related-list">

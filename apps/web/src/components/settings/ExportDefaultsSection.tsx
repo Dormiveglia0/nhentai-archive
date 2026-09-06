@@ -47,7 +47,7 @@ export function ExportDefaultsSection({ vm }: { vm: SettingsVM }) {
       <div className="folio-settings-manifest" aria-label="导出内容预览">
         <div className="folio-settings-manifest-title">
           <FileArchive size={18} />
-          <span><strong>包结构</strong><small>最终内容以所选真实作品为准</small></span>
+          <span><strong>包结构</strong><small>最终内容以所选作品为准</small></span>
         </div>
         <ul>
           <li><code>页面图像（保留原名）</code><em>始终包含</em></li>

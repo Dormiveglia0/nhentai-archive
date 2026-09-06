@@ -15,7 +15,7 @@ export function WorkbenchMetricStrip({ overview }: { overview: WorkbenchOverview
 
   return (
     <FolioMetricGrid
-      ariaLabel="工作台真实状态"
+      ariaLabel="工作台状态"
       className="folio-workbench-summary"
       items={metrics.map((metric) => ({
         ...metric,

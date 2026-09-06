@@ -29,8 +29,8 @@ export function WorkbenchDemo({ onNavigate }: { onNavigate: (page: FolioPageId) 
 
       <div className="folio-workbench-grid">
         <section className="folio-ruled-panel folio-reading-panel">
-          <PanelHeading title="继续阅读" description="阅读进度会在接入真实馆藏后出现在这里。" />
-          <EmptyCanvas icon={BookOpen} title="还没有可继续的阅读" copy="导入真实 CBZ 并打开阅读器后，进度会自动回到工作台。" />
+          <PanelHeading title="继续阅读" description="从上次读到的位置继续。" />
+          <EmptyCanvas icon={BookOpen} title="还没有可继续的阅读" copy="导入 CBZ 并打开阅读器后，进度会自动回到工作台。" />
         </section>
 
         <section className="folio-module-ledger">

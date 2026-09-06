@@ -34,7 +34,7 @@ export function FileDetailPanel({ focus, blurCovers, busy, onClose, onDelete }: 
       <AnimatePresence mode="wait" initial={false}>
         {!focus ? (
           <m.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <FolioEmptyState icon={FileQuestion} title="尚未选择文件" copy="选择清单中的任意条目后，这里会显示真实路径、状态与可用操作。" />
+            <FolioEmptyState icon={FileQuestion} title="尚未选择文件" copy="选择清单中的任意条目后，这里会显示路径、状态与可用操作。" />
           </m.div>
         ) : (
           <FileDetail key={focus.id} focus={focus} blurCovers={blurCovers} busy={busy} onClose={onClose} onDelete={onDelete} />

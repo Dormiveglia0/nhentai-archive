@@ -51,11 +51,11 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
 
       <div className="folio-split-layout">
         <section className="folio-ruled-panel">
-          <PanelHeading title="馆藏" description={query ? "当前搜索不会发送到服务器。" : "全部真实入库作品会显示在这里。"} />
+          <PanelHeading title="馆藏" description={query ? "当前搜索不会发送到服务器。" : "全部入库作品会显示在这里。"} />
           <EmptyCanvas
             icon={Library}
             title="库里还没有作品"
-            copy="公开演示不生成假作品。前往发现页后，仍可体验完整的检索与导入界面。"
+            copy="当前为演示模式，可前往发现页查看检索界面。"
             action="打开发现页"
             onAction={() => onNavigate("discover")}
           />
@@ -63,7 +63,7 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
         <aside className="folio-inspector">
           <span>Inspector</span>
           <h2>作品详情</h2>
-          <p>选择一部真实作品后，这里显示封面、阅读进度、来源与标签。</p>
+          <p>选择一部作品后，这里显示封面、阅读进度、来源与标签。</p>
           <div className="folio-inspector-lines"><i /><i /><i /><i /></div>
         </aside>
       </div>

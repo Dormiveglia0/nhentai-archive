@@ -46,7 +46,7 @@ export function TaskInspector(props: Props) {
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  if (!job) return <aside className="folio-tasks-inspector"><div className="folio-tasks-inspector-empty">选择一个真实任务查看阶段、进度与日志。</div></aside>;
+  if (!job) return <aside className="folio-tasks-inspector"><div className="folio-tasks-inspector-empty">选择一个任务查看阶段、进度与日志。</div></aside>;
 
   const galleryId = numberTarget(job, "gallery_id");
   const workId = numberTarget(job, "work_id");

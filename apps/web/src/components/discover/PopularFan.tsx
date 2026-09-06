@@ -27,7 +27,7 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
       </header>
 
       {loading && !visibleItems.length ? (
-        <div className="folio-discover-popular-loading" role="status">正在读取真实热门作品…</div>
+        <div className="folio-discover-popular-loading" role="status">正在读取热门作品…</div>
       ) : (
         <div className="folio-discover-popular-track" role="list">
           {visibleItems.map((item, index) => {

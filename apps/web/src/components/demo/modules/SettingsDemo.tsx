@@ -141,7 +141,7 @@ export function SettingsDemo({
           ) : null}
 
           {section === "data" ? (
-            <EmptyCanvas icon={BarChart3} title="演示环境未连接本地馆藏" copy="这里不会生成统计数字。接入真实后端后，再显示馆藏、阅读进度和语言分布。" />
+            <EmptyCanvas icon={BarChart3} title="演示环境未连接本地馆藏" copy="连接漫画库后查看阅读与收藏统计。" />
           ) : null}
 
           {section === "storage" ? (
@@ -151,7 +151,7 @@ export function SettingsDemo({
                 <DemoField label="源文件占用" placeholder="—" readOnly />
                 <DemoField label="可回收空间" placeholder="—" readOnly />
               </div>
-              <EmptyCanvas icon={HardDrive} title="存储状态保持空白" copy="磁盘占用、缺失源文件与清理建议只会来自真实本机数据。" />
+              <EmptyCanvas icon={HardDrive} title="存储状态保持空白" copy="连接服务后查看磁盘占用与文件状态。" />
             </>
           ) : null}
         </m.section>

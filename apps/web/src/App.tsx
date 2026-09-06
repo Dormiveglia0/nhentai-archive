@@ -99,7 +99,6 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
     page.name === "reader" || page.name === "readerRemote" ? null : page,
   );
   const archiveRouteRef = useRef<HTMLDivElement>(null);
-  const readerRouteRef = useRef<HTMLDivElement>(null);
   const archiveFocusRef = useRef<HTMLElement | null>(null);
   const archiveFocusPageRef = useRef("");
   const archivePage = page.name === "reader" || page.name === "readerRemote" ? lastArchivePage.current : page;
@@ -121,7 +120,7 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
         : null;
       archiveFocusPageRef.current = lastArchivePage.current ? pageHref(lastArchivePage.current) : "";
       if (archiveRoute) archiveRoute.inert = true;
-      readerRouteRef.current?.focus({ preventScroll: true });
+      document.querySelector<HTMLElement>(".app-route-reader")?.focus({ preventScroll: true });
       return;
     }
     if (archiveRoute) archiveRoute.inert = false;
@@ -170,7 +169,6 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
       <AnimatePresence initial={false} mode="sync">
         {readerSource ? (
           <m.div
-            ref={readerRouteRef}
             className="app-route-reader"
             key="reader"
             role="main"

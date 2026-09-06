@@ -7,7 +7,7 @@ import { formatBytes } from "./libraryHelpers";
 
 export function LibrarySummaryStrip({ summary }: { summary: LibrarySummary | null }) {
   if (!summary) {
-    return <div className="folio-library-summary-loading" role="status">正在读取真实馆藏摘要…</div>;
+    return <div className="folio-library-summary-loading" role="status">正在读取馆藏摘要…</div>;
   }
 
   const metrics = [
@@ -21,7 +21,7 @@ export function LibrarySummaryStrip({ summary }: { summary: LibrarySummary | nul
 
   return (
     <FolioMetricGrid
-      ariaLabel="馆藏真实摘要"
+      ariaLabel="馆藏摘要"
       className="folio-library-summary"
       items={metrics.map((metric) => ({
         label: metric.label,

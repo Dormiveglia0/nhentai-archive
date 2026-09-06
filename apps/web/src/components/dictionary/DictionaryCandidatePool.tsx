@@ -70,7 +70,7 @@ export function DictionaryCandidatePool(props: Props) {
         <div>
           <span>Candidate pool</span>
           <h2 id="folio-dictionary-candidate-title">候选术语池</h2>
-          <p>{props.loading ? "正在读取真实缓存…" : `当前页 ${props.candidates.length} 项`}</p>
+          <p>{props.loading ? "正在读取缓存…" : `当前页 ${props.candidates.length} 项`}</p>
         </div>
         <div className="folio-dictionary-head-actions">
           <button className="folio-line-button" type="button" onClick={props.onBulkImport}>
@@ -136,7 +136,7 @@ export function DictionaryCandidatePool(props: Props) {
           })}
         </Stagger>
         {!props.loading && props.candidates.length === 0 ? (
-          <div className="folio-dictionary-empty">暂无真实候选。先在发现页缓存远端标签，或使用批量导入创建本地词典。</div>
+          <div className="folio-dictionary-empty">暂无候选。先在发现页缓存远端标签，或使用批量导入创建本地词典。</div>
         ) : null}
       </div>
 

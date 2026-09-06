@@ -43,7 +43,7 @@ export function DiscoverFeed(props: Props) {
       ) : null}
 
       {props.loading && !props.items.length ? (
-        <div className="folio-discover-loading" role="status">正在读取真实远端结果…</div>
+        <div className="folio-discover-loading" role="status">正在读取远端结果…</div>
       ) : null}
 
       {!props.loading && !props.error && props.items.length === 0 ? (

@@ -70,18 +70,19 @@ export function FadeInOut({
 
 const staggerParent: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: stagger.base } },
+  show: { transition: { delayChildren: (index: number) => Math.min(index * stagger.base, duration.fast) } },
 };
 
 /** 列表/网格容器,子项用 <StaggerItem> 逐项进场。 */
 export const Stagger = forwardRef<HTMLDivElement, StaggerProps>(function Stagger({ children, className, ...rest }, ref) {
+  const reduce = usePrefersReducedMotion();
   return (
     <m.div
       ref={ref}
       {...rest}
       className={className}
       variants={staggerParent}
-      initial="hidden"
+      initial={reduce ? false : "hidden"}
       animate="show"
     >
       {children}

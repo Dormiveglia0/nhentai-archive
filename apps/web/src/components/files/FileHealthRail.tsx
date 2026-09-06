@@ -61,7 +61,7 @@ export function FileHealthRail({
       <header className="folio-files-column-head">
         <span>Maintenance</span>
         <h2>维护与健康</h2>
-        <p>所有破坏性操作都先显示真实影响。</p>
+        <p>删除前可预览文件清单。</p>
       </header>
 
       <RailSection icon={ShieldCheck} title="索引健康">
@@ -72,7 +72,7 @@ export function FileHealthRail({
             <HealthRow label="孤立文件" count={overview.orphan_count} />
             <HealthRow label="临时残留" count={overview.stale_count} />
           </ul>
-        ) : <p className="folio-files-dim">正在读取真实索引…</p>}
+        ) : <p className="folio-files-dim">正在读取索引…</p>}
       </RailSection>
 
       <RailSection icon={Copy} title="重复检查">

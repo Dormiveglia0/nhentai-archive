@@ -19,7 +19,7 @@ export function GalleryTags({ detail }: { detail: GalleryDetail }) {
   return (
     <section className="folio-gallery-tags">
       <header className="folio-gallery-section-head">
-        <div><Tags size={18} /><span><h2>标签索引</h2><p>选择任意真实标签，返回发现页继续检索。</p></span></div>
+        <div><Tags size={18} /><span><h2>标签索引</h2><p>点击标签搜索更多漫画。</p></span></div>
         <small>{detail.tags.length} 个标签</small>
       </header>
       <Stagger className="folio-gallery-tag-groups">

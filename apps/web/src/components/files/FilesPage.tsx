@@ -67,7 +67,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
           <header className="folio-files-column-head">
             <span>Managed inventory</span>
             <h2 id="folio-files-list-title">文件清单</h2>
-            <p>数据库索引与受管目录的实时对照。</p>
+            <p>查看已导入文件与目录扫描结果。</p>
           </header>
           <FileList
             entries={entries}
