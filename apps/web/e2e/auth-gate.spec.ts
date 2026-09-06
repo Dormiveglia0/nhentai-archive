@@ -73,7 +73,16 @@ test("服务断开可重连，慢速登录保留可见的验证状态", async ({
   await submit.click();
   await expect(submit).toBeVisible();
   await expect(submit).toBeDisabled();
-  await expect(submit).toHaveText("正在验证…");
+  await expect(submit).toHaveText("正在验证");
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    const text = submit.locator("span");
+    const box = await text.boundingBox();
+    const button = await submit.boundingBox();
+    expect(box!.height).toBeLessThan(25);
+    expect(box!.x).toBeGreaterThanOrEqual(button!.x);
+    expect(box!.x + box!.width).toBeLessThan(button!.x + button!.width);
+  }
   await expect(page.locator(".auth-wake-real-app")).toHaveCount(0);
   releaseLogin();
   await expect(page.locator(".auth-wake-demo")).toHaveClass(/auth-wake-awake/);

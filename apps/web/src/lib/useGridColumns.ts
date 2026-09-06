@@ -45,13 +45,13 @@ type BalancedGridStyle = CSSProperties & {
 export function balanceGridRows(itemCount: number, maxColumns: number) {
   const count = Math.max(0, Math.trunc(itemCount));
   const columns = Math.max(1, Math.trunc(maxColumns));
-  if (!count) return {
+  const rows = Math.max(1, Math.ceil(count / columns));
+  const narrowRow = Math.floor(count / rows);
+  if (count <= columns || narrowRow < columns * .8) return {
     style: { "--folio-grid-tracks": columns, "--folio-grid-span": 1, "--folio-grid-tail-span": 1 } as BalancedGridStyle,
     tailStart: 0,
   };
 
-  const rows = Math.ceil(count / columns);
-  const narrowRow = Math.floor(count / rows);
   const wideRow = Math.ceil(count / rows);
   const wideRows = count - narrowRow * rows;
   const tracks = narrowRow === wideRow ? wideRow : narrowRow * wideRow;

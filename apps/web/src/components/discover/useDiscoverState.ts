@@ -454,6 +454,8 @@ function scrollDiscoverTo(top: number) {
 
 function scrollDiscoverFeedToTop() {
   window.requestAnimationFrame(() => {
-    document.querySelector<HTMLElement>(".folio-discover-feed")?.scrollIntoView({ block: "start", behavior: "auto" });
+    const scroll = discoverScrollElement();
+    const feed = document.querySelector<HTMLElement>(".folio-discover-feed");
+    if (scroll && feed) scroll.scrollTo({ top: scroll.scrollTop + feed.getBoundingClientRect().top - scroll.getBoundingClientRect().top, behavior: "auto" });
   });
 }

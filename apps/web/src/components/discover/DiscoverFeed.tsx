@@ -31,7 +31,7 @@ export function DiscoverFeed(props: Props) {
   return (
     <section className="folio-discover-feed" aria-busy={props.loading}>
       <header className="folio-discover-feed-head">
-        <FolioPanelHeading title="远端索引" description="结果、标签和导入状态均来自当前远端响应与本地索引。" />
+        <FolioPanelHeading title="远端索引" description="浏览漫画，或按标签查找。" />
         <span>{props.loading ? "读取中…" : discoverCount(props.items.length, props.total)}</span>
       </header>
 
@@ -50,7 +50,7 @@ export function DiscoverFeed(props: Props) {
         <FolioEmptyState
           icon={Search}
           title="暂无结果"
-          copy="这里不会填充样例作品；调整关键词、标签或筛选条件，或者先在设置中配置远端连接。"
+          copy="试试其他关键词，或调整标签和筛选条件。"
         />
       ) : null}
 

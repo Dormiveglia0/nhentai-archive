@@ -11,8 +11,6 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 
 import { api, AUTH_REQUIRED_EVENT, type AuthStatus } from "../../lib/api";
 import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
-import { FOLIO_PAGES } from "../folio/config";
-import { WorkbenchScene } from "../folio/scenes/WorkbenchScene";
 import { FolioChrome } from "../folio/shell/FolioChrome";
 import "../folio/Folio.css";
 import "./AuthWakeDemo.css";
@@ -28,6 +26,7 @@ const PREVIEW_PASSWORD = "archive";
 
 export function AuthWakeDemo({ children, preview = false }: Props) {
   const reduceMotion = usePrefersReducedMotion();
+  const gateRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const appRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<AuthStatus | null>(preview ? { configured: true, authenticated: false, session_days: 90 } : null);
@@ -85,7 +84,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
 
   useEffect(() => {
     if (phase !== "success") return;
-    const timer = window.setTimeout(() => setPhase("awake"), reduceMotion ? 0 : 760);
+    const timer = window.setTimeout(() => setPhase("awake"), reduceMotion ? 0 : 600);
     return () => window.clearTimeout(timer);
   }, [phase, reduceMotion]);
 
@@ -97,12 +96,22 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
   const fieldLabel = setup ? (confirming ? "再次输入" : "设置密码") : "访问密码";
   const actionLabel = setup ? (confirming ? "确认并进入" : "继续") : "登录";
   const realApp = Boolean(status?.authenticated && children && !preview);
-  const revealApp = realApp || (preview && (phase === "success" || awake));
+  const revealApp = awake && (realApp || preview);
 
   useEffect(() => {
     if (!awake) return;
-    const target = appRef.current?.querySelector<HTMLElement>(".app-route-reader") ?? appRef.current?.querySelector<HTMLElement>("main");
-    target?.focus({ preventScroll: true });
+    const app = appRef.current;
+    if (!app) return;
+    const focusPage = () => {
+      const target = app.querySelector<HTMLElement>(".app-route-reader, main");
+      target?.focus({ preventScroll: true });
+      return Boolean(target);
+    };
+    if (focusPage()) return;
+    // A lazy route may commit after the gate opens.
+    const observer = new MutationObserver(() => { if (focusPage()) observer.disconnect(); });
+    observer.observe(app, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, [awake]);
 
   function resetForm() {
@@ -165,6 +174,11 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
       setFormError(null);
       inputRef.current?.blur();
       setShowPassword(false);
+      const field = gateRef.current?.querySelector(".auth-wake-field")?.getBoundingClientRect();
+      if (field && gateRef.current) {
+        gateRef.current.style.setProperty("--wake-start-y", `${field.bottom - 1}px`);
+        gateRef.current.style.setProperty("--wake-start-scale", String(field.width / gateRef.current.clientWidth));
+      }
       setPhase("success");
       setPassword("");
       setConfirmation("");
@@ -196,6 +210,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
 
   return (
     <div
+      ref={gateRef}
       className={`folio folio-no-command auth-wake-demo auth-wake-${phase}${focused ? " is-focused" : ""}${revealApp ? " has-real-app" : ""}`}
       aria-busy={phase === "loading" || locked}
     >
@@ -211,35 +226,14 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
             </FolioChrome>
           )}
         </div>
-      ) : (
-        <div className="auth-wake-backdrop" aria-hidden="true">
-          <header className="auth-wake-topbar">
-            <div className="auth-wake-brand">
-              <span className="auth-wake-brand-mark"><span>NH</span><i /></span>
-              <span className="auth-wake-brand-copy"><strong>Archive</strong><small>local collection</small></span>
-            </div>
-            <div className="auth-wake-nav">
-              {FOLIO_PAGES.map((item, index) => {
-                const Icon = item.icon;
-                return <span key={item.id} className={index === 0 ? "is-active" : ""}><Icon size={17} /><strong>{item.label}</strong></span>;
-              })}
-            </div>
-          </header>
-          <section className="auth-wake-shell">
-            <header className="auth-wake-page-head">
-              <div><h2>{FOLIO_PAGES[0].title}</h2><p>{FOLIO_PAGES[0].description}</p></div>
-              <div className="auth-wake-scene"><svg viewBox="0 0 540 230" preserveAspectRatio="xMaxYMid meet"><WorkbenchScene /></svg></div>
-            </header>
-            <div className="auth-wake-page-body"><div className="auth-wake-shell-loading"><span /><span /><span /><span /></div></div>
-          </section>
-        </div>
-      )}
+      ) : null}
       <div className="auth-wake-registration" aria-hidden="true"><span /><span /><span /><span /></div>
       {!awake ? (
         phase === "loading" ? (
           <div className="auth-wake-connecting" role="status"><LoaderCircle size={22} className="spin" /><span>正在连接…</span></div>
         ) : (
           <section className="auth-wake-access" aria-label="访问控制">
+            <div className="auth-wake-identity" aria-label="NH Archive"><span>NH</span><strong>Archive</strong></div>
             <header><h1>登录</h1><strong role="status">{stateLabel}</strong></header>
             {phase === "offline" ? (
               <div className="auth-wake-status" role="alert"><span>{statusError}</span><button type="button" onClick={() => void loadStatus()}>重新连接</button></div>
@@ -290,7 +284,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     <button className="auth-wake-submit" type="submit" disabled={locked} aria-label={actionLabel}>
-                      <span>{phase === "submitting" ? "正在验证…" : phase === "success" ? "已验证，正在进入" : confirming ? "确认" : actionLabel}</span>
+                      <span>{phase === "submitting" ? "正在验证" : phase === "success" ? "已验证" : confirming ? "确认" : actionLabel}</span>
                       {phase === "submitting" ? <LoaderCircle size={19} className="spin" /> : phase === "success" ? <Check size={19} /> : <ArrowRight size={19} />}
                     </button>
                     </div>

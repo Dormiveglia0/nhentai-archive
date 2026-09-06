@@ -91,15 +91,16 @@
 
 .folio-binding-progress {
   width: 3px;
-  height: calc(var(--folio-scroll-size) * 100%);
-  min-height: 14px;
+  height: 100%;
   display: block;
   position: absolute;
-  top: calc(var(--folio-scroll-offset) * 100%);
+  top: 0;
+  transform-origin: top;
+  transform: translateY(calc(var(--folio-scroll-offset) * 100%)) scaleY(var(--folio-scroll-size));
   left: 17px;
   background: linear-gradient(180deg, rgba(173, 56, 46, 0.48), var(--folio-red) 8% 92%, rgba(173, 56, 46, 0.48));
   box-shadow: 4px 0 11px rgba(173, 56, 46, 0.12);
-  transition: top 180ms cubic-bezier(0.22, 1, 0.36, 1), height 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
 }
 
 .folio-atmosphere {

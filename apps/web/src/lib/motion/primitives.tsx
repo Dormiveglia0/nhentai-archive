@@ -1,5 +1,5 @@
 import { m, AnimatePresence, type HTMLMotionProps, type Variants } from "motion/react";
-import { forwardRef, type PropsWithChildren, type ReactNode } from "react";
+import { Children, forwardRef, type PropsWithChildren, type ReactNode } from "react";
 import { duration, ease, stagger } from "./tokens";
 import { usePrefersReducedMotion } from "./useReducedMotion";
 
@@ -68,11 +68,6 @@ export function FadeInOut({
   );
 }
 
-const staggerParent: Variants = {
-  hidden: {},
-  show: { transition: { staggerChildren: stagger.base } },
-};
-
 /** 列表/网格容器,子项用 <StaggerItem> 逐项进场。 */
 export const Stagger = forwardRef<HTMLDivElement, StaggerProps>(function Stagger({ children, className, ...rest }, ref) {
   const reduce = usePrefersReducedMotion();
@@ -81,7 +76,7 @@ export const Stagger = forwardRef<HTMLDivElement, StaggerProps>(function Stagger
       ref={ref}
       {...rest}
       className={className}
-      variants={staggerParent}
+      variants={{ hidden: {}, show: { transition: { staggerChildren: Math.min(stagger.base, stagger.maxDelay / Math.max(1, Children.count(children) - 1)) } } }}
       initial={reduce ? false : "hidden"}
       animate="show"
     >

@@ -109,6 +109,7 @@
   padding: 14px 4px 28px;
   display: flex;
   align-items: end;
+  justify-content: center;
   gap: clamp(7px, 0.9vw, 13px);
   position: relative;
   z-index: 1;
@@ -143,6 +144,7 @@
   min-width: 0;
   min-height: 0;
   flex: var(--popular-ratio, 0.75) 1 0;
+  max-width: calc(var(--popular-ratio, .75) * 240px);
   display: grid;
   border: 1px solid var(--folio-line-strong);
   background: rgba(250, 247, 239, 0.86);

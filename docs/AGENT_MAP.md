@@ -8,7 +8,7 @@ Use this file as the first frontend navigation index. Read only the row for the 
 - Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
 - Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
-- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Preserve the original Folio login wake sequence (focus registration, scan, line convergence and app reveal); no standalone card or welcome slogans.
+- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login is an independent paper surface with no pre-auth page silhouettes or content. Preserve focus feedback and the measured field-edge → responsive topbar scan, followed by app reveal; no welcome slogans.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
 
 ## Demo Dependency Map
@@ -78,7 +78,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Tag-search URL + middle/modifier-click contract | `lib/navigation.ts::tagSearchHref()` for remote discovery and `libraryTagHref()` for local-library drill-downs; each owner must render a native anchor |
 | Back-button history contract | `lib/navigation.ts::goBack()`; visible “返回” controls pop browser history and must not synthesize a destination entry |
 | Reader failed-image retry fan-out | `reader/ReaderViewport.tsx` owns the shared retry token; `ReaderImage.tsx` retries only instances currently in an error state |
-| Actual grid-track measurement and whole-row page sizes | `lib/useGridColumns.ts`; library rounds its 24-item target up to a full row, discover requests four measured rows |
+| Actual grid-track measurement, whole-row page sizes and sparse-row size limits | `lib/useGridColumns.ts`; library rounds its 24-item target up to a full row, discover requests four measured rows |
 | Local favorites | `works.favorite`; library `WorkCard`/`WorkInspector` and reader `ReaderInfoPanel` mutate it through `api.setWorkFavorite()`; it is intentionally distinct from the remote gallery metric named `favorites` |
 | Reading-time sessions and reports | `reader/useReadingSession.ts` records visible foreground time for local and cached remote galleries with secure-context fallbacks; local sessions also create reading history while remote sessions never write local progress. `settings/ReadingStatisticsReport.tsx` renders their shared period/activity/ranking view plus local-only collection distribution from `api.libraryStatistics()` |
 

@@ -90,14 +90,19 @@
   border: 1px solid var(--folio-line);
   background: var(--folio-paper-deep);
   position: relative;
-  transition: border-color 160ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 220ms cubic-bezier(.22, 1, .36, 1);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .folio-shelf-track:not(.is-dragging) .folio-shelf-item:hover .folio-shelf-cover {
     border-color: var(--folio-red);
+    box-shadow: 0 0 0 2px var(--folio-red), 0 5px 12px rgba(23, 24, 21, .16);
+    transform: translateY(-3px);
   }
+  .folio-shelf-item:hover strong { color: var(--folio-red); }
 }
+
+.folio-shelf-item:focus-visible .folio-shelf-cover { border-color: var(--folio-red); box-shadow: 0 0 0 2px var(--folio-red); }
 
 .folio-shelf-progress {
   z-index: 3;
@@ -409,7 +414,7 @@
 
 .folio-select-menu {
   min-width: 100%;
-  padding: 5px;
+  padding: 0;
   border: 1px solid var(--folio-line-strong);
   background: var(--folio-paper-bright);
   box-shadow: 8px 10px 20px rgba(23, 24, 21, 0.12);

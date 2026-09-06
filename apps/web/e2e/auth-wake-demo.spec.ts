@@ -75,10 +75,12 @@ test("界面唤醒演示尊重减少动态效果设置", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "工作台" })).toBeVisible();
 });
 
-test("登录扫描线展开到顶栏，页面随后渐亮进入", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+for (const width of [1440, 834, 660, 390]) test(`登录过渡按顺序对齐输入框和顶栏：${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
   await page.goto("/auth-concept");
   await page.getByLabel("访问密码", { exact: true }).fill("archive");
+  await expect(page.locator(".auth-wake-backdrop, .auth-wake-real-app")).toHaveCount(0);
+  const field = await page.locator(".auth-wake-field").boundingBox();
   const frames = await page.evaluate(() => new Promise<Array<{ success: boolean; awake: boolean; y: number; width: number; opacity: number }>>((resolve) => {
     const samples: Array<{ success: boolean; awake: boolean; y: number; width: number; opacity: number }> = [];
     const start = performance.now();
@@ -95,8 +97,13 @@ test("登录扫描线展开到顶栏，页面随后渐亮进入", async ({ page 
   }));
   const flight = frames.filter((frame) => frame.success);
   expect(flight.length).toBeGreaterThan(3);
+  expect(flight.every(frame => frame.opacity === 0)).toBe(true);
+  expect(Math.abs(flight[0].y - (field!.y + field!.height - 1))).toBeLessThan(2);
   expect(flight[0].y - flight.at(-1)!.y).toBeGreaterThan(100);
-  expect(flight.at(-1)!.width - flight[0].width).toBeGreaterThan(200);
+  expect(flight.at(-1)!.width - flight[0].width).toBeGreaterThan(width < 700 ? 20 : 100);
   expect(frames.some((frame) => frame.awake && frame.opacity > 0.15 && frame.opacity < 0.9)).toBe(true);
   await expect(page.locator(".auth-wake-real-app")).toHaveCSS("opacity", "1");
+  const topbar = await page.locator(".folio-topbar").boundingBox();
+  expect(topbar!.y).toBe(0);
+  expect(Math.abs(flight.at(-1)!.y - topbar!.height)).toBeLessThan(2);
 });
