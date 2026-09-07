@@ -1,5 +1,3 @@
-import { ArrowRight } from "lucide-react";
-
 export function TasksScene() {
   return (
     <>
@@ -23,8 +21,8 @@ export function TasksScene() {
         <path d="M98 168h52" />
       </g>
       <g className="folio-scene-task-transfer">
-        <ArrowRight x={177} y={99} width={24} height={24} strokeWidth={1.2} />
-        <ArrowRight x={328} y={99} width={24} height={24} strokeWidth={1.2} />
+        <path d="M190 108.5h9m-4-4 4 4-4 4" />
+        <path d="M341 108.5h9m-4-4 4 4-4 4" />
       </g>
       <g className="folio-scene-task-running-progress">
         <path d="M222 168h96" />

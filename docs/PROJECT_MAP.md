@@ -474,4 +474,4 @@ npm run build
 
 - Cover thumbnail endpoint: `GET /api/works/{id}/cover?w=512` validates width 64–1024, reads the extracted cover (works even if the CBZ is missing), reuses atomic JPEG caching under `thumbs/`, and follows existing reimport invalidation. Omitting `w` preserves the original file endpoint; no schema changes.
 
-设置标题场景由 `folio/scenes/SettingsScene.tsx` 与 `styles/scenes.css` / `feedback-motion.css` 维护：旋钮、三条滑轨和开关共享9秒校准节奏，正式页与演示页复用；不读取配置或模拟保存状态。
+设置标题场景由 `folio/scenes/SettingsScene.tsx` 与 `styles/scenes.css` / `feedback-motion.css` 维护：无外框的三条竖向滑轨与齿轮共享9秒校准节奏，正式页与演示页复用；不读取配置或模拟保存状态。

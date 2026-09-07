@@ -61,4 +61,4 @@ The 2026-09-07 interaction revision keeps native links in all four library/workb
 - Static scan touched files for mock/sample/random hardcoded records.
 - For visual work, run browser screenshot QA with real local data and include screenshots in the status update.
 
-设置标题动画使用纸色调节面板：旋钮分段转动，三滑块依次调整，开关落定后统一复位。保留局部 transform、离屏暂停及 reduced-motion，勿恢复图标轮播或整面板浮动。
+设置标题动画使用无外框的开放式滑轨与齿轮，依次调节后复位；不要恢复面板外框、图标轮播或整组浮动。保留局部 transform、离屏暂停及 reduced-motion。队列箭头固定于列间中央，用透明度表达阶段；完成标记必须晚于卡片淡出。文字条及匹配框的缩放原点必须相对自身，词典文字跟随书页。运行 scene-motion.spec.ts 检查完整周期定位，并对九页采样检查。

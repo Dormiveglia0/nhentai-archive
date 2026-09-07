@@ -8,7 +8,7 @@ export function DiscoverScene() {
       </g>
       <g className="folio-scene-search-lens">
         <circle cx="305" cy="110" r="66" />
-        <path d="m354 159 72 58" />
+        <path d="m354 159 32 26" />
         <g className="folio-scene-search-match">
           <rect x="270" y="87" width="70" height="46" rx="3" />
           <circle cx="284" cy="101" r="4" />

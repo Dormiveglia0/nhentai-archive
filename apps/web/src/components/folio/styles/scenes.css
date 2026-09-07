@@ -193,6 +193,8 @@
 }
 
 .folio-scene-search-match {
+  transform-box: fill-box;
+  transform-origin: center;
   animation: folio-scene-discover-match 2.07s ease-in-out infinite;
 }
 
@@ -271,6 +273,7 @@
 }
 
 .folio-scene-dictionary-slots rect {
+  transform-box: fill-box;
   fill: rgba(23, 24, 21, 0.1);
   stroke: none;
   animation: folio-scene-lexicon-slot 6s ease-in-out infinite;
@@ -361,17 +364,15 @@
 }
 
 .folio-scene-task-transfer {
-  color: rgba(173, 56, 46, 0.62);
+  stroke: rgba(173, 56, 46, 0.62);
 }
 
-.folio-scene-task-transfer > svg {
-  transform-box: fill-box;
-  transform-origin: center;
+.folio-scene-task-transfer > path {
   animation: folio-scene-task-transfer 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
-.folio-scene-task-transfer > svg:last-child {
-  animation-delay: -0.45s;
+.folio-scene-task-transfer > path:last-child {
+  animation-name: folio-scene-task-transfer-next;
 }
 
 .folio-scene-task-running-progress {
@@ -529,30 +530,21 @@
   animation: folio-scene-file-drawer 9s ease-in-out infinite;
 }
 
-.folio-scene-settings-panel { stroke: rgba(23, 24, 21, 0.32); }
-.folio-scene-settings-panel > rect { fill: rgba(250, 247, 239, 0.55); }
-.folio-scene-settings-fine { stroke: rgba(23, 24, 21, 0.17); }
-.folio-scene-settings-dial-face { fill: rgba(173, 56, 46, 0.035); }
-.folio-scene-settings-needle {
-  stroke: var(--folio-red);
-  transform-origin: 154px 108px;
-  animation: folio-scene-settings-dial 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-.folio-scene-settings-needle circle,
-.folio-scene-settings-hub { fill: var(--folio-red); stroke: none; }
-.folio-scene-settings-thumb {
+.folio-scene-settings-guides { stroke: rgba(23, 24, 21, 0.22); }
+.folio-scene-settings-link { stroke-dasharray: 2 5; }
+.folio-scene-settings-slider {
   stroke: var(--folio-red);
   animation: folio-scene-settings-adjust 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
-.folio-scene-settings-thumb rect { fill: var(--folio-paper); }
-.folio-scene-settings-slider-a { --adjust-x: 85px; }
-.folio-scene-settings-slider-b { --adjust-x: -85px; }
-.folio-scene-settings-slider-c { --adjust-x: 42px; }
-.folio-scene-settings-slider-b .folio-scene-settings-thumb { animation-name: folio-scene-settings-adjust-b; }
-.folio-scene-settings-slider-c .folio-scene-settings-thumb { animation-name: folio-scene-settings-adjust-c; }
-.folio-scene-settings-switch rect { fill: rgba(173, 56, 46, 0.06); stroke: rgba(173, 56, 46, 0.35); }
-.folio-scene-settings-switch circle {
-  fill: var(--folio-red);
-  stroke: none;
-  animation: folio-scene-settings-switch 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+.folio-scene-settings-slider circle { fill: var(--folio-paper-bright); }
+.folio-scene-settings-slider-a { --adjust-y: 56px; }
+.folio-scene-settings-slider-b { --adjust-y: -56px; animation-name: folio-scene-settings-adjust-b; }
+.folio-scene-settings-slider-c { --adjust-y: 56px; animation-name: folio-scene-settings-adjust-c; }
+.folio-scene-settings-gear {
+  fill: rgba(250, 247, 239, 0.6);
+  stroke: rgba(23, 24, 21, 0.36);
+  transform-origin: 410px 112px;
+  animation: folio-scene-settings-dial 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
+.folio-scene-settings-index { stroke: var(--folio-red); stroke-width: 2; }
+.folio-scene-settings-hub { fill: var(--folio-red); stroke: none; }
