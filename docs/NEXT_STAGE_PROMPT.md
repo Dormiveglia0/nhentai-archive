@@ -60,3 +60,5 @@ The 2026-09-07 interaction revision keeps native links in all four library/workb
 - `git diff --check`
 - Static scan touched files for mock/sample/random hardcoded records.
 - For visual work, run browser screenshot QA with real local data and include screenshots in the status update.
+
+设置标题动画使用纸色调节面板：旋钮分段转动，三滑块依次调整，开关落定后统一复位。保留局部 transform、离屏暂停及 reduced-motion，勿恢复图标轮播或整面板浮动。

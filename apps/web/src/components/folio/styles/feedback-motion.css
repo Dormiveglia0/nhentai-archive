@@ -307,47 +307,31 @@
   70%, 82% { transform: translateY(9px); }
 }
 
-@keyframes folio-scene-settings-console {
-  0%, 100% { opacity: 0.76; transform: translateY(1px); }
-  50% { opacity: 1; transform: translateY(-1px); }
+@keyframes folio-scene-settings-dial {
+  0%, 8%, 100% { transform: rotate(-45deg); }
+  20%, 30% { transform: rotate(45deg); }
+  42%, 52% { transform: rotate(0deg); }
+  64%, 82% { transform: rotate(90deg); }
 }
 
-@keyframes folio-scene-settings-cursor {
-  0%, 26% { opacity: 1; transform: translateX(0); }
-  33%, 59% { opacity: 1; transform: translateX(136px); }
-  66%, 94% { opacity: 1; transform: translateX(272px); }
-  97% { opacity: 0; transform: translateX(272px); }
-  98% { opacity: 0; transform: translateX(0); }
-  100% { opacity: 1; transform: translateX(0); }
+@keyframes folio-scene-settings-adjust {
+  0%, 8%, 100% { transform: translateX(0); }
+  22%, 84% { transform: translateX(var(--adjust-x)); }
 }
 
-@keyframes folio-scene-settings-cell {
-  0%, 21%, 100% { color: var(--folio-red); opacity: 1; }
-  33%, 88% { color: rgba(23, 24, 21, 0.32); opacity: 0.54; }
+@keyframes folio-scene-settings-adjust-b {
+  0%, 30%, 100% { transform: translateX(0); }
+  42%, 84% { transform: translateX(var(--adjust-x)); }
 }
 
-@keyframes folio-scene-settings-status-dot {
-  0%, 26% { opacity: 1; transform: translateX(0) scale(1); }
-  33%, 59% { opacity: 1; transform: translateX(136px) scale(1); }
-  66%, 90% { opacity: 1; transform: translateX(272px) scale(1); }
-  94% { opacity: 1; transform: translateX(272px) scale(1.45); }
-  97% { opacity: 0; transform: translateX(272px) scale(0.7); }
-  98% { opacity: 0; transform: translateX(0) scale(0.7); }
-  100% { opacity: 1; transform: translateX(0) scale(1); }
+@keyframes folio-scene-settings-adjust-c {
+  0%, 52%, 100% { transform: translateX(0); }
+  64%, 84% { transform: translateX(var(--adjust-x)); }
 }
 
-@keyframes folio-scene-settings-status-rail {
-  0%, 26% { stroke-dasharray: 0 100; opacity: 0.8; }
-  33%, 59% { stroke-dasharray: 50 100; opacity: 0.8; }
-  66%, 94% { stroke-dasharray: 100 100; opacity: 0.8; }
-  97% { stroke-dasharray: 100 100; opacity: 0; }
-  98% { stroke-dasharray: 0 100; opacity: 0; }
-  100% { stroke-dasharray: 0 100; opacity: 0.8; }
-}
-
-@keyframes folio-scene-settings-status-check {
-  0%, 72%, 100% { opacity: 0; transform: scale(0.7) rotate(-8deg); }
-  78%, 94% { opacity: 1; transform: scale(1) rotate(0); }
+@keyframes folio-scene-settings-switch {
+  0%, 58%, 100% { transform: translateX(0); }
+  66%, 84% { transform: translateX(24px); }
 }
 
 @keyframes folio-paper-light {
