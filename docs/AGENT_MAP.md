@@ -66,7 +66,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
 | Formal summary/status metric entries and semantic tones | `folio/ui/FolioMetricGrid.tsx` + `folio/styles/workbench.css` |
-| Shared pagination, tag scroller, work shelf, and non-cropping cover frame | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx`, `AmbientCover.tsx` |
+| Shared pagination, tag scroller, work shelf, and cover frame (portrait fill on cards/shelves; full-image contain on detail/reader) | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx`, `AmbientCover.tsx` |
 | Shared byte and work-title formatting | `lib/format.ts` |
 | Shared job labels, status rules, and action predicates | `lib/jobs.ts` |
 | Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |

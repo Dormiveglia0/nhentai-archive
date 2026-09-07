@@ -34,7 +34,7 @@ export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickT
       <a href={href} className={`folio-discover-cover${isLandscape ? " is-landscape" : ""}`} onClick={openCurrent} aria-label={`打开作品详情：${title}`}>
         {item.thumbnail.url ? (
           <AmbientCover
-            className={`folio-discover-cover-artwork${isLandscape ? " is-landscape" : ""}`}
+            className={`folio-discover-cover-artwork is-fill-portrait${isLandscape ? " is-landscape" : ""}`}
             src={item.thumbnail.url}
             alt=""
             privateBlur={blurCovers}

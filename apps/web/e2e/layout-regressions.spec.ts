@@ -53,9 +53,12 @@ test("稀疏馆藏保留正常列宽，书架悬停明确，热门作品铺满�
   await page.goto('/#discover');
   const covers = page.locator('.folio-discover-popular-media');
   await expect(covers).toHaveCount(5, { timeout: 20_000 });
-  const heights = await covers.evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().height));
-  expect(Math.max(...heights)).toBeLessThanOrEqual(560);
-  expect(Math.min(...heights)).toBeGreaterThan(400);
+  await expect.poll(() => covers.evaluateAll(nodes => nodes.every(n => (n.querySelector('img.folio-ambient-cover-artwork') as HTMLImageElement).naturalHeight > 0))).toBe(true);
+  const ratios = await covers.evaluateAll(nodes => nodes.map(n => ({
+    actual: (n as HTMLElement).clientWidth / (n as HTMLElement).clientHeight,
+    expected: (n.querySelector('img.folio-ambient-cover-artwork') as HTMLImageElement).naturalWidth / (n.querySelector('img.folio-ambient-cover-artwork') as HTMLImageElement).naturalHeight,
+  })));
+  for (const ratio of ratios) expect(Math.abs(ratio.actual - ratio.expected)).toBeLessThan(.003);
   const track = await page.locator('.folio-discover-popular-track').boundingBox();
   await expect.poll(async () => {
     const first = await covers.first().boundingBox();
@@ -121,4 +124,22 @@ test("快速切换只保留当前页面，视窗动画完成后释放位移并�
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.locator(".folio-topnav a[href='#library']").click();
   expect(await page.locator('.folio-scroll').evaluate(n => n.getAnimations().length)).toBe(0);
+});
+
+
+test("作品卡和书架的竖向封面贴边填充，横向封面完整展示", async ({ page }) => {
+  for (const width of [2560, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1440 });
+    await page.goto('/#library');
+    const portraits = page.locator('.folio-shelf-cover .folio-ambient-cover-artwork[data-orientation="portrait"]');
+    await expect(portraits.first()).toHaveCSS('object-fit', 'cover');
+    const landscape = page.locator('.folio-shelf-cover .folio-ambient-cover-artwork[data-orientation="landscape"]');
+    await expect(landscape.first()).toHaveCSS('object-fit', 'contain');
+    await page.goto('/#discover');
+    const first = page.locator('.folio-discover-card').first();
+    await first.scrollIntoViewIfNeeded();
+    const image = page.locator('.folio-discover-cover-artwork .folio-ambient-cover-artwork[data-orientation="portrait"]').first();
+    await expect(image).toHaveCSS('object-fit', 'cover');
+    expect(await image.evaluate(n => n.clientWidth === n.parentElement!.clientWidth && n.clientHeight === n.parentElement!.clientHeight)).toBe(true);
+  }
 });

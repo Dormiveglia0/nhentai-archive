@@ -235,7 +235,6 @@
 .folio-discover-popular-media {
   width: 100%;
   aspect-ratio: var(--popular-ratio, 0.75);
-  max-height: clamp(300px, 40dvh, 560px);
   display: grid;
   place-items: center;
   overflow: hidden;

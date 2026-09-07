@@ -43,6 +43,9 @@ export function AmbientCover({
         loading={loading}
         decoding="async"
         draggable={draggable}
+        onLoad={({ currentTarget: image }) => {
+          image.dataset.orientation = image.naturalWidth > image.naturalHeight ? "landscape" : "portrait";
+        }}
         onError={onError}
       />
     </span>

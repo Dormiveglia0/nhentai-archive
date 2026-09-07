@@ -326,10 +326,10 @@ Root: `apps/web/src/`
   - Local `WorkCard` supplies `hrefForTag={libraryTagHref}` so middle/modifier clicks preserve the library search scope; remote callers use the default discover link. Touch scrolling and keyboard activation remain native after a drag.
   - Uses `tag.display || tag.name || tag.slug || id`, so dictionary display names flow without rewriting card logic.
 - `components/folio/ui/AmbientCover.tsx`
-  - Shared primary-cover frame for popular, gallery hero, and reader info. The foreground always uses `contain`; a non-semantic duplicate supplies the blurred/dimmed ambient fill so mismatched ratios do not create dead bands or crop meaningful artwork.
+  - Shared primary-cover frame for popular, gallery hero, and reader info. The default foreground uses `contain`; a non-semantic duplicate supplies blurred/dimmed ambient fill. Discover cards and shared shelves opt into `is-fill-portrait`: natural image dimensions recorded on load select portrait `cover` sizing so narrow portrait covers do not expose bands inside fixed frames. Landscape covers, gallery heroes and reader info remain contained.
 - `components/discover/PopularFan.tsx`
   - Real `/api/discover/popular` five-item ranked editorial showcase between the Folio heading and search workbench. It has no viewport state, drag state or fabricated entries; every cover, title, count, import state and action comes from the real payload.
-  - Desktop fills the available track with five frames and copy below the image; media height uses clamp(300px, 40dvh, 560px), and the artwork remains contained. Mobile keeps all five visible in the existing two-plus-three arrangement. Dense discover rows have independent natural heights, avoiding stretched tag/action gaps.
+  - Desktop fills the available track with five frames and copy below the image; media keeps each image’s real aspect ratio without an independent height cap, and the artwork remains contained. Mobile keeps all five visible in the existing two-plus-three arrangement. Dense discover rows have independent natural heights, avoiding stretched tag/action gaps.
   - Cards expose only real title/page/favorite/import state and never fabricate badges or statistics.
 - `components/discover/GalleryDetailPage.tsx` + `components/discover/gallery/`
   - Direct route-local gallery composition split into real data/model, fixed-slot hero, full-width tag ledger, initial page preview, keyboard/focus-restoring lightbox, and related works. It imports no demo state.

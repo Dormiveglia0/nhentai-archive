@@ -50,6 +50,10 @@
   transition: filter 220ms ease;
 }
 
+.folio-ambient-cover.is-fill-portrait .folio-ambient-cover-artwork[data-orientation="portrait"] {
+  object-fit: cover;
+}
+
 .folio-ambient-cover.is-private .folio-ambient-cover-backdrop {
   filter: blur(24px) saturate(0.38) brightness(0.54);
   opacity: 0.72;
