@@ -163,7 +163,7 @@ export function FolioChrome({
         </AnimatePresence>
         <main ref={scrollRef} className="folio-scroll" tabIndex={-1} onScroll={handleScroll}>
           <div key={routeKey} className="folio-page" ref={restoreRouteScroll}>
-            {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}
+            {heading === false || page === "workbench" ? null : <PageHeading page={current} title={heading?.title} />}
             {children}
           </div>
         </main>

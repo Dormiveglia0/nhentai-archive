@@ -28,7 +28,7 @@ test("界面唤醒演示覆盖输入、错误与成功转场", async ({ page }) 
   await expect(input).toHaveAttribute("type", "text");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page.locator(".auth-wake-demo")).toHaveClass(/auth-wake-awake/, { timeout: 4_000 });
-  await expect(page.getByRole("heading", { name: "工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "已登录" })).toBeVisible();
   await page.waitForTimeout(900);
   await page.screenshot({ path: "/tmp/auth-wake-desktop-awake.png", fullPage: true });
 
@@ -72,7 +72,7 @@ test("界面唤醒演示尊重减少动态效果设置", async ({ page }) => {
   await page.getByLabel("访问密码", { exact: true }).fill("archive");
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page.locator(".auth-wake-demo")).toHaveClass(/auth-wake-awake/);
-  await expect(page.getByRole("heading", { name: "工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "已登录" })).toBeVisible();
 });
 
 for (const width of [1440, 834, 660, 390]) test(`登录过渡按顺序对齐输入框和顶栏：${width}px`, async ({ page }) => {

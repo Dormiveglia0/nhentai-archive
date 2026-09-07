@@ -3,7 +3,7 @@ import { AlertTriangle, BookMarked, ClipboardList, HardDrive } from "lucide-reac
 import type { WorkbenchOverview } from "../../lib/api";
 import { NumberTicker } from "../effects/NumberTicker";
 import { FolioMetricGrid, type FolioMetricTone } from "../folio/ui/FolioMetricGrid";
-import { formatBytes } from "./workbenchHelpers";
+import { formatBytes } from "../../lib/format";
 
 export function WorkbenchMetricStrip({ overview }: { overview: WorkbenchOverview }) {
   const metrics = [
@@ -15,7 +15,7 @@ export function WorkbenchMetricStrip({ overview }: { overview: WorkbenchOverview
 
   return (
     <FolioMetricGrid
-      ariaLabel="工作台状态"
+      ariaLabel="馆藏状态"
       className="folio-workbench-summary"
       items={metrics.map((metric) => ({
         ...metric,

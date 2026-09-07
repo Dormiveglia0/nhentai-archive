@@ -431,7 +431,6 @@ test.describe("界面与封面回归", () => {
   test("所有主页面使用同一页头场景尺寸且切页不缩放", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const routes = [
-      ["workbench", "工作台"],
       ["library", "我的库"],
       ["discover", "发现 / 导入"],
       ["governance", "治理工作台"],

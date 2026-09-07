@@ -9,10 +9,8 @@ import { GovernanceScene } from "./GovernanceScene";
 import { LibraryScene } from "./LibraryScene";
 import { SettingsScene } from "./SettingsScene";
 import { TasksScene } from "./TasksScene";
-import { WorkbenchScene } from "./WorkbenchScene";
 
-const SCENES: Record<FolioPageId, ComponentType> = {
-  workbench: WorkbenchScene,
+const SCENES: Record<Exclude<FolioPageId, "workbench">, ComponentType> = {
   library: LibraryScene,
   discover: DiscoverScene,
   governance: GovernanceScene,
@@ -24,6 +22,7 @@ const SCENES: Record<FolioPageId, ComponentType> = {
 };
 
 export function ModuleScene({ page }: { page: FolioPageId }) {
+  if (page === "workbench") return null;
   const Scene = SCENES[page];
   return (
     <div className={`folio-scene folio-scene-${page}`} aria-hidden="true">

@@ -1,29 +1,12 @@
 export function GovernanceScene() {
   return (
     <>
-      <g className="folio-scene-governance-board">
-        <g className="folio-scene-governance-card folio-scene-governance-source">
-          <rect x="58" y="30" width="192" height="168" rx="5" />
-          <circle cx="78" cy="49" r="5" />
-          <path d="M78 67h152M78 87h137M78 151h118M78 174h91" />
-        </g>
-        <g className="folio-scene-governance-card folio-scene-governance-local">
-          <rect x="290" y="30" width="192" height="168" rx="5" />
-          <circle cx="310" cy="49" r="5" />
-          <path d="M310 67h152M310 87h137M310 151h118M310 174h91" />
-          <rect className="folio-scene-governance-target" x="310" y="103" width="150" height="32" rx="3" />
-        </g>
-        <path className="folio-scene-governance-bridge" pathLength="100" d="M256 119h28m-7-7 7 7-7 7" />
-      </g>
-      <g className="folio-scene-governance-change">
-        <rect x="78" y="103" width="150" height="32" rx="3" />
-        <circle cx="95" cy="119" r="5" />
-        <path d="M108 114h92M108 124h68" />
-      </g>
-      <g className="folio-scene-governance-stamp">
-        <circle cx="454" cy="51" r="18" />
-        <path d="m444 51 7 7 14-18" />
-      </g>
+      <g className="folio-scene-edit-sheet"><path d="M310 34h146l26 26v140H310ZM456 34v26h26" /><path d="M332 56h75M332 183h126" /></g>
+      <path className="folio-scene-edit-guide" d="M210 50h72M210 112h72M210 174h72M270 40v144" />
+      <g className="folio-scene-edit-label folio-scene-edit-label-a"><rect x="70" y="50" width="110" height="24" rx="2" /><circle cx="82" cy="62" r="3" /><path d="M94 62h66" /></g>
+      <g className="folio-scene-edit-label folio-scene-edit-label-b"><rect x="90" y="100" width="110" height="24" rx="2" /><circle cx="102" cy="112" r="3" /><path d="M114 112h54" /></g>
+      <g className="folio-scene-edit-label folio-scene-edit-label-c"><rect x="60" y="155" width="110" height="24" rx="2" /><circle cx="72" cy="167" r="3" /><path d="M84 167h72" /></g>
+      <g className="folio-scene-edit-seal"><circle cx="462" cy="187" r="20" /><path d="m451 187 8 8 15-18" /></g>
     </>
   );
 }

@@ -1,51 +1,32 @@
 import { BookOpen, RefreshCw } from "lucide-react";
-
 import { FadeIn } from "../../lib/motion";
-import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
+import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
+import { HomeHero } from "../folio/ui/HomeHero";
 import { WorkbenchMetricStrip } from "./WorkbenchMetricStrip";
-import { WorkbenchModuleCards } from "./WorkbenchModuleCards";
 import { useWorkbenchState } from "./useWorkbenchState";
 import "./WorkbenchPage.css";
 
 export function WorkbenchPage({ blurCovers }: { blurCovers: boolean }) {
   const { overview, loading, refreshing, error, refresh } = useWorkbenchState();
-
   return (
     <section className="folio-page-body folio-workbench-page">
-      <div className="folio-workbench-toolbar">
-        <span><strong>实时状态</strong><small>馆藏 · 治理 · 任务 · 文件</small></span>
-        <button type="button" onClick={() => void refresh()} disabled={refreshing || loading}>
-          <RefreshCw size={15} className={refreshing ? "spin" : undefined} />
-          刷新
-        </button>
-      </div>
-
+      <HomeHero works={overview?.recent_added} total={overview?.library.total} blurCovers={blurCovers} />
       {error ? <div className="folio-workbench-error" role="alert">{error}</div> : null}
-
-      {loading && !overview ? (
-        <div className="folio-workbench-loading" role="status">正在加载工作台数据...</div>
-      ) : overview ? (
+      {loading && !overview ? <div className="folio-workbench-loading" role="status">正在加载馆藏...</div> : overview ? (
         <FadeIn className="folio-workbench-body" y={8}>
-          <WorkbenchMetricStrip overview={overview} />
-          <div className="folio-workbench-content">
-            <div className="folio-workbench-shelves">
-              {overview.continue_reading.length ? (
-                <ContinueReadingRow title="继续阅读" works={overview.continue_reading} blurCovers={blurCovers} />
-              ) : (
-                <section className="folio-ruled-panel folio-workbench-empty-shelf">
-                  <FolioPanelHeading title="继续阅读" description="从上次读到的位置继续。" />
-                  <FolioEmptyState icon={BookOpen} title="还没有可继续的阅读" copy="打开漫画开始阅读，进度会自动保存。" />
-                </section>
-              )}
-              <ContinueReadingRow title="最近导入" works={overview.recent_added} blurCovers={blurCovers} />
-            </div>
-            <WorkbenchModuleCards overview={overview} />
+          <div className="folio-workbench-shelves">
+            {overview.continue_reading.length ? <ContinueReadingRow title="继续阅读" works={overview.continue_reading} blurCovers={blurCovers} /> :
+              <FolioEmptyState icon={BookOpen} title="还没有阅读记录" copy="" />}
+            <ContinueReadingRow title="最近导入" works={overview.recent_added} blurCovers={blurCovers} />
           </div>
+          <section className="folio-home-status" aria-label="馆藏状态">
+            <div className="folio-workbench-toolbar"><h2>馆藏概览</h2><button type="button" onClick={() => void refresh()} disabled={refreshing || loading}><RefreshCw size={15} className={refreshing ? "spin" : undefined} />刷新</button></div>
+            <WorkbenchMetricStrip overview={overview} />
+            <nav aria-label="管理入口"><a href="#governance">治理</a><a href="#tasks">队列</a><a href="#files">文件</a><a href="#settings">设置</a></nav>
+          </section>
         </FadeIn>
-      ) : (
-        <div className="folio-workbench-loading">暂无工作台数据。</div>
-      )}
+      ) : <button className="folio-home-retry" type="button" onClick={() => void refresh()} disabled={refreshing}>重新加载</button>}
     </section>
   );
 }

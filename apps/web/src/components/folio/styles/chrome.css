@@ -343,7 +343,7 @@
   min-height: 228px;
   padding: 38px clamp(34px, 4vw, 70px) 32px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   border-bottom: 1px solid var(--folio-line);
   position: relative;
   overflow: hidden;
@@ -377,13 +377,6 @@
 
 .folio-page-head.is-offscreen .folio-scene * { animation-play-state: paused !important; }
 
-.folio-page-copy p {
-  margin: 17px 0 0;
-  color: var(--folio-muted);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  line-height: 1.7;
-}
 
 @media (min-width: 901px) {
   .folio-page-library .folio-page-body,

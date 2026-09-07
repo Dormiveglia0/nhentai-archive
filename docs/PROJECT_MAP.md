@@ -433,13 +433,13 @@ Root: `apps/web/src/`
   - `TaskInspector.tsx` — focused job target, circular progress, errors/retry-after, bulk-export or scan facts, real controls, copy feedback, and durable job log timeline.
   - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
   - Failed bulk exports and failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel. Browser visual QA never triggers these mutations.
-- `components/workbench/` — daily workbench dashboard:
+- `components/workbench/` — presentation homepage:
   - `WorkbenchPage.tsx` — first directly migrated Folio route. Keeps the real overview hook/API flow while owning new semantic page structure; it does not wrap the legacy dashboard or import demo content.
-  - `WorkbenchPage.css` — production-only toolbar, metric, shelf-grid, and module-ledger layout. The replaced `.workbench-*` rules were removed from `styles/app.css`.
+  - `WorkbenchPage.css` — production-only shelves, bottom overview and refresh controls. The replaced `.workbench-*` rules were removed from `styles/app.css`.
   - `useWorkbenchState.ts` — fetches `GET /api/workbench/overview`; manages loading/error/refresh state.
   - `WorkbenchMetricStrip.tsx` — hairline thin-number strip showing real metrics: 馆藏作品 / 待治理 / 失败任务 / 缺失源文件.
-  - `WorkbenchModuleCards.tsx` — ruled module ledger (治理 / 任务 / 文件 / 导出) linking to `#governance` / `#tasks` / `#files` / `#export`.
-  - `workbenchHelpers.ts` — shared label/formatting utilities.
+  - `folio/ui/HomeHero.tsx` / `HomeHero.css` — presentation homepage shared with demo; real recent-added cover fan, reader/library/discovery links, live collection count.
+  - Shared byte formatting comes directly from `lib/format.ts`; the old module ledger/helper are removed.
   - Reuses `ContinueReadingRow` (from folio/ui) with direct shared Folio shelf markup for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
 - `styles/app.css`
   - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
@@ -475,3 +475,5 @@ npm run build
 - Cover thumbnail endpoint: `GET /api/works/{id}/cover?w=512` validates width 64–1024, reads the extracted cover (works even if the CBZ is missing), reuses atomic JPEG caching under `thumbs/`, and follows existing reimport invalidation. Omitting `w` preserves the original file endpoint; no schema changes.
 
 设置标题场景由 `folio/scenes/SettingsScene.tsx` 与 `styles/scenes.css` / `feedback-motion.css` 维护：无外框的三条竖向滑轨与齿轮共享9秒校准节奏，正式页与演示页复用；不读取配置或模拟保存状态。
+
+2026-09-07 首页阶段：导航显示“首页”，保留 #workbench 路由；首屏使用 HomeHero，书架与管理概览在其下方。FolioChrome 首页不再渲染标准标题场景，其他页面标题移除说明段落。队列为文件经过处理环的流转，治理为条目依次归整到档案；动画前缀分别 queue/edit。站点图标为 public/icon.svg（朱红 NH 组合字母），index.html favicon 与首页复用。

@@ -5,7 +5,7 @@ import {
   FileArchive,
   Folder,
   Languages,
-  LayoutDashboard,
+  House,
   KeyRound,
   Library,
   PenLine,
@@ -36,7 +36,7 @@ export type PageDefinition = {
 };
 
 export const FOLIO_PAGES: PageDefinition[] = [
-  { id: "workbench", label: "工作台", title: "工作台", description: "继续阅读，查看最近导入和任务进度。", icon: LayoutDashboard },
+  { id: "workbench", label: "首页", title: "首页", description: "继续阅读，查看最近导入和任务进度。", icon: House },
   { id: "library", label: "我的库", title: "我的库", description: "浏览、筛选和管理已收藏的漫画。", icon: Library },
   { id: "discover", label: "发现", title: "发现 / 导入", description: "搜索漫画，在线阅读或加入我的库。", icon: Search },
   { id: "governance", label: "治理", title: "治理工作台", description: "补全作品信息，整理标签与文件。", icon: PenLine },

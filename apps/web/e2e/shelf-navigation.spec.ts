@@ -37,14 +37,14 @@ test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async
     Object.assign(window, { metricFrames: samples });
     const start = performance.now();
     function sample() {
-      const text = document.querySelector(".folio-workbench-summary .fx-scope")?.textContent;
+      const text = document.querySelector(".folio-home-edition .fx-scope")?.textContent;
       if (text) samples.push(Number(text.replaceAll(",", "")));
       if (performance.now() - start < 4_000) requestAnimationFrame(sample);
     }
     requestAnimationFrame(sample);
   });
   await page.goto("/#workbench");
-  const total = page.locator(".folio-workbench-summary .fx-scope").first();
+  const total = page.locator(".folio-home-edition .fx-scope").first();
   await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));
   const frames = await page.evaluate(() => (window as unknown as { metricFrames: number[] }).metricFrames);
   expect(frames.some((value) => value > 0 && value < overview.library.total)).toBe(true);
@@ -52,9 +52,12 @@ test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async
     await page.emulateMedia({ reducedMotion });
     await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));
   }
-  await page.locator(".folio-scroll").evaluate((node) => { node.scrollTop = 600; });
+  await page.goto("/#library");
+  await page.locator(".folio-shelf-item").first().waitFor();
+  await expect(page.locator(".folio-scroll")).toHaveCSS("transform", "none");
+  await page.locator(".folio-scroll").evaluate((node) => { node.scrollTop = node.scrollHeight; });
   await expect(page.locator(".folio-page-head")).toHaveClass(/is-offscreen/);
-  await expect(page.locator(".folio-scene-hub-orbits")).toHaveCSS("animation-play-state", "paused");
+  await expect(page.locator(".folio-scene-library-file")).toHaveCSS("animation-play-state", "paused");
 });
 
 for (const [route, titles] of [
@@ -65,7 +68,7 @@ for (const [route, titles] of [
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => { if (["error", "warning"].includes(message.type())) errors.push(message.text()); });
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.setViewportSize({ width: 980, height: 1000 });
     for (const title of titles) {
       await page.goto(`/#${route}`);
       const shelf = page.locator(".folio-shelf").filter({ has: page.getByRole("heading", { name: title, exact: true }) });

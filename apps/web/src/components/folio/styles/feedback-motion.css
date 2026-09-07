@@ -99,40 +99,8 @@
   }
 }
 
-@keyframes folio-scene-orbit {
-  to { transform: rotate(360deg); }
-}
-
 @keyframes folio-scene-dash {
   to { stroke-dashoffset: -140; }
-}
-
-@keyframes folio-scene-core {
-  0%, 100% { opacity: 0.72; transform: scale(0.94) rotate(-2deg); }
-  50% { opacity: 1; transform: scale(1.04) rotate(2deg); }
-}
-
-@keyframes folio-scene-hub-panel {
-  0%, 100% { opacity: 0.42; stroke: rgba(23, 24, 21, 0.22); transform: scale(0.96); }
-  36%, 58% { opacity: 1; stroke: var(--folio-red); transform: scale(1.04); }
-  76% { opacity: 0.68; stroke: rgba(68, 95, 82, 0.5); transform: scale(1); }
-}
-
-@keyframes folio-scene-hub-scan {
-  0%, 14%, 100% { opacity: 0; transform: translateY(0); }
-  24% { opacity: 1; }
-  64% { opacity: 0.86; transform: translateY(46px); }
-  72% { opacity: 0; transform: translateY(46px); }
-}
-
-@keyframes folio-scene-hub-pulse {
-  0% { opacity: 0.42; transform: scale(0.72); }
-  72%, 100% { opacity: 0; transform: scale(2.45); }
-}
-
-@keyframes folio-scene-node {
-  0%, 100% { opacity: 0.45; transform: scale(0.7); }
-  50% { opacity: 1; transform: scale(1.35); }
 }
 
 @keyframes folio-scene-file-in {
@@ -173,27 +141,28 @@
   82% { opacity: 0; transform: translateY(40px); }
 }
 
-@keyframes folio-scene-review-bridge {
-  0%, 18%, 100% { opacity: 0.22; stroke-dashoffset: 100; }
-  28%, 52% { opacity: 0.78; stroke-dashoffset: 0; }
-  72%, 90% { opacity: 0.32; stroke-dashoffset: -100; }
+@keyframes folio-scene-edit-align {
+  0%, 8%, 100% { transform: translate(0,0); opacity: 1; }
+  28%, 86% { transform: translate(var(--label-x),var(--label-y)); opacity: 1; }
+  93% { transform: translate(var(--label-x),var(--label-y)); opacity: 0; }
+  94% { transform: translate(0,0); opacity: 0; }
 }
-
-@keyframes folio-scene-review-apply {
-  0%, 5%, 100% { opacity: 0; stroke: var(--folio-red); transform: translateX(0) scale(0.96); }
-  10%, 20% { opacity: 1; stroke: var(--folio-red); transform: translateX(0) scale(1); }
-  38%, 82% { opacity: 1; stroke: var(--folio-green); transform: translateX(232px) scale(1); }
-  92% { opacity: 0; stroke: var(--folio-green); transform: translateX(232px) scale(0.96); }
+@keyframes folio-scene-edit-align-b {
+  0%, 24%, 100% { transform: translate(0,0); opacity: 1; }
+  44%, 86% { transform: translate(var(--label-x),var(--label-y)); opacity: 1; }
+  93% { transform: translate(var(--label-x),var(--label-y)); opacity: 0; }
+  94% { transform: translate(0,0); opacity: 0; }
 }
-
-@keyframes folio-scene-review-value {
-  0%, 20%, 100% { fill: rgba(173, 56, 46, 0.13); }
-  34%, 92% { fill: rgba(68, 95, 82, 0.14); }
+@keyframes folio-scene-edit-align-c {
+  0%, 40%, 100% { transform: translate(0,0); opacity: 1; }
+  60%, 86% { transform: translate(var(--label-x),var(--label-y)); opacity: 1; }
+  93% { transform: translate(var(--label-x),var(--label-y)); opacity: 0; }
+  94% { transform: translate(0,0); opacity: 0; }
 }
-
-@keyframes folio-scene-review-stamp {
-  0%, 60%, 100% { opacity: 0; transform: scale(1.45) rotate(-12deg); }
-  70%, 90% { opacity: 1; transform: scale(1) rotate(0); }
+@keyframes folio-scene-edit-seal {
+  0%, 64%, 100% { opacity: 0; transform: scale(.65) rotate(-12deg); }
+  74%, 86% { opacity: 1; transform: scale(1) rotate(0); }
+  93% { opacity: 0; transform: scale(1); }
 }
 
 @keyframes folio-scene-lexicon-open {
@@ -217,44 +186,26 @@
   50% { opacity: 1; transform: translateY(2px) scaleY(1); }
 }
 
-@keyframes folio-scene-task-advance {
-  0%, 100% { opacity: 0; transform: translateX(0) scale(0.9); }
-  8%, 20% { opacity: 1; transform: translateX(0) scale(1); }
-  36%, 50% { opacity: 1; transform: translateX(151px) scale(1.02); }
-  66%, 70% { opacity: 1; transform: translateX(302px) scale(0.96); }
-  76% { opacity: 0; transform: translateX(302px) scale(0.84); }
+@keyframes folio-scene-queue-route {
+  0%, 100% { opacity: 0; transform: translateX(0); }
+  8%, 16% { opacity: 1; transform: translateX(0); }
+  32%, 54% { opacity: 1; transform: translateX(174px); }
+  72%, 76% { opacity: 1; transform: translateX(333px); }
+  82%, 94% { opacity: 0; transform: translateX(333px); }
 }
-
-@keyframes folio-scene-task-wait {
-  0%, 100% { opacity: 0.38; transform: translateY(2px); }
-  50% { opacity: 0.8; transform: translateY(-3px); }
+@keyframes folio-scene-queue-process {
+  0%, 28% { opacity: .3; transform: rotate(0); }
+  34% { opacity: 1; }
+  54% { opacity: 1; transform: rotate(360deg); }
+  64%, 100% { opacity: .3; transform: rotate(360deg); }
 }
-
-@keyframes folio-scene-task-progress {
-  0%, 16% { stroke-dasharray: 8 100; }
-  46% { stroke-dasharray: 48 100; }
-  72%, 100% { stroke-dasharray: 100 100; }
+@keyframes folio-scene-queue-progress {
+  0%, 32% { stroke-dasharray: 0 100; }
+  54%, 100% { stroke-dasharray: 100 100; }
 }
-
-@keyframes folio-scene-task-transfer {
-  0%, 16%, 42%, 100% { opacity: 0.18; }
-  24%, 34% { opacity: 1; }
-}
-
-@keyframes folio-scene-task-transfer-next {
-  0%, 46%, 72%, 100% { opacity: 0.18; }
-  54%, 64% { opacity: 1; }
-}
-
-@keyframes folio-scene-task-running {
-  0%, 22% { stroke-dasharray: 0 100; }
-  50%, 66% { stroke-dasharray: 68 100; }
-  82%, 100% { stroke-dasharray: 100 100; }
-}
-
-@keyframes folio-scene-task-complete {
-  0%, 76%, 100% { opacity: 0; transform: scale(0.55) rotate(-14deg); }
-  82%, 92% { opacity: 1; transform: scale(1) rotate(0); }
+@keyframes folio-scene-queue-done {
+  0%, 82%, 100% { opacity: 0; transform: scale(.7); }
+  88%, 94% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes folio-scene-export-bind {

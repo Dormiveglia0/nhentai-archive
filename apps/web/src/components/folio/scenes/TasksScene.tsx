@@ -1,37 +1,18 @@
 export function TasksScene() {
   return (
     <>
-      <g className="folio-scene-task-columns">
-        <rect x="51" y="28" width="136" height="174" rx="5" />
-        <rect className="folio-scene-task-column-running" x="202" y="28" width="136" height="174" rx="5" />
-        <rect x="353" y="28" width="136" height="174" rx="5" />
-        <circle cx="70" cy="49" r="5" />
-        <circle cx="221" cy="49" r="5" />
-        <circle cx="372" cy="49" r="5" />
+      <g className="folio-scene-queue-stack">
+        <path d="M62 65h66v92H62zM70 57h66v92M78 49h66v92M396 73h66v92h-66zM404 65h66v92M412 57h66v92" />
+        <path className="folio-scene-queue-route" d="M150 112h62M328 112h62" />
       </g>
-      <g className="folio-scene-task-card folio-scene-task-card-main">
-        <rect x="68" y="78" width="102" height="61" rx="4" />
-        <circle cx="86" cy="98" r="6" />
-        <path d="M101 94h49M80 120h70" />
-        <path className="folio-scene-task-progress" pathLength="100" d="M80 127h70" />
+      <circle className="folio-scene-queue-track" cx="270" cy="112" r="61" />
+      <g className="folio-scene-queue-rotor"><path d="M270 51a61 61 0 0 1 61 61M270 173a61 61 0 0 1-61-61" /></g>
+      <g className="folio-scene-queue-document">
+        <path d="M70 76h40l12 12v60H70ZM110 76v12h12" />
+        <path d="M81 103h30M81 114h30" />
+        <path className="folio-scene-queue-progress" d="M81 134h30" pathLength="100" />
       </g>
-      <g className="folio-scene-task-card folio-scene-task-card-waiting">
-        <rect x="68" y="151" width="102" height="35" rx="4" />
-        <circle cx="85" cy="168" r="5" />
-        <path d="M98 168h52" />
-      </g>
-      <g className="folio-scene-task-transfer">
-        <path d="M190 108.5h9m-4-4 4 4-4 4" />
-        <path d="M341 108.5h9m-4-4 4 4-4 4" />
-      </g>
-      <g className="folio-scene-task-running-progress">
-        <path d="M222 168h96" />
-        <path className="folio-scene-task-running-value" pathLength="100" d="M222 168h96" />
-      </g>
-      <g className="folio-scene-task-complete">
-        <circle cx="421" cy="109" r="25" />
-        <path d="m408 109 9 9 18-23" />
-      </g>
+      <g className="folio-scene-queue-done"><circle cx="429" cy="112" r="20" /><path d="m418 112 8 8 15-18" /></g>
     </>
   );
 }
