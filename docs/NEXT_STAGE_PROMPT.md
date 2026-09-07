@@ -64,3 +64,5 @@ The 2026-09-07 interaction revision keeps native links in all four library/workb
 设置标题动画使用无外框的开放式滑轨与齿轮，依次调节后复位；不要恢复面板外框、图标轮播或整组浮动。保留局部 transform、离屏暂停及 reduced-motion。队列箭头固定于列间中央，用透明度表达阶段；完成标记必须晚于卡片淡出。文字条及匹配框的缩放原点必须相对自身，词典文字跟随书页。运行 scene-motion.spec.ts 检查完整周期定位，并对九页采样检查。
 
 最新首页阶段覆盖旧工作台构图：#workbench 导航名为“首页”，复用 folio/ui/HomeHero，真实最近入藏最多3张封面及馆藏数；不恢复顶部管理账本、标题说明或欢迎词。演示首页使用无馆藏空态，不能伪造作品。标准标题说明统一不渲染。队列/治理场景已完整替换，前缀 queue/edit；删除的 task/governance 旧动画不可复活。站点 SVG icon 在 public/icon.svg；首页使用原生阅读链接和既有缩略图。验证首页0/1/2/3封面、手机/大屏、减少动态效果、登录、四个书架和 scene-motion 回归。
+
+后续首页修订优先级最高：禁止恢复大字品牌首屏、封面扇形、首页重复导航按钮和空旷展示区。保留小标题/作品数，最近导入与继续阅读直接展示作品；两行共用 ContinueReadingRow，宽度165–280px。网页不得出现“馆藏/入藏”及 local collection；不要用宣传、欢迎词填空白。图标仅保留 favicon。

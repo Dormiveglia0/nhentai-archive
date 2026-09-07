@@ -20,7 +20,7 @@ export function DemoCommandBar({
     governance: { label: "刷新队列", icon: RefreshCw, action: () => announce("演示环境没有治理队列。") },
     dictionary: { label: "新建本地词条", icon: Plus, action: () => announce("可在术语编辑器中填写新词条；演示页不会写入。") },
     tasks: { label: "刷新任务", icon: RefreshCw, action: () => announce("演示环境没有任务。") },
-    export: { label: "生成 CBZ", icon: PackageOpen, action: () => announce("请先从馆藏选择作品。") },
+    export: { label: "生成 CBZ", icon: PackageOpen, action: () => announce("请先从作品选择作品。") },
     files: { label: "扫描目录", icon: Folder, action: () => announce("公开演示不会读取本机目录。") },
     settings: { label: "保存设置", icon: Save, action: () => announce("演示设置已保留在当前页面，未写入服务器或本地文件。") },
   }[page];

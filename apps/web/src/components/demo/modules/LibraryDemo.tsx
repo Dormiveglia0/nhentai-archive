@@ -51,7 +51,7 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
 
       <div className="folio-split-layout">
         <section className="folio-ruled-panel">
-          <PanelHeading title="馆藏" description={query ? "当前搜索不会发送到服务器。" : "全部入库作品会显示在这里。"} />
+          <PanelHeading title="作品" description={query ? "当前搜索不会发送到服务器。" : "全部入库作品会显示在这里。"} />
           <EmptyCanvas
             icon={Library}
             title="库里还没有作品"

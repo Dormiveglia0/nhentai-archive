@@ -77,7 +77,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           <section className="folio-library-results" aria-busy={library.loading}>
             <header className="folio-library-results-head">
               <FolioPanelHeading
-                title="馆藏索引"
+                title="作品列表"
                 description={library.filtersActive ? "已按当前条件筛选。" : "全部已收藏的漫画。"}
               />
               <div className="folio-library-result-controls">
@@ -126,7 +126,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
                 <FolioEmptyState
                   icon={Info}
                   title="没有符合条件的作品"
-                  copy="调整搜索、标签或筛选条件，或者重置后查看全部馆藏。"
+                  copy="调整搜索、标签或筛选条件，或者重置后查看全部作品。"
                   action="重置筛选"
                   onAction={library.resetFilters}
                 />

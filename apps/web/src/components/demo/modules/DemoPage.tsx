@@ -24,7 +24,7 @@ export function DemoPage({
   onNavigate: (page: FolioPageId) => void;
   announce: (message: string) => void;
 }) {
-  if (page === "workbench") return <WorkbenchDemo onNavigate={onNavigate} />;
+  if (page === "workbench") return <WorkbenchDemo />;
   if (page === "library") return <LibraryDemo onNavigate={onNavigate} />;
   if (page === "discover") return <DiscoverDemo announce={announce} />;
   if (page === "governance") return <GovernanceDemo />;

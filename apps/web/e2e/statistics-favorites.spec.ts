@@ -105,7 +105,7 @@ test("阅读图谱支持周期、节奏、馆藏分布和本地钻取并适配�
   await expect(report.locator(".folio-reading-calendar-grid i")).toHaveCount(30);
   const collection = page.locator(".folio-collection-map");
   await expect(collection.getByText("作者作品分布")).toBeVisible();
-  await expect(collection.getByText("馆藏 Tag 占比")).toBeVisible();
+  await expect(collection.getByText("作品 Tag 占比")).toBeVisible();
   await expect(page.locator(".folio-settings-language-map article").first()).toBeVisible();
   const authorLink = collection.locator(".folio-reading-distribution").first().locator("a").first();
   await expect(authorLink).toHaveAttribute("href", /^#library(?:\?|$)/);

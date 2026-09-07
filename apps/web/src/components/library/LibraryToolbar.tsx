@@ -62,7 +62,7 @@ export function LibraryToolbar(props: Props) {
   ];
 
   return (
-    <section className="folio-library-toolbar" aria-label="馆藏搜索与筛选">
+    <section className="folio-library-toolbar" aria-label="作品搜索与筛选">
       <div className="folio-library-query">
         <form className="folio-library-search" onSubmit={submit}>
           <div className="folio-library-search-field">
@@ -72,7 +72,7 @@ export function LibraryToolbar(props: Props) {
               value={draft}
               onChange={(event) => changeDraft(event.target.value)}
               placeholder="搜索标题、作者、标签或画廊 ID"
-              aria-label="搜索馆藏"
+              aria-label="搜索作品"
             />
             {draft ? <button className="folio-library-search-clear" type="button" onClick={clearSearch} aria-label="清除文字搜索"><X size={15} /></button> : null}
             <i />
@@ -83,7 +83,7 @@ export function LibraryToolbar(props: Props) {
         <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
       </div>
 
-      <div className="folio-view-switch folio-library-view-switch" aria-label="馆藏视图方式">
+      <div className="folio-view-switch folio-library-view-switch" aria-label="作品视图方式">
         <button
           className={props.view === "grid" ? "is-active" : ""}
           type="button"

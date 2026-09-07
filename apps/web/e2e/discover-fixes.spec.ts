@@ -414,7 +414,7 @@ test.describe("界面与封面回归", () => {
 
   test("馆藏文字搜索可一键清除并立即恢复结果", async ({ page }) => {
     await page.goto("/#library");
-    const input = page.getByRole("searchbox", { name: "搜索馆藏" });
+    const input = page.getByRole("searchbox", { name: "搜索作品" });
     await input.fill("no-result-probe");
     await input.press("Enter");
     await expect(page.getByText("没有符合条件的作品")).toBeVisible();
@@ -514,7 +514,7 @@ test.describe("界面与封面回归", () => {
   test("登出使用完整顶栏单元且文案保持简洁", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/#settings");
-    const logout = page.getByRole("button", { name: "登出并锁定本地馆藏" });
+    const logout = page.getByRole("button", { name: "登出并锁定本地作品" });
     await expect(logout).toContainText("登出");
     const geometry = await logout.evaluate((button) => {
       const box = button.getBoundingClientRect();

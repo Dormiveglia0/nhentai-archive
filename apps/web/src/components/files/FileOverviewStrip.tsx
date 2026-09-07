@@ -7,7 +7,7 @@ import { formatBytes } from "./fileHelpers";
 
 export function FileOverviewStrip({ overview }: { overview: FileOverview | null }) {
   const metrics = [
-    { label: "馆藏作品", value: overview?.work_count, icon: Archive, tone: "active" },
+    { label: "作品总数", value: overview?.work_count, icon: Archive, tone: "active" },
     { label: "源文件占用", value: overview?.source_bytes, format: formatBytes, icon: Database, tone: "neutral" },
     {
       label: "索引异常",

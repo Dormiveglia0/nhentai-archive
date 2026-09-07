@@ -1,13 +1,10 @@
-.folio-workbench-page { padding-bottom: 64px; }
-.folio-workbench-body { display: grid; gap: 52px; padding-top: 30px; }
+.folio-workbench-page { padding-top: 16px; padding-bottom: 40px; }
+.folio-workbench-body { display: grid; gap: 28px; padding-top: 22px; }
 .folio-workbench-shelves { min-width: 0; display: grid; gap: 34px; }
 .folio-workbench-toolbar { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--folio-line); }
 .folio-workbench-toolbar h2 { font-family: "Noto Serif SC", serif; font-size: 21px; font-weight: 500; }
 .folio-workbench-toolbar button, .folio-home-retry { min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); }
 .folio-workbench-toolbar button:hover:not(:disabled), .folio-home-retry:hover { background: var(--folio-ink); color: var(--folio-paper-bright); }
-.folio-home-status nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 24px; padding-top: 18px; }
-.folio-home-status nav a { padding: 8px 0; color: var(--folio-muted); text-decoration: none; border-bottom: 1px solid var(--folio-line); }
-.folio-home-status nav a:hover { color: var(--folio-red); border-color: currentColor; }
 .folio-workbench-error, .folio-workbench-loading { min-height: 112px; padding: 24px; display: grid; place-items: center; color: var(--folio-muted); text-align: center; }
 .folio-workbench-error { color: var(--folio-red); }
 .folio-home-retry { margin-top: 24px; }

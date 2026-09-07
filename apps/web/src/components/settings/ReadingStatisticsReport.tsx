@@ -53,7 +53,7 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
   const activeCoverage = overview ? overview.active_days / Math.max(1, periodDays) : 0;
 
   return (
-    <section className={`folio-reading-atlas${loading ? " is-loading" : ""}`} aria-label="阅读统计与馆藏报表" aria-busy={loading}>
+    <section className={`folio-reading-atlas${loading ? " is-loading" : ""}`} aria-label="阅读统计与作品报表" aria-busy={loading}>
       <header className="folio-reading-atlas-head">
         <div>
           <span className="folio-reading-atlas-kicker"><Activity size={14} />READING ATLAS</span>
@@ -128,9 +128,9 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
 
 export function CollectionStatistics({ statistics, loading }: { statistics: ReadingStatistics | null; loading: boolean }) {
   return (
-    <section className={`folio-collection-map${loading ? " is-loading" : ""}`} aria-label="本地馆藏组成" aria-busy={loading}>
+    <section className={`folio-collection-map${loading ? " is-loading" : ""}`} aria-label="本地作品组成" aria-busy={loading}>
       <header>
-        <div><LibraryBig size={17} /><span><strong>馆藏构成</strong><small>按本地库中的作品数量统计，不从收藏结果推测偏好</small></span></div>
+        <div><LibraryBig size={17} /><span><strong>作品分布</strong><small>按本地库中的作品数量统计，不从收藏结果推测偏好</small></span></div>
         <em>{statistics ? `${statistics.collection_total_works} WORKS INDEXED` : "LOCAL INDEX"}</em>
       </header>
       <div>
@@ -316,7 +316,7 @@ function DistributionRanking({ kind, rows, loading }: { kind: "artist" | "tag"; 
   const reduceMotion = usePrefersReducedMotion();
   const maxCount = Math.max(1, ...rows.map((row) => row.work_count));
   const Icon = kind === "artist" ? Users : Tags;
-  const title = kind === "artist" ? "作者作品分布" : "馆藏 Tag 占比";
+  const title = kind === "artist" ? "作者作品分布" : "作品 Tag 占比";
 
   return (
     <section className="folio-reading-distribution">
@@ -333,7 +333,7 @@ function DistributionRanking({ kind, rows, loading }: { kind: "artist" | "tag"; 
             </li>
           ))}
         </ol>
-      ) : <p className="folio-reading-empty">{loading ? "正在读取本地馆藏…" : `本地馆藏还没有可统计的${kind === "artist" ? "作者" : "作品 Tag"}。`}</p>}
+      ) : <p className="folio-reading-empty">{loading ? "正在读取本地作品…" : `本地作品还没有可统计的${kind === "artist" ? "作者" : "作品 Tag"}。`}</p>}
     </section>
   );
 }

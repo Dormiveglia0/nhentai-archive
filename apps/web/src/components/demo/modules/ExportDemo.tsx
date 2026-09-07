@@ -19,7 +19,7 @@ export function ExportDemo() {
     <div className="folio-page-body">
       <div className="folio-export-layout">
         <section className="folio-export-source">
-          <PanelHeading title="选择作品" description="只从本地馆藏中选择导出项。" />
+          <PanelHeading title="选择作品" description="只从本地作品中选择导出项。" />
           <SearchField value={query} onChange={setQuery} placeholder="搜索作品" />
           <EmptyCanvas icon={Archive} title="没有可导出的作品" copy="导入漫画后，即可选择作品导出。" />
         </section>

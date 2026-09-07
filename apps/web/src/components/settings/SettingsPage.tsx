@@ -31,8 +31,8 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
     copy: "只定义导出中心的起始选项，单次下载仍可临时调整。",
   },
   data: {
-    title: "馆藏与阅读报表",
-    copy: "查看阅读时长、作品排行与馆藏分布。",
+    title: "作品与阅读报表",
+    copy: "查看阅读时长、作品排行与作品分布。",
   },
   storage: {
     title: "存储与路径",

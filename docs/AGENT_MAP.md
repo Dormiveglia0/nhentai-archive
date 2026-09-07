@@ -136,4 +136,4 @@ git diff --check
 
 For rendered changes, verify `/demo` at 1440×1000 plus 390×844, click the changed control, check console errors/warnings, and verify the affected formal hash route. Reader QA must distinguish remote no-progress-write behavior from intentional local progress persistence.
 
-Homepage uses real recent-added covers, native reader links and existing overview data through HomeHero; demo uses its empty state with no fabricated works. Brand icon: apps/web/public/icon.svg, linked by apps/web/index.html and HomeHero. Do not restore the old dashboard ledger or title descriptions.
+Homepage uses a compact heading/count and the shared recent-import shelf in HomeHero, followed by continue-reading and the bottom overview. No oversized brand hero or duplicate navigation. Brand icon: apps/web/public/icon.svg, linked by apps/web/index.html. Do not restore the old dashboard ledger or title descriptions.

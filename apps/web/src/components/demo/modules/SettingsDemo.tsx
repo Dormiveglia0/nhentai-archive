@@ -141,7 +141,7 @@ export function SettingsDemo({
           ) : null}
 
           {section === "data" ? (
-            <EmptyCanvas icon={BarChart3} title="演示环境未连接本地馆藏" copy="连接漫画库后查看阅读与收藏统计。" />
+            <EmptyCanvas icon={BarChart3} title="演示环境未连接本地作品" copy="连接漫画库后查看阅读与收藏统计。" />
           ) : null}
 
           {section === "storage" ? (

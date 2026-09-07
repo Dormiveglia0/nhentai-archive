@@ -7,11 +7,11 @@ import { formatBytes } from "./libraryHelpers";
 
 export function LibrarySummaryStrip({ summary }: { summary: LibrarySummary | null }) {
   if (!summary) {
-    return <div className="folio-library-summary-loading" role="status">正在读取馆藏摘要…</div>;
+    return <div className="folio-library-summary-loading" role="status">正在读取作品统计…</div>;
   }
 
   const metrics = [
-    { label: "馆藏总数", value: summary.total, icon: Database, tone: "active" },
+    { label: "作品总数", value: summary.total, icon: Database, tone: "active" },
     { label: "已收藏", value: summary.favorites, icon: Heart, tone: summary.favorites ? "warning" : "neutral" },
     { label: "已读", value: summary.completed, icon: CheckCheck, tone: "good" },
     { label: "阅读中", value: summary.reading, icon: BookOpen, tone: "active" },
@@ -21,7 +21,7 @@ export function LibrarySummaryStrip({ summary }: { summary: LibrarySummary | nul
 
   return (
     <FolioMetricGrid
-      ariaLabel="馆藏摘要"
+      ariaLabel="作品统计"
       className="folio-library-summary"
       items={metrics.map((metric) => ({
         label: metric.label,

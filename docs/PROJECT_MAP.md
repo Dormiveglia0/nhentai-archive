@@ -438,7 +438,7 @@ Root: `apps/web/src/`
   - `WorkbenchPage.css` — production-only shelves, bottom overview and refresh controls. The replaced `.workbench-*` rules were removed from `styles/app.css`.
   - `useWorkbenchState.ts` — fetches `GET /api/workbench/overview`; manages loading/error/refresh state.
   - `WorkbenchMetricStrip.tsx` — hairline thin-number strip showing real metrics: 馆藏作品 / 待治理 / 失败任务 / 缺失源文件.
-  - `folio/ui/HomeHero.tsx` / `HomeHero.css` — presentation homepage shared with demo; real recent-added cover fan, reader/library/discovery links, live collection count.
+  - `folio/ui/HomeHero.tsx` / `HomeHero.css` — compact homepage shared with demo; recent-import shelf with native reader links and actual work count.
   - Shared byte formatting comes directly from `lib/format.ts`; the old module ledger/helper are removed.
   - Reuses `ContinueReadingRow` (from folio/ui) with direct shared Folio shelf markup for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
 - `styles/app.css`
@@ -477,3 +477,5 @@ npm run build
 设置标题场景由 `folio/scenes/SettingsScene.tsx` 与 `styles/scenes.css` / `feedback-motion.css` 维护：无外框的三条竖向滑轨与齿轮共享9秒校准节奏，正式页与演示页复用；不读取配置或模拟保存状态。
 
 2026-09-07 首页阶段：导航显示“首页”，保留 #workbench 路由；首屏使用 HomeHero，书架与管理概览在其下方。FolioChrome 首页不再渲染标准标题场景，其他页面标题移除说明段落。队列为文件经过处理环的流转，治理为条目依次归整到档案；动画前缀分别 queue/edit。站点图标为 public/icon.svg（朱红 NH 组合字母），index.html favicon 与首页复用。
+
+最新首页采用紧凑作品展示，HomeHero 不再包含大字品牌、封面扇形或入口按钮；最近导入通过 ContinueReadingRow 与继续阅读复用同一交互。作品概览移除重复管理导航。所有网页“馆藏/入藏”措辞已移除，使用作品、作品列表、作品统计等具体名称。

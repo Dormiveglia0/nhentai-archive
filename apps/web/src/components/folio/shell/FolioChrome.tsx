@@ -134,12 +134,12 @@ export function FolioChrome({
           }}
         >
           <span className="folio-brand-mark" aria-hidden="true"><span className="folio-monogram">NH</span><i /></span>
-          <span className="folio-brand-copy"><strong>Archive</strong><small>local collection</small></span>
+          <span className="folio-brand-copy"><strong>Archive</strong></span>
         </a>
         <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
         <div className="folio-top-actions">
           {onLogout ? (
-            <button className="folio-session-button" type="button" aria-label="登出并锁定本地馆藏" title="登出" onClick={() => void onLogout()}>
+            <button className="folio-session-button" type="button" aria-label="登出并锁定本地作品" title="登出" onClick={() => void onLogout()}>
               <LogOut size={17} />
               <span>登出</span>
             </button>

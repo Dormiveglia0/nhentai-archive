@@ -86,7 +86,7 @@ export function GalleryHero({
           transition={{ duration: duration.slow, ease: ease.standard, delay: reduceMotion ? 0 : 0.08 }}
         >
           <div className="folio-gallery-kicker">
-            <span>{detail.imported ? "本地馆藏" : "远端档案"}</span>
+            <span>{detail.imported ? "本地作品" : "远端档案"}</span>
             <i />
             <small>Gallery {detail.gallery_id}</small>
           </div>

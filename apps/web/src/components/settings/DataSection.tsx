@@ -110,11 +110,11 @@ export function DataSection() {
   }));
 
   return (
-    <section className="folio-settings-section" aria-label="本地馆藏概览" aria-busy={loading || statisticsLoading}>
+    <section className="folio-settings-section" aria-label="本地作品概览" aria-busy={loading || statisticsLoading}>
       {error ? (
         <div className="folio-settings-fetch-error" role="alert">
           <AlertTriangle size={18} />
-          <span><strong>无法读取馆藏概览</strong><small>{error}</small></span>
+          <span><strong>无法读取作品概览</strong><small>{error}</small></span>
         </div>
       ) : null}
 
@@ -134,8 +134,7 @@ export function DataSection() {
           transition={{ duration: reduceMotion ? 0 : undefined }}
         >
           <header>
-            <span><Database size={15} />馆藏规模</span>
-            <small>LOCAL COLLECTION</small>
+            <span><Database size={15} />作品数量</span>
           </header>
           <div className="folio-settings-data-total">
             <strong>{library ? <NumberTicker value={library.total} /> : "—"}</strong>
@@ -188,12 +187,12 @@ export function DataSection() {
 
       <CollectionStatistics statistics={statistics} loading={statisticsLoading} />
 
-      <section className="folio-settings-maintenance" aria-label="馆藏维护状态">
+      <section className="folio-settings-maintenance" aria-label="作品维护状态">
         <header>
           <div><span>维护状态</span><strong>需要处理的项目会单独标红</strong></div>
           <small>{loading ? "正在读取状态" : error || !library || !files ? "状态不可用" : maintenanceMetrics.some((metric) => metric.warn) ? "存在待处理项" : "当前状态正常"}</small>
         </header>
-        <FolioMetricGrid ariaLabel="馆藏维护指标" className="folio-settings-maintenance-grid" items={maintenanceItems} />
+        <FolioMetricGrid ariaLabel="作品维护指标" className="folio-settings-maintenance-grid" items={maintenanceItems} />
       </section>
 
       <div className="folio-settings-data-details">
@@ -262,7 +261,7 @@ function LanguageDistribution({ languages, loading, reduceMotion }: { languages:
           })}
         </div>
       ) : (
-        <p className="folio-settings-data-empty">{loading ? "正在读取分布…" : "当前馆藏没有语言统计"}</p>
+        <p className="folio-settings-data-empty">{loading ? "正在读取分布…" : "当前作品没有语言统计"}</p>
       )}
     </section>
   );
