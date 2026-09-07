@@ -1,4 +1,4 @@
-export const duration = { fast: 0.18, base: 0.28, slow: 0.5, pageEnter: 0.24, pageExit: 0.12 } as const;
+export const duration = { fast: 0.18, base: 0.28, slow: 0.5, pageEnter: 0.24 } as const;
 
 export const ease = {
   standard: [0.4, 0, 0.2, 1],

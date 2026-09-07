@@ -33,6 +33,7 @@ export function AmbientCover({
         alt=""
         aria-hidden="true"
         loading={loading}
+        decoding="async"
         draggable={false}
       />
       <img
@@ -40,6 +41,7 @@ export function AmbientCover({
         src={src}
         alt={alt}
         loading={loading}
+        decoding="async"
         draggable={draggable}
         onError={onError}
       />

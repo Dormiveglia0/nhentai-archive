@@ -90,6 +90,10 @@ def test_reingest_invalidates_cached_page_thumbnail(tmp_path):
 
     work_id = service.ingest_cbz(first_path, "remote", "Colors", 42, {})
     first_thumb = service.read_page_thumbnail(work_id, 1, width=64)[0]
+    first_cover = service.read_cover_thumbnail(work_id, width=64)[0]
+    cover_cache = settings.thumbs_dir / f"{work_id}-cover-64.jpg"
+    assert cover_cache.exists()
+    assert service.read_cover_thumbnail(work_id, width=64)[0] == first_cover
     cache_file = settings.thumbs_dir / f"{work_id}-1-64.jpg"
     assert cache_file.exists()
 
@@ -97,6 +101,8 @@ def test_reingest_invalidates_cached_page_thumbnail(tmp_path):
 
     assert reingested_id == work_id
     assert not cache_file.exists()
+    assert not cover_cache.exists()
+    assert service.read_cover_thumbnail(work_id, width=64)[0] != first_cover
     assert service.read_page_thumbnail(work_id, 1, width=64)[0] != first_thumb
 
 

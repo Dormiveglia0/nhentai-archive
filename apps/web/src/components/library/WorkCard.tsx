@@ -66,7 +66,7 @@ export function WorkCard({
           </span>
         ) : null}
         {work.cover_path ? (
-          <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" loading="lazy" />
+          <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover?w=512`} alt="" loading="lazy" decoding="async" />
         ) : (
           <span className="folio-cover-fallback">NO COVER</span>
         )}

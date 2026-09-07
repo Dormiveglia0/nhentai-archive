@@ -59,7 +59,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Concern | Owner |
 | --- | --- |
 | Page ids, labels, descriptions, icons, settings section definitions | `folio/config.ts` |
-| Full-screen grid, topbar, mobile drawer, page transition, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
+| Full-screen grid, topbar, mobile drawer, viewport-sized native page transition, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
 | Top navigation item animation | `folio/shell/PageNavigation.tsx` + `styles/chrome.css`; Motion layout spring indicator with `domMax`, keyboard-contained mobile navigation in `FolioChrome.tsx` |
 | Standard title composition and scene placement | `folio/shell/PageHeading.tsx`; pauses decorative scene animations when the heading is outside the viewport |
 | Large background atmosphere and discover radar hits | `folio/shell/ModuleBackdrop.tsx` + `folio/styles/base.css` |

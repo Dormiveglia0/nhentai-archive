@@ -8,7 +8,7 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any
+from typing import Any, Callable
 
 from PIL import Image
 
@@ -183,13 +183,26 @@ class ArchiveService:
         """Return a downscaled JPEG for a page, generating and caching it on first use."""
         width = max(64, min(width, 1024))
         cache_path = self.settings.thumbs_dir / f"{work_id}-{page_index}-{width}.jpg"
+        return self._read_thumbnail(cache_path, width, lambda: self.read_page(work_id, page_index)[0])
+
+    def read_cover_thumbnail(self, work_id: int, width: int = 512) -> tuple[bytes, str]:
+        work = self.get_work(work_id)
+        if not work or not work.get("cover_path"):
+            raise FileNotFoundError("Cover not found")
+        path = Path(work["cover_path"])
+        if not path.is_file():
+            raise FileNotFoundError("Cover file missing")
+        width = max(64, min(width, 1024))
+        cache_path = self.settings.thumbs_dir / f"{work_id}-cover-{width}.jpg"
+        return self._read_thumbnail(cache_path, width, path.read_bytes)
+
+    def _read_thumbnail(self, cache_path: Path, width: int, read_body: Callable[[], bytes]) -> tuple[bytes, str]:
         try:
             return cache_path.read_bytes(), "image/jpeg"
         except FileNotFoundError:
             pass
 
-        body, _ = self.read_page(work_id, page_index)
-        thumb_bytes = _make_thumbnail(body, width)
+        thumb_bytes = _make_thumbnail(read_body(), width)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         # Write atomically so a concurrent reader never sees a half-written file.
         with NamedTemporaryFile(dir=cache_path.parent, prefix=f".{cache_path.name}.", suffix=".tmp", delete=False) as tmp:

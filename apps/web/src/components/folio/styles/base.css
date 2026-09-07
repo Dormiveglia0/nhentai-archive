@@ -48,13 +48,19 @@
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 0;
+  width: min(760px, 70vw);
+  height: min(560px, 60dvh);
+  inset: 0 4vw auto auto;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 74% 18%, rgba(255, 255, 255, 0.34), transparent 28%),
-    radial-gradient(circle at 18% 78%, rgba(173, 56, 46, 0.035), transparent 34%),
-    linear-gradient(118deg, transparent 0 42%, rgba(255, 255, 255, 0.13) 48%, transparent 56%);
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.34), transparent 70%);
   animation: folio-paper-light 18s ease-in-out infinite alternate;
+}
+
+.folio.is-scrolling::after,
+.folio.is-scrolling .folio-atmosphere *,
+.folio.is-scrolling .folio-atmosphere *::before,
+.folio.is-scrolling .folio-atmosphere *::after {
+  animation-play-state: paused;
 }
 
 .folio-binding {

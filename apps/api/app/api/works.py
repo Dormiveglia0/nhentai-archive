@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 
 from app.api.schemas import FavoritePatch, ReaderStatePatch, ReadingSessionPatch, ReadingSessionStart
@@ -24,7 +24,13 @@ def get_work(work_id: int):
 
 
 @router.get("/{work_id}/cover")
-def get_cover(work_id: int):
+def get_cover(work_id: int, w: int | None = Query(default=None, ge=64, le=1024)):
+    if w is not None:
+        try:
+            body, media_type = services.archive.read_cover_thumbnail(work_id, w)
+            return Response(content=body, media_type=media_type, headers={"Cache-Control": "private, max-age=86400"})
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
     work = services.archive.get_work(work_id)
     if not work or not work.get("cover_path"):
         raise HTTPException(status_code=404, detail="Cover not found")

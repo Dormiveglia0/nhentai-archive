@@ -271,7 +271,7 @@ Root: `apps/web/src/`
   - Formal tag surfaces keep native anchor semantics: discovery/remote-reader contexts use `tagSearchHref()`, while library/statistics contexts use `libraryTagHref()` so middle/modifier click preserves the owning data scope in a new tab.
 - `lib/motion/`
   - `MotionProvider` uses `domMax` for the shared navigation layout spring and respects user reduced-motion settings. Lists stagger at up to 50ms per item with a 320ms total delay budget; pages retain shorter horizontal entrance/exit and header scenes pause offscreen. Binding progress uses transform instead of top/height animations. Do not remove visible animations as a performance shortcut.
-  - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,优先复用共享 token。
+  - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`（通过 useSyncExternalStore 订阅媒体查询，系统设置改变时同步已挂载组件）、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,优先复用共享 token。
 - `components/effects/NumberTicker.tsx`
   - Restores the original spring count-up when entering the viewport and settles on the actual formatted value. Under reduced motion, jump both spring and source to the actual value so switching the preference back cannot reset the display to zero.
 - `components/effects/`
@@ -291,7 +291,7 @@ Root: `apps/web/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Folio-only shell for every non-reader route. History reuses the library module context with its own heading; gallery detail reuses discover context while suppressing the repeated page heading. `scrollKey` resets each route/detail scroll position. `TaskDock` remains outside the chrome.
+  - Folio-only shell for every non-reader route. History reuses the library module context with its own heading; gallery detail reuses discover context while suppressing the repeated page heading. `scrollKey` selects each route/detail scroll position. FolioChrome animates only the visible scroll viewport with native Web Animations; rapid navigation cancels the previous animation and reduced motion skips it. The initial authenticated mount uses only the login reveal. Background paper glow is bounded to 760×560px rather than a full-screen animated texture; decorative background animations pause during scroll and resume 150ms after it stops. Background changes fade in without simultaneously scaling two full-screen layers. `TaskDock` remains outside the chrome.
 - `components/layout/RouteFallback.tsx`
   - Honest, data-free loading surfaces for lazy formal routes and the immersive reader. `RouteFallback.css` owns the paper-sheet loop and reduced-motion fallback; it must not duplicate page titles, metrics, or fake content.
 - `components/layout/TaskDock.tsx`
@@ -329,7 +329,7 @@ Root: `apps/web/src/`
   - Shared primary-cover frame for popular, gallery hero, and reader info. The foreground always uses `contain`; a non-semantic duplicate supplies the blurred/dimmed ambient fill so mismatched ratios do not create dead bands or crop meaningful artwork.
 - `components/discover/PopularFan.tsx`
   - Real `/api/discover/popular` five-item ranked editorial showcase between the Folio heading and search workbench. It has no viewport state, drag state or fabricated entries; every cover, title, count, import state and action comes from the real payload.
-  - Desktop renders five portrait frames with copy below the image; mobile keeps all five in one non-scrolling row with compact 30px import rails.
+  - Desktop fills the available track with five frames and copy below the image; media height uses clamp(300px, 40dvh, 560px), and the artwork remains contained. Mobile keeps all five visible in the existing two-plus-three arrangement. Dense discover rows have independent natural heights, avoiding stretched tag/action gaps.
   - Cards expose only real title/page/favorite/import state and never fabricate badges or statistics.
 - `components/discover/GalleryDetailPage.tsx` + `components/discover/gallery/`
   - Direct route-local gallery composition split into real data/model, fixed-slot hero, full-width tag ledger, initial page preview, keyboard/focus-restoring lightbox, and related works. It imports no demo state.
@@ -376,7 +376,7 @@ Root: `apps/web/src/`
 - `components/library/WorkInspector.tsx`
   - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress and local tag drill-downs. Its action grid keeps reader full-width, governance/export together, and favorite/delete together on the final row.
 - `components/folio/ui/ContinueReadingRow.tsx`
-  - Shared real-data shelves for library/workbench. Mouse capture starts after 6px movement; normal/held clicks, keyboard, middle/modifier links remain native. Touch uses browser scrolling; previous/next buttons offer a gesture-free alternative. `AmbientCover` preserves the complete cover and privacy blur; progress and read actions stay visible.
+  - Shared real-data shelves for library/workbench. Mouse capture starts after 6px movement; normal/held clicks, keyboard, middle/modifier links remain native. Touch uses browser scrolling; previous/next buttons offer a gesture-free alternative. `AmbientCover` preserves the complete cover and privacy blur; progress and read actions stay visible. Shelves and library cards use the optional 512px cover thumbnail with asynchronous decoding, avoiding full-resolution decoding in small frames.
 - `components/library/libraryHelpers.ts`
   - `formatBytes`, title/author/language/read-status derivation, and shared sort/status/source option lists.
 - `components/history/`
@@ -471,3 +471,5 @@ Frontend:
 cd apps/web
 npm run build
 ```
+
+- Cover thumbnail endpoint: `GET /api/works/{id}/cover?w=512` validates width 64–1024, reads the extracted cover (works even if the CBZ is missing), reuses atomic JPEG caching under `thumbs/`, and follows existing reimport invalidation. Omitting `w` preserves the original file endpoint; no schema changes.

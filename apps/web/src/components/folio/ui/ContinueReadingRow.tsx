@@ -110,7 +110,7 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
             >
               <div className="folio-shelf-cover">
                 {work.cover_path ? (
-                  <AmbientCover src={`/api/works/${work.id}/cover`} alt="" privateBlur={blurCovers} loading="lazy" draggable={false} />
+                  <AmbientCover src={`/api/works/${work.id}/cover?w=512`} alt="" privateBlur={blurCovers} loading="lazy" draggable={false} />
                 ) : (
                   <span className="folio-cover-fallback">NO COVER</span>
                 )}

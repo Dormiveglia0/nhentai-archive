@@ -44,7 +44,8 @@ export function NumberTicker({ value, format }: Props) {
     if (reduce) return;
     if (ref.current) ref.current.textContent = render(spring.get());
     const unsubscribe = spring.on("change", (latest) => {
-      if (ref.current) ref.current.textContent = render(latest);
+      const text = render(latest);
+      if (ref.current && ref.current.textContent !== text) ref.current.textContent = text;
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps

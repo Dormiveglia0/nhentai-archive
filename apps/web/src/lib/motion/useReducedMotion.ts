@@ -1,6 +1,12 @@
-import { useReducedMotion } from "motion/react";
+import { useSyncExternalStore } from "react";
 
-/** 系统开启「减少动态」时返回 true;原语据此降级。 */
+const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+const subscribe = (notify: () => void) => {
+  preference.addEventListener("change", notify);
+  return () => preference.removeEventListener("change", notify);
+};
+
+/** Keep mounted animations in sync when the system preference changes. */
 export function usePrefersReducedMotion(): boolean {
-  return useReducedMotion() ?? false;
+  return useSyncExternalStore(subscribe, () => preference.matches);
 }

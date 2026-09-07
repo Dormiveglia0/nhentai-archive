@@ -34,10 +34,13 @@ export function FolioChrome({
   const reduceMotion = usePrefersReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollIdleRef = useRef(0);
   const menuRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const bindingRef = useRef<HTMLDivElement>(null);
   const scrollPositionsRef = useRef(new Map<string, number>());
+  const animatedRouteRef = useRef<string | null>(null);
   const current = FOLIO_PAGES.find((item) => item.id === page) ?? FOLIO_PAGES[0];
   const routeKey = `${page}:${String(scrollKey ?? "")}`;
 
@@ -87,13 +90,35 @@ export function FolioChrome({
     window.requestAnimationFrame(updateBindingProgress);
   }, [routeKey, updateBindingProgress]);
 
+  useEffect(() => {
+    const previousRoute = animatedRouteRef.current;
+    animatedRouteRef.current = routeKey;
+    const scroll = scrollRef.current;
+    if (!scroll || previousRoute === null || previousRoute === routeKey || reduceMotion) return;
+    // Animate the viewport, so a long page does not become one oversized moving layer.
+    const animation = scroll.animate(
+      [{ opacity: .55, transform: "translateX(12px)" }, { opacity: 1, transform: "translateX(0)" }],
+      { duration: duration.pageEnter * 1000, easing: "cubic-bezier(.22, 1, .36, 1)" },
+    );
+    animation.finished.then(updateBindingProgress, () => undefined);
+    return () => animation.cancel();
+  }, [routeKey, reduceMotion, updateBindingProgress]);
+
+  useEffect(() => () => window.clearTimeout(scrollIdleRef.current), []);
+
   function handleScroll() {
+    if (!scrollIdleRef.current) rootRef.current?.classList.add("is-scrolling");
+    window.clearTimeout(scrollIdleRef.current);
+    scrollIdleRef.current = window.setTimeout(() => {
+      rootRef.current?.classList.remove("is-scrolling");
+      scrollIdleRef.current = 0;
+    }, 150);
     if (scrollRef.current) scrollPositionsRef.current.set(routeKey, scrollRef.current.scrollTop);
     updateBindingProgress();
   }
 
   return (
-    <div className={`folio folio-app folio-page-${page}${footer ? "" : " folio-no-command"}`}>
+    <div ref={rootRef} className={`folio folio-app folio-page-${page}${footer ? "" : " folio-no-command"}`}>
       <ModuleBackdrop page={page} reduceMotion={reduceMotion} />
       <div ref={bindingRef} className="folio-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
 
@@ -137,15 +162,10 @@ export function FolioChrome({
           ) : null}
         </AnimatePresence>
         <main ref={scrollRef} className="folio-scroll" tabIndex={-1} onScroll={handleScroll}>
-          <AnimatePresence mode="wait" initial={false}>
-            <m.div key={routeKey} className="folio-page" initial={{ opacity: 0, x: reduceMotion ? 0 : 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: reduceMotion ? 0 : -8, transition: { duration: reduceMotion ? 0 : duration.pageExit } }} transition={{ duration: reduceMotion ? 0 : duration.pageEnter, ease: ease.standard }} onAnimationComplete={updateBindingProgress}>
-              {/* Keep refs below AnimatePresence: Motion reads props.ref, which warns in React 18. */}
-              <div ref={restoreRouteScroll}>
-                {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}
-                {children}
-              </div>
-            </m.div>
-          </AnimatePresence>
+          <div key={routeKey} className="folio-page" ref={restoreRouteScroll}>
+            {heading === false ? null : <PageHeading page={current} title={heading?.title} description={heading?.description} />}
+            {children}
+          </div>
         </main>
       </div>
       {footer}
