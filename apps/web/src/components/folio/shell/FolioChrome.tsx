@@ -119,7 +119,7 @@ export function FolioChrome({
 
   return (
     <div ref={rootRef} className={`folio folio-app folio-page-${page}${footer ? "" : " folio-no-command"}`}>
-      <ModuleBackdrop page={page} reduceMotion={reduceMotion} />
+      {page === "workbench" ? null : <ModuleBackdrop page={page} reduceMotion={reduceMotion} />}
       <div ref={bindingRef} className="folio-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
 
       <header className="folio-topbar">

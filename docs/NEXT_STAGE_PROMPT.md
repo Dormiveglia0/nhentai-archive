@@ -66,3 +66,5 @@ The 2026-09-07 interaction revision keeps native links in all four library/workb
 最新首页阶段覆盖旧工作台构图：#workbench 导航名为“首页”，复用 folio/ui/HomeHero，真实最近入藏最多3张封面及馆藏数；不恢复顶部管理账本、标题说明或欢迎词。演示首页使用无馆藏空态，不能伪造作品。标准标题说明统一不渲染。队列/治理场景已完整替换，前缀 queue/edit；删除的 task/governance 旧动画不可复活。站点 SVG icon 在 public/icon.svg；首页使用原生阅读链接和既有缩略图。验证首页0/1/2/3封面、手机/大屏、减少动态效果、登录、四个书架和 scene-motion 回归。
 
 后续首页修订优先级最高：禁止恢复大字品牌首屏、封面扇形、首页重复导航按钮和空旷展示区。保留小标题/作品数，最近导入与继续阅读直接展示作品；两行共用 ContinueReadingRow，宽度165–280px。网页不得出现“馆藏/入藏”及 local collection；不要用宣传、欢迎词填空白。图标仅保留 favicon。
+
+2026-09-08 用户最新方向优先：主页只负责视觉与独特玩法，组合可漫游封面墙和立体翻阅台。不要恢复统计、书架列表、大标题、欢迎词或页面跳转按钮。HomeHero 用同一组最多36张真实封面连续变形，控件仅服务漫游/翻阅；保留拖动防误点、触屏换页、键盘、减少动态效果及空作品状态。运行 home-gallery.spec.ts 与 shelf-navigation.spec.ts；后者现在只覆盖我的库（首页已无书架）。

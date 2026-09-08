@@ -436,9 +436,9 @@ Root: `apps/web/src/`
 - `components/workbench/` — presentation homepage:
   - `WorkbenchPage.tsx` — first directly migrated Folio route. Keeps the real overview hook/API flow while owning new semantic page structure; it does not wrap the legacy dashboard or import demo content.
   - `WorkbenchPage.css` — production-only shelves, bottom overview and refresh controls. The replaced `.workbench-*` rules were removed from `styles/app.css`.
-  - `useWorkbenchState.ts` — fetches `GET /api/workbench/overview`; manages loading/error/refresh state.
-  - `WorkbenchMetricStrip.tsx` — hairline thin-number strip showing real metrics: 馆藏作品 / 待治理 / 失败任务 / 缺失源文件.
-  - `folio/ui/HomeHero.tsx` / `HomeHero.css` — compact homepage shared with demo; recent-import shelf with native reader links and actual work count.
+  - `WorkbenchPage.tsx` fetches up to 36 real recently-added works through librarySearch, with loading/empty/error/retry states. The old overview hook is removed.
+  - The homepage metric strip is removed; existing library/settings statistics retain their owners.
+  - `folio/ui/HomeHero.tsx` / `HomeHero.css` — interactive homepage shared with demo: draggable cover wall and spatial carousel share the same real cover elements.
   - Shared byte formatting comes directly from `lib/format.ts`; the old module ledger/helper are removed.
   - Reuses `ContinueReadingRow` (from folio/ui) with direct shared Folio shelf markup for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
 - `styles/app.css`
@@ -479,3 +479,5 @@ npm run build
 2026-09-07 首页阶段：导航显示“首页”，保留 #workbench 路由；首屏使用 HomeHero，书架与管理概览在其下方。FolioChrome 首页不再渲染标准标题场景，其他页面标题移除说明段落。队列为文件经过处理环的流转，治理为条目依次归整到档案；动画前缀分别 queue/edit。站点图标为 public/icon.svg（朱红 NH 组合字母），index.html favicon 与首页复用。
 
 最新首页采用紧凑作品展示，HomeHero 不再包含大字品牌、封面扇形或入口按钮；最近导入通过 ContinueReadingRow 与继续阅读复用同一交互。作品概览移除重复管理导航。所有网页“馆藏/入藏”措辞已移除，使用作品、作品列表、作品统计等具体名称。
+
+2026-09-08 互动首页替代此前所有列表首页方案：HomeHero 使用现有 Motion 的拖动、惯性与弹簧，CSS perspective 呈现厚度和前后层次。默认封面墙，点击作品进入翻阅台，拖动/滑动、方向按钮、键盘与复位操作可用。只显示现有作品，不自动跳转阅读；空态不伪造封面。仅封面缩略图，无背景大图或额外包。首页不渲染被遮挡的 ModuleBackdrop。

@@ -37,14 +37,14 @@ test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async
     Object.assign(window, { metricFrames: samples });
     const start = performance.now();
     function sample() {
-      const text = document.querySelector(".folio-home-edition .fx-scope")?.textContent;
+      const text = document.querySelector(".folio-library-summary .fx-scope")?.textContent;
       if (text) samples.push(Number(text.replaceAll(",", "")));
       if (performance.now() - start < 4_000) requestAnimationFrame(sample);
     }
     requestAnimationFrame(sample);
   });
-  await page.goto("/#workbench");
-  const total = page.locator(".folio-home-edition .fx-scope").first();
+  await page.goto("/#library");
+  const total = page.locator(".folio-library-summary .fx-scope").first();
   await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));
   const frames = await page.evaluate(() => (window as unknown as { metricFrames: number[] }).metricFrames);
   expect(frames.some((value) => value > 0 && value < overview.library.total)).toBe(true);
@@ -61,7 +61,6 @@ test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async
 });
 
 for (const [route, titles] of [
-  ["workbench", ["继续阅读", "最近导入"]],
   ["library", ["继续阅读", "最近添加"]],
 ] as const) {
   test(`${route} 两个书架支持点击、拖动后点击和键盘进入`, async ({ page }) => {
@@ -113,7 +112,7 @@ for (const [route, titles] of [
 }
 
 test("书架保留长按点击、中键和修饰键链接行为", async ({ page, context }) => {
-  await page.goto("/#workbench");
+  await page.goto("/#library");
   const link = page.locator(".folio-shelf-item").first();
   await expect(link).toBeVisible();
   const href = await link.getAttribute("href");
@@ -127,7 +126,7 @@ test("书架保留长按点击、中键和修饰键链接行为", async ({ page,
     const tab = await opened;
     await expect(tab).toHaveURL(new RegExp(`${href}$`));
     await tab.close();
-    await expect(page).toHaveURL(/#workbench$/);
+    await expect(page).toHaveURL(/#library$/);
   }
 });
 
