@@ -137,3 +137,5 @@ git diff --check
 For rendered changes, verify `/demo` at 1440×1000 plus 390×844, click the changed control, check console errors/warnings, and verify the affected formal hash route. Reader QA must distinguish remote no-progress-write behavior from intentional local progress persistence.
 
 Homepage uses a paper/ink reading composition: each SVG outline represents one of up to 36 real recent works, its vermilion segment represents reading progress. Drag/arrow keys browse works and synchronize the native reader title link and metadata. Daily activity selection updates reading totals; no geometric mode selector, spread slider or print action. No fake works or counters.
+
+2026-09-08 独立首页静态预览：`/?home-preview=1#workbench` 使用 `workbench/HomeLayoutPreview.tsx` / `.css`，由 WorkbenchPage 按查询参数懒加载；正常首页不替换。复用真实作品/统计，并额外读取 libraryContinueReading(3)。完整封面按原比例显示，原生阅读链接，尊重隐私开关；未使用生图素材或添加展示动效。已验证1440/390/2560尺寸、横竖封面比例、标题占位和阅读链接。此入口用于用户审阅构图，不代表最终设计。
