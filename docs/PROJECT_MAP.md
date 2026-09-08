@@ -436,7 +436,7 @@ Root: `apps/web/src/`
 - `components/workbench/` — presentation homepage:
   - `WorkbenchPage.tsx` — first directly migrated Folio route. Keeps the real overview hook/API flow while owning new semantic page structure; it does not wrap the legacy dashboard or import demo content.
   - `WorkbenchPage.css` — production-only shelves, bottom overview and refresh controls. The replaced `.workbench-*` rules were removed from `styles/app.css`.
-  - `WorkbenchPage.tsx` fetches up to 36 real recently-added works through librarySearch, with loading/empty/error/retry states. The old overview hook is removed.
+  - `WorkbenchPage.tsx` loads librarySummary and libraryStatistics(30) independently, preserving available data and retry on partial failure. HomeHero renders an interactive SVG paper installation and real reading data.
   - The homepage metric strip is removed; existing library/settings statistics retain their owners.
   - `folio/ui/HomeHero.tsx` / `HomeHero.css` — interactive homepage shared with demo: draggable cover wall and spatial carousel share the same real cover elements.
   - Shared byte formatting comes directly from `lib/format.ts`; the old module ledger/helper are removed.
@@ -481,3 +481,5 @@ npm run build
 最新首页采用紧凑作品展示，HomeHero 不再包含大字品牌、封面扇形或入口按钮；最近导入通过 ContinueReadingRow 与继续阅读复用同一交互。作品概览移除重复管理导航。所有网页“馆藏/入藏”措辞已移除，使用作品、作品列表、作品统计等具体名称。
 
 2026-09-08 互动首页替代此前所有列表首页方案：HomeHero 使用现有 Motion 的拖动、惯性与弹簧，CSS perspective 呈现厚度和前后层次。默认封面墙，点击作品进入翻阅台，拖动/滑动、方向按钮、键盘与复位操作可用。只显示现有作品，不自动跳转阅读；空态不伪造封面。仅封面缩略图，无背景大图或额外包。首页不渲染被遮挡的 ModuleBackdrop。
+
+2026-09-08 当前首页覆盖此前封面方案：纸色、墨线与朱红的 SVG 页片装置；叠页/回环/流线连续变形、拖转、键盘、展开滑杆、印章重排、暂停与复位。左右排版展示真实作品/阅读分布，底部为可交互30天阅读节律。不请求封面，无新包或后端改动。后台及装置离开视口暂停循环动画。

@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type LibraryWork } from "../../lib/api";
+import { api, type LibrarySummary, type ReadingStatistics } from "../../lib/api";
 import { HomeHero } from "../folio/ui/HomeHero";
 import "./WorkbenchPage.css";
 
-export function WorkbenchPage({ blurCovers }: { blurCovers: boolean }) {
-  const [works, setWorks] = useState<LibraryWork[]>([]);
+export function WorkbenchPage(_props: { blurCovers: boolean }) {
+  const [summary, setSummary] = useState<LibrarySummary>();
+  const [statistics, setStatistics] = useState<ReadingStatistics>();
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const load = useCallback(async () => {
-    setLoading(true); setError("");
-    try { setWorks((await api.librarySearch({ per_page: 36, sort: "recent_added" })).result); }
-    catch (error) { setError(error instanceof Error ? error.message : "无法加载作品"); }
-    finally { setLoading(false); }
+    setError("");
+    const results = await Promise.allSettled([api.librarySummary(), api.libraryStatistics(30)]);
+    if (results[0].status === "fulfilled") setSummary(results[0].value);
+    if (results[1].status === "fulfilled") setStatistics(results[1].value);
+    if (results.some(result => result.status === "rejected")) setError("部分数据加载失败");
   }, []);
   useEffect(() => { void load(); }, [load]);
   return <div className="folio-workbench-page">
-    <HomeHero works={works} blurCovers={blurCovers} />
-    {loading || error || !works.length ? <div className="folio-home-feedback" role={error ? "alert" : "status"}>
-      {error ? <><span>{error}</span><button type="button" onClick={() => void load()}>重试</button></> : loading ? "正在加载封面…" : "暂无作品"}
-    </div> : null}
+    <HomeHero summary={summary} statistics={statistics} />
+    {error ? <div className="folio-home-feedback" role="alert"><span>{error}</span><button type="button" onClick={() => void load()}>重试</button></div> : null}
   </div>;
 }

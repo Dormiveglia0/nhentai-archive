@@ -1,72 +1,50 @@
 import { expect, test } from "@playwright/test";
 
 test.use({ storageState: process.env.E2E_STORAGE_STATE });
-test.skip(!process.env.E2E_STORAGE_STATE, "需要独立的真实作品测试会话");
+test.skip(!process.env.E2E_STORAGE_STATE, "需要独立测试会话");
 
-test("封面墙拖动不会误选，点选连续转入翻阅，键盘与复位可用", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+test("纸上装置支持变形、拖转、键盘、暂停和重置，数据来自统计接口", async ({ page }) => {
+  const summaryPromise = page.waitForResponse(response => response.url().endsWith('/api/library/summary'));
   await page.goto('/#workbench');
-  const gallery = page.locator('.folio-home-gallery');
-  await expect(page.locator('.folio-home-art')).toHaveCount(36);
-  await page.waitForTimeout(1200);
-  const bounds = (await gallery.boundingBox())!;
-  const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
-  await page.mouse.move(cx, cy); await page.mouse.down();
-  await page.mouse.move(cx + 180, cy + 80, { steps: 12 }); await page.mouse.up();
-  await expect(gallery).toHaveClass(/is-wall/);
-  await page.getByRole('button', { name: '复位', exact: true }).click();
-  await page.waitForTimeout(800);
-  const target = await page.locator('.folio-home-art').evaluateAll(nodes => nodes.map(n => {
-    const r = n.getBoundingClientRect(); return { label: n.getAttribute('aria-label')!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
-  }).find(p => p.x > 300 && p.x < 1100 && p.y > 200 && p.y < 700));
-  expect(target).toBeTruthy();
-  await page.mouse.click(target!.x, target!.y);
-  await expect(gallery).toHaveClass(/is-shelf/);
-  await expect(page.locator('.folio-home-art.is-selected')).toHaveAttribute('aria-label', target!.label);
-  await expect(page.locator('.folio-home-art.is-selected')).toBeInViewport();
-  const previous = await page.locator('.folio-home-caption').innerText();
-  await page.getByRole('button', { name: '下一本', exact: true }).click();
-  await expect(page.locator('.folio-home-caption')).not.toHaveText(previous);
-  await gallery.focus(); await page.keyboard.press('Escape');
-  await expect(gallery).toHaveClass(/is-wall/);
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.getByRole('button', { name: '翻阅', exact: true }).click();
-  await expect(page.locator('.folio-home-art.is-selected')).toBeInViewport();
+  const summary = await (await summaryPromise).json();
+  await expect(page.locator('.folio-studio-total > strong')).toHaveText(summary.total.toLocaleString('zh-CN'));
+  const stage = page.getByRole('slider', { name: '页片旋转' });
+  await stage.focus(); await page.keyboard.press('ArrowRight');
+  await expect(stage).toHaveAttribute('aria-valuenow', '15');
+  const rect = (await stage.boundingBox())!;
+  await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2); await page.mouse.down();
+  await page.mouse.move(rect.x + rect.width / 2 + 90, rect.y + rect.height / 2, { steps: 6 }); await page.mouse.up();
+  await expect(stage).toHaveAttribute('aria-valuenow', '60');
+  for (const name of ['回环', '流线', '叠页']) {
+    await page.getByRole('button', { name: new RegExp(name) }).click();
+    await expect(page.getByRole('button', { name: new RegExp(name) })).toHaveAttribute('aria-pressed', 'true');
+  }
+  await page.getByRole('slider', { name: '展开', exact: true }).focus(); await page.keyboard.press('End');
+  await expect(page.locator('.folio-studio-range output')).toHaveText('100°');
+  await page.getByRole('button', { name: '重新排印' }).click();
+  await expect(page.getByRole('button', { name: /回环/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: '暂停动效' }).click();
+  await expect(page.locator('.folio-home-studio')).toHaveClass(/is-still/);
+  await page.getByRole('button', { name: '重置画面' }).click();
+  await expect(stage).toHaveAttribute('aria-valuenow', '0');
+  await expect(page.locator('.folio-studio-range output')).toHaveText('55°');
+  await page.locator('.folio-studio-bars button').first().click();
+  await expect(page.locator('.folio-studio-activity strong')).toContainText('分钟');
 });
 
-test("空集和单本作品不生成假封面，触屏可以切换翻阅", async ({ browser }) => {
-  const context = await browser.newContext({ storageState: process.env.E2E_STORAGE_STATE, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  const page = await context.newPage();
-  const base = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5173';
-  for (const count of [0, 1, 3]) {
-    await page.route('**/api/library/search?*', async route => {
-      const response = await route.fetch(); const data = await response.json();
-      await route.fulfill({ json: { ...data, result: data.result.slice(0, count) } });
-    });
-    await page.goto('about:blank'); await page.goto(base + '/#workbench');
-    if (!count) await expect(page.getByText('暂无作品', { exact: true })).toBeVisible();
-    await expect(page.locator('.folio-home-art')).toHaveCount(count);
-    if (count) {
-      await page.getByRole('button', { name: '翻阅', exact: true }).tap();
-      await expect(page.locator('.folio-home-art.is-selected')).toBeInViewport();
-      if (count > 1) {
-        const previous = await page.locator('.folio-home-caption').innerText();
-        const session = await context.newCDPSession(page);
-        await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 290, y: 400 }] });
-        for (const x of [250, 210, 170, 130, 90]) await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: 400 }] });
-        await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-        await expect(page.locator('.folio-home-caption')).not.toHaveText(previous);
-        await session.detach();
-      }
-    } else await expect(page.getByRole('button', { name: '翻阅', exact: true })).toBeDisabled();
-    await page.unrouteAll({ behavior: 'wait' });
-  }
-  await page.setViewportSize({ width: 844, height: 390 });
-  await page.waitForTimeout(1000);
-  const cover = (await page.locator('.folio-home-art.is-selected').boundingBox())!;
-  const caption = (await page.locator('.folio-home-caption').boundingBox())!;
-  const controls = (await page.locator('.folio-home-controls').boundingBox())!;
-  expect(cover.y + cover.height).toBeLessThan(caption.y);
-  expect(caption.y + caption.height).toBeLessThan(controls.y);
-  await context.close();
+test("窄屏与减少动态效果可用，数据失败仍可操作装置并重试", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('**/api/library/summary', route => route.abort());
+  await page.goto('/#workbench');
+  await expect(page.getByRole('alert')).toContainText('部分数据加载失败');
+  await expect(page.locator('.folio-studio-total > strong')).toHaveText('—');
+  await page.getByRole('button', { name: /流线/ }).click();
+  await expect(page.getByRole('button', { name: /流线/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.folio-home-studio')).toHaveClass(/is-still/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.unroute('**/api/library/summary');
+  await page.getByRole('button', { name: '重试', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.locator('.folio-studio-total > strong')).not.toHaveText('—');
 });
