@@ -5,7 +5,14 @@ import "./WorkbenchPage.css";
 
 const HomeLayoutPreview = lazy(() => import("./HomeLayoutPreview").then(module => ({ default: module.HomeLayoutPreview })));
 
+const HomePlayPreview = lazy(() => import("./HomePlayPreview").then(module => ({ default: module.HomePlayPreview })));
+
 export function WorkbenchPage({ blurCovers }: { blurCovers: boolean }) {
+  if (new URLSearchParams(window.location.search).get("home-preview") === "play") return <Suspense fallback={<p role="status">正在加载…</p>}><HomePlayPreview /></Suspense>;
+  return <WorkbenchData blurCovers={blurCovers} />;
+}
+
+function WorkbenchData({ blurCovers }: { blurCovers: boolean }) {
   const preview = new URLSearchParams(window.location.search).get("home-preview") === "1";
   const [works, setWorks] = useState<LibraryWork[]>([]);
   const [summary, setSummary] = useState<LibrarySummary>();
