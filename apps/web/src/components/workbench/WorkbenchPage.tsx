@@ -6,9 +6,12 @@ import "./WorkbenchPage.css";
 const HomeLayoutPreview = lazy(() => import("./HomeLayoutPreview").then(module => ({ default: module.HomeLayoutPreview })));
 
 const HomePlayPreview = lazy(() => import("./HomePlayPreview").then(module => ({ default: module.HomePlayPreview })));
+const HomeConcepts = lazy(() => import("./concepts/HomeConcepts").then(module => ({ default: module.HomeConcepts })));
 
 export function WorkbenchPage({ blurCovers }: { blurCovers: boolean }) {
-  if (new URLSearchParams(window.location.search).get("home-preview") === "play") return <Suspense fallback={<p role="status">正在加载…</p>}><HomePlayPreview /></Suspense>;
+  const preview = new URLSearchParams(window.location.search).get("home-preview");
+  if (preview && ["encounter", "echo", "imprint"].includes(preview)) return <Suspense fallback={<p role="status">正在加载…</p>}><HomeConcepts kind={preview} blurCovers={blurCovers} /></Suspense>;
+  if (preview === "play") return <Suspense fallback={<p role="status">正在加载…</p>}><HomePlayPreview /></Suspense>;
   return <WorkbenchData blurCovers={blurCovers} />;
 }
 
