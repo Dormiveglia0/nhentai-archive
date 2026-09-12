@@ -52,33 +52,50 @@
 .encounter-mini-page i:last-child { width: 65%; }
 .encounter-history button[aria-pressed=true], .encounter-history button:hover { color: var(--folio-red); }
 .encounter-history button:hover .encounter-mini-page { transform: translateY(-6px); }
-.echo-map { position: relative; height: clamp(530px, calc(100dvh - 265px), 1030px); }
+/* The history, current work and relations share one stable composition. */
+.echo-map { position: relative; display: grid; grid-template-columns: minmax(150px, 19fr) minmax(180px, 27fr) minmax(360px, 48fr); gap: 3%; align-items: center; min-height: clamp(650px, calc(100dvh - 245px), 1100px); }
 .echo-lines { position: absolute; width: 100%; height: 100%; inset: 0; pointer-events: none; }
-.echo-lines path { transition: stroke .2s, stroke-opacity .2s; }
-.echo-origin { z-index: 1; position: absolute; left: 35%; bottom: 62%; width: 250px; display: flex; align-items: flex-end; gap: 17px; padding: 10px; background: transparent; animation: concept-arrive .4s ease both; }
-.echo-origin .concept-cover { height: 115px; width: 78px; flex-shrink: 0; }
-.echo-origin h2 { margin: 0; font-size: 12px; font-weight: 450; line-height: 1.65; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-.echo-origin a { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; color: var(--folio-red); font-size: 12px; text-decoration: none; }
-.echo-start { position: absolute; left: 1%; top: 60%; font-size: 22px; color: var(--folio-red); font-variant-numeric: tabular-nums; }
-.echo-past button { position: absolute; transform: translate(-15px, -22px); display: flex; align-items: center; gap: 10px; min-width: 80px; min-height: 44px; padding: 0 8px; border: 0; color: var(--folio-muted); background: var(--folio-paper); }
-.echo-past button span { font-size: 11px; }
-.echo-past button:hover { color: var(--folio-red); }
-.echo-branch h2 { position: absolute; left: 60%; top: calc(var(--branch-y) - 65px); width: 150px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 500; }
-.echo-branch h2 small { flex: 0 0 100%; color: var(--folio-muted); font-weight: 400; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 25px; }
-.echo-branch button { position: absolute; min-width: 0; display: flex; align-items: center; gap: 8px; width: 15%; min-height: 44px; transform: translateY(-22px); padding: 8px 5px; text-align: left; font-size: 11px; background: var(--folio-paper); border: 0; transition: color .2s, background .2s; animation: concept-arrive .5s ease both; }
-.echo-branch button span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.echo-branch button svg { flex-shrink: 0; }
-.echo-branch button:hover, .echo-branch button:focus-visible { color: var(--folio-red); background: var(--folio-red-soft); }
-.echo-branch > p { position: absolute; left: 66%; top: calc(var(--branch-y) + 10px); color: var(--folio-muted); font-size: 11px; }
-.echo-loading { position: absolute; left: 65%; top: 45%; color: var(--folio-muted); font-size: 12px; }
-.echo-trail { display: flex; overflow: auto; gap: 18px; margin-bottom: 8px; }
-.echo-trail button { display: flex; align-items: center; gap: 9px; flex: 0 0 180px; min-width: 0; min-height: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: transparent; font-size: 11px; }
+.echo-lines path { fill: none; stroke: var(--folio-line); stroke-width: .8; }
+.echo-lines .echo-flow { stroke: var(--folio-red); stroke-dasharray: 4 160; animation: echo-flow 18s linear infinite; opacity: .6; }
+.echo-past, .echo-center, .echo-branches { position: relative; min-width: 0; }
+.echo-past { display: grid; gap: 3px; }
+.echo-past button { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; width: 100%; min-width: 0; padding: 10px 12px; border: 0; background: transparent; text-align: left; transition: color .2s, background .2s; }
+.echo-past button time { grid-column: 1 / -1; color: var(--folio-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.echo-past button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.echo-past button small { color: var(--folio-muted); font-size: 10px; }
+.echo-past button:hover, .echo-past button[aria-pressed=true] { background: var(--folio-red-soft); color: var(--folio-red); }
+.echo-record-active { position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; background: var(--folio-red); }
+.echo-origin { width: 100%; margin: auto; max-width: 300px; padding: 15px; background: var(--folio-paper); }
+.echo-cover-link { display: block; }
+.echo-origin .concept-cover { height: clamp(220px, 18vw, 390px); width: 100%; transition: transform .4s; }
+.echo-cover-link:hover .concept-cover { transform: translateY(-5px) rotate(-1deg); }
+.echo-origin h2 { margin: 20px 0 8px; font-size: clamp(13px, 1vw, 17px); font-weight: 450; line-height: 1.65; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.echo-read { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; color: var(--folio-red); font-size: 12px; text-decoration: none; }
+.echo-read svg { transition: transform .2s; }
+.echo-read:hover svg { transform: translateX(5px); }
+.echo-branches { padding-left: 4%; }
+.echo-branch { position: relative; margin: 20px 0; }
+.echo-branch h2 { display: flex; align-items: baseline; gap: 12px; margin: 0 0 12px; font-size: 12px; font-weight: 500; }
+.echo-branch h2::before { content: ''; width: 5px; height: 5px; background: var(--folio-red); border-radius: 50%; animation: echo-breathe 5s ease-in-out infinite; }
+.echo-branch:nth-child(2) h2::before { animation-delay: -2s; }
+.echo-branch h2 small { color: var(--folio-muted); font-weight: 400; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.echo-related { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 1.4vw, 28px); }
+.echo-related button { min-width: 0; padding: 8px; text-align: left; background: var(--folio-paper); border: 0; transition: background .25s, transform .25s; }
+.echo-related button:hover, .echo-related button:focus-visible { background: var(--folio-red-soft); transform: translateY(-5px); }
+.echo-related .concept-cover { height: clamp(105px, 8vw, 180px); width: 100%; }
+.echo-related button > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px; line-height: 1.6; margin-top: 10px; min-height: 3.2em; }
+.echo-related button > small { display: block; color: var(--folio-muted); font-size: 10px; margin-top: 5px; }
+.echo-loading { color: var(--folio-muted); font-size: 12px; }
+.echo-trail { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; border-top: 1px solid var(--folio-line); padding-top: 12px; }
+.echo-trail button { display: flex; align-items: center; gap: 10px; max-width: 180px; min-width: 0; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 11px; }
+.echo-trail button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.echo-trail button small { color: var(--folio-red); }
 .echo-trail button svg { flex-shrink: 0; }
-.echo-timeline { display: flex; justify-content: space-between; gap: 18px; overflow-x: auto; border-top: 1px solid var(--folio-line); }
-.echo-timeline button { position: relative; flex: 1 0 46px; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0 0; min-height: 60px; border: 0; background: transparent; font-size: 10px; color: var(--folio-muted); }
-.echo-timeline i { height: 14px; width: 1px; background: currentColor; transition: transform .2s; }
-.echo-timeline button:hover, .echo-timeline button[aria-pressed=true] { color: var(--folio-red); }
-.echo-timeline button:hover i { transform: scaleY(1.7); }
+.echo-trail button:hover { color: var(--folio-red); }
+.echo-map.is-paused .echo-flow, .echo-map.is-paused .echo-branch h2::before { animation-play-state: paused; }
+@keyframes echo-flow { to { stroke-dashoffset: -656; } }
+@keyframes echo-breathe { 50% { opacity: .35; transform: scale(.7); } }
+@media (min-width: 1900px) { .echo-origin { max-width: 380px; } .echo-related button > span { font-size: 13px; } .echo-past button { padding: 15px; } .echo-past button span { font-size: 13px; } }
 .imprint-heading { justify-content: space-between; align-items: center; padding-right: 0; }
 .imprint-heading .concept-actions button { border: 0; color: var(--folio-red); }
 .imprint-stage { position: relative; width: min(100%, calc((100dvh - 280px) * 1.5)); aspect-ratio: 3 / 2; margin: 0 auto; }
@@ -117,19 +134,17 @@
   .encounter-result > .concept-text-action { margin-top: 10px; }
   .encounter-history { gap: 15px; }
   .encounter-history button { flex-basis: 115px; }
-  .echo-map { height: auto; padding-top: 20px; }
-  .echo-lines, .echo-past, .echo-start { display: none; }
-  .echo-origin { position: relative; inset: auto; width: 100%; padding: 8px 0 25px; gap: 22px; }
-  .echo-origin .concept-cover { height: 110px; width: 76px; }
-  .echo-origin h2 { font-size: 13px; -webkit-line-clamp: 3; }
-  .echo-branches { border-left: 1px solid var(--folio-line); margin-left: 12px; }
-  .echo-branch { position: relative; padding: 22px 0 12px 20px; }
-  .echo-branch::before { content: ''; position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--folio-red); left: -3.5px; top: 28px; }
-  .echo-branch h2 { position: static; width: 100%; margin-bottom: 12px; }
-  .echo-branch h2 small { flex-basis: auto; padding-left: 0; max-width: 145px; }
-  .echo-branch button { position: static; transform: none; width: 100%; font-size: 12px; background: transparent; padding: 10px 0; }
-  .echo-branch > p, .echo-loading { position: static; }
-  .echo-timeline { margin-top: 20px; }
+  .echo-map { display: flex; flex-direction: column; min-height: 0; gap: 22px; }
+  .echo-lines { display: none; }
+  .echo-past { width: 100%; display: flex; overflow-x: auto; overflow-y: hidden; gap: 8px; padding: 4px; }
+  .echo-past button { flex: 0 0 155px; }
+  .echo-center { width: 100%; }
+  .echo-origin { max-width: 330px; }
+  .echo-origin .concept-cover { height: 250px; }
+  .echo-branches { width: 100%; padding: 0; }
+  .echo-related { gap: 8px; }
+  .echo-related button { padding: 4px; }
+  .echo-related .concept-cover { height: 120px; }
   .imprint-stage { width: calc(100% + 32px); margin-left: -16px; margin-top: 24px; }
   .imprint-heading .concept-actions { gap: 4px; }
   .imprint-heading .concept-actions button { padding: 0 8px; }

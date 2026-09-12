@@ -29,13 +29,20 @@ test('方案1连续抽取不同的未读作品，拖动只触发一次且收藏�
 
 test('方案2沿真实作品关系前进并能返回探索路径', async ({ page }) => {
   await page.goto('/?home-preview=echo#workbench');
-  await expect(page.locator('.echo-branch')).toHaveCount(3);
-  const first = await page.locator('.echo-origin a').getAttribute('href');
+  await expect(page.locator('.echo-map')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.echo-related button').first()).toBeVisible();
+  const first = await page.locator('.echo-cover-link').getAttribute('href');
+  const records = await page.locator('.echo-past button').allTextContents();
+  for (const branch of await page.locator('.echo-branch').all()) await expect(branch.locator('button').first()).toBeVisible();
   await page.locator('.echo-branch button').first().click();
-  await expect(page.locator('.echo-origin a')).not.toHaveAttribute('href', first!);
-  await expect(page.locator('.echo-branch')).toHaveCount(3);
+  await expect(page.locator('.echo-cover-link')).not.toHaveAttribute('href', first!);
+  await expect(page.locator('.echo-map')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.echo-related button').first()).toBeVisible();
   await page.locator('.echo-trail button').first().click();
-  await expect(page.locator('.echo-origin a')).toHaveAttribute('href', first!);
+  await expect(page.locator('.echo-cover-link')).toHaveAttribute('href', first!);
+  expect(await page.locator('.echo-past button').allTextContents()).toEqual(records);
+  await expect(page.locator('.echo-timeline')).toHaveCount(0);
+  expect(await page.locator('.echo-trail').evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBeTruthy();
   await expect(page.locator('.echo-map')).toHaveAttribute('aria-busy', 'false');
 });
 
@@ -57,4 +64,24 @@ test('方案3拖动与键盘改变记录曲线，导出有效 PNG，重置恢复
   const bytes = await readFile((await download.path())!); expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   expect(bytes.readUInt32BE(16)).toBe(1800); expect(bytes.readUInt32BE(20)).toBe(1200);
   await page.getByRole('button', { name: '恢复初始位置' }).click(); await expect(path).toHaveAttribute('d', before!);
+});
+
+
+test('方案2隐藏没有结果的关联分类，失败后允许重试', async ({ page }) => {
+  let fail = true;
+  await page.route('**/api/library/search?**', async route => {
+    if (!new URL(route.request().url()).searchParams.has('tag_ids')) return route.continue();
+    if (fail) return route.fulfill({ status: 503, body: '{}' });
+    const response = await route.fetch();
+    const data = await response.json();
+    await route.fulfill({ response, json: { ...data, result: [], total: 0, num_pages: 0 } });
+  });
+  await page.goto('/?home-preview=echo#workbench');
+  await expect(page.getByRole('button', { name: '重试', exact: true })).toBeVisible();
+  fail = false;
+  await page.getByRole('button', { name: '重试', exact: true }).click();
+  await expect(page.locator('.echo-map')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.echo-branch')).toHaveCount(0);
+  await expect(page.getByText('暂无关联作品', { exact: true })).toBeVisible();
+  await expect(page.locator('.echo-cover-link')).toBeVisible();
 });
