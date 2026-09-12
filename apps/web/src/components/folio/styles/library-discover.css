@@ -573,7 +573,8 @@
 }
 
 .folio button:active:not(:disabled) {
-  transform: translateY(1px) scale(0.985);
+  translate: 0 1px;
+  scale: 0.985;
 }
 
 .folio-split-layout {

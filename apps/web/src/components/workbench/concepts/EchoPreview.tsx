@@ -1,6 +1,6 @@
-import { ArrowRight, BookOpen, Clock3, Tag, UserRound } from "lucide-react";
+import { ArrowRight, FileText, Clock3, Tag, UserRound } from "lucide-react";
 import { m } from "motion/react";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { api, type LibraryWork } from "../../../lib/api";
 import { workTitle } from "../../../lib/format";
 import { pageHref } from "../../../lib/navigation";
@@ -15,6 +15,7 @@ export function EchoPreview({ hidden }: { hidden: boolean }) {
   const [recent, setRecent] = useState<LibraryWork[]>([]);
   const [trail, setTrail] = useState<LibraryWork[]>([]);
   const [groups, setGroups] = useState<Relation[]>([]);
+  const [hovered, setHovered] = useState<number | null>(null);
   const [owner, setOwner] = useState<number>();
   const [error, setError] = useState(""), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
   useEffect(() => {
@@ -61,18 +62,34 @@ export function EchoPreview({ hidden }: { hidden: boolean }) {
     setRoot(work);
   }
   const visible = owner === root?.id ? groups : [];
+  const previous = recent.filter(work => work.id !== root?.id).slice(0, 6);
+  const date = root?.last_read_at ? new Date(root.last_read_at).toLocaleDateString("zh-CN") : "最近添加";
   return <>
-    <header className="concept-heading"><h1>阅读回声</h1><span>{root?.last_read_at ? new Date(root.last_read_at).toLocaleDateString("zh-CN") : "最近添加"}</span></header>
-    {!root ? <div className="concept-empty" role="status">{loading ? "正在寻找阅读痕迹…" : error || "暂无作品"}</div> : <div className="echo-map" aria-busy={loading}>
-      <svg className="echo-lines" viewBox="0 0 1200 650" preserveAspectRatio="none" aria-hidden="true">{visible.map((_, index) => <m.path key={`${root.id}-${index}`} d={`M340 330C530 330 460 ${35 + index * 215} 645 ${35 + index * 215}`} fill="none" stroke={index === 1 ? "var(--folio-red)" : "var(--folio-line-strong)"} strokeWidth="1" initial={reduced ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduced ? 0 : .7, delay: reduced ? 0 : index * .1 }} />)}</svg>
-      <div className="echo-origin" key={root.id}><BookOpen className="echo-origin-icon" size={28} strokeWidth={1} /><ConceptCover key={root.id} work={root} hidden={hidden} /><h2>{workTitle(root)}</h2><a href={pageHref({ name: "reader", workId: root.id })}>阅读<ArrowRight size={15} /></a></div>
+    <header className="concept-heading"><time>{date}</time></header>
+    {!root ? <div className="concept-empty" role="status">{loading ? "正在加载阅读记录" : error || "暂无作品"}</div> : <div className="echo-map" aria-busy={loading}>
+      <svg className="echo-lines" viewBox="0 0 1200 700" preserveAspectRatio="none" aria-hidden="true">
+        {previous.map((work, index) => <path key={work.id} d={`M${80 + index % 3 * 40} ${85 + index * 90}C300 ${85 + index * 90} 220 340 450 340`} fill="none" stroke={hovered === work.id ? "var(--folio-red)" : "var(--folio-line)"} strokeWidth=".8" />)}
+        <m.path d="M65 410C250 415 220 340 450 340" fill="none" stroke="var(--folio-red)" strokeWidth="1.2" initial={reduced ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduced ? 0 : .8 }} />
+        {visible.map((group, index) => <g key={`${root.id}-${index}`}>
+          <m.path d={`M450 340C635 340 620 ${155 + index * 185} 740 ${155 + index * 185}`} fill="none" stroke="var(--folio-red)" strokeWidth="1" initial={reduced ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: reduced ? 0 : .7, delay: reduced ? 0 : index * .1 }} />
+          <circle cx="740" cy={155 + index * 185} r="3" fill="var(--folio-red)" />
+          {group.works.map((work, j) => <path key={work.id} d={`M748 ${155 + index * 185}C860 ${155 + index * 185} 850 ${100 + index * 185 + j * 55} ${950 + j * 30} ${100 + index * 185 + j * 55}`} fill="none" stroke={hovered === work.id ? "var(--folio-red)" : "var(--folio-line-strong)"} strokeOpacity={hovered === work.id ? 1 : .5} strokeWidth=".8" />)}
+        </g>)}
+        <path d="M450 340V262" stroke="var(--folio-red)" strokeWidth="1" /><circle cx="450" cy="340" r="3" fill="var(--folio-red)" />
+      </svg>
+      <div className="echo-past" aria-label="阅读记录">{previous.map((work, index) => <button type="button" key={work.id} style={{ left: `${(80 + index % 3 * 40) / 12}%`, top: `${(85 + index * 90) / 7}%` }} onMouseEnter={() => setHovered(work.id)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(work.id)} onBlur={() => setHovered(null)} onClick={() => follow(work)} aria-label={`回到阅读记录：${workTitle(work)}`} title={workTitle(work)}><FileText size={17} strokeWidth={1} /><span>{work.last_read_at ? new Date(work.last_read_at).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }) : "—"}</span></button>)}</div>
+      <div className="echo-origin" key={root.id}><ConceptCover key={root.id} work={root} hidden={hidden} /><div><h2 title={workTitle(root)}>{workTitle(root)}</h2><a href={pageHref({ name: "reader", workId: root.id })}>阅读<ArrowRight size={15} /></a></div></div>
+      <span className="echo-start">{root.last_read_at ? new Date(root.last_read_at).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }) : "未读"}</span>
       <div className="echo-branches">{visible.map((group, index) => {
         const Icon = icons[index];
-        return <section className="echo-branch" key={`${root.id}-${group.label}`}><h2><Icon size={17} strokeWidth={1.3} />{group.label}<small>{group.detail}</small></h2>{group.error ? <p>暂时无法加载</p> : group.works.length ? <div>{group.works.map(work => <button type="button" key={work.id} onClick={() => follow(work)} aria-label={`追溯：${workTitle(work)}`}><span>{workTitle(work)}</span><ArrowRight size={15} /></button>)}</div> : <p>暂无关联作品</p>}</section>;
-      })}{loading ? <p className="echo-loading" role="status">正在连接…</p> : null}</div>
+        return <section className="echo-branch" key={`${root.id}-${group.label}`} style={{ "--branch-y": `${(155 + index * 185) / 7}%` } as CSSProperties}>
+          <h2><Icon size={17} strokeWidth={1.3} />{group.label}<small title={group.detail}>{group.detail}</small></h2>
+          {group.error ? <p>暂时无法加载</p> : group.works.length ? <div>{group.works.map((work, j) => <button type="button" key={work.id} style={{ left: `${(950 + j * 30) / 12}%`, top: `${(100 + index * 185 + j * 55) / 7}%` }} onMouseEnter={() => setHovered(work.id)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(work.id)} onBlur={() => setHovered(null)} onClick={() => follow(work)} aria-label={`追溯：${workTitle(work)}`} title={workTitle(work)}><FileText size={18} strokeWidth={1} /><span>{workTitle(work)}</span></button>)}</div> : <p>暂无关联作品</p>}
+        </section>;
+      })}{loading ? <p className="echo-loading" role="status">正在加载…</p> : null}</div>
     </div>}
     {error || visible.some(group => group.error) ? <div className="concept-error" role="alert">{error || "部分关系未能加载"}<button type="button" onClick={() => setRevision(value => value + 1)}>重试</button></div> : null}
-    {trail.length ? <nav className="echo-trail" aria-label="本次探索路径">{trail.map(work => <button key={work.id} type="button" onClick={() => follow(work)}>{workTitle(work)}</button>)}</nav> : null}
+    {trail.length ? <nav className="echo-trail" aria-label="本次浏览">{trail.map(work => <button key={work.id} type="button" onClick={() => follow(work)} title={workTitle(work)}><FileText size={15} />{workTitle(work)}</button>)}</nav> : null}
     <footer className="echo-timeline" aria-label="最近阅读记录">{recent.map(work => <button type="button" key={work.id} aria-label={`回到阅读记录：${workTitle(work)}`} aria-pressed={work.id === root?.id} onClick={() => follow(work)}><i /><span>{work.last_read_at ? new Date(work.last_read_at).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }) : "—"}</span></button>)}</footer>
   </>;
 }

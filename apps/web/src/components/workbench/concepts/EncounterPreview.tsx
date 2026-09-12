@@ -1,5 +1,5 @@
 import { ArrowRight, Bookmark, Check, MoveHorizontal } from "lucide-react";
-import { m } from "motion/react";
+import { animate, m, useMotionValue } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type LibraryWork } from "../../../lib/api";
 import { workTitle } from "../../../lib/format";
@@ -9,6 +9,7 @@ import { ConceptCover } from "./HomeConcepts";
 
 export function EncounterPreview({ hidden }: { hidden: boolean }) {
   const reduced = usePrefersReducedMotion();
+  const pullX = useMotionValue(0);
   const [work, setWork] = useState<LibraryWork>();
   const [total, setTotal] = useState<number>();
   const [history, setHistory] = useState<LibraryWork[]>([]);
@@ -49,24 +50,25 @@ export function EncounterPreview({ hidden }: { hidden: boolean }) {
     finally { if (alive.current) setSaving(false); }
   }
   return <>
-    <header className="concept-heading"><h1>偶遇一册</h1><span>{total === undefined ? "—" : `${total} 部未读`}</span></header>
+    <header className="concept-heading"><span>{total === undefined ? "—" : `${total} 部未读`}</span></header>
+    <svg className="encounter-flow" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true"><path d="M1200 20H540Q380 20 380 145V210M1200 495C1100 630 955 585 855 690S690 780 620 800" fill="none" stroke="var(--folio-red)" strokeWidth=".8" /></svg>
     <div className="encounter-layout">
       <div className="encounter-stage" aria-busy={busy}>
         <div className="encounter-thread" />
-        {Array.from({ length: Math.min(total ?? 0, 5) }, (_, i) => <m.div key={i} className="encounter-slip" aria-hidden="true" initial={false} animate={{ x: `${(i - 2) * 34}%`, rotate: (i - 2) * 4, y: busy ? 18 + Math.abs(i - 2) * 12 : Math.abs(i - 2) * 10 }} transition={{ duration: reduced ? 0 : .45 }}><Bookmark size={22} strokeWidth={.7} /><i /><i /><i /></m.div>)}
+        {Array.from({ length: Math.min(total ?? 0, 5) }, (_, i) => <m.div key={i} className="encounter-slip" aria-hidden="true" initial={false} animate={{ x: `${(i - 2) * 34}%`, rotate: (i - 2) * 1.8, y: busy ? 18 + Math.abs(i - 2) * 12 : Math.abs(i - 2) * 10 }} transition={{ duration: reduced ? 0 : .45 }}><span className="encounter-page-rules"><i /><i /><i /><i /><i /></span><i /><i /><i /></m.div>)}
         <div className="encounter-selected">
           {work ? <m.div key={work.id} initial={reduced ? false : { opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : .5 }}><ConceptCover key={work.id} work={work} hidden={hidden} /></m.div> : <span className="encounter-unopened">{total === 0 ? "暂无未读作品" : "未揭晓"}</span>}
         </div>
-        <button type="button" className="encounter-pull" disabled={busy || total === 0 || total === undefined} aria-label="抽取一部未读作品" onPointerDown={event => { if (event.button !== 0) return; gesture.current = event.clientX; swiped.current = false; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerUp={event => { if (gesture.current !== null && Math.abs(event.clientX - gesture.current) > 35) { swiped.current = true; void draw(); } gesture.current = null; }} onPointerCancel={() => { gesture.current = null; }} onLostPointerCapture={() => { gesture.current = null; }} onClick={event => { if (event.detail && swiped.current) { swiped.current = false; return; } void draw(); }}><MoveHorizontal size={20} /></button>
+        <m.button type="button" className="encounter-pull" style={{ x: pullX }} whileHover={reduced ? undefined : { y: -5 }} disabled={busy || total === 0 || total === undefined} aria-label="抽取一部未读作品" onPointerDown={event => { if (event.button !== 0) return; gesture.current = event.clientX; swiped.current = false; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={event => { if (gesture.current !== null) pullX.set(Math.max(-65, Math.min(65, event.clientX - gesture.current))); }} onPointerUp={event => { animate(pullX, 0, { duration: reduced ? 0 : .3 }); if (gesture.current !== null && Math.abs(event.clientX - gesture.current) > 35) { swiped.current = true; void draw(); } gesture.current = null; }} onPointerCancel={() => { gesture.current = null; pullX.set(0); }} onLostPointerCapture={() => { gesture.current = null; animate(pullX, 0, { duration: reduced ? 0 : .3 }); }} onClick={event => { if (event.detail && swiped.current) { swiped.current = false; return; } void draw(); }}><MoveHorizontal size={20} /></m.button>
       </div>
       <div className="encounter-result" aria-live="polite">
-        <span className="concept-kicker">{busy ? "正在揭晓" : work ? "未读" : "偶遇"}</span>
-        <h2>{work ? workTitle(work) : total === 0 ? "已经读遍了" : "—"}</h2>
-        {work ? <><p>{work.page_count} 页{work.language ? ` · ${work.language}` : ""}</p><div className="concept-actions"><button type="button" onClick={() => void keep()} disabled={saving || work.favorite}>{work.favorite ? <Check size={17} /> : <Bookmark size={17} />}{work.favorite ? "已收藏" : saving ? "正在收藏" : "留下这部"}</button><a href={pageHref({ name: "reader", workId: work.id })}>阅读<ArrowRight size={16} /></a></div></> : null}
-        <button type="button" className="concept-text-action" disabled={busy || !total} onClick={() => void draw()}>{work ? "再遇一部" : "抽取一部"}<ArrowRight size={16} /></button>
+        <span className="concept-kicker">{busy ? "正在揭晓" : "未读"}</span>
+        <h2>{work ? workTitle(work) : total === 0 ? "暂无未读作品" : "—"}</h2>
+        {work ? <><p>{work.page_count} 页{work.language ? ` · ${work.language}` : ""}</p><div className="concept-actions"><button type="button" onClick={() => void keep()} disabled={saving || work.favorite}>{work.favorite ? <Check size={17} /> : <Bookmark size={17} />}{work.favorite ? "已收藏" : saving ? "正在收藏" : "收藏"}</button><a href={pageHref({ name: "reader", workId: work.id })}>阅读<ArrowRight size={16} /></a></div></> : null}
+        <button type="button" className="concept-text-action" disabled={busy || !total} onClick={() => void draw()}>{work ? "换一部" : "抽取一部"}<ArrowRight size={16} /></button>
       </div>
     </div>
     {error ? <div className="concept-error" role="alert">{error}<button type="button" onClick={() => void (total === undefined ? loadCount() : draw())}>重试</button></div> : null}
-    <footer className="encounter-history"><span>本次偶遇</span>{history.map(item => <button key={item.id} type="button" aria-label={`查看：${workTitle(item)}`} aria-pressed={item.id === work?.id} onClick={() => setWork(item)}><Bookmark size={20} strokeWidth={1} /><span>{workTitle(item)}</span></button>)}</footer>
+    <footer className="encounter-history"><span>本次查看</span>{history.map(item => <button key={item.id} type="button" aria-label={`查看：${workTitle(item)}`} aria-pressed={item.id === work?.id} onClick={() => setWork(item)}><span className="encounter-mini-page" aria-hidden="true"><i /><i /><i /></span><span>{workTitle(item)}</span></button>)}</footer>
   </>;
 }

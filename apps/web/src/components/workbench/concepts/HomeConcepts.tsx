@@ -10,7 +10,7 @@ import "./HomeConcepts.css";
 export function HomeConcepts({ kind, blurCovers }: { kind: string; blurCovers: boolean }) {
   const [hidden, setHidden] = useState(blurCovers);
   useEffect(() => setHidden(blurCovers), [blurCovers]);
-  return <section className={`home-concept is-${kind}`} aria-label={kind === "encounter" ? "偶遇一册" : kind === "echo" ? "阅读回声" : "私人扉页"}>
+  return <section className={`home-concept is-${kind}`} aria-label={kind === "encounter" ? "方案 1" : kind === "echo" ? "方案 2" : "方案 3"}>
     {kind !== "imprint" ? <button className="concept-privacy" type="button" aria-label={hidden ? "显示封面" : "隐藏封面"} onClick={() => setHidden(value => !value)}>{hidden ? <Eye size={17} /> : <EyeOff size={17} />}</button> : null}
     {kind === "encounter" ? <EncounterPreview hidden={hidden} /> : kind === "echo" ? <EchoPreview hidden={hidden} /> : <ImprintPreview />}
   </section>;

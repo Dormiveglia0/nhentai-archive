@@ -328,6 +328,9 @@
   position: relative;
 }
 
+/* Route focus lands on this non-interactive landmark; controls keep their own focus rings. */
+.folio-scroll:focus { outline: none; }
+
 .folio-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
