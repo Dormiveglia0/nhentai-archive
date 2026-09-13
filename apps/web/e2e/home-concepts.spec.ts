@@ -33,6 +33,20 @@ test('方案2沿真实作品关系前进并能返回探索路径', async ({ page
   await expect(page.locator('.echo-related button').first()).toBeVisible();
   const first = await page.locator('.echo-cover-link').getAttribute('href');
   const records = await page.locator('.echo-past button').allTextContents();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect.poll(() => page.locator('.echo-map').evaluate(stage => {
+    const bounds = stage.getBoundingClientRect();
+    const paths = [...stage.querySelectorAll<SVGPathElement>('[data-echo-path]')];
+    if (!paths.length) return false;
+    return paths.every(path => {
+      const key = path.dataset.echoPath!;
+      const anchor = stage.querySelector<HTMLElement>(`[data-echo-anchor="${key.startsWith('past:') ? 'root' : key}"]`);
+      if (!anchor) return false;
+      const target = anchor.getBoundingClientRect(), end = path.getPointAtLength(path.getTotalLength());
+      return Math.hypot(end.x - (target.left + target.width / 2 - bounds.left), end.y - (target.top + target.height / 2 - bounds.top)) < 1;
+    });
+  })).toBe(true);
+
   for (const branch of await page.locator('.echo-branch').all()) await expect(branch.locator('button').first()).toBeVisible();
   await page.locator('.echo-branch button').first().click();
   await expect(page.locator('.echo-cover-link')).not.toHaveAttribute('href', first!);

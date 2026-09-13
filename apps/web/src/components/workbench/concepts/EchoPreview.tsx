@@ -1,10 +1,11 @@
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { api, type LibraryTagFilter, type LibraryWork } from "../../../lib/api";
 import { workTitle } from "../../../lib/format";
 import { pageHref } from "../../../lib/navigation";
 import { usePrefersReducedMotion } from "../../../lib/motion";
+import { EchoConnections } from "./EchoConnections";
 import { ConceptCover } from "./HomeConcepts";
 
 type Relation = { label: string; detail: string; works: LibraryWork[] };
@@ -17,6 +18,7 @@ export function EchoPreview({ hidden }: { hidden: boolean }) {
   const [recent, setRecent] = useState<LibraryWork[]>([]);
   const [trail, setTrail] = useState<LibraryWork[]>([]);
   const [groups, setGroups] = useState<Relation[]>([]);
+  const [active, setActive] = useState<number>();
   const [owner, setOwner] = useState<number>();
   const [error, setError] = useState(""), [loading, setLoading] = useState(true), [revision, setRevision] = useState(0);
   const stage = useRef<HTMLDivElement>(null);
@@ -99,28 +101,25 @@ export function EchoPreview({ hidden }: { hidden: boolean }) {
   return <>
     <header className="concept-heading"><time>{root ? stamp(root) : ""}</time></header>
     {!root ? <div className="concept-empty" role="status">{loading ? "正在加载阅读记录" : error || "暂无作品"}</div> : <div ref={stage} className="echo-map" aria-busy={loading}>
-      <svg className="echo-lines" viewBox="0 0 1200 700" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M110 90V600M110 350C230 350 260 350 420 350S540 350 650 350M650 100V600" />
-        {[150, 350, 550].slice(0, Math.max(1, visible.length)).map(y => <path key={y} d={`M420 350C560 350 540 ${y} 685 ${y}`} />)}
-        <path className="echo-flow" d="M110 350C230 350 260 350 420 350S540 350 650 350" />
-      </svg>
-      <nav className="echo-past" aria-label="阅读记录">{recent.map(work => <button type="button" key={work.id} onClick={() => follow(work)} aria-pressed={work.id === root.id} aria-label={`回到阅读记录：${workTitle(work)}`}>
+      <EchoConnections stage={stage} revision={`${root.id}:${owner}:${visible.map(group => group.works.map(work => work.id).join(',')).join(';')}`} active={active ?? root.id} reduced={reduced} />
+      <nav className="echo-past" aria-label="阅读记录">{recent.map((work, index) => <button type="button" key={work.id} style={{ "--record-x": `${[0, 5, 2, 7][index % 4]}%`, "--record-y": `${4 + index * 7.5}%` } as CSSProperties} onMouseEnter={() => setActive(work.id)} onMouseLeave={() => setActive(undefined)} onFocus={() => setActive(work.id)} onBlur={() => setActive(undefined)} onClick={() => follow(work)} aria-pressed={work.id === root.id} aria-label={`回到阅读记录：${workTitle(work)}`}>
         {work.id === root.id ? <m.i className="echo-record-active" layoutId="echo-record-active" transition={transition} /> : null}
-        <time>{stamp(work)}</time><span>{workTitle(work)}</span><small>{Math.round(work.progress_percent ?? 0)}%</small>
+        <i className="echo-record-dot" data-echo-anchor={`past:${work.id}`} data-work={work.id} /><time>{stamp(work)}</time><span>{workTitle(work)}</span><small>{Math.round(work.progress_percent ?? 0)}%</small>
       </button>)}</nav>
-      <div className="echo-center"><AnimatePresence mode="wait" initial={false}><m.div className="echo-origin" key={root.id} initial={reduced ? false : { opacity: 0, y: 12, rotate: -1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
+      <div className="echo-center"><i className="echo-root-dot" data-echo-anchor="root" /><AnimatePresence mode="wait" initial={false}><m.div className="echo-origin" key={root.id} initial={reduced ? false : { opacity: 0, y: 12, rotate: -1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} exit={{ opacity: 0, y: -8 }} transition={transition}>
         <a className="echo-cover-link" href={pageHref({ name: "reader", workId: root.id })} aria-label={`阅读：${workTitle(root)}`}><ConceptCover key={root.id} work={root} hidden={hidden} /></a>
         <h2 title={workTitle(root)}>{workTitle(root)}</h2><a className="echo-read" href={pageHref({ name: "reader", workId: root.id })}>阅读<ArrowRight size={15} /></a>
       </m.div></AnimatePresence></div>
-      <div className="echo-branches"><AnimatePresence mode="wait" initial={false}><m.div key={owner === root.id ? root.id : "loading"} initial={reduced ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={transition}>
-        {visible.map(group => <section className="echo-branch" key={`${group.label}-${group.detail}`}>
-          <h2>{group.label}<small>{group.detail}</small></h2>
-          <div className="echo-related">{group.works.map(work => <button type="button" key={work.id} onClick={() => follow(work)} aria-label={`追溯：${workTitle(work)}`}>
+      <div className="echo-branches" style={{ "--group-count": Math.max(1, visible.length) } as CSSProperties}>
+        {visible.map((group, index) => <section className="echo-branch" key={`${group.label}-${group.detail}`} style={{ "--group-index": index } as CSSProperties}>
+          <h2><i className="echo-branch-dot" data-echo-anchor={`group:${index}`} />{group.label}<small>{group.detail}</small></h2>
+          <div className="echo-related">{group.works.map((work, workIndex) => <button type="button" key={work.id} style={{ "--work-index": workIndex } as CSSProperties} onMouseEnter={() => setActive(work.id)} onMouseLeave={() => setActive(undefined)} onFocus={() => setActive(work.id)} onBlur={() => setActive(undefined)} onClick={() => follow(work)} aria-label={`追溯：${workTitle(work)}`}>
+            <i className="echo-node-dot" data-echo-anchor={`work:${work.id}`} data-group={index} data-work={work.id} />
             <ConceptCover key={work.id} work={work} hidden={hidden} /><span>{workTitle(work)}</span><small>{work.page_count} 页{work.favorite ? " · 已收藏" : ""}</small>
           </button>)}</div>
         </section>)}
         {loading ? <p className="echo-loading" role="status">正在加载…</p> : !visible.length && !error ? <p className="echo-loading">暂无关联作品</p> : null}
-      </m.div></AnimatePresence></div>
+      </div>
     </div>}
     {error ? <div className="concept-error" role="alert">{error}<button type="button" onClick={() => root ? setRevision(value => value + 1) : window.location.reload()}>重试</button></div> : null}
     {trail.length ? <nav className="echo-trail" aria-label="本次浏览">{trail.map((work, index) => <button key={work.id} type="button" onClick={() => follow(work)} title={workTitle(work)}><small>{String(index + 1).padStart(2, "0")}</small><span>{workTitle(work)}</span><ChevronRight size={14} /></button>)}</nav> : null}
