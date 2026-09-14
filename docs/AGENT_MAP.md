@@ -4,11 +4,12 @@ Use this file as the first frontend navigation index. Read only the row for the 
 
 ## Active Frontend Contract
 
-- Visual source of truth: `http://127.0.0.1:5173/demo`, shared system `apps/web/src/components/folio/`, and demo-only bodies in `apps/web/src/components/demo/modules/`.
+- Before 2026-09-14, visual source of truth: `http://127.0.0.1:5173/demo`, shared system `apps/web/src/components/folio/`, and demo-only bodies in `apps/web/src/components/demo/modules/`.
 - Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
 - Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
-- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login is an independent paper surface with no pre-auth page silhouettes or content. Preserve focus feedback and the measured field-edge → responsive topbar scan, followed by app reveal; no welcome slogans.
+- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login is an independent surface with no pre-auth page silhouettes or content. Preserve focus feedback and the measured field-edge → responsive topbar scan, followed by app reveal; no welcome slogans.
+- Current visual baseline (2026-09-14): formal routes with the rebuilt gray-white/graphite/amber Folio shell; default homepage uses `workbench/ReadingHome.tsx` and `.css`. Previous homepage query previews remain historical alternatives.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
 
 ## Demo Dependency Map
@@ -19,7 +20,6 @@ FrontendDemo.tsx
   -> ../folio/shell/FolioChrome.tsx
        -> ../folio/shell/PageNavigation.tsx
        -> ../folio/shell/PageHeading.tsx -> ../folio/scenes/ModuleScene.tsx -> scenes/*Scene.tsx
-       -> ../folio/shell/ModuleBackdrop.tsx
        -> ../folio/Folio.css -> ../folio/styles/*.css
   -> modules/DemoPage.tsx -> modules/*Demo.tsx
        -> ../folio/ui/FolioPrimitives.tsx
@@ -32,7 +32,7 @@ FrontendDemo.tsx
 
 | Module | Demo page body | Header scene | Primary CSS | Formal page/state | Real API entry |
 | --- | --- | --- | --- | --- | --- |
-| 首页（#workbench） | `demo/modules/WorkbenchDemo.tsx` | `folio/ui/HomeHero.tsx` | `folio/ui/HomeHero.css`, `workbench/WorkbenchPage.css` | `workbench/WorkbenchPage.tsx` | `api.librarySummary()`, `api.libraryStatistics(30)`, `api.librarySearch({ per_page: 36, sort: "recent_added" })` |
+| 首页（#workbench） | `demo/modules/WorkbenchDemo.tsx` | `workbench/ReadingHome.tsx` | `workbench/ReadingHome.css`, `workbench/WorkbenchPage.css` | `workbench/WorkbenchPage.tsx` | `api.librarySummary()`, `api.libraryStatistics(30)`, `api.librarySearch({ per_page: 3, sort: "recent_added" })` |
 | 我的库 | `demo/modules/LibraryDemo.tsx` | `folio/scenes/LibraryScene.tsx` | `library/LibraryPage.css`, shared shelf/control rules in `folio/styles/library-discover.css`, scene prefix `folio-scene-library-*` | `library/LibraryPage.tsx`, `useLibraryState.ts`, `LibraryBatchTray.tsx`, shared `folio/ui/ContinueReadingRow.tsx` and feature components | `api.librarySummary/search/continueReading/recentAdded/tagFilters/setWorkFavorite/metadataRefreshPreview/metadataRefreshApply` |
 | 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `discover/DiscoverPage.css`, shared controls in `folio/styles/library-discover.css`, scene prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `useDiscoverState.ts`, `TagFilterSelector.tsx` and feature components | `api.feed/popular/random/dictionaryCandidates/dictionaryAutocomplete/importGallery` |
 | 治理 | `demo/modules/GovernanceDemo.tsx` | `folio/scenes/GovernanceScene.tsx` | `governance/GovernancePage.css`, `GovernanceEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-edit-*` | `governance/GovernancePage.tsx`, `useGovernanceState.ts`, `GovernanceReviewPanel.tsx`, `GovernanceTranslationPanel.tsx`, `GovernanceTagBoard.tsx` / `GovernanceTagItem.tsx` and queue/source/action components | `api.governanceQueue/workGovernance/apply/review/translate/bulk*` |
@@ -59,10 +59,10 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Concern | Owner |
 | --- | --- |
 | Page ids, labels, descriptions, icons, settings section definitions | `folio/config.ts` |
-| Full-screen grid, topbar, mobile drawer, viewport-sized native page transition, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
+| Fixed topbar, desktop side navigation, mobile drawer, interruptible viewport transition, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
 | Top navigation item animation | `folio/shell/PageNavigation.tsx` + `styles/chrome.css`; Motion layout spring indicator with `domMax`, keyboard-contained mobile navigation in `FolioChrome.tsx` |
 | Standard title composition (no explanatory subtitle) and scene placement; homepage owns its hero | `folio/shell/PageHeading.tsx`; pauses decorative scene animations when the heading is outside the viewport |
-| Large background atmosphere and discover radar hits | `folio/shell/ModuleBackdrop.tsx` + `folio/styles/base.css` |
+| Static canvas and bounded visible-scene motion | `folio/styles/base.css` + feature-local scenes |
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
 | Formal summary/status metric entries and semantic tones | `folio/ui/FolioMetricGrid.tsx` + `folio/styles/workbench.css` |
@@ -121,7 +121,7 @@ Update one row to `migrated` only when its real page renders Folio structure dir
 - Change one page layout: page body + its primary CSS file only.
 - Change one header animation: `folio/scenes/{Module}Scene.tsx` + its `folio-scene-{module}-*` rules in `folio/styles/scenes.css`.
 - Change top navigation: `folio/config.ts`, `folio/shell/PageNavigation.tsx`, then responsive nav rules.
-- Change page background: `folio/shell/ModuleBackdrop.tsx` + matching atmosphere rules in `folio/styles/base.css`.
+- Change page background: the static canvas in `folio/styles/base.css`; decorative animation stays in visible feature scenes.
 - Change a select/input/toggle everywhere: `folio/ui/FolioPrimitives.tsx` + the owning shared CSS layer.
 - Change route loading or split boundaries: `App.tsx` + `layout/RouteFallback.*`; keep `ArchiveShell` eager and readers outside it.
 - Change tag navigation: update the matching `lib/navigation.ts` builder (`tagSearchHref()` for discovery, `libraryTagHref()` for local-library scope), then preserve native `<a>` semantics in the feature owner; pointer-drag code may suppress only a completed primary-mouse drag; capture after movement exceeds the threshold, preserve keyboard/modifier clicks, and use native touch scrolling.
@@ -160,3 +160,11 @@ Homepage uses a paper/ink reading composition: each SVG outline represents one o
 
 
 方案2脉络构图恢复：取消三栏列表/卡片排版，阅读记录错落汇入中央作品，关联作品沿分类枝条展开。新增 `workbench/concepts/EchoConnections.tsx`，ResizeObserver 按真实节点位置绘制连接，绕开中央封面/标题，并提供路径过渡与悬停强调。保留前轮封面尺寸、时间信息、非空分类、缓存及探索路径；窄屏改为紧凑分枝排版。新增端点落位检查，不能只验点击成功而忽略关系图视觉。
+
+
+2026-09-14 RhineLabUI 设计研究与前端重构：用户明确无需保留原风格。独立分支 `codex/rhine-frontend` 从留档提交 `2b4fbef` 创建；原分支 `codex/login-and-shelf-fixes` 已推送，不合并 main。
+- 研究上游 DESIGN.md、motion.ts、ui-transitions.ts、document-decryption.ts 及仓库实录；借鉴空间连续性、邻近响应、紧凑排版与完成事件衔接。本站自行实现 SVG/已有 Motion，无上游模型、音频、字体或生成图片资产。
+- 正常首页默认 `ReadingHome`：近30天真实阅读数据生成切片，鼠标选择/日期滑块/方向按钮联动读数。默认最近有阅读的日期；零记录不伪造统计。状态分布与最多3部最近添加仅为辅助信息。旧查询预览保持独立。
+- FolioChrome 桌面100px侧栏、64px顶栏；窄屏使用原可访问抽屉。原全屏装饰 ModuleBackdrop 已移除，页头主题动画保留。登录扫描线实测输入框中心/下沿，animationend 后挂载页面，不再由600ms计时器抢先切换。
+- 配色与字体在各现有CSS所有者内统一；没有叠加第二套皮肤。竖向铺满封面的不可见模糊背景停绘，移除封面全局 drop-shadow，后台/滚动/离屏暂停相关动效。
+- 回归入口新增 `e2e/reading-home.spec.ts`；配合 auth-gate、auth-wake-demo 的四尺寸过渡测试与 shelf-navigation。只读接口和隔离真实数据副本，无API/schema变更。

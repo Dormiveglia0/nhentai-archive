@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
 import { pageHref } from "../../../lib/navigation";
 import { FOLIO_PAGES, type FolioPageId } from "../config";
-import { ModuleBackdrop } from "./ModuleBackdrop";
 import { PageHeading } from "./PageHeading";
 import { PageNavigation } from "./PageNavigation";
 import "../Folio.css";
@@ -41,6 +40,7 @@ export function FolioChrome({
   const bindingRef = useRef<HTMLDivElement>(null);
   const scrollPositionsRef = useRef(new Map<string, number>());
   const animatedRouteRef = useRef<string | null>(null);
+  const routeAnimationRef = useRef<Animation>();
   const current = FOLIO_PAGES.find((item) => item.id === page) ?? FOLIO_PAGES[0];
   const routeKey = `${page}:${String(scrollKey ?? "")}`;
 
@@ -78,10 +78,7 @@ export function FolioChrome({
     const binding = bindingRef.current;
     if (!scroll || !binding) return;
     const max = scroll.scrollHeight - scroll.clientHeight;
-    const size = max <= 1 ? 1 : Math.max(0.12, scroll.clientHeight / scroll.scrollHeight);
-    const offset = max <= 1 ? 0 : (scroll.scrollTop / max) * (1 - size);
-    binding.style.setProperty("--folio-scroll-size", String(size));
-    binding.style.setProperty("--folio-scroll-offset", String(offset));
+    binding.style.setProperty("--folio-scroll-offset", String(max <= 1 ? 0 : scroll.scrollTop / max));
   }, []);
 
   const restoreRouteScroll = useCallback((node: HTMLDivElement | null) => {
@@ -94,17 +91,30 @@ export function FolioChrome({
     const previousRoute = animatedRouteRef.current;
     animatedRouteRef.current = routeKey;
     const scroll = scrollRef.current;
+    if (reduceMotion) routeAnimationRef.current?.cancel();
     if (!scroll || previousRoute === null || previousRoute === routeKey || reduceMotion) return;
-    // Animate the viewport, so a long page does not become one oversized moving layer.
+    const previousAnimation = routeAnimationRef.current;
+    const live = previousAnimation?.playState === "running" ? getComputedStyle(scroll) : null;
+    const opacity = live?.opacity ?? ".7";
+    previousAnimation?.cancel();
     const animation = scroll.animate(
-      [{ opacity: .55, transform: "translateX(12px)" }, { opacity: 1, transform: "translateX(0)" }],
-      { duration: duration.pageEnter * 1000, easing: "cubic-bezier(.22, 1, .36, 1)" },
+      [{ opacity }, { opacity: 1 }],
+      { duration: 320, easing: "cubic-bezier(.22, 1, .36, 1)" },
     );
+    routeAnimationRef.current = animation;
     animation.finished.then(updateBindingProgress, () => undefined);
-    return () => animation.cancel();
   }, [routeKey, reduceMotion, updateBindingProgress]);
 
-  useEffect(() => () => window.clearTimeout(scrollIdleRef.current), []);
+  useEffect(() => {
+    const update = () => rootRef.current?.classList.toggle("is-background", document.hidden);
+    document.addEventListener("visibilitychange", update);
+    update();
+    return () => {
+      document.removeEventListener("visibilitychange", update);
+      window.clearTimeout(scrollIdleRef.current);
+      routeAnimationRef.current?.cancel();
+    };
+  }, []);
 
   function handleScroll() {
     if (!scrollIdleRef.current) rootRef.current?.classList.add("is-scrolling");
@@ -119,7 +129,6 @@ export function FolioChrome({
 
   return (
     <div ref={rootRef} className={`folio folio-app folio-page-${page}${footer ? "" : " folio-no-command"}`}>
-      {page === "workbench" ? null : <ModuleBackdrop page={page} reduceMotion={reduceMotion} />}
       <div ref={bindingRef} className="folio-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
 
       <header className="folio-topbar">
@@ -136,7 +145,7 @@ export function FolioChrome({
           <span className="folio-brand-mark" aria-hidden="true"><span className="folio-monogram">NH</span><i /></span>
           <span className="folio-brand-copy"><strong>Archive</strong></span>
         </a>
-        <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
+        <div className="folio-current-section"><span>NH ARCHIVE</span><i /><strong>{current.label}</strong></div>
         <div className="folio-top-actions">
           {onLogout ? (
             <button className="folio-session-button" type="button" aria-label="登出并锁定本地作品" title="登出" onClick={() => void onLogout()}>
@@ -150,6 +159,7 @@ export function FolioChrome({
         </div>
       </header>
 
+      <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
       <div className="folio-workspace">
         <AnimatePresence>
           {menuOpen ? (

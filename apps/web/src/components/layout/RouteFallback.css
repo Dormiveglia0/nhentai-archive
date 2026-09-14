@@ -19,7 +19,7 @@
   background:
     repeating-linear-gradient(0deg, transparent 0 5px, rgba(238,232,218,.018) 5px 6px),
     #0d0e0c;
-  font-family: Inter, "Noto Sans SC", "PingFang SC", sans-serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   position: fixed;
   inset: 0;
 }
@@ -35,7 +35,7 @@
 
 .folio-route-loading strong,
 .reader-route-loading strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 15px;
 }
 
@@ -68,7 +68,7 @@
 
 @keyframes route-loading-sheet {
   0%, 100% { opacity: .12; transform: translate(-9px, 6px); }
-  50% { opacity: .58; transform: translate(9px, -6px); border-color: #ad382e; }
+  50% { opacity: .58; transform: translate(9px, -6px); border-color: #9d6024; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -64,7 +64,7 @@
 }
 
 .folio-gallery-feedback.is-success {
-  background: rgba(68, 95, 82, 0.1);
+  background: rgba(58, 104, 88, 0.1);
   color: var(--folio-green);
 }
 
@@ -97,7 +97,7 @@
 .folio-gallery-loading > span i {
   height: 16px;
   display: block;
-  background: rgba(23, 24, 21, 0.1);
+  background: rgba(27, 34, 30, 0.1);
 }
 
 .folio-gallery-loading > span i:first-child { width: 18%; }
@@ -138,7 +138,7 @@
 }
 
 .folio-gallery-section-head h2 {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 21px;
   font-weight: 600;
 }

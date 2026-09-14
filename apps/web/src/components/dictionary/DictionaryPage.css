@@ -43,7 +43,7 @@
   min-width: 0;
   border-top: 1px solid var(--folio-line-strong);
   border-bottom: 1px solid var(--folio-line-strong);
-  background: rgba(250, 247, 239, 0.16);
+  background: rgba(248, 249, 247, 0.16);
 }
 
 .folio-dictionary-panel-head {
@@ -59,7 +59,7 @@
 .folio-dictionary-panel-head > div:first-child > span,
 .folio-dictionary-modal > header > span {
   color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -67,7 +67,7 @@
 
 .folio-dictionary-panel-head h2 {
   margin: 6px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 21px;
   font-weight: 600;
 }
@@ -131,7 +131,7 @@
   align-items: center;
   gap: 2px 9px;
   border: 1px solid var(--folio-line);
-  background: linear-gradient(105deg, rgba(173, 56, 46, 0.075), transparent 68%);
+  background: linear-gradient(105deg, rgba(157, 96, 36, 0.075), transparent 68%);
   color: var(--folio-ink);
   text-align: left;
   transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
@@ -143,7 +143,7 @@
 }
 
 .folio-dictionary-suggest span {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
 }
 
@@ -153,7 +153,7 @@
 }
 
 .folio-dictionary-suggest:hover:not(:disabled) {
-  border-color: rgba(173, 56, 46, 0.52);
+  border-color: rgba(157, 96, 36, 0.52);
   background-color: var(--folio-red-soft);
   transform: translateY(-1px);
 }
@@ -170,7 +170,7 @@
   overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: rgba(173, 56, 46, 0.62) rgba(23, 24, 21, 0.025);
+  scrollbar-color: rgba(157, 96, 36, 0.62) rgba(27, 34, 30, 0.025);
 }
 
 .folio-dictionary-table::-webkit-scrollbar {
@@ -180,12 +180,12 @@
 
 .folio-dictionary-table::-webkit-scrollbar-track {
   border-left: 1px solid var(--folio-line);
-  background: rgba(23, 24, 21, 0.025);
+  background: rgba(27, 34, 30, 0.025);
 }
 
 .folio-dictionary-table::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
-  background: rgba(173, 56, 46, 0.62);
+  background: rgba(157, 96, 36, 0.62);
   background-clip: padding-box;
 }
 
@@ -207,7 +207,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgba(243, 239, 229, 0.96);
+  background: rgba(232, 235, 232, 0.96);
   backdrop-filter: blur(6px);
 }
 
@@ -265,7 +265,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(173, 56, 46, 0.3);
+  border: 1px solid rgba(157, 96, 36, 0.3);
   color: var(--folio-red);
   font-size: 12px;
   font-style: normal;
@@ -292,7 +292,7 @@
 }
 
 .folio-dictionary-impact {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -326,7 +326,7 @@
   display: grid;
   place-items: center;
   color: var(--folio-muted);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   line-height: 1.8;
   text-align: center;
@@ -398,7 +398,7 @@
 }
 
 .folio-dictionary-evidence-head strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 15px;
 }
 
@@ -482,7 +482,7 @@
 }
 
 .folio-dictionary-preview-metrics strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 25px;
   font-weight: 400;
 }
@@ -520,7 +520,7 @@
 
 .folio-dictionary-evidence-grid h3 {
   margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
 }
 
@@ -589,7 +589,7 @@
 
 .folio-dictionary-co-tags b {
   color: var(--folio-red);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
 }
 
 .folio-dictionary-evidence-grid p.is-conflict {
@@ -627,7 +627,7 @@
 
 .folio-dictionary-related h3 {
   margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
 }
 
@@ -677,7 +677,7 @@
 
 .folio-dictionary-work-cell strong {
   overflow: hidden;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -706,7 +706,7 @@
   justify-content: flex-end;
   gap: 9px;
   border-top: 1px solid var(--folio-line-strong);
-  background: rgba(243, 239, 229, 0.96);
+  background: rgba(232, 235, 232, 0.96);
   backdrop-filter: blur(10px);
   position: fixed;
   z-index: 90;
@@ -801,7 +801,7 @@
   padding: 22px;
   display: grid;
   place-items: center;
-  background: rgba(23, 24, 21, 0.4);
+  background: rgba(27, 34, 30, 0.4);
   backdrop-filter: blur(7px);
   position: fixed;
   inset: 0;
@@ -814,14 +814,14 @@
   padding: 32px;
   overflow-y: auto;
   border: 1px solid var(--folio-line-strong);
-  background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(23, 24, 21, 0.018) 5px 6px), var(--folio-paper-bright);
-  box-shadow: 12px 14px 0 rgba(173, 56, 46, 0.28);
+  background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(27, 34, 30, 0.018) 5px 6px), var(--folio-paper-bright);
+  box-shadow: 12px 14px 0 rgba(157, 96, 36, 0.28);
   scrollbar-width: thin;
 }
 
 .folio-dictionary-modal > header h2 {
   margin: 8px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 32px;
 }
 
@@ -871,7 +871,7 @@
 }
 
 .folio-dictionary-bulk-compose textarea:focus {
-  border-color: rgba(173, 56, 46, 0.68);
+  border-color: rgba(157, 96, 36, 0.68);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
 
@@ -917,7 +917,7 @@
 
 .folio-dictionary-bulk-compose dd {
   margin: 0;
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 16px;
 }
 

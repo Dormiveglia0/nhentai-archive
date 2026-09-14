@@ -2,7 +2,7 @@
 .folio-scene {
   width: min(48vw, 620px);
   height: 100%;
-  color: rgba(23, 24, 21, 0.31);
+  color: rgba(27, 34, 30, 0.31);
   position: absolute;
   right: clamp(26px, 4vw, 70px);
   top: 0;
@@ -29,11 +29,11 @@
 }
 
 .folio-scene-library-shelf {
-  stroke: rgba(23, 24, 21, 0.34);
+  stroke: rgba(27, 34, 30, 0.34);
 }
 
 .folio-scene-library-shelf rect {
-  fill: rgba(250, 247, 239, 0.18);
+  fill: rgba(248, 249, 247, 0.18);
 }
 
 .folio-scene-library-spines {
@@ -54,7 +54,7 @@
 }
 
 .folio-scene-discover-records > g {
-  stroke: rgba(23, 24, 21, 0.24);
+  stroke: rgba(27, 34, 30, 0.24);
   transform-box: fill-box;
   transform-origin: center;
   animation: folio-scene-discover-record 6.2s ease-in-out infinite;
@@ -69,11 +69,11 @@
 }
 
 .folio-scene-discover-records rect {
-  fill: rgba(250, 247, 239, 0.62);
+  fill: rgba(248, 249, 247, 0.62);
 }
 
 .folio-scene-discover-records circle {
-  fill: rgba(173, 56, 46, 0.1);
+  fill: rgba(157, 96, 36, 0.1);
   stroke: var(--folio-red);
 }
 
@@ -85,12 +85,12 @@
 }
 
 .folio-scene-search-lens > circle {
-  fill: rgba(250, 247, 239, 0.2);
+  fill: rgba(248, 249, 247, 0.2);
   stroke-width: 1.6;
 }
 
 .folio-scene-search-match rect {
-  fill: rgba(173, 56, 46, 0.06);
+  fill: rgba(157, 96, 36, 0.06);
 }
 
 .folio-scene-search-match {
@@ -101,12 +101,12 @@
 
 .folio-scene-search-scan {
   stroke-width: 2;
-  filter: drop-shadow(0 4px 6px rgba(173, 56, 46, 0.2));
+  filter: drop-shadow(0 4px 6px rgba(157, 96, 36, 0.2));
   animation: folio-scene-discover-scan 2.07s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
-.folio-scene-edit-sheet { fill: rgba(250,247,239,.62); stroke: rgba(23,24,21,.28); }
-.folio-scene-edit-guide { stroke: rgba(23,24,21,.17); stroke-dasharray: 2 6; }
+.folio-scene-edit-sheet { fill: rgba(248,249,247,.62); stroke: rgba(27,34,30,.28); }
+.folio-scene-edit-guide { stroke: rgba(27,34,30,.17); stroke-dasharray: 2 6; }
 .folio-scene-edit-label { stroke: var(--folio-red); animation: folio-scene-edit-align 9s cubic-bezier(.65,0,.35,1) infinite; }
 .folio-scene-edit-label rect { fill: var(--folio-paper-bright); }
 .folio-scene-edit-label circle { fill: var(--folio-red); stroke: none; }
@@ -116,7 +116,7 @@
 .folio-scene-edit-seal { fill: var(--folio-paper-bright); stroke: var(--folio-green); transform-box: fill-box; transform-origin: center; animation: folio-scene-edit-seal 9s ease-in-out infinite; }
 
 .folio-scene-dictionary-book {
-  stroke: rgba(23, 24, 21, 0.3);
+  stroke: rgba(27, 34, 30, 0.3);
   transform-box: fill-box;
   transform-origin: center bottom;
   animation: folio-scene-lexicon-open 8s ease-in-out infinite;
@@ -124,12 +124,12 @@
 
 .folio-scene-dictionary-book path:first-child,
 .folio-scene-dictionary-book path:nth-child(2) {
-  fill: rgba(250, 247, 239, 0.72);
+  fill: rgba(248, 249, 247, 0.72);
 }
 
 .folio-scene-dictionary-slots rect {
   transform-box: fill-box;
-  fill: rgba(23, 24, 21, 0.1);
+  fill: rgba(27, 34, 30, 0.1);
   stroke: none;
   animation: folio-scene-lexicon-slot 6s ease-in-out infinite;
 }
@@ -146,14 +146,14 @@
 }
 
 .folio-scene-dictionary-token rect {
-  fill: rgba(250, 247, 239, 0.92);
+  fill: rgba(248, 249, 247, 0.92);
   stroke: var(--folio-red);
 }
 
 .folio-scene-dictionary-token text {
   fill: var(--folio-red);
   stroke: none;
-  font-family: Georgia, "Noto Serif SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 16px;
 }
 
@@ -166,16 +166,16 @@
 }
 
 .folio-scene-dictionary-bookmark {
-  fill: rgba(173, 56, 46, 0.16);
+  fill: rgba(157, 96, 36, 0.16);
   stroke: var(--folio-red);
   transform-box: fill-box;
   transform-origin: center top;
   animation: folio-scene-lexicon-bookmark 5s ease-in-out infinite;
 }
 
-.folio-scene-queue-stack { fill: rgba(250,247,239,.65); stroke: rgba(23,24,21,.25); }
+.folio-scene-queue-stack { fill: rgba(248,249,247,.65); stroke: rgba(27,34,30,.25); }
 .folio-scene-queue-route { stroke-dasharray: 2 5; }
-.folio-scene-queue-track { stroke: rgba(23,24,21,.12); }
+.folio-scene-queue-track { stroke: rgba(27,34,30,.12); }
 .folio-scene-queue-rotor { stroke: var(--folio-red); stroke-width: 2; transform-origin: 270px 112px; animation: folio-scene-queue-process 9s ease-in-out infinite; }
 .folio-scene-queue-document { stroke: var(--folio-red); animation: folio-scene-queue-route 9s cubic-bezier(.65,0,.35,1) infinite; }
 .folio-scene-queue-document > path:first-child { fill: var(--folio-paper-bright); }
@@ -185,14 +185,14 @@
 .folio-scene-export-file {
   --folio-export-bundle-x: 0px;
   --folio-export-bundle-y: 0px;
-  stroke: rgba(23, 24, 21, 0.3);
+  stroke: rgba(27, 34, 30, 0.3);
   transform-box: fill-box;
   transform-origin: center;
   animation: folio-scene-export-bind 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 .folio-scene-export-file path:first-child {
-  fill: rgba(250, 247, 239, 0.86);
+  fill: rgba(248, 249, 247, 0.86);
 }
 
 .folio-scene-export-file-a {
@@ -211,7 +211,7 @@
 }
 
 .folio-scene-export-rail {
-  stroke: rgba(23, 24, 21, 0.14);
+  stroke: rgba(27, 34, 30, 0.14);
   stroke-dasharray: 4 8;
 }
 
@@ -223,11 +223,11 @@
 }
 
 .folio-scene-export-cover {
-  fill: rgba(250, 247, 239, 0.84);
+  fill: rgba(248, 249, 247, 0.84);
 }
 
 .folio-scene-export-archive rect {
-  fill: rgba(173, 56, 46, 0.045);
+  fill: rgba(157, 96, 36, 0.045);
 }
 
 .folio-scene-export-zip {
@@ -252,30 +252,30 @@
 }
 
 .folio-scene-export-seal circle {
-  fill: rgba(68, 95, 82, 0.09);
+  fill: rgba(58, 104, 88, 0.09);
 }
 
 .folio-scene-files-source-stack {
-  fill: rgba(250, 247, 239, 0.25);
-  stroke: rgba(23, 24, 21, 0.12);
+  fill: rgba(248, 249, 247, 0.25);
+  stroke: rgba(27, 34, 30, 0.12);
 }
 
 .folio-scene-files-scanner {
-  stroke: rgba(23, 24, 21, 0.28);
+  stroke: rgba(27, 34, 30, 0.28);
 }
 
 .folio-scene-files-scanner rect {
-  fill: rgba(250, 247, 239, 0.68);
+  fill: rgba(248, 249, 247, 0.68);
 }
 
 .folio-scene-files-scanner circle {
-  fill: rgba(173, 56, 46, 0.14);
+  fill: rgba(157, 96, 36, 0.14);
   stroke: var(--folio-red);
 }
 
 .folio-scene-files-folder-back {
-  fill: rgba(229, 223, 209, 0.58);
-  stroke: rgba(23, 24, 21, 0.26);
+  fill: rgba(213, 218, 212, 0.58);
+  stroke: rgba(27, 34, 30, 0.26);
 }
 
 .folio-scene-files-document {
@@ -286,7 +286,7 @@
 }
 
 .folio-scene-files-document > rect {
-  fill: rgba(250, 247, 239, 0.94);
+  fill: rgba(248, 249, 247, 0.94);
 }
 
 .folio-scene-files-document-status {
@@ -297,27 +297,27 @@
 }
 
 .folio-scene-files-document-status circle {
-  fill: rgba(68, 95, 82, 0.1);
+  fill: rgba(58, 104, 88, 0.1);
 }
 
 .folio-scene-files-scan-beam {
   fill: var(--folio-red);
   stroke: none;
-  filter: drop-shadow(0 4px 6px rgba(173, 56, 46, 0.18));
+  filter: drop-shadow(0 4px 6px rgba(157, 96, 36, 0.18));
   transform-box: fill-box;
   transform-origin: center;
   animation: folio-scene-file-scan 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .folio-scene-files-folder-front {
-  fill: rgba(250, 247, 239, 0.94);
+  fill: rgba(248, 249, 247, 0.94);
   stroke: var(--folio-red);
   transform-box: fill-box;
   transform-origin: center bottom;
   animation: folio-scene-file-drawer 9s ease-in-out infinite;
 }
 
-.folio-scene-settings-guides { stroke: rgba(23, 24, 21, 0.22); }
+.folio-scene-settings-guides { stroke: rgba(27, 34, 30, 0.22); }
 .folio-scene-settings-link { stroke-dasharray: 2 5; }
 .folio-scene-settings-slider {
   stroke: var(--folio-red);
@@ -328,8 +328,8 @@
 .folio-scene-settings-slider-b { --adjust-y: -56px; animation-name: folio-scene-settings-adjust-b; }
 .folio-scene-settings-slider-c { --adjust-y: 56px; animation-name: folio-scene-settings-adjust-c; }
 .folio-scene-settings-gear {
-  fill: rgba(250, 247, 239, 0.6);
-  stroke: rgba(23, 24, 21, 0.36);
+  fill: rgba(248, 249, 247, 0.6);
+  stroke: rgba(27, 34, 30, 0.36);
   transform-origin: 410px 112px;
   animation: folio-scene-settings-dial 9s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }

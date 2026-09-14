@@ -14,8 +14,8 @@
   align-items: center;
   gap: 9px;
   border-left: 2px solid var(--folio-ink);
-  background: rgba(23, 24, 21, 0.045);
-  box-shadow: 0 8px 18px rgba(23, 24, 21, 0.07);
+  background: rgba(27, 34, 30, 0.045);
+  box-shadow: 0 8px 18px rgba(27, 34, 30, 0.07);
   position: sticky;
   top: 12px;
   z-index: 30;
@@ -127,7 +127,7 @@
 .folio-files-batch.is-active {
   padding-right: 10px;
   padding-left: 10px;
-  background: rgba(173, 56, 46, 0.035);
+  background: rgba(157, 96, 36, 0.035);
 }
 
 .folio-files-batch p {
@@ -138,7 +138,7 @@
 }
 
 .folio-files-batch p strong {
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 21px;
   font-weight: 400;
 }
@@ -211,7 +211,7 @@
 
 .folio-files-column-head > span {
   color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -219,7 +219,7 @@
 
 .folio-files-column-head h2 {
   margin: 8px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 22px;
   font-weight: 600;
 }
@@ -276,7 +276,7 @@
   max-height: min(57vh, 660px);
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-color: rgba(173, 56, 46, 0.48) transparent;
+  scrollbar-color: rgba(157, 96, 36, 0.48) transparent;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
 }
@@ -291,7 +291,7 @@
 .folio-files-list::-webkit-scrollbar-thumb,
 .folio-files-rail::-webkit-scrollbar-thumb,
 .folio-files-tags > div::-webkit-scrollbar-thumb {
-  background: rgba(173, 56, 46, 0.42);
+  background: rgba(157, 96, 36, 0.42);
 }
 
 .folio-files-row-wrap {
@@ -400,7 +400,7 @@
 }
 
 .folio-files-file strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   font-weight: 600;
 }
@@ -422,7 +422,7 @@
 }
 
 .folio-files-size {
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -444,7 +444,7 @@
 }
 
 .folio-files-status.is-warn {
-  border-color: rgba(173, 56, 46, 0.38);
+  border-color: rgba(157, 96, 36, 0.38);
   color: var(--folio-red);
 }
 
@@ -495,7 +495,7 @@
 
 .folio-files-pager input {
   outline: 0;
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
 }
 
 .folio-files-pager input:focus {
@@ -505,7 +505,7 @@
 
 .folio-files-pager span {
   color: var(--folio-muted);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
 }
 
@@ -524,7 +524,7 @@
   overflow-y: auto;
   position: sticky;
   top: 18px;
-  scrollbar-color: rgba(173, 56, 46, 0.42) transparent;
+  scrollbar-color: rgba(157, 96, 36, 0.42) transparent;
   scrollbar-width: thin;
 }
 
@@ -610,7 +610,7 @@
 
 .folio-files-detail-copy h3 {
   margin: 13px 0 8px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: clamp(18px, 2vw, 25px);
   line-height: 1.35;
 }
@@ -681,7 +681,7 @@
   flex-wrap: wrap;
   gap: 5px;
   overflow-y: auto;
-  scrollbar-color: rgba(173, 56, 46, 0.42) transparent;
+  scrollbar-color: rgba(157, 96, 36, 0.42) transparent;
   scrollbar-width: thin;
 }
 
@@ -737,7 +737,7 @@
 
 .folio-files-detail-actions button.is-danger {
   margin-left: auto;
-  border-color: rgba(173, 56, 46, 0.42);
+  border-color: rgba(157, 96, 36, 0.42);
   color: var(--folio-red);
 }
 
@@ -774,7 +774,7 @@
 
 .folio-files-rail-section h3 {
   margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
 }
 
@@ -805,7 +805,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
@@ -910,7 +910,7 @@
 }
 
 .folio-files-preview > p strong {
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   font-weight: 400;
 }
@@ -935,18 +935,18 @@
   overflow: auto;
   color: var(--folio-ink);
   overscroll-behavior: contain;
-  scrollbar-color: var(--folio-red) rgba(23, 24, 21, 0.08);
+  scrollbar-color: var(--folio-red) rgba(27, 34, 30, 0.08);
   scrollbar-width: thin;
 }
 
 .folio-files-delete-dialog::backdrop {
-  background: rgba(23, 24, 21, 0.46);
+  background: rgba(27, 34, 30, 0.46);
   backdrop-filter: blur(5px);
 }
 
 .folio-files-delete-dialog > header > span {
   color: var(--folio-red);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -956,7 +956,7 @@
   margin-top: 22px;
   display: block;
   overflow: hidden;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -964,7 +964,7 @@
 
 .folio-files-delete-dialog > p strong {
   color: var(--folio-ink);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 15px;
   font-weight: 400;
 }
@@ -1060,8 +1060,8 @@
 }
 
 @keyframes folio-files-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(173, 56, 46, 0); }
-  50% { box-shadow: 0 0 0 5px rgba(173, 56, 46, 0.12); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(157, 96, 36, 0); }
+  50% { box-shadow: 0 0 0 5px rgba(157, 96, 36, 0.12); }
 }
 
 @media (max-width: 1120px) {
@@ -1107,7 +1107,7 @@
     overflow-y: auto;
     border: 1px solid var(--folio-line-strong);
     background: var(--folio-paper-bright);
-    box-shadow: 0 22px 70px rgba(23, 24, 21, 0.28), 7px 7px 0 rgba(173, 56, 46, 0.2);
+    box-shadow: 0 22px 70px rgba(27, 34, 30, 0.28), 7px 7px 0 rgba(157, 96, 36, 0.2);
     overscroll-behavior: contain;
     position: fixed;
     z-index: 120;

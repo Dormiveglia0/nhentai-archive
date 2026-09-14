@@ -66,7 +66,7 @@
 .folio-dictionary-field:focus-within > input,
 .folio-dictionary-field:focus-within > textarea,
 .folio-dictionary-chip-field:focus-within > div {
-  border-color: rgba(173, 56, 46, 0.58);
+  border-color: rgba(157, 96, 36, 0.58);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -99,7 +99,7 @@
 
 .folio-dictionary-field > .folio-select.is-open > button,
 .folio-dictionary-field > .folio-select > button:focus-visible {
-  border-color: rgba(173, 56, 46, 0.58);
+  border-color: rgba(157, 96, 36, 0.58);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -123,7 +123,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid rgba(173, 56, 46, 0.25);
+  border: 1px solid rgba(157, 96, 36, 0.25);
   background: var(--folio-red-soft);
   color: var(--folio-ink);
   font-size: 12px;

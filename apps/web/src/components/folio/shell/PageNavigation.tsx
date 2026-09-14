@@ -17,7 +17,7 @@ export function PageNavigation({
 
   return (
     <nav className={`folio-nav${className ? ` ${className}` : ""}`} aria-label="全局导航">
-      {FOLIO_PAGES.map((item) => {
+      {FOLIO_PAGES.map((item, index) => {
         const Icon = item.icon;
         return (
           <a
@@ -32,7 +32,8 @@ export function PageNavigation({
             }}
           >
             {page === item.id ? <m.span className="folio-nav-active" layoutId={indicatorId} transition={{ type: "spring", stiffness: 420, damping: 34 }} /> : null}
-            <Icon size={17} />
+            <span className="folio-nav-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <Icon size={18} />
             <strong>{item.label}</strong>
             <ArrowRight className="folio-nav-arrow" size={15} />
           </a>

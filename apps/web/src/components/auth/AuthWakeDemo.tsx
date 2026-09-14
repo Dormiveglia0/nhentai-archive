@@ -83,9 +83,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
   }, [preview]);
 
   useEffect(() => {
-    if (phase !== "success") return;
-    const timer = window.setTimeout(() => setPhase("awake"), reduceMotion ? 0 : 600);
-    return () => window.clearTimeout(timer);
+    if (phase === "success" && reduceMotion) setPhase("awake");
   }, [phase, reduceMotion]);
 
   const locked = phase === "submitting" || phase === "success";
@@ -177,6 +175,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
       const field = gateRef.current?.querySelector(".auth-wake-field")?.getBoundingClientRect();
       if (field && gateRef.current) {
         gateRef.current.style.setProperty("--wake-start-y", `${field.bottom - 1}px`);
+        gateRef.current.style.setProperty("--wake-start-x", `${field.left + field.width / 2 - gateRef.current.clientWidth / 2}px`);
         gateRef.current.style.setProperty("--wake-start-scale", String(field.width / gateRef.current.clientWidth));
       }
       setPhase("success");
@@ -227,7 +226,15 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
           )}
         </div>
       ) : null}
-      <div className="auth-wake-registration" aria-hidden="true"><span /><span /><span /><span /></div>
+      {!awake ? <div className="auth-wake-emblem" aria-hidden="true">
+        <svg viewBox="0 0 500 500" fill="none">
+          <g className="auth-orbit-outer"><circle cx="250" cy="250" r="211" /><path d="M250 39A211 211 0 0 1 461 250" /><circle cx="250" cy="39" r="4" /></g>
+          <g className="auth-orbit-inner"><circle cx="250" cy="250" r="174" strokeDasharray="1 12" /><path d="M76 250A174 174 0 0 1 250 76" /></g>
+          <g className="auth-emblem-pages"><path d="M156 175l82-28 106 30v160l-106-30-82 28z" /><path d="M156 175v160m82-188v160m106-130-106 30-82-32" /><path d="M168 194v120l60-21V173m22 1 80 23v121l-80-23" /></g>
+          <path className="auth-emblem-cross" d="M250 9v18m0 446v18M9 250h18m446 0h18" />
+        </svg>
+      </div> : null}
+      <div className="auth-wake-registration" aria-hidden="true"><span /><span /></div>
       {!awake ? (
         phase === "loading" ? (
           <div className="auth-wake-connecting" role="status"><LoaderCircle size={22} className="spin" /><span>正在连接…</span></div>
@@ -312,7 +319,7 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
           </section>
         )
       ) : null}
-      <div className="auth-wake-scan" aria-hidden="true"><i /></div>
+      <div className="auth-wake-scan" aria-hidden="true" onAnimationEnd={event => { if (event.animationName === "wake-line-travel" && phase === "success") setPhase("awake"); }}><i /></div>
     </div>
   );
 }

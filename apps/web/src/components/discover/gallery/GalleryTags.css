@@ -17,7 +17,7 @@
 .folio-gallery-tag-group h3 {
   margin: 7px 0 0;
   color: var(--folio-muted);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   font-weight: 600;
 }
@@ -36,7 +36,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.4);
+  background: rgba(248, 249, 247, 0.4);
   color: var(--folio-ink);
   font-size: 12px;
   text-align: center;

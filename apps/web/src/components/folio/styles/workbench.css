@@ -14,7 +14,7 @@
 
 .folio-panel-heading h2 {
   margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.025em;
@@ -42,13 +42,14 @@
   --folio-metric-tone: var(--folio-muted);
   min-width: 0;
   min-height: 100px;
-  padding: 15px 14px 12px;
+  padding: 15px 0 12px;
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 10px;
-  border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.52);
+  border: 0;
+  border-bottom: 1px solid var(--folio-line);
+  background: transparent;
   position: relative;
   overflow: hidden;
 }
@@ -70,6 +71,9 @@
 .folio-metric-card.is-muted { --folio-metric-tone: var(--folio-faint); }
 
 .folio-metric-card-icon {
+  position: absolute;
+  top: 13px;
+  right: 3px;
   width: 24px;
   height: 24px;
   display: grid;
@@ -88,6 +92,7 @@
 }
 
 .folio-metric-card-copy > span {
+  padding-right: 29px;
   overflow: hidden;
   color: var(--folio-muted);
   font-size: 12px;
@@ -99,8 +104,8 @@
 .folio-metric-card-copy > strong {
   margin-top: 7px;
   overflow: hidden;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(25px, 2.25vw, 33px);
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
+  font-size: clamp(23px, 2.1vw, 30px);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.035em;
@@ -110,7 +115,7 @@
 }
 
 .folio-metric-card.has-text-value .folio-metric-card-copy > strong {
-  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -171,7 +176,7 @@
 .folio-status-band strong,
 .folio-task-summary strong {
   grid-column: 1 / -1;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 17px;
   font-weight: 600;
 }
@@ -238,7 +243,7 @@
 }
 
 .folio-module-ledger > button strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
 }
 
@@ -293,7 +298,7 @@
 
 .folio-empty strong {
   margin-top: 18px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 19px;
   position: relative;
   z-index: 1;

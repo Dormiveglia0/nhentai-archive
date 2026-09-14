@@ -80,7 +80,7 @@
 
 .folio-recipe-head h2 {
   margin: 8px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 24px;
 }
 
@@ -107,7 +107,7 @@
 
 .folio-toggle-row.is-active {
   padding-left: 10px;
-  background: rgba(173, 56, 46, 0.045);
+  background: rgba(157, 96, 36, 0.045);
 }
 
 .folio-toggle-row > span > strong,
@@ -116,7 +116,7 @@
 }
 
 .folio-toggle-row > span > strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
 }
 

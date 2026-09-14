@@ -32,7 +32,7 @@ test("界面唤醒演示覆盖输入、错误与成功转场", async ({ page }) 
   await page.waitForTimeout(900);
   await page.screenshot({ path: "/tmp/auth-wake-desktop-awake.png", fullPage: true });
 
-  await page.getByRole("button", { name: "锁定" }).click();
+  await page.getByRole("button", { name: "登出并锁定本地作品" }).click();
   await expect(input).toBeFocused();
   await page.getByRole("button", { name: "登录" }).click();
   await expect(page.getByRole("alert")).toHaveText("请输入访问密码");

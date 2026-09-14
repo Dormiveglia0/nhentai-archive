@@ -88,7 +88,7 @@
 .folio-history-timeline::before {
   content: "";
   width: 1px;
-  background: linear-gradient(180deg, var(--folio-red), rgba(173, 56, 46, 0.16) 26%, var(--folio-line) 82%, transparent);
+  background: linear-gradient(180deg, var(--folio-red), rgba(157, 96, 36, 0.16) 26%, var(--folio-line) 82%, transparent);
   position: absolute;
   top: 10px;
   bottom: 28px;
@@ -119,7 +119,7 @@
 
 .folio-history-bucket-head h2 {
   margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 19px;
   font-weight: 600;
 }
@@ -213,7 +213,7 @@
 
 .folio-history-cover-empty {
   background:
-    linear-gradient(135deg, transparent 47%, rgba(23, 24, 21, 0.1) 48% 52%, transparent 53%),
+    linear-gradient(135deg, transparent 47%, rgba(27, 34, 30, 0.1) 48% 52%, transparent 53%),
     var(--folio-paper-deep);
 }
 
@@ -228,7 +228,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 15px;
   font-weight: 600;
 }

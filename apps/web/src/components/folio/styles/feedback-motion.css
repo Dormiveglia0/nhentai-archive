@@ -7,7 +7,7 @@
   justify-content: space-between;
   gap: 24px;
   border-top: 1px solid var(--folio-line-strong);
-  background: rgba(243, 239, 229, 0.96);
+  background: rgba(232, 235, 232, 0.96);
   position: relative;
   z-index: 45;
 }
@@ -65,7 +65,7 @@
   border: 1px solid var(--folio-ink);
   background: var(--folio-ink);
   color: var(--folio-paper);
-  box-shadow: 6px 6px 0 rgba(173, 56, 46, 0.78);
+  box-shadow: 6px 6px 0 rgba(157, 96, 36, 0.78);
   font-size: 13px;
   line-height: 1.5;
   position: fixed;
@@ -111,13 +111,13 @@
 }
 
 @keyframes folio-scene-library-accepted {
-  0%, 54%, 100% { fill: rgba(250, 247, 239, 0.18); stroke: rgba(23, 24, 21, 0.34); transform: scale(1); }
-  66%, 82% { fill: rgba(173, 56, 46, 0.09); stroke: var(--folio-red); transform: scale(1.04); }
+  0%, 54%, 100% { fill: rgba(248, 249, 247, 0.18); stroke: rgba(27, 34, 30, 0.34); transform: scale(1); }
+  66%, 82% { fill: rgba(157, 96, 36, 0.09); stroke: var(--folio-red); transform: scale(1.04); }
 }
 
 @keyframes folio-scene-discover-record {
   0%, 24%, 100% { opacity: 1; stroke: var(--folio-red); transform: scale(1.025); }
-  34%, 88% { opacity: 0.42; stroke: rgba(23, 24, 21, 0.22); transform: scale(0.985); }
+  34%, 88% { opacity: 0.42; stroke: rgba(27, 34, 30, 0.22); transform: scale(0.985); }
 }
 
 @keyframes folio-scene-discover-lens {

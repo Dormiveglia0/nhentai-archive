@@ -29,7 +29,7 @@
   justify-content: center;
   gap: 12px;
   color: var(--folio-muted);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   text-align: center;
 }
@@ -57,7 +57,7 @@
 
 .folio-editor-head > div > span {
   color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -65,7 +65,7 @@
 
 .folio-editor-head h2 {
   margin: 8px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 22px;
 }
 
@@ -100,14 +100,14 @@
   padding: 0 11px;
   border: 1px solid var(--folio-line);
   outline: 0;
-  background: rgba(250, 247, 239, 0.25);
+  background: rgba(248, 249, 247, 0.25);
   color: var(--folio-ink);
   font-size: 13px;
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .folio-field:focus-within input {
-  border-color: rgba(173, 56, 46, 0.62);
+  border-color: rgba(157, 96, 36, 0.62);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -136,7 +136,7 @@
 }
 
 .folio-tag-board strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
 }
 
@@ -200,7 +200,7 @@
   display: grid;
   place-items: center;
   color: var(--folio-muted);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
 }
 
@@ -227,7 +227,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
 }
 
 .folio-evidence-strip svg {
@@ -246,7 +246,7 @@
 .folio-modal-backdrop {
   display: grid;
   place-items: center;
-  background: rgba(23, 24, 21, 0.38);
+  background: rgba(27, 34, 30, 0.38);
   backdrop-filter: blur(5px);
   position: fixed;
   inset: 0;
@@ -258,15 +258,15 @@
   padding: 34px;
   border: 1px solid var(--folio-line-strong);
   background:
-    repeating-linear-gradient(0deg, transparent 0 5px, rgba(23, 24, 21, 0.018) 5px 6px),
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(27, 34, 30, 0.018) 5px 6px),
     var(--folio-paper-bright);
-  box-shadow: 12px 14px 0 rgba(173, 56, 46, 0.28);
+  box-shadow: 12px 14px 0 rgba(157, 96, 36, 0.28);
   position: relative;
 }
 
 .folio-modal h2 {
   margin: 10px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 34px;
 }
 
@@ -283,7 +283,7 @@
   border: 1px solid var(--folio-line-strong);
   outline: 0;
   resize: vertical;
-  background: rgba(243, 239, 229, 0.45);
+  background: rgba(232, 235, 232, 0.45);
   color: var(--folio-ink);
   font-size: 13px;
   line-height: 1.6;

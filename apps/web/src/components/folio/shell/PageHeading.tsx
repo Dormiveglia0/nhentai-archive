@@ -22,6 +22,7 @@ export function PageHeading({
   return (
     <header ref={heading} className="folio-page-head">
       <div className="folio-page-copy">
+        <span className="folio-page-index" aria-hidden="true">{page.id.toUpperCase()}</span>
         <h1>{title}</h1>
       </div>
       <ModuleScene page={page.id} />

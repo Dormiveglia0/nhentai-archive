@@ -1,5 +1,17 @@
 # NH Archive Project Map
 
+## 2026-09-14 · RhineLabUI 设计研究与前端重构
+
+- 留档：`2b4fbef` 已推送至 `codex/login-and-shelf-fixes`；重构在 `codex/rhine-frontend`，不合并 main。
+- 用户已解除原风格限制。新基线为灰白、石墨与琥珀，固定侧栏/顶栏、紧凑标题及统一无衬线字体。主题页头动画保留，整页背景循环移除。
+- 默认首页为 `ReadingHome.tsx` / `.css`，真实30天阅读时长切片与日期滑块、每日读数联动；默认最近活跃日，待机轻微起伏，可暂停且尊重减少动态效果。原查询参数预览保留。
+- 登录独立构图，输入聚焦/验证/完成都有对应状态；扫描线从实测输入框位置到64px顶栏，完成事件触发应用显示。固定计时器曾在掉帧时提前进入，已移除。
+- 所有正式业务页面使用新的共享配色/字体；修复侧栏引入后的热门背景宽度、设置底部操作栏边界；竖向封面隐藏无用模糊层，去掉图片全局阴影。
+- 参考：https://github.com/LBEILC/RhineLabUI （DESIGN.md、motion.ts、ui-transitions.ts、document-decryption.ts 与仓库实录）。在线演示暂停，本地源码可运行，但服务器软件GPU截图超时；视觉参考使用仓库实录，未声称完成上游实机性能评估。
+- 无新增依赖，无API/schema改动，无生成图片素材。正式验证使用Playwright（Browser插件不可用）、构建及1440/2560/390截图。
+- 验证结果：Web构建与diff检查通过；auth-gate、auth-wake-demo、shelf-navigation、reading-home共19项通过。九个主页面在1440×1000、2560×1440、390×844的布局/顶栏/操作栏检查通过。Docker构建成功并已重新部署为健康状态；不将服务器浏览器检查等同于用户设备帧率保证。
+
+
 ## Current Slice
 
 Implemented loop:

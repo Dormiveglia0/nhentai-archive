@@ -98,7 +98,7 @@
   place-items: center;
   border: 1px solid var(--folio-line);
   border-radius: 50%;
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
 }
 
@@ -171,7 +171,7 @@
   display: grid;
   place-items: center;
   color: var(--folio-muted);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
 }
 
@@ -282,7 +282,7 @@
 }
 
 .folio-tasks-row.is-bad .folio-tasks-kind-icon {
-  border-color: rgba(173, 56, 46, 0.4);
+  border-color: rgba(157, 96, 36, 0.4);
   color: var(--folio-red);
 }
 
@@ -368,7 +368,7 @@
 
 .folio-tasks-progress em {
   color: var(--folio-muted);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   font-style: normal;
 }
@@ -436,7 +436,7 @@
   display: grid;
   place-items: center;
   color: var(--folio-muted);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   line-height: 1.7;
   text-align: center;
@@ -454,7 +454,7 @@
 
 .folio-tasks-inspector-head > div > span {
   color: var(--folio-red);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -462,7 +462,7 @@
 
 .folio-tasks-inspector-head h2 {
   margin: 8px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 21px;
 }
 
@@ -488,7 +488,7 @@
 
 .folio-tasks-inspector-head > strong {
   color: var(--folio-muted);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
 }
 
@@ -535,7 +535,7 @@
 }
 
 .folio-tasks-progress-ring strong {
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 22px;
   font-weight: 400;
 }
@@ -558,7 +558,7 @@
 
 .folio-tasks-progress-detail > div:last-child > strong {
   margin-top: 8px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
 }
 
@@ -743,7 +743,7 @@
   overflow-y: auto;
   list-style: none;
   scrollbar-width: thin;
-  scrollbar-color: rgba(23, 24, 21, 0.35) transparent;
+  scrollbar-color: rgba(27, 34, 30, 0.35) transparent;
 }
 
 .folio-tasks-log li {
@@ -757,7 +757,7 @@
 
 .folio-tasks-log time {
   color: var(--folio-muted);
-  font-family: Georgia, serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
 }
 

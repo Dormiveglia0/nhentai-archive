@@ -1,11 +1,11 @@
 .folio-task-dock {
-  --dock-paper: #f3efe5;
-  --dock-paper-bright: #faf7ef;
-  --dock-ink: #171815;
-  --dock-muted: #6d695f;
-  --dock-line: rgba(23, 24, 21, 0.2);
-  --dock-line-strong: rgba(23, 24, 21, 0.56);
-  --dock-red: #ad382e;
+  --dock-paper: #e8ebe8;
+  --dock-paper-bright: #f8f9f7;
+  --dock-ink: #1b221e;
+  --dock-muted: #626b63;
+  --dock-line: rgba(27, 34, 30, 0.2);
+  --dock-line-strong: rgba(27, 34, 30, 0.56);
+  --dock-red: #9d6024;
   width: min(510px, calc(100vw - 36px));
   padding: 8px 12px 11px;
   display: grid;
@@ -13,11 +13,11 @@
   border: 1px solid var(--dock-line-strong);
   border-left: 3px solid var(--dock-red);
   background:
-    repeating-linear-gradient(0deg, transparent 0 5px, rgba(23,24,21,.014) 5px 6px),
-    rgba(243, 239, 229, 0.97);
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(27,34,30,.014) 5px 6px),
+    rgba(232, 235, 232, 0.97);
   color: var(--dock-ink);
-  box-shadow: 8px 9px 0 rgba(250,247,239,.72), 0 22px 52px rgba(23,24,21,.18);
-  font-family: Inter, "Noto Sans SC", "PingFang SC", sans-serif;
+  box-shadow: 8px 9px 0 rgba(248,249,247,.72), 0 22px 52px rgba(27,34,30,.18);
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   position: fixed;
   z-index: 140;
   right: 20px;
@@ -105,7 +105,7 @@
 
 .folio-task-dock-head strong {
   margin-top: 3px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
 }
 
@@ -189,7 +189,7 @@
   height: 3px;
   grid-column: 2 / -1;
   display: block;
-  background: rgba(23,24,21,.12);
+  background: rgba(27,34,30,.12);
   overflow: hidden;
 }
 
@@ -242,8 +242,8 @@
 }
 
 @keyframes folio-task-dock-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(173,56,46,.34); }
-  72%, 100% { box-shadow: 0 0 0 8px rgba(173,56,46,0); }
+  0% { box-shadow: 0 0 0 0 rgba(157,96,36,.34); }
+  72%, 100% { box-shadow: 0 0 0 8px rgba(157,96,36,0); }
 }
 
 @media (max-width: 680px) {

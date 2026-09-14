@@ -19,11 +19,11 @@
 
 .folio-discover-popular::before {
   content: "";
-  width: 100vw;
+  width: 100%;
   background:
-    radial-gradient(ellipse at 24% 0%, rgba(173, 56, 46, 0.1), transparent 38%),
-    linear-gradient(90deg, transparent, rgba(173, 56, 46, 0.045) 22%, rgba(173, 56, 46, 0.025) 72%, transparent),
-    repeating-linear-gradient(90deg, transparent 0 79px, rgba(23, 24, 21, 0.018) 79px 80px);
+    radial-gradient(ellipse at 24% 0%, rgba(157, 96, 36, 0.1), transparent 38%),
+    linear-gradient(90deg, transparent, rgba(157, 96, 36, 0.045) 22%, rgba(157, 96, 36, 0.025) 72%, transparent),
+    repeating-linear-gradient(90deg, transparent 0 79px, rgba(27, 34, 30, 0.018) 79px 80px);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
   position: absolute;
@@ -63,7 +63,7 @@
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(173, 56, 46, 0.42);
+  border: 1px solid rgba(157, 96, 36, 0.42);
   color: var(--folio-red);
 }
 
@@ -81,14 +81,14 @@
 
 .folio-discover-popular-title small {
   color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .folio-discover-popular-title strong {
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 20px;
   font-weight: 600;
 }
@@ -119,8 +119,8 @@
 .folio-discover-popular-track::before {
   content: "";
   height: 58%;
-  background: linear-gradient(90deg, transparent, rgba(173, 56, 46, 0.13), transparent);
-  filter: blur(26px);
+  background: linear-gradient(90deg, transparent, rgba(157, 96, 36, 0.13), transparent);
+
   opacity: 0.48;
   position: absolute;
   z-index: 0;
@@ -146,8 +146,8 @@
   flex: var(--popular-ratio, 0.75) 1 0;
   display: grid;
   border: 1px solid var(--folio-line-strong);
-  background: rgba(250, 247, 239, 0.86);
-  box-shadow: 0 14px 32px rgba(23, 24, 21, 0.1);
+  background: rgba(248, 249, 247, 0.86);
+  box-shadow: 0 14px 32px rgba(27, 34, 30, 0.1);
   position: relative;
   z-index: 1;
   isolation: isolate;
@@ -193,8 +193,8 @@
 }
 
 .folio-discover-popular-card:first-of-type {
-  border-color: rgba(173, 56, 46, 0.52);
-  box-shadow: 5px 6px 0 var(--folio-red-soft), 0 16px 34px rgba(23, 24, 21, 0.12);
+  border-color: rgba(157, 96, 36, 0.52);
+  box-shadow: 5px 6px 0 var(--folio-red-soft), 0 16px 34px rgba(27, 34, 30, 0.12);
 }
 
 .folio-discover-popular-card::after {
@@ -245,7 +245,7 @@
 
 .folio-discover-popular-media::after {
   content: "";
-  background: linear-gradient(145deg, rgba(23, 24, 21, 0.32), transparent 34%);
+  background: linear-gradient(145deg, rgba(27, 34, 30, 0.32), transparent 34%);
   position: absolute;
   z-index: 2;
   inset: 0;
@@ -259,13 +259,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(250, 247, 239, 0.72);
-  background: rgba(23, 24, 21, 0.72);
+  border: 1px solid rgba(248, 249, 247, 0.72);
+  background: rgba(27, 34, 30, 0.72);
   color: var(--folio-paper-bright);
   font: 22px/1 Georgia, "Times New Roman", serif;
   font-weight: 400;
   letter-spacing: -0.04em;
-  text-shadow: 0 2px 16px rgba(23, 24, 21, 0.58);
+  text-shadow: 0 2px 16px rgba(27, 34, 30, 0.58);
   position: absolute;
   z-index: 3;
   top: 9px;
@@ -285,7 +285,7 @@
 .folio-discover-popular-copy > strong {
   display: -webkit-box;
   overflow: hidden;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.4;
@@ -311,7 +311,7 @@
 .folio-discover-popular-card:first-of-type .folio-discover-popular-media > b {
   min-width: 42px;
   min-height: 42px;
-  background: rgba(173, 56, 46, 0.88);
+  background: rgba(157, 96, 36, 0.88);
   font-size: 27px;
 }
 
@@ -324,7 +324,7 @@
   justify-content: center;
   gap: 5px;
   border: 1px solid var(--folio-line-strong);
-  background: rgba(250, 247, 239, 0.92);
+  background: rgba(248, 249, 247, 0.92);
   color: var(--folio-red);
   position: absolute;
   z-index: 3;
@@ -398,7 +398,7 @@
   .folio-discover-popular-card:hover {
     z-index: 8;
     border-color: var(--folio-red);
-    box-shadow: 7px 9px 0 var(--folio-red-soft), 0 20px 42px rgba(23, 24, 21, 0.15);
+    box-shadow: 7px 9px 0 var(--folio-red-soft), 0 20px 42px rgba(27, 34, 30, 0.15);
     translate: 0 calc(var(--popular-lift) - 12px);
     rotate: 0deg;
     scale: 1.03;
@@ -427,13 +427,13 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.28);
+  background: rgba(248, 249, 247, 0.28);
   position: relative;
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .folio-discover-query:focus-within {
-  border-color: rgba(173, 56, 46, 0.62);
+  border-color: rgba(157, 96, 36, 0.62);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -548,7 +548,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border: 1px solid rgba(173, 56, 46, 0.34);
+  border: 1px solid rgba(157, 96, 36, 0.34);
   background: var(--folio-red-soft);
   color: var(--folio-red);
   font-size: 12px;
@@ -556,7 +556,7 @@
 
 .folio-discover-tag-chips > span.is-excluded {
   border-color: var(--folio-line-strong);
-  background: rgba(23, 24, 21, 0.06);
+  background: rgba(27, 34, 30, 0.06);
   color: var(--folio-ink);
 }
 
@@ -624,7 +624,7 @@
   gap: 10px;
   border: 1px solid var(--folio-line-strong);
   background: var(--folio-paper-bright);
-  box-shadow: 10px 14px 28px rgba(23, 24, 21, 0.15);
+  box-shadow: 10px 14px 28px rgba(27, 34, 30, 0.15);
   position: absolute;
   z-index: 110;
   top: calc(100% + 7px);
@@ -714,7 +714,7 @@
 
 .folio-discover-tag-options > a.is-excluded {
   box-shadow: inset 3px 0 0 var(--folio-red);
-  background: rgba(23, 24, 21, 0.06);
+  background: rgba(27, 34, 30, 0.06);
 }
 
 .folio-discover-tag-options a > span {
@@ -852,7 +852,7 @@
 }
 
 .folio-discover-message.is-error {
-  border-color: rgba(173, 56, 46, 0.52);
+  border-color: rgba(157, 96, 36, 0.52);
   background: var(--folio-red-soft);
   color: var(--folio-red);
 }
@@ -908,8 +908,8 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.34);
-  box-shadow: 0 10px 24px rgba(23, 24, 21, 0.035);
+  background: rgba(248, 249, 247, 0.34);
+  box-shadow: 0 10px 24px rgba(27, 34, 30, 0.035);
   position: relative;
   transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, box-shadow 240ms ease;
 }
@@ -929,8 +929,8 @@
 
 .folio-discover-card:hover {
   z-index: 1;
-  border-color: rgba(173, 56, 46, 0.42);
-  box-shadow: 9px 12px 0 rgba(173, 56, 46, 0.075), 0 18px 36px rgba(23, 24, 21, 0.08);
+  border-color: rgba(157, 96, 36, 0.42);
+  box-shadow: 9px 12px 0 rgba(157, 96, 36, 0.075), 0 18px 36px rgba(27, 34, 30, 0.08);
   transform: translateY(-4px);
 }
 
@@ -978,8 +978,8 @@
   width: calc(100% - 18px);
   height: auto;
   max-height: calc(100% - 18px);
-  border: 1px solid rgba(250, 247, 239, 0.52);
-  box-shadow: 0 15px 34px rgba(23, 24, 21, 0.42), 0 0 0 1px rgba(23, 24, 21, 0.16);
+  border: 1px solid rgba(248, 249, 247, 0.52);
+  box-shadow: 0 15px 34px rgba(27, 34, 30, 0.42), 0 0 0 1px rgba(27, 34, 30, 0.16);
   inset: 50% auto auto 9px;
   transform: translateY(-50%);
 }
@@ -989,7 +989,7 @@
   padding: 0 9px;
   display: inline-flex;
   align-items: center;
-  background: rgba(23, 24, 21, 0.82);
+  background: rgba(27, 34, 30, 0.82);
   color: var(--folio-paper-bright);
   font-size: 12px;
   position: absolute;
@@ -998,7 +998,7 @@
 }
 
 .folio-discover-status.is-imported {
-  background: rgba(68, 95, 82, 0.94);
+  background: rgba(58, 104, 88, 0.94);
 }
 
 .folio-discover-card-body {
@@ -1036,7 +1036,7 @@
   border: 0;
   background: transparent;
   color: var(--folio-ink);
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.42;
@@ -1098,7 +1098,7 @@
 }
 
 .folio-discover-card-tags a:hover {
-  border-color: rgba(173, 56, 46, 0.45);
+  border-color: rgba(157, 96, 36, 0.45);
   background: var(--folio-red-soft);
   color: var(--folio-red);
 }
@@ -1127,7 +1127,7 @@
 }
 
 .folio-discover-card-action.is-read {
-  border-color: rgba(173, 56, 46, 0.58);
+  border-color: rgba(157, 96, 36, 0.58);
   color: var(--folio-red);
 }
 
@@ -1179,7 +1179,7 @@
 
 .folio-discover-pager span {
   color: var(--folio-muted);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
 }
 
@@ -1265,7 +1265,7 @@
     flex: 0 0 min(var(--popular-mobile-width, 96px), calc((100% - 12px) / 3));
     display: block;
     align-self: flex-end;
-    box-shadow: 0 9px 20px rgba(23, 24, 21, 0.13);
+    box-shadow: 0 9px 20px rgba(27, 34, 30, 0.13);
     position: relative;
     top: auto;
     left: auto;
@@ -1336,7 +1336,7 @@
     min-height: 22px;
     padding: 0 3px;
     border: 0;
-    background: rgba(23, 24, 21, 0.68);
+    background: rgba(27, 34, 30, 0.68);
     font-size: 10px;
     letter-spacing: 0;
     top: 3px;
@@ -1349,7 +1349,7 @@
     height: 24px;
     padding: 0;
     border-width: 1px;
-    background: rgba(250, 247, 239, 0.92);
+    background: rgba(248, 249, 247, 0.92);
     position: absolute;
     right: 3px;
     bottom: 3px;

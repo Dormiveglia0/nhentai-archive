@@ -10,7 +10,7 @@
   display: grid;
   place-items: center;
   color: var(--folio-muted);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.12em;
 }
@@ -45,7 +45,7 @@
 
 .folio-shelf-head h2 {
   margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 20px;
 }
 
@@ -96,7 +96,7 @@
 @media (hover: hover) and (pointer: fine) {
   .folio-shelf-track:not(.is-dragging) .folio-shelf-item:hover .folio-shelf-cover {
     border-color: var(--folio-red);
-    box-shadow: 0 0 0 2px var(--folio-red), 0 5px 12px rgba(23, 24, 21, .16);
+    box-shadow: 0 0 0 2px var(--folio-red), 0 5px 12px rgba(27, 34, 30, .16);
     transform: translateY(-3px);
   }
   .folio-shelf-item:hover strong { color: var(--folio-red); }
@@ -118,7 +118,7 @@
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   line-height: 1.35;
 }
@@ -143,7 +143,7 @@
   align-items: center;
   gap: 10px;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.28);
+  background: rgba(248, 249, 247, 0.28);
   color: var(--folio-muted);
   position: relative;
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
@@ -155,13 +155,13 @@
   display: flex;
   align-items: stretch;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.28);
+  background: rgba(248, 249, 247, 0.28);
   position: relative;
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .folio-query-composer:focus-within {
-  border-color: rgba(173, 56, 46, 0.62);
+  border-color: rgba(157, 96, 36, 0.62);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -216,7 +216,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid rgba(173, 56, 46, 0.34);
+  border: 1px solid rgba(157, 96, 36, 0.34);
   background: var(--folio-red-soft);
   color: var(--folio-red);
   font-size: 13px;
@@ -270,7 +270,7 @@
   gap: 9px;
   border: 1px solid var(--folio-line-strong);
   background: var(--folio-paper-bright);
-  box-shadow: 9px 11px 24px rgba(23, 24, 21, 0.14);
+  box-shadow: 9px 11px 24px rgba(27, 34, 30, 0.14);
   position: absolute;
   top: calc(100% + 7px);
   right: -1px;
@@ -345,7 +345,7 @@
 
 .folio-search-field:focus-within,
 .folio-secret:focus-within {
-  border-color: rgba(173, 56, 46, 0.62);
+  border-color: rgba(157, 96, 36, 0.62);
   background: rgba(255, 255, 255, 0.34);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -382,7 +382,7 @@
   justify-content: space-between;
   gap: 12px;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.28);
+  background: rgba(248, 249, 247, 0.28);
   color: var(--folio-ink);
   text-align: left;
   transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
@@ -403,7 +403,7 @@
 }
 
 .folio-select.is-open > button {
-  border-color: rgba(173, 56, 46, 0.62);
+  border-color: rgba(157, 96, 36, 0.62);
   background: var(--folio-paper-bright);
   box-shadow: 5px 5px 0 var(--folio-red-soft);
 }
@@ -417,7 +417,7 @@
   padding: 0;
   border: 1px solid var(--folio-line-strong);
   background: var(--folio-paper-bright);
-  box-shadow: 8px 10px 20px rgba(23, 24, 21, 0.12);
+  box-shadow: 8px 10px 20px rgba(27, 34, 30, 0.12);
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -539,7 +539,7 @@
 .folio-primary-button:hover:not(:disabled) {
   border-color: var(--folio-red);
   background: var(--folio-red);
-  box-shadow: 4px 4px 0 rgba(23, 24, 21, 0.14);
+  box-shadow: 4px 4px 0 rgba(27, 34, 30, 0.14);
   transform: translateY(-1px);
 }
 
@@ -598,8 +598,8 @@
   content: "";
   width: 42px;
   height: 42px;
-  border-top: 1px solid rgba(173, 56, 46, 0.38);
-  border-right: 1px solid rgba(173, 56, 46, 0.38);
+  border-top: 1px solid rgba(157, 96, 36, 0.38);
+  border-right: 1px solid rgba(157, 96, 36, 0.38);
   position: absolute;
   top: 10px;
   right: 0;
@@ -610,7 +610,7 @@
 .folio-recipe-head span,
 .folio-modal > span {
   color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -619,7 +619,7 @@
 .folio-inspector h2,
 .folio-source-rail h2 {
   margin: 12px 0 9px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 21px;
   font-weight: 600;
 }
@@ -675,7 +675,7 @@
 
 .folio-popular-strip h2 {
   margin: 8px 0 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 23px;
   font-weight: 600;
 }
@@ -753,7 +753,7 @@
 
 .folio-pager span {
   color: var(--folio-muted);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 13px;
 }
 
@@ -772,13 +772,13 @@
 }
 
 .folio-work-delete-dialog::backdrop {
-  background: rgba(23, 24, 21, 0.46);
+  background: rgba(27, 34, 30, 0.46);
   backdrop-filter: blur(5px);
 }
 
 .folio-work-delete-dialog > header > span {
   color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -788,7 +788,7 @@
   margin-top: 20px;
   display: block;
   overflow: hidden;
-  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif);
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;

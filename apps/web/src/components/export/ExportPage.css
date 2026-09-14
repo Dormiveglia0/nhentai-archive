@@ -5,7 +5,7 @@
 .folio-export-message > span { width: 6px; height: 6px; background: #4c6d56; transform: rotate(45deg); }
 .folio-export-message svg { color: var(--folio-red); }
 .folio-export-message p { margin: 0; }
-.folio-export-loading { min-height: 340px; display: grid; place-items: center; color: var(--folio-muted); font-family: "Noto Serif SC", serif; font-size: 12px; }
+.folio-export-loading { min-height: 340px; display: grid; place-items: center; color: var(--folio-muted); font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 12px; }
 .folio-export-empty { min-height: 360px; }
 
 .folio-export-toolbar { min-width: 0; margin-bottom: 24px; padding-bottom: 16px; display: grid; grid-template-columns: minmax(260px, .6fr) minmax(250px, .65fr) auto; align-items: end; gap: 14px; border-bottom: 1px solid var(--folio-line-strong); }
@@ -21,14 +21,14 @@
 .folio-export-page .folio-export-layout { min-width: 0; display: grid; grid-template-columns: minmax(360px, .72fr) minmax(430px, 1fr); align-items: start; gap: clamp(30px, 4vw, 58px); }
 .folio-export-page .folio-export-source, .folio-export-inspector { min-width: 0; border-top: 1px solid var(--folio-line-strong); border-bottom: 1px solid var(--folio-line-strong); }
 .folio-export-column-head { min-height: 92px; padding: 17px 0; border-bottom: 1px solid var(--folio-line); }
-.folio-export-column-head > span { color: var(--folio-red); font-family: Georgia, serif; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; }
-.folio-export-column-head h2 { margin: 7px 0 0; font-family: "Noto Serif SC", serif; font-size: 21px; }
+.folio-export-column-head > span { color: var(--folio-red); font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 12px; letter-spacing: .15em; text-transform: uppercase; }
+.folio-export-column-head h2 { margin: 7px 0 0; font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 21px; }
 .folio-export-column-head p { margin: 5px 0 0; color: var(--folio-muted); font-size: 12px; }
 .folio-export-page .folio-export-source > .folio-empty { min-height: 300px; }
-.folio-export-work-list { min-width: 0; max-height: 630px; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: rgba(173,56,46,.58) rgba(23,24,21,.04); }
+.folio-export-work-list { min-width: 0; max-height: 630px; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: rgba(157,96,36,.58) rgba(27,34,30,.04); }
 .folio-export-page .folio-export-work-list::-webkit-scrollbar { width: 8px; height: 0; }
-.folio-export-page .folio-export-work-list::-webkit-scrollbar-track { border-left: 1px solid var(--folio-line); background: rgba(23,24,21,.025); }
-.folio-export-page .folio-export-work-list::-webkit-scrollbar-thumb { border: 2px solid transparent; background: rgba(173,56,46,.62); background-clip: padding-box; }
+.folio-export-page .folio-export-work-list::-webkit-scrollbar-track { border-left: 1px solid var(--folio-line); background: rgba(27,34,30,.025); }
+.folio-export-page .folio-export-work-list::-webkit-scrollbar-thumb { border: 2px solid transparent; background: rgba(157,96,36,.62); background-clip: padding-box; }
 .folio-export-work-list-body { min-width: 0; }
 .folio-export-work-item { width: 100%; min-height: 76px; padding: 8px 6px; display: grid; grid-template-columns: 48px minmax(0, 1fr) 62px; align-items: center; gap: 10px; border: 0; border-bottom: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); text-align: left; position: relative; transition: background-color 180ms ease; }
 .folio-export-work-item::before { content: ""; width: 2px; background: var(--folio-red); position: absolute; inset: 0 auto 0 0; transform: scaleY(0); transform-origin: top; transition: transform 220ms ease; }
@@ -56,16 +56,16 @@
 .folio-export-inspector-head { min-height: 128px; padding: 18px 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 15px; border-bottom: 1px solid var(--folio-line); }
 .folio-export-inspector-head > .folio-export-cover { width: 72px; height: 96px; }
 .folio-export-inspector-head-text { min-width: 0; }
-.folio-export-inspector-head-text > strong { display: block; overflow: hidden; font-family: "Noto Serif SC", serif; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.folio-export-inspector-head-text > strong { display: block; overflow: hidden; font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .folio-export-name-field { margin: 12px 0 9px; display: block; }
 .folio-export-name-field > span { margin-bottom: 5px; display: block; color: var(--folio-muted); font-size: 12px; }
 .folio-export-name-input { width: 100%; height: 38px; padding: 0 8px; border: 1px solid var(--folio-line); outline: 0; background: rgba(255,255,255,.18); color: var(--folio-ink); font-size: 12px; transition: border-color 180ms ease, box-shadow 180ms ease; }
-.folio-export-name-input:focus { border-color: rgba(173,56,46,.6); box-shadow: 4px 4px 0 var(--folio-red-soft); }
+.folio-export-name-input:focus { border-color: rgba(157,96,36,.6); box-shadow: 4px 4px 0 var(--folio-red-soft); }
 .folio-export-comicinfo { margin-top: 20px; border-top: 1px solid var(--folio-line-strong); border-bottom: 1px solid var(--folio-line-strong); }
 .folio-export-comicinfo.is-off { opacity: .64; }
 .folio-export-comicinfo-title { min-height: 56px; padding: 10px 4px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--folio-line); }
 .folio-export-comicinfo-title svg { color: var(--folio-red); }
-.folio-export-comicinfo-title h3 { margin: 0; font-family: "Noto Serif SC", serif; font-size: 13px; }
+.folio-export-comicinfo-title h3 { margin: 0; font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 13px; }
 .folio-export-tag { margin-left: auto; padding: 3px 6px; border-bottom: 1px solid var(--folio-line-strong); font-size: 12px; }
 .folio-export-tag.is-ok { border-color: #4c6d56; color: #4c6d56; }
 .folio-export-comicinfo-rows { max-height: 230px; margin: 0; overflow-y: auto; }
@@ -78,13 +78,13 @@
 .folio-export-issues p.blocked { border-color: var(--folio-red); background: var(--folio-red-soft); color: var(--folio-red); }
 .folio-export-selected-strip { min-height: 76px; margin-top: 16px; padding: 8px; display: flex; gap: 7px; overflow-x: auto; border: 1px solid var(--folio-line); scrollbar-width: none; }
 .folio-export-selected-strip .folio-export-cover { width: 40px; height: 56px; flex: 0 0 40px; }
-.folio-export-selected-more { min-width: 40px; display: grid; place-items: center; color: var(--folio-muted); font-family: Georgia, serif; }
-.folio-export-inspector-empty { min-height: 360px; margin: 0; display: grid; place-items: center; color: var(--folio-muted); font-family: "Noto Serif SC", serif; font-size: 12px; }
+.folio-export-selected-more { min-width: 40px; display: grid; place-items: center; color: var(--folio-muted); font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); }
+.folio-export-inspector-empty { min-height: 360px; margin: 0; display: grid; place-items: center; color: var(--folio-muted); font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 12px; }
 
-.folio-export-action-zone { margin-top: 22px; padding: 14px 0; border-top: 1px solid var(--folio-line-strong); background: rgba(243,239,229,.96); position: sticky; bottom: 0; z-index: 4; }
+.folio-export-action-zone { margin-top: 22px; padding: 14px 0; border-top: 1px solid var(--folio-line-strong); background: rgba(232,235,232,.96); position: sticky; bottom: 0; z-index: 4; }
 .folio-export-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 42px; gap: 7px; }
 .folio-export-options label, .folio-export-refresh { min-height: 42px; padding: 0 8px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-muted); font-size: 12px; cursor: pointer; }
-.folio-export-options label.is-on { border-color: rgba(173,56,46,.45); background: var(--folio-red-soft); color: var(--folio-ink); }
+.folio-export-options label.is-on { border-color: rgba(157,96,36,.45); background: var(--folio-red-soft); color: var(--folio-ink); }
 .folio-export-options input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .folio-export-options label:has(input:focus-visible), .folio-export-refresh:focus-visible { outline: 2px solid var(--folio-red); outline-offset: 2px; }
 .folio-export-refresh { padding: 0; }
