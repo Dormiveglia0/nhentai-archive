@@ -2,7 +2,6 @@ import { CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { GovernanceQueue, GovernanceQueueItem } from "../../lib/api";
-import { Stagger, StaggerItem } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
 import { workTitle } from "../../lib/format";
 
@@ -62,9 +61,9 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
       </div>
       <p className="folio-governance-filter-explainer">{filters.find((item) => item.id === filter)?.description}</p>
       {visibleItems.length ? (
-        <Stagger key={`${filter}-${visibleItems.map((item) => item.work.id).join("-")}`} className="folio-governance-queue-list">
+        <div className="folio-governance-queue-list">
           {visibleItems.map((item) => (
-            <StaggerItem key={item.work.id}>
+            <div key={item.work.id}>
               <QueueCard
                 item={item}
                 selected={selectedId === item.work.id}
@@ -73,9 +72,9 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
                 checked={selectedIds.has(item.work.id)}
                 onToggleSelected={onToggleSelected}
               />
-            </StaggerItem>
+            </div>
           ))}
-        </Stagger>
+        </div>
       ) : (
         <div className="folio-governance-queue-clear">
           <CheckCircle2 size={20} />
@@ -112,7 +111,7 @@ function QueueCard({
           <i aria-hidden="true" />
         </label>
       ) : null}
-      <button className="folio-governance-queue-card-body" type="button" onClick={() => onSelect(item.work.id)}>
+      <button className="folio-governance-queue-card-body" type="button" onClick={() => onSelect(item.work.id)} aria-pressed={selected}>
         <div className="folio-governance-queue-card-top">
           <strong>{workTitle(item.work)}</strong>
           <span

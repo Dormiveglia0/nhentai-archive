@@ -52,14 +52,12 @@ export function GalleryHero({
 
   return (
     <section className={`folio-gallery-hero${blurCovers ? " is-private" : ""}`}>
-      {src ? <div className="folio-gallery-hero-image" style={{ backgroundImage: `url("${src}")` }} aria-hidden="true" /> : null}
-      <div className="folio-gallery-hero-paper" aria-hidden="true"><i /><i /><i /></div>
       <div className="folio-gallery-hero-stage">
         <m.div
           className="folio-gallery-cover-stage"
           style={{ "--gallery-cover-ratio": coverRatio } as CSSProperties}
-          initial={{ opacity: 0, x: reduceMotion ? 0 : -26, rotate: reduceMotion ? 0 : -1.4 }}
-          animate={{ opacity: 1, x: 0, rotate: 0 }}
+          initial={{ opacity: 0, x: reduceMotion ? 0 : -18 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: duration.slow, ease: ease.standard }}
         >
           <span className="folio-gallery-cover-register" aria-hidden="true"><i /><i /><i /><i /></span>

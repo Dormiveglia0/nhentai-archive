@@ -2,7 +2,7 @@ import { AlertTriangle, RefreshCw, Save } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { type FormEvent, useRef } from "react";
 
-import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
+import { SelectionStage, usePrefersReducedMotion } from "../../lib/motion";
 import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
 import { ConnectionSection } from "./ConnectionSection";
 import { DataSection } from "./DataSection";
@@ -13,30 +13,24 @@ import { TranslationSection } from "./TranslationSection";
 import { useSettingsState } from "./useSettingsState";
 import "./SettingsPage.css";
 
-const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
+const SECTION_COPY: Record<SettingsSection, { title: string }> = {
   connection: {
     title: "数据源与连接",
-    copy: "配置漫画来源与 API 密钥。",
   },
   translation: {
     title: "机器翻译配置",
-    copy: "选择翻译服务、目标语言与批量数量。",
   },
   privacy: {
     title: "访问与阅读偏好",
-    copy: "修改本地访问密码，并设置媒体封面的默认保护方式与阅读布局。",
   },
   export: {
     title: "CBZ 导出默认值",
-    copy: "只定义导出中心的起始选项，单次下载仍可临时调整。",
   },
   data: {
     title: "作品与阅读报表",
-    copy: "查看阅读时长、作品排行与作品分布。",
   },
   storage: {
     title: "存储与路径",
-    copy: "查看数据目录、文件占用与可回收空间。",
   },
 };
 
@@ -74,6 +68,7 @@ export function SettingsPage({
 
   return (
     <form ref={formRef} className={`folio-page-body folio-settings-body folio-settings-page${showActions ? "" : " is-readonly"}`} onSubmit={onSubmit}>
+      <div className="settings-directory">
       <nav className="folio-settings-nav" aria-label="设置章节">
         {SETTINGS_SECTIONS.map((item) => {
           const Icon = item.icon;
@@ -95,25 +90,18 @@ export function SettingsPage({
               ) : null}
               <Icon size={16} />
               <strong>{item.label}</strong>
-              <small>{item.description}</small>
+              <small>{String(SETTINGS_SECTIONS.indexOf(item) + 1).padStart(2, "0")}</small>
             </button>
           );
         })}
       </nav>
+      <div className="settings-directory-state"><i className={vm.dirty ? "is-dirty" : ""} /><span>{syncLabel}</span></div>
+      </div>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <m.section
-          key={vm.section}
-          className="folio-settings-stage"
-          initial={{ opacity: 0, y: reduceMotion ? 0 : 10, clipPath: reduceMotion ? "none" : "inset(0 0 8% 0)" }}
-          animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
-          exit={{ opacity: 0, y: reduceMotion ? 0 : -7, clipPath: reduceMotion ? "none" : "inset(0 0 6% 0)" }}
-          transition={{ duration: reduceMotion ? 0 : duration.fast, ease: ease.standard }}
-        >
+      <SelectionStage selection={vm.section} className="folio-settings-stage">
           <header className="folio-settings-head">
             <div>
               <h2>{current.title}</h2>
-              <p>{current.copy}</p>
             </div>
             <div className={`folio-settings-state${vm.dirty ? " is-dirty" : ""}${vm.loading ? " is-loading" : ""}`}>
               <i />
@@ -156,8 +144,7 @@ export function SettingsPage({
               </m.div>
             ) : null}
           </AnimatePresence>
-        </m.section>
-      </AnimatePresence>
+      </SelectionStage>
 
       {showActions ? (
         <footer className="folio-settings-actions">

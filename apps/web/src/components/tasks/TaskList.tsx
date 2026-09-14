@@ -53,18 +53,15 @@ export function TaskList(props: Props) {
   if (props.loading) return <div className="folio-tasks-loading" role="status">正在读取任务队列…</div>;
   if (props.jobs.length === 0) return <FolioEmptyState icon={Workflow} title="没有匹配的任务" copy={props.emptyLabel} />;
 
-  const signature = props.jobs.map((job) => `${job.id}:${job.status}`).join("-");
 
   return (
     <div className="folio-tasks-table">
-      <div className="folio-tasks-table-head" aria-hidden="true">
-        <span>任务</span><span>目标 / 文件</span><span>阶段</span><span>进度</span><span>时间</span><span>操作</span>
-      </div>
-      <Stagger key={signature} className="folio-tasks-row-list">
+      <Stagger className="folio-tasks-row-list">
         {props.jobs.map((job) => (
           <StaggerItem key={job.id} className="folio-tasks-row-motion">
             <article className={`folio-tasks-row is-${statusTone(job.status)}${props.focusId === job.id ? " is-focused" : ""}`}>
-              <button className="folio-tasks-row-main" type="button" onClick={() => props.onFocus(job.id)} aria-label={`查看任务 ${job.id}：${jobTypeLabel(job.type)}`}>
+              <button className="folio-tasks-row-main" type="button" onClick={() => props.onFocus(job.id)} aria-pressed={props.focusId === job.id} aria-label={`查看任务 ${job.id}：${jobTypeLabel(job.type)}`}>
+                <span className="task-record-id">#{job.id}</span>
                 <span className="folio-tasks-kind">
                   <span className="folio-tasks-kind-icon"><StatusIcon status={job.status} /></span>
                   <span><strong>{jobTypeLabel(job.type)}</strong><small>{jobTypeDescription(job.type)}</small></span>

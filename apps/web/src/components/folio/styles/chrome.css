@@ -32,10 +32,10 @@
 .folio-scroll { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bdc5bd transparent; position: relative; }
 .folio-scroll:focus { outline: none; }
 .folio-page { min-width: 0; min-height: 100%; }
-.folio-page-head { min-height: 154px; padding: 28px clamp(26px,3.3vw,64px); display: flex; align-items: center; position: relative; overflow: hidden; border-bottom: 1px solid var(--folio-line); }
+.folio-page-head { min-height: 104px; padding: 18px clamp(26px,3.3vw,64px); display: flex; align-items: center; position: relative; overflow: hidden; border-bottom: 1px solid var(--folio-line); }
 .folio-page-copy { position: relative; z-index: 2; max-width: 60%; }
-.folio-page-index { display: block; margin-bottom: 13px; font-size: 10px; color: var(--folio-muted); letter-spacing: .22em; }
-.folio-page-copy h1 { margin: 0; font-size: clamp(28px,2.8vw,42px); line-height: 1.15; letter-spacing: -.045em; font-weight: 500; }
+.folio-page-index { display: block; margin-bottom: 8px; font-size: 10px; color: var(--folio-muted); letter-spacing: .22em; }
+.folio-page-copy h1 { margin: 0; font-size: clamp(25px,2vw,30px); line-height: 1.15; letter-spacing: -.045em; font-weight: 500; }
 .folio-page-head::after { content: ""; position: absolute; bottom: 0; left: 0; height: 2px; width: 90px; background: var(--folio-red); transform-origin: left; animation: folio-heading-scan .65s cubic-bezier(.22,1,.36,1) both; }
 .folio-page-head.is-offscreen .folio-scene * { animation-play-state: paused !important; }
 .folio-command-bar { grid-column: 2; }
@@ -44,3 +44,5 @@
 
 .folio-page-copy { animation: folio-title-enter .4s cubic-bezier(.22,1,.36,1) both; }
 @keyframes folio-title-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.folio-page-head .folio-scene { width:300px; right:36px; opacity:.75; }

@@ -6,7 +6,7 @@
   --reader-muted: #aaa596;
   --reader-line: rgba(238, 232, 218, 0.18);
   --reader-line-strong: rgba(238, 232, 218, 0.42);
-  --reader-red: #c74b3e;
+  --reader-red: #d6ad73;
   width: 100vw;
   height: 100dvh;
   color: var(--reader-paper);

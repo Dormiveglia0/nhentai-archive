@@ -34,18 +34,14 @@ export function GovernanceActionBar({
         <i aria-hidden="true"><span /></i>
         <span><strong>同时回写 ComicInfo</strong><small>就地改写源 CBZ，不可撤销</small></span>
       </label>
-      <a className="folio-governance-action" href={pageHref({ name: "dictionary" })}>
-        <Tags size={16} />
-        管理词典
-      </a>
-      <a className="folio-governance-action" href={pageHref({ name: "export", workId })}>
-        <Download size={16} />
-        进入导出
-      </a>
-      <button className="folio-governance-action" type="button" onClick={() => void onReload()}>
-        <RefreshCw size={16} />
-        重新读取
-      </button>
+      <details className="governance-more">
+        <summary>更多</summary>
+        <div>
+          <a href={pageHref({ name: "dictionary" })}><Tags size={16} />管理词典</a>
+          <a href={pageHref({ name: "export", workId })}><Download size={16} />进入导出</a>
+          <button type="button" onClick={() => void onReload()}><RefreshCw size={16} />重新读取</button>
+        </div>
+      </details>
     </div>
   );
 }

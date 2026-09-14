@@ -7,9 +7,11 @@ import { formatBytes } from "../../lib/format";
 export function GovernanceSourceRail({
   aggregate,
   bulkMode,
+  onSection,
 }: {
   aggregate: GovernanceAggregate | null;
   bulkMode: boolean;
+  onSection: (section: "metadata" | "tags") => void;
 }) {
   const sourceFile = aggregate?.files.find((file) => file.kind === "source_cbz");
 
@@ -32,7 +34,7 @@ export function GovernanceSourceRail({
                     {actionHref(action.code) ? (
                       <a href={actionHref(action.code)}><span>{action.label}</span><ArrowRight size={14} /></a>
                     ) : (
-                      <button type="button" onClick={() => runAction(action.code)}><span>{action.label}</span><ArrowRight size={14} /></button>
+                      <button type="button" onClick={() => runAction(action.code, onSection)}><span>{action.label}</span><ArrowRight size={14} /></button>
                     )}
                   </li>
                 ))}
@@ -70,13 +72,15 @@ export function GovernanceSourceRail({
   );
 }
 
-function runAction(code: string) {
+function runAction(code: string, onSection: (section: "metadata" | "tags") => void) {
   if (code === "missing_metadata") {
-    scrollToSection("governance-metadata");
+    onSection("metadata");
+    window.requestAnimationFrame(() => scrollToSection("governance-metadata"));
     return;
   }
   if (code === "dictionary_unmapped" || code === "dictionary_review") {
-    scrollToSection("governance-tags");
+    onSection("tags");
+    window.requestAnimationFrame(() => scrollToSection("governance-tags"));
     return;
   }
   if (code === "dictionary_conflict") {

@@ -1,5 +1,5 @@
 import { m, AnimatePresence, type HTMLMotionProps, type Variants } from "motion/react";
-import { Children, forwardRef, type PropsWithChildren, type ReactNode } from "react";
+import { Children, forwardRef, useLayoutEffect, useEffect, useRef, type HTMLAttributes, type PropsWithChildren, type ReactNode } from "react";
 import { duration, ease, stagger } from "./tokens";
 import { usePrefersReducedMotion } from "./useReducedMotion";
 
@@ -126,4 +126,21 @@ export function Reveal({
 /** 路由/弹窗进出场。包装 AnimatePresence。 */
 export function Presence({ children }: { children: ReactNode }) {
   return <AnimatePresence mode="wait">{children}</AnimatePresence>;
+}
+
+export function SelectionStage({ selection, children, ...props }: HTMLAttributes<HTMLDivElement> & { selection: string | number | null }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const animation = useRef<Animation>();
+  const reduce = usePrefersReducedMotion();
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const running = animation.current?.playState === "running";
+    const current = getComputedStyle(node);
+    const from = { opacity: running ? current.opacity : "0.55", transform: running ? current.transform : "translateY(8px)" };
+    animation.current?.cancel();
+    if (!reduce) animation.current = node.animate([from, { opacity: 1, transform: "translateY(0)" }], { duration: 260, easing: "cubic-bezier(.22,1,.36,1)" });
+  }, [selection, reduce]);
+  useEffect(() => () => animation.current?.cancel(), []);
+  return <div ref={ref} {...props}>{children}</div>;
 }

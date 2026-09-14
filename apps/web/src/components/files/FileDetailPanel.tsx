@@ -1,9 +1,8 @@
 import { ArrowUpRight, BookOpen, Check, Clipboard, Download, FileQuestion, Images, PenLine, Trash2, X } from "lucide-react";
-import { AnimatePresence, m } from "motion/react";
 import { useEffect, useState } from "react";
 
 import type { FileEntry } from "../../lib/api";
-import { duration, ease } from "../../lib/motion";
+import { SelectionStage } from "../../lib/motion";
 import { pageHref, tagSearchHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { entryStatusLabel, entryStatusTone, formatBytes, kindLabel } from "./fileHelpers";
@@ -25,21 +24,13 @@ export function FileDetailPanel({ focus, blurCovers, busy, onClose, onDelete }: 
   return (
     <section className={`folio-files-detail${focus ? " is-active" : ""}`} aria-label="文件详情">
       <header className="folio-files-column-head">
-        <span>Selection</span>
         <h2>文件详情</h2>
-        <p>核对来源、索引状态与维护边界。</p>
         <button className="folio-files-detail-close" type="button" onClick={onClose} aria-label="关闭文件详情"><X size={17} /></button>
       </header>
 
-      <AnimatePresence mode="wait" initial={false}>
-        {!focus ? (
-          <m.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <FolioEmptyState icon={FileQuestion} title="尚未选择文件" copy="选择清单中的任意条目后，这里会显示路径、状态与可用操作。" />
-          </m.div>
-        ) : (
-          <FileDetail key={focus.id} focus={focus} blurCovers={blurCovers} busy={busy} onClose={onClose} onDelete={onDelete} />
-        )}
-      </AnimatePresence>
+      <SelectionStage selection={focus?.id ?? null}>
+        {focus ? <FileDetail focus={focus} blurCovers={blurCovers} busy={busy} onClose={onClose} onDelete={onDelete} /> : <FolioEmptyState icon={FileQuestion} title="尚未选择文件" copy="选择文件以查看路径、状态和可用操作。" />}
+      </SelectionStage>
     </section>
   );
 }
@@ -79,13 +70,7 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
       ];
 
   return (
-    <m.div
-      className="folio-files-detail-content"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: duration.base, ease: ease.standard }}
-    >
+    <div className="folio-files-detail-content">
       <div className="folio-files-detail-primary">
         <div className="folio-files-detail-cover">
           {isWork && focus.cover_path && focus.work_id ? (
@@ -153,6 +138,6 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
           </div>
         </div>
       ) : null}
-    </m.div>
+    </div>
   );
 }

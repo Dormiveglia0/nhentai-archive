@@ -4,11 +4,10 @@ import { useId, useRef, useState } from "react";
 
 import { duration, ease } from "../../../lib/motion";
 
-export function FolioPanelHeading({ title, description }: { title: string; description: string }) {
+export function FolioPanelHeading({ title }: { title: string; description?: string }) {
   return (
     <header className="folio-panel-heading">
       <h2>{title}</h2>
-      <p>{description}</p>
     </header>
   );
 }
@@ -136,17 +135,7 @@ export function FolioSelect<T extends string>({
           if (event.key === "Escape") setOpen(false);
         }}
       >
-        <AnimatePresence mode="wait" initial={false}>
-          <m.strong
-            key={selected.value}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: duration.fast, ease: ease.standard }}
-          >
-            {selected.label}
-          </m.strong>
-        </AnimatePresence>
+        <strong>{selected.label}</strong>
         <ChevronDown size={15} />
       </button>
       <AnimatePresence>

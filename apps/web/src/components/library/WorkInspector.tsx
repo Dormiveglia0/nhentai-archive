@@ -1,9 +1,9 @@
-import { BookOpen, Download, Heart, Info, PenTool, X } from "lucide-react";
+import { BookOpen, Download, Heart, PenTool, X } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
-import { FadeIn } from "../../lib/motion";
+import { SelectionStage } from "../../lib/motion";
 import { libraryTagHref, pageHref } from "../../lib/navigation";
-import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
+import { FolioSheet } from "../folio/ui/FolioSheet";
 import { WorkDeleteAction } from "../folio/ui/WorkDeleteAction";
 import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
 
@@ -17,29 +17,15 @@ type Props = {
 };
 
 export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted }: Props) {
-  if (!work) {
-    return (
-      <aside className="folio-library-inspector is-empty" aria-label="作品详情">
-        <FolioEmptyState
-          icon={Info}
-          title="选择一部作品"
-          copy="这里会显示封面、来源、文件信息、阅读进度与本地标签。"
-        />
-      </aside>
-    );
-  }
-
-  const status = readStatusLabel(work);
-  const tags = work.tags ?? [];
-  const title = workTitle(work);
+  const status = work ? readStatusLabel(work) : null;
+  const tags = work?.tags ?? [];
+  const title = work ? workTitle(work) : "作品详情";
 
   return (
-    <>
-      <button className="folio-library-inspector-backdrop" type="button" onClick={onClose} aria-label="关闭作品详情" />
-      <aside className="folio-library-inspector is-open" aria-label={`${title}的详情`}>
-        <FadeIn key={work.id} y={8}>
+    <FolioSheet open={Boolean(work)} label="作品详情" onClose={onClose}>
+      {work && status ? <SelectionStage selection={work.id} className="library-detail-sheet">
           <header className="folio-library-inspector-head">
-            <span>Inspector</span>
+            <span>作品详情</span>
             <strong className={`tone-${status.tone}`}>{status.label}</strong>
             <button type="button" onClick={onClose} aria-label="关闭详情"><X size={16} /></button>
           </header>
@@ -95,8 +81,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
             </button>
             <WorkDeleteAction workId={work.id} title={title} onDeleted={onDeleted} />
           </div>
-        </FadeIn>
-      </aside>
-    </>
+      </SelectionStage> : null}
+    </FolioSheet>
   );
 }

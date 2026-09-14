@@ -1,7 +1,9 @@
 import { AlertTriangle, ArrowLeft, Check, RotateCw } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 
-import { FadeIn } from "../../lib/motion";
+import { useState } from "react";
+import { SectionSwitch } from "../folio/ui/SectionSwitch";
+import { FadeIn, SelectionStage } from "../../lib/motion";
 import { goBack, pageHref } from "../../lib/navigation";
 import { GalleryHero } from "./gallery/GalleryHero";
 import { GalleryPagePreview } from "./gallery/GalleryPagePreview";
@@ -17,6 +19,7 @@ type Props = {
 };
 
 export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
+  const [section, setSection] = useState<"pages" | "tags" | "related">("pages");
   const gallery = useGalleryDetail(galleryId);
   const backLabel = returnTo?.startsWith("reader/")
     ? "返回阅读器"
@@ -72,9 +75,14 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
             onEnqueue={() => void gallery.enqueue()}
             onDeleted={gallery.reload}
           />
-          <GalleryTags detail={gallery.detail} />
-          <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />
-          <GalleryRelated detail={gallery.detail} blurCovers={blurCovers} />
+          <div className="gallery-content-workspace">
+            <SectionSwitch label="作品内容" value={section} onChange={setSection} items={[{value: "pages", label: "页面预览"}, {value: "tags", label: "作品标签"}, {value: "related", label: "相关作品"}]} />
+            <SelectionStage selection={section}>
+              {section === "tags" && <GalleryTags detail={gallery.detail} />}
+              {section === "pages" && <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />}
+              {section === "related" && <GalleryRelated detail={gallery.detail} blurCovers={blurCovers} />}
+            </SelectionStage>
+          </div>
         </FadeIn>
       ) : null}
     </section>

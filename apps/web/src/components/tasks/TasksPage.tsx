@@ -6,16 +6,17 @@ import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 import { STATUS_TABS } from "../../lib/jobs";
 import { TaskInspector } from "./TaskInspector";
 import { TaskList } from "./TaskList";
-import { TaskSummaryStrip } from "./TaskSummaryStrip";
+import { usePrefersReducedMotion } from "../../lib/motion";
 import { useTasksState } from "./useTasksState";
 import "./TasksPage.css";
 
-export function TasksPage() {
+export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
+  const reduce = usePrefersReducedMotion();
 
   function openLogs(id: number) {
     tasks.focusJob(id);
-    window.requestAnimationFrame(() => document.querySelector(".folio-tasks-log-section")?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    window.requestAnimationFrame(() => document.querySelector(".folio-tasks-log-section")?.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" }));
   }
 
   function clearFinished() {
@@ -25,13 +26,13 @@ export function TasksPage() {
   }
 
   return (
-    <section className="folio-page-body folio-tasks-page">
-      <TaskSummaryStrip summary={tasks.summary} />
+    <section className={`folio-page-body folio-tasks-page${blurCovers ? " is-private" : ""}`}>
+
 
       {tasks.error ? <FadeIn key={tasks.error} className="folio-tasks-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{tasks.error}</p></FadeIn> : null}
       {tasks.notice ? <FadeIn key={tasks.notice} className="folio-tasks-message" role="status" y={6}><span aria-hidden="true" /><p>{tasks.notice}</p></FadeIn> : null}
 
-      <section className="folio-tasks-toolbar">
+      <section className="task-status-overview">
         <div className="folio-tasks-tabs" role="group" aria-label="任务状态筛选">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} type="button" aria-pressed={tasks.statusFilter === tab.key} className={tasks.statusFilter === tab.key ? "is-active" : ""} onClick={() => tasks.setStatusFilter(tab.key)}>
@@ -40,6 +41,8 @@ export function TasksPage() {
             </button>
           ))}
         </div>
+      </section>
+      <section className="folio-tasks-toolbar">
         <FolioSearchField value={tasks.query} onChange={tasks.setQuery} placeholder="搜索任务 ID、Gallery ID、阶段或错误" />
         <div className="folio-tasks-toolbar-actions">
           <button type="button" onClick={() => void tasks.refresh()} disabled={tasks.refreshing} aria-busy={tasks.refreshing}><RefreshCw size={15} className={tasks.refreshing ? "spin" : ""} />刷新</button>
@@ -47,8 +50,9 @@ export function TasksPage() {
         </div>
       </section>
 
-      <FadeIn className="folio-tasks-layout" y={8}>
+      <FadeIn className={`folio-tasks-layout${tasks.focus ? "" : " is-empty"}`} y={8}>
         <section className="folio-tasks-main" aria-label="任务列表">
+          <header className="task-list-heading"><h2>任务记录</h2><span>{tasks.visibleJobs.length} 项</span></header>
           <TaskList
             jobs={tasks.visibleJobs}
             focusId={tasks.focus?.id ?? null}
@@ -65,7 +69,7 @@ export function TasksPage() {
             onDelete={(id) => void tasks.deleteJob(id)}
           />
         </section>
-        <TaskInspector
+        {tasks.focus ? <TaskInspector
           job={tasks.focus}
           logs={tasks.logs}
           logsLoading={tasks.logsLoading}
@@ -76,7 +80,7 @@ export function TasksPage() {
           onResume={(id) => void tasks.resumeJob(id)}
           onCancel={(id) => void tasks.cancelJob(id)}
           onDelete={(id) => void tasks.deleteJob(id)}
-        />
+        /> : null}
       </FadeIn>
     </section>
   );

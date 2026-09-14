@@ -1,7 +1,9 @@
 import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
+import { useState } from "react";
+import { SectionSwitch } from "../folio/ui/SectionSwitch";
 import { AnimatePresence, m } from "motion/react";
 
-import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
+import { duration, ease, SelectionStage, Stagger, StaggerItem } from "../../lib/motion";
 import { pageHref } from "../../lib/navigation";
 import { balanceGridRows, completeGridRows, useGridColumns } from "../../lib/useGridColumns";
 import { IconPager } from "../folio/ui/IconPager";
@@ -15,7 +17,12 @@ import { WorkInspector } from "./WorkInspector";
 import { useLibraryState } from "./useLibraryState";
 import "./LibraryPage.css";
 
+let previousShelf: "reading" | "recent" = "reading";
+
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
+  const [shelf, updateShelf] = useState(previousShelf);
+  function setShelf(value: "reading" | "recent") { previousShelf = value; updateShelf(value); }
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [gridRef, gridColumns] = useGridColumns();
   const library = useLibraryState(completeGridRows(24, gridColumns));
   const gridRows = balanceGridRows(library.works.length, gridColumns);
@@ -24,6 +31,9 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
     <section className="folio-page-body folio-library-page">
       <LibrarySummaryStrip summary={library.summary} />
 
+      <div className="library-workspace">
+      <aside className={`library-filter-rail${filtersOpen ? " is-open" : ""}`}>
+      <button className="library-filter-trigger" type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>搜索与筛选{library.filtersActive ? " · 已筛选" : ""}</button>
       <LibraryToolbar
         q={library.q}
         onQ={library.setQ}
@@ -45,6 +55,8 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         canReset={library.filtersActive}
         onReset={library.resetFilters}
       />
+      </aside>
+      <div className="library-content">
 
       {library.error ? (
         <div className="folio-library-error" role="alert">
@@ -66,10 +78,12 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
       ) : null}
 
       {!library.emptyLibrary && !library.filtersActive ? (
-        <div className="folio-library-shelves">
-          <ContinueReadingRow title="继续阅读" works={library.continueReading} blurCovers={blurCovers} />
-          <ContinueReadingRow title="最近添加" works={library.recentAdded} blurCovers={blurCovers} />
-        </div>
+        <section className="library-recent-section">
+          <SectionSwitch label="最近作品" value={shelf} onChange={setShelf} items={[{value: "reading", label: "继续阅读"}, {value: "recent", label: "最近添加"}]} />
+          <SelectionStage selection={shelf} className="folio-library-shelves">
+            <ContinueReadingRow title={shelf === "reading" ? "继续阅读" : "最近添加"} works={shelf === "reading" ? library.continueReading : library.recentAdded} blurCovers={blurCovers} />
+          </SelectionStage>
+        </section>
       ) : null}
 
       {!library.emptyLibrary ? (
@@ -135,7 +149,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
               <div className={library.loading ? "folio-library-cards is-loading" : "folio-library-cards"}>
                 <div ref={gridRef} className="folio-library-grid-measure" aria-hidden="true" />
                 <Stagger
-                  key={`${library.view}:${library.page}:${library.works.length}:${library.works[0]?.id ?? "none"}`}
+                  key={library.view}
                   className={library.view === "grid" ? "folio-library-grid" : "folio-library-list"}
                   style={library.view === "grid" ? gridRows.style : undefined}
                 >
@@ -178,6 +192,8 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           />
         </div>
       ) : null}
+      </div>
+      </div>
     </section>
   );
 }

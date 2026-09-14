@@ -1,7 +1,9 @@
 import { AlertCircle, CircleCheck } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useState, useSyncExternalStore } from "react";
 
-import { FadeIn, usePrefersReducedMotion } from "../../lib/motion";
+import { FadeIn, SelectionStage } from "../../lib/motion";
+import { FolioSheet } from "../folio/ui/FolioSheet";
+import { SectionSwitch } from "../folio/ui/SectionSwitch";
 import { IconPager } from "../folio/ui/IconPager";
 import { FileDeleteDialog } from "./FileDeleteDialog";
 import { FileDetailPanel } from "./FileDetailPanel";
@@ -12,23 +14,20 @@ import { FileToolbar } from "./FileToolbar";
 import { useFilesState } from "./useFilesState";
 import "./FilesPage.css";
 
+const compactFiles = window.matchMedia("(max-width: 900px)");
+function subscribeCompact(listener: () => void) { compactFiles.addEventListener("change", listener); return () => compactFiles.removeEventListener("change", listener); }
+
 export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
   const files = useFilesState();
-  const reduceMotion = usePrefersReducedMotion();
-  const sideRef = useRef<HTMLDivElement>(null);
+  const compact = useSyncExternalStore(subscribeCompact, () => compactFiles.matches);
+  const [section, setSection] = useState<"inventory" | "maintenance">("inventory");
   const entries = files.inventory?.result ?? [];
   const focus = entries.find((entry) => entry.id === files.focusId) ?? null;
   const total = files.inventory?.total ?? 0;
   const perPage = files.inventory?.per_page ?? 50;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
-  useEffect(() => {
-    if (!files.focusId || window.matchMedia("(max-width: 900px)").matches) return;
-    const frame = window.requestAnimationFrame(() => {
-      sideRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [files.focusId, reduceMotion]);
+  const detailPanel = <FileDetailPanel focus={focus} blurCovers={blurCovers} busy={files.busy} onClose={files.closeFocus} onDelete={files.previewEntry} />;
 
   return (
     <section className="folio-page-body folio-files-page">
@@ -46,6 +45,8 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
         </FadeIn>
       ) : null}
 
+      <SectionSwitch label="文件工作区" value={section} onChange={setSection} items={[{value: "inventory", label: "文件清单"}, {value: "maintenance", label: "扫描与清理"}]} />
+      <div hidden={section !== "inventory"}>
       <FileToolbar
         category={files.category}
         onCategory={files.setCategory}
@@ -62,12 +63,11 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
         busy={files.busy}
       />
 
-      <FadeIn className="folio-files-layout" y={8}>
+      <FadeIn className={`folio-files-layout${compact ? " is-compact" : ""}`} y={8}>
         <section className="folio-files-main" aria-labelledby="folio-files-list-title">
           <header className="folio-files-column-head">
-            <span>Managed inventory</span>
             <h2 id="folio-files-list-title">文件清单</h2>
-            <p>查看已导入文件与目录扫描结果。</p>
+            <p>{total.toLocaleString()} 项</p>
           </header>
           <FileList
             entries={entries}
@@ -79,14 +79,11 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
           />
           <IconPager className="folio-files-pager" page={files.page} totalPages={totalPages} loading={files.loading} onPage={files.setPage} />
         </section>
-        <div ref={sideRef} className="folio-files-side">
-          <FileDetailPanel
-            focus={focus}
-            blurCovers={blurCovers}
-            busy={files.busy}
-            onClose={files.closeFocus}
-            onDelete={files.previewEntry}
-          />
+        {!compact && <div className="folio-files-side">{detailPanel}</div>}
+      </FadeIn>
+      </div>
+      <div hidden={section !== "maintenance"}>
+      <SelectionStage selection={section} className="files-maintenance-workspace">
           <FileHealthRail
             overview={files.overview}
             duplicates={files.duplicates}
@@ -100,8 +97,10 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
             onScanStart={files.startScan}
             onScanCancel={files.cancelScan}
           />
-        </div>
-      </FadeIn>
+      </SelectionStage>
+      </div>
+
+      {compact && <FolioSheet open={Boolean(focus)} label="文件详情" onClose={files.closeFocus}><div className="files-detail-sheet">{detailPanel}</div></FolioSheet>}
 
       <FileDeleteDialog
         preview={files.preview}

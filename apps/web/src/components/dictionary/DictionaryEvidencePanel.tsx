@@ -1,7 +1,7 @@
 import { ArrowRight, BookOpen, Link2, ShieldAlert, Tags } from "lucide-react";
 
 import type { DictionaryApplyPayload, DictionaryEvidence, DictionaryPreview } from "../../lib/api";
-import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
+import { SelectionStage, FadeIn, Stagger, StaggerItem } from "../../lib/motion";
 import { tagSearchHref } from "../../lib/navigation";
 
 type Props = {
@@ -18,7 +18,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
   const conflicts = preview?.conflicts ?? [];
   const aliases = form.aliases ?? [];
   const hasContext = Boolean(preview || remote || relatedWorks.length || coTags.length);
-  const contextKey = `${remote?.id ?? "local"}:${preview?.will_update_tags ?? 0}:${preview?.will_update_works ?? 0}:${form.original_text}:${form.zh_name}`;
+
 
   return (
     <section className="folio-dictionary-evidence" aria-labelledby="folio-dictionary-evidence-title">
@@ -33,7 +33,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
           <p>选择候选或新建词条；点击「预览影响」后，这里会列出更新范围、冲突与关联作品。</p>
         </FadeIn>
       ) : (
-        <FadeIn key={contextKey} className="folio-dictionary-evidence-body" y={8}>
+        <SelectionStage selection={remote?.id ?? null} className="folio-dictionary-evidence-body">
           <div className="folio-dictionary-preview-metrics">
             <Metric label="将更新标签" value={preview ? preview.will_update_tags : "—"} />
             <Metric label="将影响作品" value={preview ? preview.will_update_works : "—"} />
@@ -89,7 +89,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
               </Stagger>
             ) : <em className="folio-dictionary-related-empty">暂无关联作品。</em>}
           </section>
-        </FadeIn>
+        </SelectionStage>
       )}
     </section>
   );

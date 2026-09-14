@@ -1,7 +1,7 @@
 import { AlertTriangle, Download, FileCheck2, FileCode2, FileJson, Package, RefreshCw } from "lucide-react";
 
 import type { ExportOptions, ExportPreview, ExportQueueItem } from "../../lib/api";
-import { FadeIn } from "../../lib/motion";
+import { FadeIn, SelectionStage } from "../../lib/motion";
 import { formatBytes, workTitle } from "../../lib/format";
 import { Cover, STATUS_LABEL, itemStatus } from "./exportHelpers";
 
@@ -43,8 +43,6 @@ export function ExportInspector({
   const currentPreview = preview && focusItem && preview.work.id === focusItem.work.id ? preview : null;
   const comicEntries = currentPreview ? Object.entries(currentPreview.comic_info) : [];
   const writesComicInfo = currentPreview?.will_write.includes("ComicInfo.xml") ?? false;
-  const keepsJson = (currentPreview?.will_keep.length ?? 0) > 0;
-  const compresses = currentPreview?.options.compress ?? true;
   const issues = currentPreview ? [...currentPreview.blockers, ...currentPreview.warnings] : [];
   const canDownloadCurrent = Boolean(currentPreview && !previewLoading && currentPreview.blockers.length === 0);
   const canDownloadSelection = selectedItems.some((item) => item.blockers.length === 0);
@@ -57,14 +55,11 @@ export function ExportInspector({
   return (
     <aside className="folio-export-inspector">
       <header className="folio-export-column-head">
-        <span>Export manifest</span>
-        <h2>作品信息</h2>
-        <p>预览最终写入字段与打包选项</p>
+        <h2>打包预览</h2>
       </header>
       {currentPreview && focusItem ? (
-        <FadeIn
-          key={`focus-${currentPreview.work.id}-${writesComicInfo}-${keepsJson}-${compresses}`}
-          y={8}
+        <SelectionStage
+          selection={currentPreview.work.id}
           className="folio-export-inspector-detail"
         >
           {/* Focus head */}
@@ -139,11 +134,16 @@ export function ExportInspector({
               {count > 6 ? <span className="folio-export-selected-more">+{count - 6}</span> : null}
             </FadeIn>
           ) : null}
-        </FadeIn>
+        </SelectionStage>
       ) : (
         <p className="folio-export-inspector-empty">{previewLoading ? "正在读取预览..." : "点击左侧任一作品查看详情。"}</p>
       )}
 
+      <div className="export-package-map" aria-label="打包内容">
+        <Package size={34} aria-hidden="true" />
+        <div><strong>CBZ</strong><span>{exportOptions.compress ? "标准压缩" : "不压缩"}</span></div>
+        <ul><li>漫画页面</li>{exportOptions.write_comicinfo && <li>ComicInfo.xml</li>}{exportOptions.keep_json && <li>JSON</li>}</ul>
+      </div>
       {/* Sticky action zone */}
       <div className="folio-export-action-zone">
         {/* Global option switches */}

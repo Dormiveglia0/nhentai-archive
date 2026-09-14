@@ -30,12 +30,6 @@
   line-height: 1.6;
 }
 
-.folio-dictionary-page .folio-dictionary-layout {
-  display: grid;
-  grid-template-columns: minmax(370px, 0.88fr) minmax(440px, 1.12fr);
-  gap: clamp(30px, 4vw, 62px);
-  align-items: start;
-}
 
 .folio-dictionary-candidates,
 .folio-dictionary-editor,
@@ -707,12 +701,11 @@
   gap: 9px;
   border-top: 1px solid var(--folio-line-strong);
   background: rgba(232, 235, 232, 0.96);
-  backdrop-filter: blur(10px);
   position: fixed;
   z-index: 90;
   right: 0;
   bottom: 0;
-  left: 20px;
+  left: 100px;
 }
 
 .folio-dictionary-action-state {
@@ -952,10 +945,7 @@
 }
 
 @media (max-width: 1120px) {
-  .folio-dictionary-page .folio-dictionary-layout {
-    grid-template-columns: minmax(330px, 0.82fr) minmax(390px, 1.18fr);
-    gap: 28px;
-  }
+
 
   .folio-dictionary-evidence-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -984,10 +974,6 @@
     padding-bottom: 124px;
   }
 
-  .folio-dictionary-page .folio-dictionary-layout {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 30px;
-  }
 
   .folio-dictionary-table {
     max-height: 390px;
@@ -1136,4 +1122,44 @@
   .folio-dictionary-evidence-empty i {
     animation: none;
   }
+}
+
+
+.dictionary-workspace { display:grid; grid-template-columns:minmax(290px,.7fr) minmax(0,1.7fr); gap:clamp(24px,3vw,48px); align-items:start; }
+.dictionary-edit-column { display:grid; grid-template-columns:minmax(300px,1fr) minmax(240px,.75fr); gap:24px; align-items:start; min-width:0; }
+.dictionary-workspace .folio-dictionary-candidates { position:sticky; top:22px; }
+.dictionary-edit-column .folio-dictionary-evidence { margin:0; min-width:0; }
+.dictionary-edit-column .folio-dictionary-evidence-head { min-height:94px; display:block; padding:20px 0; }
+.dictionary-edit-column .folio-dictionary-evidence-head p { margin-top:10px; }
+.dictionary-edit-column .folio-dictionary-evidence-grid { grid-template-columns:minmax(0,1fr); }
+.dictionary-edit-column .folio-dictionary-evidence-grid > article { border-right:0; border-bottom:1px solid var(--folio-line); padding:18px 0; }
+.dictionary-edit-column .folio-dictionary-preview-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.dictionary-edit-column .folio-dictionary-work-grid { grid-template-columns:minmax(0,1fr); }
+.dictionary-edit-column .folio-dictionary-evidence-empty { display:block; min-height:240px; padding:28px 8px; }
+.dictionary-edit-column .folio-dictionary-evidence-empty > span { display:none; }
+.dictionary-import-sheet { padding:28px; }
+.dictionary-import-sheet > header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+.dictionary-import-sheet > header h2 { font-size:22px; }
+.dictionary-import-sheet > header button { width:44px; height:44px; border:1px solid var(--folio-line); background:none; color:var(--folio-ink); }
+@media(max-width:1180px){ .dictionary-workspace { grid-template-columns:minmax(280px,.75fr) minmax(0,1.25fr); gap:28px; } .dictionary-edit-column { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:800px){ .dictionary-workspace { grid-template-columns:minmax(0,1fr); } .dictionary-workspace .folio-dictionary-candidates { position:static; } }
+
+@media(max-width:980px){ .folio-dictionary-actions { left:0; } }
+
+.dictionary-workspace .folio-dictionary-panel-head { align-items:flex-start; flex-wrap:wrap; gap:12px; }
+.dictionary-workspace .folio-dictionary-panel-head > div > span { display:none; }
+
+.folio-dictionary-page.is-private img { filter:blur(11px); }
+
+.folio-dictionary-candidates { container-type:inline-size; }
+.folio-dictionary-term i { flex-shrink:0; white-space:nowrap; }
+@container (max-width: 440px) {
+  .folio-dictionary-table-head { display:none; }
+  .folio-dictionary-row { grid-template-columns:minmax(0,1fr) auto 70px; gap:6px 10px; padding:12px 8px; }
+  .folio-dictionary-term { grid-column:1 / -1; }
+  .folio-dictionary-row > .folio-dictionary-display,
+  .folio-dictionary-row > .folio-dictionary-impact { display:block; }
+  .folio-dictionary-impact::after { content:" 部"; font-size:11px; }
+  .folio-dictionary-pager { grid-template-columns:auto minmax(0,1fr); }
+  .folio-dictionary-pager > .folio-select { grid-column:1 / -1; }
 }

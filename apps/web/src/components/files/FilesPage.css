@@ -1310,3 +1310,13 @@
     transition: none !important;
   }
 }
+
+
+.folio-files-page > .folio-section-switch { margin-bottom:24px; }
+.files-maintenance-workspace .folio-files-rail { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 40px; }
+.files-maintenance-workspace { min-width:0; }
+.folio-files-side { position:sticky; top:24px; }
+@media(max-width:900px){ .files-maintenance-workspace .folio-files-rail { grid-template-columns:minmax(0,1fr); } .folio-files-side { position:static; } }
+
+.folio-files-layout.is-compact { grid-template-columns:minmax(0,1fr); }
+.files-detail-sheet { padding:22px; }

@@ -12,7 +12,8 @@ import {
   ScrollText,
 } from "lucide-react";
 
-import { FadeInOut, Presence } from "../../lib/motion";
+import { AnimatePresence } from "motion/react";
+import { FadeInOut } from "../../lib/motion";
 import type { Direction, Fit, Mode, ReaderPanel } from "./readerHelpers";
 import "./ReaderToolbar.css";
 
@@ -68,9 +69,10 @@ export function ReaderToolbar({
   onPanelHoverChange,
 }: ReaderToolbarProps) {
   return (
-    <Presence>
+    <AnimatePresence>
       {visible ? (
         <FadeInOut
+          key="identity"
           y={-14}
           className="reader-chrome reader-toolbar"
           role="toolbar"
@@ -93,7 +95,23 @@ export function ReaderToolbar({
             </span>
           </div>
 
-          <div className="reader-toolbar-controls">
+        </FadeInOut>
+      ) : null}
+      {visible ? (
+        <FadeInOut
+          key="controls"
+          y={14}
+          className="reader-chrome reader-toolbar-controls"
+          role="toolbar"
+          aria-label="阅读操作"
+          onMouseEnter={() => onPanelHoverChange(true)}
+          onMouseLeave={() => onPanelHoverChange(false)}
+          onFocusCapture={() => onPanelHoverChange(true)}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onPanelHoverChange(false);
+          }}
+        >
+
             <div className="reader-control-group" aria-label="翻页控制">
               <button type="button" onClick={() => onFlip(-1)} disabled={pageIndex <= 1} aria-label="上一页"><ChevronLeft size={17} /></button>
               <button className="reader-page-jump" type="button" onClick={onOpenJump} disabled={pageCount <= 0} aria-label="跳转页码">
@@ -135,9 +153,9 @@ export function ReaderToolbar({
                 <span>{queued ? "已加入" : importing ? "正在加入" : "加入队列"}</span>
               </button>
             ) : null}
-          </div>
+
         </FadeInOut>
       ) : null}
-    </Presence>
+    </AnimatePresence>
   );
 }

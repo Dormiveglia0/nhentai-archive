@@ -1,6 +1,8 @@
 import { AlertTriangle, PenLine } from "lucide-react";
 
-import { FadeIn } from "../../lib/motion";
+import { useState } from "react";
+import { SectionSwitch } from "../folio/ui/SectionSwitch";
+import { FadeIn, SelectionStage } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { GovernanceActionBar } from "./GovernanceActionBar";
 import { GovernanceBulkBar } from "./GovernanceBulkBar";
@@ -20,6 +22,7 @@ type Props = {
 };
 
 export function GovernancePage({ initialWorkId, blurCovers }: Props) {
+  const [section, setSection] = useState<"metadata" | "tags" | "review">("metadata");
   const gov = useGovernanceState(initialWorkId);
 
   return (
@@ -63,7 +66,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
           <section className="folio-governance-editor" aria-label={gov.bulkMode ? "批量治理编辑区" : "单部治理编辑区"}>
             <header className="folio-governance-modebar">
               <div>
-                <span>{gov.bulkMode ? "Batch workflow" : "Review workflow"}</span>
+
                 <strong>{gov.bulkMode ? "批量治理" : "单部审核"}</strong>
               </div>
               <button
@@ -95,8 +98,11 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
               <>
                 {gov.aggregateLoading ? <div className="folio-governance-loading" role="status">正在读取作品元数据…</div> : null}
                 {!gov.aggregateLoading && gov.aggregate ? (
-                  <FadeIn key={gov.aggregate.work.id} className="folio-governance-document" y={10}>
+                  <SelectionStage selection={gov.aggregate.work.id} className="folio-governance-document">
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
+                    <SectionSwitch label="治理内容" value={section} onChange={setSection} items={[{value: "metadata", label: "元数据"}, {value: "tags", label: "标签映射"}, {value: "review", label: "人工核对"}]} />
+                    <SelectionStage selection={section}>
+                    {section === "review" ? <>
                     <GovernanceReviewPanel
                       aggregate={gov.aggregate}
                       changedCount={gov.changedFields.length}
@@ -105,6 +111,8 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onNoteChange={gov.setReviewNote}
                       onReview={gov.reviewWork}
                     />
+                    </> : null}
+                    {section === "metadata" ? <>
                     <MetadataEditor
                       aggregate={gov.aggregate}
                       edits={gov.edits}
@@ -118,13 +126,17 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onAcceptAllTranslations={gov.acceptAllTranslations}
                       onDismissTranslation={gov.dismissTranslation}
                     />
+                    </> : null}
+                    {section === "tags" ? <>
                     <GovernanceTagBoard
                       aggregate={gov.aggregate}
                       onApplyDictionaryTag={gov.applyDictionaryTag}
                       onReviewDictionaryTag={gov.reviewDictionaryTag}
                       applyingTagId={gov.dictionaryApplyingId}
                     />
-                  </FadeIn>
+                    </> : null}
+                    </SelectionStage>
+                  </SelectionStage>
                 ) : null}
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <GovernanceActionBar
@@ -144,7 +156,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
             )}
           </section>
 
-          <GovernanceSourceRail aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} />
+          <GovernanceSourceRail onSection={setSection} aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} />
         </div>
       ) : null}
     </section>

@@ -70,6 +70,7 @@ for (const [route, titles] of [
     await page.setViewportSize({ width: 980, height: 1000 });
     for (const title of titles) {
       await page.goto(`/#${route}`);
+      await page.getByRole("group", { name: "最近作品" }).getByRole("button", { name: title, exact: true }).click();
       const shelf = page.locator(".folio-shelf").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
       const track = shelf.locator(".folio-shelf-track");
       const link = track.locator("a").first();

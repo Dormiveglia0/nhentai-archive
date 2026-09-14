@@ -156,8 +156,8 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
               {archivePage.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "governance" ? <GovernancePage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
-              {archivePage.name === "dictionary" ? <DictionaryPage /> : null}
-              {archivePage.name === "tasks" ? <TasksPage /> : null}
+              {archivePage.name === "dictionary" ? <DictionaryPage blurCovers={blurCovers} /> : null}
+              {archivePage.name === "tasks" ? <TasksPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "export" ? <ExportPage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
               {archivePage.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "settings" ? <SettingsPage onBlurCoversChange={setBlurCovers} /> : null}

@@ -34,7 +34,7 @@ FrontendDemo.tsx
 | --- | --- | --- | --- | --- | --- |
 | 首页（#workbench） | `demo/modules/WorkbenchDemo.tsx` | `workbench/ReadingHome.tsx` | `workbench/ReadingHome.css`, `workbench/WorkbenchPage.css` | `workbench/WorkbenchPage.tsx` | `api.librarySummary()`, `api.libraryStatistics(30)`, `api.librarySearch({ per_page: 3, sort: "recent_added" })` |
 | 我的库 | `demo/modules/LibraryDemo.tsx` | `folio/scenes/LibraryScene.tsx` | `library/LibraryPage.css`, shared shelf/control rules in `folio/styles/library-discover.css`, scene prefix `folio-scene-library-*` | `library/LibraryPage.tsx`, `useLibraryState.ts`, `LibraryBatchTray.tsx`, shared `folio/ui/ContinueReadingRow.tsx` and feature components | `api.librarySummary/search/continueReading/recentAdded/tagFilters/setWorkFavorite/metadataRefreshPreview/metadataRefreshApply` |
-| 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `discover/DiscoverPage.css`, shared controls in `folio/styles/library-discover.css`, scene prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `useDiscoverState.ts`, `TagFilterSelector.tsx` and feature components | `api.feed/popular/random/dictionaryCandidates/dictionaryAutocomplete/importGallery` |
+| 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `discover/DiscoverPage.css`, `discover/PopularFan.css` (five-cover selection), shared controls in `folio/styles/library-discover.css`, scene prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `useDiscoverState.ts`, `TagFilterSelector.tsx` and feature components | `api.feed/popular/random/dictionaryCandidates/dictionaryAutocomplete/importGallery` |
 | 治理 | `demo/modules/GovernanceDemo.tsx` | `folio/scenes/GovernanceScene.tsx` | `governance/GovernancePage.css`, `GovernanceEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-edit-*` | `governance/GovernancePage.tsx`, `useGovernanceState.ts`, `GovernanceReviewPanel.tsx`, `GovernanceTranslationPanel.tsx`, `GovernanceTagBoard.tsx` / `GovernanceTagItem.tsx` and queue/source/action components | `api.governanceQueue/workGovernance/apply/review/translate/bulk*` |
 | 词典 | `demo/modules/DictionaryDemo.tsx` | `folio/scenes/DictionaryScene.tsx` | `dictionary/DictionaryPage.css`, `DictionaryEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-dictionary-*` | `dictionary/DictionaryPage.tsx`, `useDictionaryState.ts` and feature components | `api.dictionarySummary/candidates/evidence/preview/apply/*` |
 | 队列 | `demo/modules/TasksDemo.tsx` | `folio/scenes/TasksScene.tsx` | `tasks/TasksPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-queue-*` | `tasks/TasksPage.tsx`, `useTasksState.ts` and feature components | `api.jobs/jobLogs/pause/resume/cancel/retry/delete/clear` |
@@ -64,6 +64,8 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Standard title composition (no explanatory subtitle) and scene placement; homepage owns its hero | `folio/shell/PageHeading.tsx`; pauses decorative scene animations when the heading is outside the viewport |
 | Static canvas and bounded visible-scene motion | `folio/styles/base.css` + feature-local scenes |
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
+| Shared section selection / interruptible local content transition | `folio/ui/SectionSwitch.tsx`, `lib/motion/primitives.tsx::SelectionStage`; preserve form state and avoid selection-signature remounts |
+| Modal side sheets, native background inertness and focus return | `folio/ui/FolioSheet.tsx`; library inspector, dictionary import, mobile file details |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
 | Formal summary/status metric entries and semantic tones | `folio/ui/FolioMetricGrid.tsx` + `folio/styles/workbench.css` |
 | Shared pagination, tag scroller, work shelf, and cover frame (portrait fill on cards/shelves; full-image contain on detail/reader) | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx`, `AmbientCover.tsx` |
@@ -88,7 +90,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 
 `folio/Folio.css` is the ordered import manifest and is loaded by `folio/shell/FolioChrome.tsx`:
 
-1. `styles/base.css` — paper tokens, atmosphere, binding progress, shared focus.
+1. `styles/base.css` — gray-white/graphite/amber tokens, atmosphere, binding progress, shared focus.
 2. `styles/chrome.css` — topbar, nav, scroll container, page heading.
 3. `styles/scenes.css` — nine scene animation systems.
 4. `styles/workbench.css` — shared content primitives and workbench.
@@ -168,3 +170,14 @@ Homepage uses a paper/ink reading composition: each SVG outline represents one o
 - FolioChrome 桌面100px侧栏、64px顶栏；窄屏使用原可访问抽屉。原全屏装饰 ModuleBackdrop 已移除，页头主题动画保留。登录扫描线实测输入框中心/下沿，animationend 后挂载页面，不再由600ms计时器抢先切换。
 - 配色与字体在各现有CSS所有者内统一；没有叠加第二套皮肤。竖向铺满封面的不可见模糊背景停绘，移除封面全局 drop-shadow，后台/滚动/离屏暂停相关动效。
 - 回归入口新增 `e2e/reading-home.spec.ts`；配合 auth-gate、auth-wake-demo 的四尺寸过渡测试与 shelf-navigation。只读接口和隔离真实数据副本，无API/schema变更。
+
+## 2026-09-14 Workspace Structure
+
+- `LibraryPage`: filter rail, switched recent shelf, work grid and modal inspector; native reader links and drag threshold retained.
+- `SettingsPage`: sticky directory + editable stage, state stays in `useSettingsState` across section switches.
+- `GovernancePage`: horizontal queue, editor sections + source checklist; checklist navigation selects its target section before scrolling.
+- `DictionaryPage`: candidate rail + editor/evidence columns; container query keeps narrow candidate rows readable.
+- `TasksPage`: status filters, card list and focused progress/log inspector; polling must not remount the list.
+- `FilesPage`: inventory/maintenance switch; `matchMedia` selects desktop detail versus mobile `FolioSheet`, without duplicating detail controls.
+- `GalleryDetailPage`: preview/tags/related switch. `HistoryPage`: real date index. `ReaderToolbar`: separate identity and control bars in keyed `AnimatePresence` children.
+- Checks: `e2e/workspace-rebuild.spec.ts` plus existing auth/shelf/home suites. Keep data mutations isolated and actual source data only.

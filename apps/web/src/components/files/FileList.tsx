@@ -30,7 +30,7 @@ export function FileList({ entries, selected, focusId, onPick, onToggle, loading
       ) : entries.length === 0 ? (
         <FolioEmptyState icon={FolderOpen} title="没有匹配的文件" copy="调整分类、状态或搜索条件后重试。" />
       ) : (
-        <Stagger key={entries.map((entry) => entry.id).join("-")} className="folio-files-list">
+        <Stagger className="folio-files-list">
           {entries.map((entry) => {
             const name = entry.kind === "work" ? entry.title ?? "(无标题)" : entry.name ?? "(未命名)";
             const path = (entry.kind === "work" ? entry.source_path : entry.path) ?? "—";

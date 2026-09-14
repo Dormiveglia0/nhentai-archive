@@ -1,10 +1,9 @@
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, Clock3, History, RotateCw } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, History, RotateCw } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
 import { goBack, pageHref } from "../../lib/navigation";
 import { IconPager } from "../folio/ui/IconPager";
-import { FolioMetricGrid } from "../folio/ui/FolioMetricGrid";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { groupByBucket, progressLabel, timeOfDay } from "./historyHelpers";
 import { useHistoryState } from "./useHistoryState";
@@ -14,14 +13,6 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
   const state = useHistoryState();
   const entries = state.data?.result ?? [];
   const buckets = groupByBucket(entries);
-  const completedOnPage = entries.filter((entry) => entry.completed).length;
-  const metrics = [
-    { label: "全部记录", value: state.data ? state.data.total.toLocaleString() : "—", icon: History, tone: "neutral" as const },
-    { label: "当前页", value: state.data ? `${state.page} / ${state.data.num_pages || 1}` : "—", icon: CalendarDays, tone: "active" as const },
-    { label: "本页作品", value: state.data ? entries.length.toLocaleString() : "—", icon: Clock3, tone: "neutral" as const },
-    { label: "本页已读完", value: state.data ? completedOnPage.toLocaleString() : "—", icon: CheckCircle2, tone: "good" as const },
-  ];
-
   return (
     <section className="folio-page-body folio-history-page">
       <header className="folio-history-context">
@@ -32,7 +23,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
         <span>{state.loading && !state.data ? "正在读取记录…" : `${(state.data?.total ?? 0).toLocaleString()} 条阅读记录`}</span>
       </header>
 
-      <FolioMetricGrid ariaLabel="阅读历史摘要" className="folio-history-summary" items={metrics} />
+
 
       {state.error ? (
         <div className="folio-history-error" role="alert">
@@ -60,9 +51,11 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
       ) : null}
 
       {!state.loading && !state.error && entries.length > 0 ? (
+        <div className="history-workspace">
+        <nav className="history-date-index" aria-label="阅读日期">{buckets.map((bucket,index) => <button key={bucket.label} type="button" onClick={() => document.getElementById(`history-bucket-${index}`)?.scrollIntoView({block:"start", behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"})}><span>{bucket.label}</span><small>{bucket.entries.length}</small></button>)}</nav>
         <FadeIn className="folio-history-timeline" y={10}>
-          {buckets.map((bucket) => (
-            <section className="folio-history-bucket" key={bucket.label}>
+          {buckets.map((bucket, index) => (
+            <section className="folio-history-bucket" key={bucket.label} id={`history-bucket-${index}`}>
               <header className="folio-history-bucket-head">
                 <span />
                 <h2>{bucket.label}</h2>
@@ -116,6 +109,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
             onPage={state.setPage}
           />
         </FadeIn>
+        </div>
       ) : null}
     </section>
   );

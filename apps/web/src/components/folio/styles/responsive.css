@@ -521,11 +521,13 @@
   .folio-mobile-nav { display: block; position: absolute; top: 0; left: 0; right: 0; padding: 16px; z-index: 50; background: var(--folio-paper-bright); border-bottom: 1px solid var(--folio-line); }
   .folio-mobile-nav .folio-nav { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
   .folio-mobile-nav .folio-nav a { min-height: 65px; }
-  .folio-page-head { min-height: 132px; padding: 24px; }
-  .folio-page-copy h1 { font-size: 30px; }
+  .folio-page-head { min-height: 96px; padding: 18px 24px; }
+  .folio-page-copy h1 { font-size: 26px; }
 }
 @media (max-width: 680px) {
-  .folio-page-head { min-height: 118px; padding: 22px 20px; }
+  .folio-page-head { min-height: 90px; padding: 16px 20px; }
   .folio-page-index { font-size: 9px; margin-bottom: 10px; }
-  .folio-page-copy h1 { font-size: 28px; }
+  .folio-page-copy h1 { font-size: 25px; }
 }
+
+@media(max-width:680px){ .folio-page-head .folio-scene { width:170px; right:12px; opacity:.5; } }

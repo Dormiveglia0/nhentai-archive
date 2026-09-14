@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, Copy, Download, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
 import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 
+import { SelectionStage } from "../../lib/motion";
 import { api, type Job, type JobLog } from "../../lib/api";
 import {
   bulkExportExpired,
@@ -63,7 +64,7 @@ export function TaskInspector(props: Props) {
   }
 
   return (
-    <aside className="folio-tasks-inspector" aria-label={`任务 ${job.id} 详情`}>
+    <SelectionStage selection={job.id} className="folio-tasks-inspector" role="complementary" aria-label={`任务 ${job.id} 详情`}>
       <header className="folio-tasks-inspector-head">
         <div><span>Task log</span><h2>{jobTypeLabel(job.type)}</h2><p className={`is-${statusTone(job.status)}`}><i aria-hidden="true" />{statusLabel(job.status)}</p></div>
         <strong>#{job.id}</strong>
@@ -76,6 +77,13 @@ export function TaskInspector(props: Props) {
         <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{formatDurationHint(job)}</small></div>
       </section>
 
+      <InspectorSection title="任务日志" className="folio-tasks-log-section">
+        {props.logsLoading ? <p className="folio-tasks-boundary">正在读取日志…</p> : props.logs.length ? (
+          <ol className="folio-tasks-log">
+            {props.logs.map((entry) => <li key={entry.id} className={entry.level === "error" ? "is-error" : ""}><time>{formatTime(entry.created_at)}</time><span>{entry.message}</span></li>)}
+          </ol>
+        ) : <p className="folio-tasks-boundary">该任务暂无日志。</p>}
+      </InspectorSection>
       <InspectorSection title="目标信息">
         {job.meta?.title ? (
           <div className="folio-tasks-inspector-work">
@@ -110,9 +118,9 @@ export function TaskInspector(props: Props) {
         </InspectorSection>
       ) : null}
 
-      <InspectorSection title="错误 / 提示">
+      {job.error ? <InspectorSection title="错误 / 提示">
         {job.error ? <div className="folio-tasks-error-card"><AlertTriangle size={16} /><p>{job.error}</p>{job.retry_after ? <small>远端建议等待 {job.retry_after} 秒后重试。</small> : null}</div> : <p className="folio-tasks-boundary">当前任务没有错误记录。</p>}
-      </InspectorSection>
+      </InspectorSection> : null}
 
       <InspectorSection title="操作">
         <div className="folio-tasks-inspector-actions">
@@ -125,14 +133,8 @@ export function TaskInspector(props: Props) {
         </div>
       </InspectorSection>
 
-      <InspectorSection title="任务日志" className="folio-tasks-log-section">
-        {props.logsLoading ? <p className="folio-tasks-boundary">正在读取日志…</p> : props.logs.length ? (
-          <ol className="folio-tasks-log">
-            {props.logs.map((entry) => <li key={entry.id} className={entry.level === "error" ? "is-error" : ""}><time>{formatTime(entry.created_at)}</time><span>{entry.message}</span></li>)}
-          </ol>
-        ) : <p className="folio-tasks-boundary">该任务暂无日志。</p>}
-      </InspectorSection>
-    </aside>
+
+    </SelectionStage>
   );
 }
 

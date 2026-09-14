@@ -122,3 +122,12 @@
   .folio-export-primary { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .folio-export-work-item { transition: none; } }
+
+
+.export-package-map { display:grid; grid-template-columns:44px 1fr; gap:12px; padding:22px; margin-top:22px; background:var(--folio-paper-deep); border-left:2px solid var(--folio-red); }
+.export-package-map > svg { color:var(--folio-red); }
+.export-package-map > div { display:flex; flex-direction:column; gap:5px; }
+.export-package-map strong { font-size:16px; letter-spacing:.12em; }
+.export-package-map span { font-size:12px; color:var(--folio-muted); }
+.export-package-map ul { grid-column:2; margin:0; padding:0; list-style:none; }
+.export-package-map li { position:relative; padding:8px 0; font-size:12px; border-bottom:1px solid var(--folio-line); animation:folio-title-enter .24s ease both; }
