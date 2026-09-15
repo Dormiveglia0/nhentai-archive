@@ -284,3 +284,7 @@
     animation: none;
   }
 }
+
+.gallery-open-document{display:grid;grid-template-columns:minmax(300px,.55fr) minmax(0,1fr);gap:40px;align-items:start}.gallery-open-document>.folio-gallery-hero{position:sticky;top:24px}.gallery-open-document .gallery-content-workspace{margin:0;min-width:0}.gallery-content-workspace>.folio-section-switch{margin-bottom:24px}
+@media(max-width:900px){.gallery-open-document{display:block}.gallery-open-document>.folio-gallery-hero{position:static;margin-bottom:30px}.folio-gallery-hero-stage{display:grid;grid-template-columns:minmax(100px,.5fr) minmax(0,1fr);align-items:start}}
+@media(max-width:600px){.folio-gallery-hero-stage{display:flex}.folio-gallery-cover-stage{max-height:280px}.folio-gallery-hero{padding:20px}}

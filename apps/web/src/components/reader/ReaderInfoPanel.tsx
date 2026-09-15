@@ -67,7 +67,7 @@ export function ReaderInfoPanel({
     <Presence>
       {open ? (
         <FadeInOut
-          x={22}
+          y={18}
           className="reader-chrome reader-panel reader-info-panel"
           role="dialog"
           aria-label="作品信息"
@@ -75,7 +75,7 @@ export function ReaderInfoPanel({
           onMouseLeave={() => onHoverChange(false)}
         >
           <header className="reader-panel-head">
-            <span><small>READER INDEX</small><strong>作品信息</strong></span>
+            <span><strong>作品信息</strong></span>
             <button ref={closeButton} type="button" onClick={onClose} aria-label="关闭作品信息"><X size={17} /></button>
           </header>
 

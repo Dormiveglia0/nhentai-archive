@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
+import { AlertTriangle, Clock3, Info, Library, SlidersHorizontal } from "lucide-react";
 import { useRef, useState } from "react";
 import { SectionSwitch } from "../folio/ui/SectionSwitch";
 import { AnimatePresence, m } from "motion/react";
@@ -10,19 +10,18 @@ import { IconPager } from "../folio/ui/IconPager";
 import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives";
 import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
 import { LibraryBatchTray } from "./LibraryBatchTray";
-import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
 import { LibraryToolbar } from "./LibraryToolbar";
 import { WorkCard } from "./WorkCard";
 import { WorkInspector } from "./WorkInspector";
 import { useLibraryState } from "./useLibraryState";
 import "./LibraryPage.css";
 
-let previousShelf: "reading" | "recent" = "reading";
+let previousShelf: "all" | "reading" | "recent" = "all";
 
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
   const origin = useRef<HTMLElement | null>(null);
   const [shelf, updateShelf] = useState(previousShelf);
-  function setShelf(value: "reading" | "recent") { previousShelf = value; updateShelf(value); }
+  function setShelf(value: "all" | "reading" | "recent") { previousShelf = value; updateShelf(value); }
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [gridRef, gridColumns] = useGridColumns();
   const library = useLibraryState(completeGridRows(24, gridColumns));
@@ -30,11 +29,11 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
 
   return (
     <section className="folio-page-body folio-library-page">
-      <LibrarySummaryStrip summary={library.summary} />
-
-      <div className="library-workspace">
-      <aside className={`library-filter-rail${filtersOpen ? " is-open" : ""}`}>
-      <button className="library-filter-trigger" type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>搜索与筛选{library.filtersActive ? " · 已筛选" : ""}</button>
+      <header className="library-catalog-head"><h1>我的库</h1><span>{library.summary ? `${library.summary.total.toLocaleString()} 部作品` : "读取中…"}</span><button type="button" className="library-filter-trigger" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={17}/>筛选{library.filtersActive ? " · 已启用" : ""}</button></header>
+      <div className="library-status-index" role="group" aria-label="阅读状态">
+        {[{value:"all",label:"全部",count:library.summary?.total},{value:"unread",label:"未读",count:library.summary?.unread},{value:"reading",label:"在读",count:library.summary?.reading},{value:"completed",label:"已读",count:library.summary?.completed}].map(item => <button key={item.value} type="button" aria-pressed={library.readStatus===item.value} onClick={()=>library.setReadStatus(item.value)}><span>{item.label}</span><strong>{item.count ?? "—"}</strong>{library.readStatus===item.value ? <m.i layoutId="library-status"/> : null}</button>)}
+      </div>
+      <div className={`library-search-surface${filtersOpen ? " is-open" : ""}`}>
       <LibraryToolbar
         q={library.q}
         onQ={library.setQ}
@@ -56,7 +55,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         canReset={library.filtersActive}
         onReset={library.resetFilters}
       />
-      </aside>
+      </div>
       <div className="library-content">
 
       {library.error ? (
@@ -80,20 +79,19 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
 
       {!library.emptyLibrary && !library.filtersActive ? (
         <section className="library-recent-section">
-          <SectionSwitch label="最近作品" value={shelf} onChange={setShelf} items={[{value: "reading", label: "继续阅读"}, {value: "recent", label: "最近添加"}]} />
-          <SelectionStage selection={shelf} className="folio-library-shelves">
+          <SectionSwitch label="最近作品" value={shelf} onChange={setShelf} items={[{value:"all",label:"全部作品"},{value: "reading", label: "继续阅读"}, {value: "recent", label: "最近添加"}]} />
+          {shelf!=="all" && <SelectionStage selection={shelf} className="folio-library-shelves">
             <ContinueReadingRow title={shelf === "reading" ? "继续阅读" : "最近添加"} works={shelf === "reading" ? library.continueReading : library.recentAdded} blurCovers={blurCovers} />
-          </SelectionStage>
+          </SelectionStage>}
         </section>
       ) : null}
 
-      {!library.emptyLibrary ? (
+      {!library.emptyLibrary && (shelf==="all" || library.filtersActive) ? (
         <div className="folio-library-browser">
           <section className="folio-library-results" aria-busy={library.loading}>
             <header className="folio-library-results-head">
               <FolioPanelHeading
-                title="作品列表"
-                description={library.filtersActive ? "已按当前条件筛选。" : "全部已收藏的漫画。"}
+                title="作品"
               />
               <div className="folio-library-result-controls">
                 <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>
@@ -194,7 +192,6 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           />
         </div>
       ) : null}
-      </div>
       </div>
     </section>
   );

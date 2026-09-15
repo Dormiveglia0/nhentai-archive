@@ -1,9 +1,9 @@
 /* Canvas tokens, paper atmosphere, binding progress and global focus states. */
 .folio {
-  --folio-paper: #e8ebe8;
-  --folio-paper-bright: #f8f9f7;
-  --folio-paper-deep: #d5dad4;
-  --folio-ink: #1b221e;
+  --folio-paper: #e9e7e0;
+  --folio-paper-bright: #f7f6ef;
+  --folio-paper-deep: #d8d5ca;
+  --folio-ink: #242822;
   --folio-muted: #626b63;
   --folio-faint: #697168;
   --folio-line: rgba(27, 34, 30, 0.16);
@@ -14,7 +14,7 @@
   width: 100vw;
   height: 100dvh;
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 64px minmax(0, 1fr) 68px;
   color: var(--folio-ink);
   background: var(--folio-paper);
@@ -30,7 +30,7 @@
 }
 
 /* A static canvas avoids continuously repainting the full viewport. */
-.folio::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 55% 20%, #f8f9f7, transparent 65%); }
+.folio::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: none; }
 .folio-binding { position: absolute; z-index: 55; inset: 0 0 auto; height: 2px; pointer-events: none; }
 .folio-binding-progress { display: block; height: 100%; width: 100%; background: var(--folio-red); transform-origin: left; transform: scaleX(var(--folio-scroll-offset, 0)); }
 
@@ -68,9 +68,7 @@
   background-clip: padding-box;
 }
 
-.folio button,
-.folio input,
-.folio textarea {
+.folio :where(button, input, textarea) {
   font: inherit;
 }
 

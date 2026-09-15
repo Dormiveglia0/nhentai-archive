@@ -50,31 +50,31 @@ type Props = {
 };
 
 export function TaskList(props: Props) {
-  if (props.loading) return <div className="folio-tasks-loading" role="status">正在读取任务队列…</div>;
+  if (props.loading) return <div className="task-record-loading" role="status">正在读取任务队列…</div>;
   if (props.jobs.length === 0) return <FolioEmptyState icon={Workflow} title="没有匹配的任务" copy={props.emptyLabel} />;
 
 
   return (
-    <div className="folio-tasks-table">
-      <Stagger className="folio-tasks-row-list">
+    <div className="task-record-table">
+      <Stagger className="task-record-row-list">
         {props.jobs.map((job) => (
-          <StaggerItem key={job.id} className="folio-tasks-row-motion">
-            <article className={`folio-tasks-row is-${statusTone(job.status)}${props.focusId === job.id ? " is-focused" : ""}`}>
-              <button className="folio-tasks-row-main" type="button" onClick={() => props.onFocus(job.id)} aria-pressed={props.focusId === job.id} aria-label={`查看任务 ${job.id}：${jobTypeLabel(job.type)}`}>
-                <span className="task-record-id">#{job.id}</span>
-                <span className="folio-tasks-kind">
-                  <span className="folio-tasks-kind-icon"><StatusIcon status={job.status} /></span>
+          <StaggerItem key={job.id} className="task-record-row-motion">
+            <article className={`task-record-row is-${statusTone(job.status)}${props.focusId === job.id ? " is-focused" : ""}`}>
+              <button className="task-record-row-main" type="button" onClick={() => props.onFocus(job.id)} aria-pressed={props.focusId === job.id} aria-label={`查看任务 ${job.id}：${jobTypeLabel(job.type)}`}>
+                <span className="task-record-number">#{job.id}</span>
+                <span className="task-record-kind">
+                  <span className="task-record-kind-icon"><StatusIcon status={job.status} /></span>
                   <span><strong>{jobTypeLabel(job.type)}</strong><small>{jobTypeDescription(job.type)}</small></span>
                 </span>
                 <TargetCell job={job} />
-                <span className={`folio-tasks-stage is-${job.status}`}><strong>{stageLabel(job.stage)}</strong><small>{statusLabel(job.status)}</small></span>
-                <span className="folio-tasks-progress">
+                <span className={`task-record-stage is-${job.status}`}><strong>{stageLabel(job.stage)}</strong><small>{statusLabel(job.status)}</small></span>
+                <span className="task-record-progress">
                   <span role="progressbar" aria-label="任务进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress.percent}><i style={{ width: `${job.progress.percent}%` }} /></span>
                   <em>{job.progress.percent}%</em>
                 </span>
-                <span className="folio-tasks-time"><strong>{formatTime(job.updated_at)}</strong><small>{formatDurationHint(job)}</small></span>
+                <span className="task-record-time"><strong>{formatTime(job.updated_at)}</strong><small>{formatDurationHint(job)}</small></span>
               </button>
-              <div className="folio-tasks-row-actions">
+              <div className="task-record-row-actions">
                 {canDownloadBulkExport(job) ? (
                   <a href={api.bulkExportDownloadUrl(job.id)} download aria-label="下载"><Download size={14} /><span>下载</span></a>
                 ) : null}
@@ -103,11 +103,11 @@ export function TaskList(props: Props) {
 
 function TargetCell({ job }: { job: Job }) {
   const title = job.meta?.title?.trim();
-  if (!title) return <span className="folio-tasks-target"><strong>{targetLabel(job)}</strong></span>;
+  if (!title) return <span className="task-record-target"><strong>{targetLabel(job)}</strong></span>;
   const sub = [targetLabel(job), job.meta?.page_count ? `${job.meta.page_count}P` : null].filter(Boolean).join(" · ");
   return (
-    <span className="folio-tasks-target is-rich">
-      {job.meta?.cover_url ? <img src={job.meta.cover_url} alt="" loading="lazy" decoding="async" /> : <span className="folio-tasks-cover-empty" aria-hidden="true" />}
+    <span className="task-record-target is-rich">
+      {job.meta?.cover_url ? <img src={job.meta.cover_url} alt="" loading="lazy" decoding="async" /> : <span className="task-record-cover-empty" aria-hidden="true" />}
       <span><strong>{title}</strong><small>{sub}</small></span>
     </span>
   );

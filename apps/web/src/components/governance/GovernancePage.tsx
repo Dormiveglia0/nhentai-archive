@@ -1,6 +1,7 @@
-import { AlertTriangle, PenLine } from "lucide-react";
+import { AlertTriangle, PenLine, ListFilter, X } from "lucide-react";
 
 import { useState } from "react";
+import { FolioSheet } from "../folio/ui/FolioSheet";
 import { SectionSwitch } from "../folio/ui/SectionSwitch";
 import { FadeIn, SelectionStage } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
@@ -15,6 +16,7 @@ import { MetadataEditor } from "./MetadataEditor";
 import { useGovernanceState } from "./useGovernanceState";
 import "./GovernancePage.css";
 import "./GovernanceEditor.css";
+import "./GovernanceDocument.css";
 
 type Props = {
   initialWorkId?: number;
@@ -24,9 +26,11 @@ type Props = {
 export function GovernancePage({ initialWorkId, blurCovers }: Props) {
   const [section, setSection] = useState<"metadata" | "tags" | "review">("metadata");
   const gov = useGovernanceState(initialWorkId);
+  const [queueOpen,setQueueOpen]=useState(false);
 
   return (
     <section className="folio-page-body folio-governance-page">
+      <header className="governance-document-head"><h1>治理</h1><span>{gov.queue?.summary.total ?? "—"} 待核对</span><button type="button" onClick={()=>setQueueOpen(true)}><ListFilter size={18}/>选择作品</button></header>
       {gov.error ? (
         <FadeIn key={gov.error} className="folio-governance-message is-error" role="alert" y={6}>
           <AlertTriangle size={16} />
@@ -54,14 +58,16 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
 
       {!gov.loading && gov.queue && gov.queue.result.length ? (
         <div className={gov.bulkMode ? "folio-governance-workspace is-bulk" : "folio-governance-workspace"}>
+          <FolioSheet open={queueOpen} label="治理作品队列" onClose={()=>setQueueOpen(false)} className="governance-queue-sheet"><header><span>选择作品</span><button type="button" aria-label="关闭治理队列" onClick={()=>setQueueOpen(false)}><X size={20}/></button></header>
           <GovernanceQueueRail
             queue={gov.queue}
             selectedId={gov.selectedId}
-            onSelect={gov.selectWork}
+            onSelect={(id)=>{gov.selectWork(id);if(!gov.bulkMode)setQueueOpen(false);}}
             bulkMode={gov.bulkMode}
             selectedIds={gov.selectedIds}
             onToggleSelected={gov.toggleSelected}
           />
+          </FolioSheet>
 
           <section className="folio-governance-editor" aria-label={gov.bulkMode ? "批量治理编辑区" : "单部治理编辑区"}>
             <header className="folio-governance-modebar">
@@ -73,7 +79,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 className={gov.bulkMode ? "folio-filter-toggle is-active" : "folio-filter-toggle"}
                 type="button"
                 aria-pressed={gov.bulkMode}
-                onClick={gov.toggleBulkMode}
+                onClick={()=>{gov.toggleBulkMode();if(!gov.bulkMode)setQueueOpen(true);}}
               >
                 {gov.bulkMode ? "退出批量" : "进入批量"}
               </button>
@@ -156,7 +162,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
             )}
           </section>
 
-          <GovernanceSourceRail onSection={setSection} aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} />
+          <details className="governance-source-drawer"><summary>来源与检查项</summary><GovernanceSourceRail onSection={setSection} aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} /></details>
         </div>
       ) : null}
     </section>

@@ -1,5 +1,5 @@
 import { AlertCircle, CircleCheck } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 
 import { FadeIn, SelectionStage } from "../../lib/motion";
 import { FolioSheet } from "../folio/ui/FolioSheet";
@@ -14,12 +14,8 @@ import { FileToolbar } from "./FileToolbar";
 import { useFilesState } from "./useFilesState";
 import "./FilesPage.css";
 
-const compactFiles = window.matchMedia("(max-width: 900px)");
-function subscribeCompact(listener: () => void) { compactFiles.addEventListener("change", listener); return () => compactFiles.removeEventListener("change", listener); }
-
 export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
   const files = useFilesState();
-  const compact = useSyncExternalStore(subscribeCompact, () => compactFiles.matches);
   const [section, setSection] = useState<"inventory" | "maintenance">("inventory");
   const entries = files.inventory?.result ?? [];
   const focus = entries.find((entry) => entry.id === files.focusId) ?? null;
@@ -63,7 +59,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
         busy={files.busy}
       />
 
-      <FadeIn className={`folio-files-layout${compact ? " is-compact" : ""}`} y={8}>
+      <FadeIn className="folio-files-layout is-compact" y={8}>
         <section className="folio-files-main" aria-labelledby="folio-files-list-title">
           <header className="folio-files-column-head">
             <h2 id="folio-files-list-title">文件清单</h2>
@@ -79,7 +75,6 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
           />
           <IconPager className="folio-files-pager" page={files.page} totalPages={totalPages} loading={files.loading} onPage={files.setPage} />
         </section>
-        {!compact && <div className="folio-files-side">{detailPanel}</div>}
       </FadeIn>
       </div>
       <div hidden={section !== "maintenance"}>
@@ -100,7 +95,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
       </SelectionStage>
       </div>
 
-      {compact && <FolioSheet open={Boolean(focus)} label="文件详情" onClose={files.closeFocus}><div className="files-detail-sheet">{detailPanel}</div></FolioSheet>}
+      {<FolioSheet open={Boolean(focus)} label="文件详情" onClose={files.closeFocus}><div className="files-detail-sheet">{detailPanel}</div></FolioSheet>}
 
       <FileDeleteDialog
         preview={files.preview}

@@ -60,7 +60,6 @@ export function GalleryHero({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: duration.slow, ease: ease.standard }}
         >
-          <span className="folio-gallery-cover-register" aria-hidden="true"><i /><i /><i /><i /></span>
           <div className="folio-gallery-cover-slot">
             {src ? (
               <AmbientCover
@@ -73,7 +72,6 @@ export function GalleryHero({
             ) : (
               <span className="folio-gallery-cover-empty">暂无封面</span>
             )}
-            <span className="folio-gallery-cover-scan" aria-hidden="true" />
           </div>
         </m.div>
 
@@ -84,7 +82,7 @@ export function GalleryHero({
           transition={{ duration: duration.slow, ease: ease.standard, delay: reduceMotion ? 0 : 0.08 }}
         >
           <div className="folio-gallery-kicker">
-            <span>{detail.imported ? "本地作品" : "远端档案"}</span>
+            <span>{detail.imported ? "本地作品" : "远端作品"}</span>
             <i />
             <small>Gallery {detail.gallery_id}</small>
           </div>

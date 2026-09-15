@@ -86,17 +86,12 @@ export function WorkCard({
         </button>
       ) : null}
 
-      <div className="folio-library-card-body">
-        <div className="folio-library-card-meta">
-          <span>{work.source === "remote" ? "远端入库" : "本地导入"}</span>
-          <em>{languageLabel(work)}</em>
-        </div>
-
+      <div className="library-card-caption">
         <a href={readerHref} className="folio-library-card-title" onClick={selectCurrent}>
           {title}
         </a>
         <p title={authorLine(work)}>{authorLine(work)}</p>
-        <small>{work.page_count} 页{work.remote_gallery_id ? ` · Gallery ${work.remote_gallery_id}` : ""}</small>
+        <div className="library-card-facts"><span>{languageLabel(work)}</span><span>{work.page_count} 页</span><span>{work.source === "remote" ? "远端" : "本地"}</span></div>
 
         <div
           className="folio-library-progress"

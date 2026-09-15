@@ -14,18 +14,18 @@ test("首页日期切片、快速切换和键盘读数对应真实统计", async
   await slider.focus();
   await page.keyboard.press("Home");
   await expect(slider).toHaveValue("0");
-  await expect(page.locator(".reading-day-date strong")).toHaveText(activity[0].date.slice(5).replace("-", " / "));
-  await expect(page.locator(".reading-day-duration strong")).toHaveText(String(Math.round(activity[0].seconds / 60)));
+  await expect(page.locator(".reading-dial-center>strong")).toHaveText(activity[0].date.slice(5).replace("-", " / "));
+  await expect(page.locator(".reading-dial-center>div>b")).toHaveText(String(Math.round(activity[0].seconds / 60)));
   for (let i = 0; i < 12; i++) await page.keyboard.press("ArrowRight");
   await expect(slider).toHaveValue("12");
   await expect(page.locator(".reading-slice.is-selected")).toHaveAttribute("data-date", activity[12].date);
   await page.keyboard.press("End");
   await page.getByRole("button", { name: "前一天", exact: true }).click();
   await expect(slider).toHaveValue(String(activity.length - 2));
-  await expect(page.locator(".reading-day-duration strong")).toHaveText(String(Math.round(activity[activity.length - 2].seconds / 60)));
+  await expect(page.locator(".reading-dial-center>div>b")).toHaveText(String(Math.round(activity[activity.length - 2].seconds / 60)));
   await page.getByRole("button", { name: "暂停动效" }).click();
   await expect(page.locator(".reading-home")).toHaveClass(/is-still/);
-  const link = page.locator(".reading-recent a").first();
+  const link = page.locator(".reading-latest a").first();
   await expect(link).toHaveAttribute("href", /^#reader\//);
 });
 
@@ -45,4 +45,28 @@ test("连续切页和长页面滚动不移动顶栏，手机导航保留键盘�
   await expect(page.locator(".reading-home")).toBeVisible();
   await expect(page.locator(".folio-scroll")).toHaveJSProperty("inert", false);
   expect(await page.locator(".reading-home").evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+});
+
+test("日期记录展开保留原节点，快速反向后仍可点击与键盘选择", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/#workbench");
+  const slider = page.getByRole("slider", { name: "选择日期" });
+  await expect(slider).toBeEnabled();
+  await slider.fill("12");
+  const selected = page.locator(".reading-slice.is-selected");
+  await selected.evaluate(node => node.setAttribute("data-preserved", "yes"));
+  await page.getByRole("button", { name: "展开记录", exact: true }).click();
+  await expect(selected).toHaveAttribute("data-preserved", "yes");
+  await expect.poll(() => selected.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    return node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+  })).toBe(true);
+  await page.getByRole("button", { name: "返回总览", exact: true }).click();
+  await page.getByRole("button", { name: "展开记录", exact: true }).click();
+  await page.getByRole("button", { name: "返回总览", exact: true }).click();
+  await selected.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(slider).toHaveValue("13");
+  await expect(page.locator(".reading-slice.is-selected")).toBeFocused();
+  await expect(page.locator(".reading-home")).not.toHaveClass(/is-inspecting/);
 });

@@ -48,11 +48,11 @@ export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickT
         </span>
       </a>
 
-      <div className="folio-discover-card-body">
-        <div className="folio-discover-card-meta"><span>{category}</span><em>{language}</em></div>
+      <div className="discover-card-caption">
+
         <a href={href} className="folio-discover-card-title" onClick={openCurrent}>{title}</a>
         <p title={author}>{author}</p>
-        <small>{item.page_count} 页 · Gallery {item.gallery_id}</small>
+        <div className="discover-card-facts"><span>{language}</span><span>{category}</span><span>{item.page_count} 页</span></div>
         <TagScroller className="folio-discover-card-tags" tags={contentTags} onPickTag={(tag) => onPickTag(tag)} />
 
         <div className="folio-discover-card-actions">

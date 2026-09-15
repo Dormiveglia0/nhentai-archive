@@ -15,6 +15,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
   const buckets = groupByBucket(entries);
   return (
     <section className="folio-page-body folio-history-page">
+      <h1 className="history-heading">阅读历史</h1>
       <header className="folio-history-context">
         <button type="button" onClick={goBack}>
           <ArrowLeft size={15} />
@@ -52,7 +53,6 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
 
       {!state.loading && !state.error && entries.length > 0 ? (
         <div className="history-workspace">
-        <nav className="history-date-index" aria-label="阅读日期">{buckets.map((bucket,index) => <button key={bucket.label} type="button" onClick={() => document.getElementById(`history-bucket-${index}`)?.scrollIntoView({block:"start", behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"})}><span>{bucket.label}</span><small>{bucket.entries.length}</small></button>)}</nav>
         <FadeIn className="folio-history-timeline" y={10}>
           {buckets.map((bucket, index) => (
             <section className="folio-history-bucket" key={bucket.label} id={`history-bucket-${index}`}>

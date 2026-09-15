@@ -46,7 +46,7 @@ export function ArchiveShell({
     <>
       <FolioChrome
         page={route.page}
-        heading={route.heading}
+        heading={false}
         onNavigate={(name: FolioPageId) => navigate({ name } as Parameters<typeof navigate>[0])}
         scrollKey={scrollKey}
         onLogout={onLogout}

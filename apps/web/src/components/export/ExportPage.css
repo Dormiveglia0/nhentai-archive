@@ -18,7 +18,7 @@
 .folio-export-toolbar-actions button { min-height: 44px; padding: 0 11px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--folio-line-strong); background: transparent; color: var(--folio-ink); font-size: 12px; white-space: nowrap; }
 .folio-export-toolbar-actions button:hover, .folio-export-toolbar-actions button.is-active { background: var(--folio-ink); color: var(--folio-paper-bright); }
 
-.folio-export-page .folio-export-layout { min-width: 0; display: grid; grid-template-columns: minmax(360px, .72fr) minmax(430px, 1fr); align-items: start; gap: clamp(30px, 4vw, 58px); }
+.folio-export-page .folio-export-layout { min-width:0; display:block; }
 .folio-export-page .folio-export-source, .folio-export-inspector { min-width: 0; border-top: 1px solid var(--folio-line-strong); border-bottom: 1px solid var(--folio-line-strong); }
 .folio-export-column-head { min-height: 92px; padding: 17px 0; border-bottom: 1px solid var(--folio-line); }
 .folio-export-column-head > span { color: var(--folio-red); font-family: var(--folio-display, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif); font-size: 12px; letter-spacing: .15em; text-transform: uppercase; }

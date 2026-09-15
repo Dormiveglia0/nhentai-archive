@@ -1,48 +1,32 @@
-/* Application frame. Navigation and content have independent, bounded surfaces. */
-.folio-topbar { grid-column: 1 / -1; min-width: 0; padding: 0 24px; display: grid; grid-template-columns: 190px 1fr auto; align-items: center; border-bottom: 1px solid var(--folio-line); background: var(--folio-paper-bright); position: relative; z-index: 40; }
-.folio-brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--folio-ink); height: 100%; }
-.folio-brand-mark { width: 33px; height: 33px; display: grid; place-items: center; position: relative; background: var(--folio-ink); color: var(--folio-paper-bright); clip-path: polygon(0 0, 76% 0, 100% 24%, 100% 100%, 0 100%); }
-.folio-monogram { font-size: 16px; font-weight: 700; letter-spacing: -.08em; }
-.folio-brand-mark > i { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: #d6ad73; }
-.folio-brand strong { font-size: 14px; letter-spacing: .07em; text-transform: uppercase; }
-.folio-current-section { display: flex; align-items: center; gap: 18px; font-size: 11px; letter-spacing: .08em; color: var(--folio-muted); }
-.folio-current-section > span { font-size: 10px; letter-spacing: .15em; }
-.folio-current-section > i { width: 20px; height: 1px; background: var(--folio-line-strong); transform: rotate(-50deg); }
-.folio-current-section strong { color: var(--folio-ink); font-weight: 500; }
-.folio-top-actions { display: flex; height: 100%; align-items: center; gap: 10px; justify-self: end; }
-.folio-session-button, .folio-menu-button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 0; background: transparent; color: var(--folio-muted); font-size: 12px; transition: color .18s, background-color .18s; }
-.folio-session-button:hover, .folio-menu-button:hover { background: var(--folio-paper-deep); color: var(--folio-ink); }
-.folio-menu-button { display: none; }
-.folio-nav { position: relative; z-index: 2; }
-.folio-nav a { min-height: 64px; position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; color: var(--folio-muted); text-decoration: none; isolation: isolate; transition: color .2s; }
-.folio-nav a:hover, .folio-nav a:focus-visible { color: var(--folio-ink); }
-.folio-nav a.is-active { color: var(--folio-paper-bright); }
-.folio-nav a strong { font-size: 12px; font-weight: 500; letter-spacing: .04em; }
-.folio-nav a > svg { transition: transform .3s cubic-bezier(.22,1,.36,1); }
-.folio-nav a:hover > svg { transform: translateY(-3px); }
-.folio-nav-active { position: absolute; inset: 0; z-index: -1; background: var(--folio-ink); border-left: 3px solid #d6ad73; pointer-events: none; }
-.folio-nav-arrow { display: none; }
-.folio-nav-number { position: absolute; left: 8px; top: 7px; font-size: 9px; font-variant-numeric: tabular-nums; opacity: .5; }
-.folio-topnav { grid-column: 1; grid-row: 2 / -1; padding: 20px 10px; border-right: 1px solid var(--folio-line); display: flex; flex-direction: column; gap: 5px; background: var(--folio-paper-bright); overflow-y: auto; }
-.folio-topnav a { flex: 0 0 68px; flex-direction: column; gap: 7px; }
-.folio-topnav a:last-child { margin-top: auto; }
-.folio-workspace { grid-column: 2; min-width: 0; min-height: 0; position: relative; display: grid; grid-template-columns: minmax(0,1fr); }
-.folio-mobile-nav { display: none; }
-.folio-nav-scrim { position: absolute; z-index: 49; inset: 0; background: rgba(27,34,30,.25); }
-.folio-scroll { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bdc5bd transparent; position: relative; }
-.folio-scroll:focus { outline: none; }
-.folio-page { min-width: 0; min-height: 100%; }
-.folio-page-head { min-height: 104px; padding: 18px clamp(26px,3.3vw,64px); display: flex; align-items: center; position: relative; overflow: hidden; border-bottom: 1px solid var(--folio-line); }
-.folio-page-copy { position: relative; z-index: 2; max-width: 60%; }
-.folio-page-index { display: block; margin-bottom: 8px; font-size: 10px; color: var(--folio-muted); letter-spacing: .22em; }
-.folio-page-copy h1 { margin: 0; font-size: clamp(25px,2vw,30px); line-height: 1.15; letter-spacing: -.045em; font-weight: 500; }
-.folio-page-head::after { content: ""; position: absolute; bottom: 0; left: 0; height: 2px; width: 90px; background: var(--folio-red); transform-origin: left; animation: folio-heading-scan .65s cubic-bezier(.22,1,.36,1) both; }
-.folio-page-head.is-offscreen .folio-scene * { animation-play-state: paused !important; }
-.folio-command-bar { grid-column: 2; }
-@keyframes folio-heading-scan { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
-@media (max-height: 780px) and (min-width: 981px) { .folio-topnav { padding-block: 9px; gap: 2px; } .folio-topnav a { min-height: 51px; flex-basis: 51px; gap: 4px; } }
-
-.folio-page-copy { animation: folio-title-enter .4s cubic-bezier(.22,1,.36,1) both; }
-@keyframes folio-title-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.folio-page-head .folio-scene { width:300px; right:36px; opacity:.75; }
+.folio-topbar { grid-column:1; display:flex; align-items:stretch; gap:28px; padding:0 28px; z-index:60; background:var(--folio-paper); color:var(--folio-ink); border-bottom:1px solid var(--folio-line); }
+.folio-brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; flex-shrink:0; }
+.folio-brand-mark { position:relative; width:33px; height:33px; display:grid; place-items:center; border:0; }
+.folio-monogram { font-size:16px; font-weight:600; letter-spacing:-2px; }
+.folio-brand-mark i { position:absolute; width:7px; height:7px; right:-3px; top:-3px; background:#deb374; }
+.folio-brand-copy strong { font-size:13px; letter-spacing:.04em; font-weight:500; }
+.folio-top-actions { display:flex; align-items:center; margin-left:auto; }
+.folio-session-button,.folio-menu-button { display:flex; align-items:center; justify-content:center; gap:8px; height:40px; padding:0 12px; border:0; background:transparent; color:inherit; font-size:12px; }
+.folio-session-button:hover,.folio-menu-button:hover { background:#19231f0a; }
+.folio-menu-button { display:none; }
+.folio-nav { display:flex; min-width:0; }
+.folio-topnav { align-self:stretch; gap:3px; flex:1; justify-content:center; }
+.folio-nav a { position:relative; display:flex; align-items:center; justify-content:center; gap:7px; color:inherit; text-decoration:none; isolation:isolate; transition:color .2s; }
+.folio-topnav a { padding:0 clamp(9px,1.3vw,26px); font-size:12px; color:var(--folio-muted); }
+.folio-nav a:hover,.folio-nav a.is-active { color:var(--folio-ink); }
+.folio-nav strong { font-weight:500; white-space:nowrap; }
+.folio-nav-number,.folio-nav-arrow { display:none; }
+.folio-topnav svg { width:15px; }
+.folio-nav-active { position:absolute; inset:0; background:transparent; z-index:-1; border-bottom:2px solid #b38b55; }
+.folio-workspace { grid-column:1; min-width:0; min-height:0; position:relative; display:grid; }
+.folio-scroll { min-width:0; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; position:relative; }
+.folio-scroll:focus { outline:none; }
+.folio-page { min-width:0; min-height:100%; }
+.folio-mobile-nav { display:none; }
+.folio-nav-scrim { position:absolute; z-index:49; inset:0; background:#19231f88; }
+.folio-command-bar { grid-column:1; }
+.folio-page-head { min-height:90px; display:flex; align-items:center; padding:20px 36px; position:relative; overflow:hidden; border-bottom:1px solid var(--folio-line); }
+.folio-page-copy h1 { margin:0; font-size:28px; font-weight:500; }
+.folio-page-index { font-size:10px; color:var(--folio-muted); }
+.folio-page-head.is-offscreen .folio-scene * { animation-play-state:paused!important; }
+@media (min-width:1600px) { .folio-topbar { padding-inline:40px; gap:60px; } .folio-topnav { max-width:1200px; margin-inline:auto; } }
+@media (max-width:1100px) and (min-width:981px) { .folio-brand-copy,.folio-topnav svg,.folio-session-button span { display:none; } .folio-topbar { gap:16px; } }

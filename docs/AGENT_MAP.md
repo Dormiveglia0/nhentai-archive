@@ -1,6 +1,21 @@
 # NH Archive Agent Map
 
+## 2026-09-16 · 视觉方案重新校准（未部署）
+
+用户否定了环形首页与六行折叠设置的视觉结果，本轮不将这组截图作为已通过设计。首页已改为真实日期记录的三维阵列，原节点在总览、选中与展开间保留，邻近记录跟随选择抬升；展开时整体取景转正，背景记录退到选中表面之后。设置改为六个配置对象的选择区，选择对象移入编辑区，草稿继续由原状态层维护。全局导航改为与画布连续的浅色表面。
+
+已完成 1440×1000、2560×1440、390×844 布局及连续反向操作检查；动画录像在本地 `/tmp/nh-spatial-video/`。不把这些检查表述为用户认可、参考项目还原或整站重构完成。其他页面的前轮结构仍为待复核稿，后续不能仅靠同色按钮与淡入作为设计交付。
+
+保留阅读器底部悬浮控件与库详情的封面展开。原始远端留档 `2b4fbef201ff6140e3ed7d0878fb5ddbeb60901d`，当前线上仍为 `b553195`；未合并 main。公开远端推送因既有自动审核限制仍未执行。
+
+
 Use this file as the first frontend navigation index. Read only the row for the module being changed; do not load the former monolithic demo files into context.
+
+## Current visual contract · 2026-09-15 replacement
+
+Read `docs/FRONTEND_REDESIGN.md` for the active screen and motion plan. The user rejected the previous incremental redesign. Formal routes now own their complete page structure; no generic scene heading. Keep the accepted bottom reader controls and cover-origin library detail dialog.
+
+New owners: SettingsPage + SettingsModules.css (expandable modules); TasksPage/TaskList + TaskLedger.css (ledger + modal detail); DictionaryPage (index + modal editor); FilesPage/FileOverviewStrip + FileStorage.css (full-width inventory + modal detail); ExportPage/ExportInspector + ExportWorkflow.css (two-step selection/output); GovernancePage + GovernanceDocument.css (document + queue dialog); ReadingHome (radial date activity). SettingsDirectory, TaskFlow and the two obsolete summary strips were deleted. Older descriptions below are history where they conflict.
 
 ## Active Frontend Contract
 

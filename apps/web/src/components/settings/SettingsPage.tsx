@@ -1,10 +1,9 @@
-import { AlertTriangle, RefreshCw, Save } from "lucide-react";
+import { AlertTriangle, RefreshCw, Save, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
-import { type FormEvent, useRef } from "react";
+import { type FormEvent, useState } from "react";
 
-import { SelectionStage, usePrefersReducedMotion } from "../../lib/motion";
-import { type SettingsSection } from "../folio/config";
-import { SettingsDirectory } from "./SettingsDirectory";
+import { usePrefersReducedMotion } from "../../lib/motion";
+import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
 import { ConnectionSection } from "./ConnectionSection";
 import { DataSection } from "./DataSection";
 import { ExportDefaultsSection } from "./ExportDefaultsSection";
@@ -13,7 +12,7 @@ import { StorageSection } from "./StorageSection";
 import { TranslationSection } from "./TranslationSection";
 import { useSettingsState } from "./useSettingsState";
 import "./SettingsPage.css";
-import "./SettingsDirectory.css";
+import "./SettingsModules.css";
 
 const SECTION_COPY: Record<SettingsSection, { title: string }> = {
   connection: {
@@ -36,26 +35,32 @@ const SECTION_COPY: Record<SettingsSection, { title: string }> = {
   },
 };
 
+function SettingSymbol({ section }: { section: SettingsSection }) {
+  return <svg className={`settings-symbol is-${section}`} viewBox="0 0 200 200" aria-hidden="true">
+    <g className="settings-symbol-guides"><path d="M100 12v20m0 136v20M12 100h20m136 0h20"/><circle cx="100" cy="100" r="76"/></g>
+    {section === "connection" && <><path d="M55 65h90v70H55zM55 100h90M100 65v70"/><g className="settings-symbol-core"><circle cx="55" cy="65" r="15"/><circle cx="145" cy="65" r="15"/><circle cx="55" cy="135" r="15"/><circle cx="145" cy="135" r="15"/></g></>}
+    {section === "translation" && <><path d="M35 65h95l-18-18m18 18-18 18M165 135H70l18-18m-18 18 18 18"/><text x="52" y="133">文</text><text x="124" y="100">A</text></>}
+    {section === "privacy" && <><path d="M100 58Q70 38 38 55v94q34-18 62 3 28-21 62-3V55q-32-17-62 3v94"/><path className="settings-symbol-core" d="M53 77q19-7 33 1m-33 20q19-7 33 1m28-21q19-7 33-1m-33 22q19-7 33-1"/></>}
+    {section === "export" && <><path d="m100 40 65 33-65 33-65-33zM35 98l65 33 65-33M35 123l65 33 65-33"/><path className="settings-symbol-core" d="M100 10v58m-13-13 13 13 13-13"/></>}
+    {section === "data" && <><path d="M35 155h130M52 148v-38h18v38m21 0V54h18v94m21 0V80h18v68"/><path className="settings-symbol-core" d="m40 90 56-61 60 24"/></>}
+    {section === "storage" && <><ellipse cx="100" cy="55" rx="58" ry="22"/><path d="M42 55v90c0 30 116 30 116 0V55M42 100c0 30 116 30 116 0"/><path className="settings-symbol-core" d="M61 82v7m0 40v7"/></>}
+  </svg>;
+}
+
 export function SettingsPage({
   onBlurCoversChange,
 }: {
   onBlurCoversChange: (value: boolean) => void;
 }) {
   const vm = useSettingsState(onBlurCoversChange);
+  const [expanded,setExpanded]=useState<SettingsSection|null>(null);
   const reduceMotion = usePrefersReducedMotion();
-  const current = SECTION_COPY[vm.section];
-  const formRef = useRef<HTMLFormElement>(null);
-
-  function selectSection(section: SettingsSection) {
-    vm.setSection(section);
-    if (window.innerWidth > 900) return;
-    const form = formRef.current;
-    const scroll = form?.closest<HTMLElement>(".folio-scroll");
-    if (!form || !scroll) return;
-    const top = scroll.scrollTop + form.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
-    scroll.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
-  }
-
+  const summaries: Record<SettingsSection,string> = {
+    connection: vm.settings ? vm.settings.nhentai.api_key_configured ? "API 已配置" : "API 未配置" : "读取中",
+    translation: `${vm.mtProvider === "deepl" ? "DeepL" : "Google"} · ${vm.mtTargetLang === "zh-TW" ? "繁体" : "简体"}`,
+    privacy: `${vm.readerMode === "single" ? "单页" : "连续"} · ${vm.blurDefault ? "封面模糊" : "封面可见"}`,
+    export: vm.exportDefaults.compress ? "压缩 CBZ" : "不压缩 CBZ", data: "阅读记录与作品分布", storage: "路径与本地数据",
+  };
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (vm.dirty && !vm.loading) void vm.save();
@@ -67,30 +72,39 @@ export function SettingsPage({
   }
 
   const syncLabel = vm.loading ? "正在同步" : vm.dirty ? "有未保存更改" : vm.settings ? "已同步" : "等待配置";
-  const showActions = vm.dirty || (vm.section !== "data" && vm.section !== "storage");
+  const showActions = vm.dirty;
 
   return (
-    <form ref={formRef} className={`folio-page-body folio-settings-body folio-settings-page${showActions ? "" : " is-readonly"}`} onSubmit={onSubmit}>
-      <SettingsDirectory vm={vm} onSelect={selectSection} />
-
-      <SelectionStage selection={vm.section} className="folio-settings-stage">
-          <header className="folio-settings-head">
-            <div>
-              <h2>{current.title}</h2>
-            </div>
-            <div className={`folio-settings-state${vm.dirty ? " is-dirty" : ""}${vm.loading ? " is-loading" : ""}`}>
-              <i />
-              {syncLabel}
-            </div>
+    <form className={`folio-page-body folio-settings-body folio-settings-page settings-modules-page${showActions ? "" : " is-readonly"}`} onSubmit={onSubmit}>
+      <header className="settings-modules-head"><h1>设置</h1><span className={vm.dirty ? "is-dirty" : ""}>{syncLabel}</span><button type="button" onClick={reload} disabled={vm.loading} aria-label="重新读取设置"><RefreshCw size={18} className={vm.loading ? "spin" : ""} /></button></header>
+      <div className={`settings-composition${expanded ? " has-selection" : ""}`}>
+        <m.div layout className="settings-modules" transition={{ type: "spring", stiffness: 120, damping: 25 }}>
+          {SETTINGS_SECTIONS.map((item, index) => {
+            const active = item.id === expanded;
+            return <m.button layout="position" className={`settings-module-trigger${active ? " is-selected" : ""}`} key={item.id} type="button" aria-expanded={active} aria-controls={active ? `settings-${item.id}` : undefined} onClick={() => { setExpanded(active ? null : item.id); vm.setSection(item.id); }} transition={reduceMotion ? {duration:0} : {type:"spring",stiffness:120,damping:25}}>
+              <span className="settings-module-index">{String(index + 1).padStart(2, "0")}</span>
+              {!active && <m.span className="settings-module-object" layoutId={`settings-object-${item.id}`} transition={reduceMotion ? {duration:0} : {type:"spring",stiffness:100,damping:24}}><SettingSymbol section={item.id}/></m.span>}
+              {active && <span className="settings-module-selected-mark"><item.icon size={25}/></span>}
+              <span className="settings-module-label"><strong>{item.label}</strong><small>{summaries[item.id]}</small></span><ArrowUpRight className="settings-module-arrow" size={18}/>
+            </m.button>;
+          })}
+        </m.div>
+        {expanded && <m.section className="settings-module is-open" id={`settings-${expanded}`} key={expanded} initial={reduceMotion ? false : {opacity:0}} animate={{opacity:1}} transition={{duration:reduceMotion ? 0 : .25}}>
+          <header className="settings-editor-head">
+            <m.div className="settings-editor-object" layoutId={`settings-object-${expanded}`} transition={reduceMotion ? {duration:0} : {type:"spring",stiffness:100,damping:24}}><SettingSymbol section={expanded}/></m.div>
+            <h2>{SECTION_COPY[expanded].title}</h2>
+            <button type="button" aria-label="返回设置总览" onClick={() => setExpanded(null)}><ArrowLeft size={20}/></button>
           </header>
-
-          {vm.section === "connection" ? <ConnectionSection vm={vm} /> : null}
-          {vm.section === "translation" ? <TranslationSection vm={vm} /> : null}
-          {vm.section === "privacy" ? <PreferencesSection vm={vm} /> : null}
-          {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
-          {vm.section === "data" ? <DataSection /> : null}
-          {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
-
+          <m.div className="settings-module-content" initial={reduceMotion ? false : {opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:reduceMotion ? 0 : .3,delay:reduceMotion ? 0 : .12}}>
+            {expanded === "connection" ? <ConnectionSection vm={vm} /> : null}
+            {expanded === "translation" ? <TranslationSection vm={vm} /> : null}
+            {expanded === "privacy" ? <PreferencesSection vm={vm} /> : null}
+            {expanded === "export" ? <ExportDefaultsSection vm={vm} /> : null}
+            {expanded === "data" ? <DataSection /> : null}
+            {expanded === "storage" ? <StorageSection vm={vm} /> : null}
+          </m.div>
+        </m.section>}
+      </div>
           <AnimatePresence mode="popLayout">
             {vm.error ? (
               <m.div
@@ -119,7 +133,7 @@ export function SettingsPage({
               </m.div>
             ) : null}
           </AnimatePresence>
-      </SelectionStage>
+
 
       {showActions ? (
         <footer className="folio-settings-actions">

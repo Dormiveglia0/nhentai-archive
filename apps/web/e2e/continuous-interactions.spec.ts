@@ -30,18 +30,19 @@ test('封面展开中反向关闭保持当前位置，完成后归还焦点',asy
 
 test('设置控制摘要跟随草稿，导出组成操作保持真实选项',async({page})=>{
  await page.goto('/#settings');
- const nav=page.getByRole('navigation',{name:'设置章节'});
+ const nav=page.locator('.settings-modules');
  await nav.getByRole('button',{name:/访问与阅读/}).click();
  const control=page.getByRole('checkbox',{name:/封面模糊默认开启/});
  const original=await control.isChecked();
  await control.setChecked(!original);
  await expect(nav.getByRole('button',{name:/访问与阅读/})).toContainText(original?'封面可见':'封面模糊');
- await expect(page.locator('.settings-control-directory')).toHaveClass(/is-dirty/);
+ await expect(page.locator('.settings-modules-head')).toContainText('有未保存更改');
  await nav.getByRole('button',{name:/翻译/}).click();
  await nav.getByRole('button',{name:/访问与阅读/}).click();
  await expect(control).toBeChecked({checked:!original});
  await control.setChecked(original);
  await page.goto('/#export');
+ await page.getByRole('button',{name:/02.*配置与下载/}).click();
  const box=page.getByRole('checkbox',{name:'保留 JSON',exact:true});
  const checked=await box.isChecked();await box.setChecked(!checked);
  const layer=box.locator('..');
@@ -52,13 +53,14 @@ test('设置控制摘要跟随草稿，导出组成操作保持真实选项',asy
 test('任务状态分组使用真实记录，减少动态效果不阻碍选择',async({page})=>{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto('/#tasks');
- await expect(page.locator('.task-flow-live')).not.toContainText('读取中');
+ await expect(page.locator('.task-record-row').first()).toBeVisible();
  const response=await page.request.get('/api/jobs');const data=await response.json();
  const jobs=data.result;
- const groups=[{key:'queued',statuses:['queued']},{key:'active',statuses:['running','cancelling']},{key:'attention',statuses:['paused','failed']},{key:'finished',statuses:['completed','cancelled']}];
+ const groups=[{key:'queued',statuses:['queued']},{key:'active',statuses:['running','cancelling']},{key:'attention',statuses:['paused','failed']},{key:'completed',statuses:['completed']}];
  for(const group of groups){
-   await page.locator(`.flow-${group.key} > header button`).click();
-   await expect(page.locator('.folio-tasks-row')).toHaveCount(jobs.filter((job:{status:string})=>group.statuses.includes(job.status)).length);
+   if(group.key==='completed')await page.getByRole('group',{name:'任务状态筛选'}).getByRole('button',{name:/已完成/}).click();
+   else await page.locator('.task-ledger-states').getByRole('button',{name:new RegExp(group.key==='queued'?'等待':group.key==='active'?'运行':'需处理')}).click();
+   await expect(page.locator('.task-record-row')).toHaveCount(jobs.filter((job:{status:string})=>group.statuses.includes(job.status)).length);
  }
 });
 

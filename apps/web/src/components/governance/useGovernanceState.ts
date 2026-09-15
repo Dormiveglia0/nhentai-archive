@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import {
   api,
@@ -89,7 +89,7 @@ export function useGovernanceState(initialWorkId?: number) {
     () => (aggregate ? buildInitialEdits(aggregate.metadata.fields) : {}),
     [aggregate]
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     setEdits(initialEdits);
     setTranslationSuggestions([]);
     setReviewNote("");
@@ -284,6 +284,7 @@ export function useGovernanceState(initialWorkId?: number) {
   };
 
   const selectWork = (id: number) => {
+    if (id !== selectedId) { setAggregateLoading(true); setAggregate(null); }
     setSelectedId(id);
     navigate({ name: "governance", workId: id });
   };

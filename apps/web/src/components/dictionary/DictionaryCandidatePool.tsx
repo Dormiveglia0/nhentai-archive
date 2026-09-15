@@ -65,11 +65,9 @@ export function DictionaryCandidatePool(props: Props) {
   const currentPage = Math.floor(props.offset / props.limit) + 1;
 
   return (
-    <section className="folio-dictionary-candidates" aria-labelledby="folio-dictionary-candidate-title">
+    <section className="folio-dictionary-candidates" aria-label="词条索引">
       <header className="folio-dictionary-panel-head">
         <div>
-          <span>Candidate pool</span>
-          <h2 id="folio-dictionary-candidate-title">候选术语池</h2>
           <p>{props.loading ? "正在读取缓存…" : `当前页 ${props.candidates.length} 项`}</p>
         </div>
         <div className="folio-dictionary-head-actions">
@@ -126,7 +124,7 @@ export function DictionaryCandidatePool(props: Props) {
                     <strong title={label}>{label}</strong>
                   </span>
                   <span className={display === "未配置" ? "folio-dictionary-display is-muted" : "folio-dictionary-display"}>{display}</span>
-                  <span className="folio-dictionary-impact">{candidate.impact_work_count ?? 0}</span>
+                  <span className="folio-dictionary-impact">{candidate.impact_work_count ?? 0} 部作品</span>
                   <span className={`folio-dictionary-status is-${statusTone(candidate)}`}>
                     {candidate.ignored ? "已忽略" : candidate.configured ? statusLabel(candidate.status) : "待处理"}
                   </span>

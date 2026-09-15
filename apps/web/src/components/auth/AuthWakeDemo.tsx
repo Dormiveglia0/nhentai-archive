@@ -227,11 +227,11 @@ export function AuthWakeDemo({ children, preview = false }: Props) {
         </div>
       ) : null}
       {!awake ? <div className="auth-wake-emblem" aria-hidden="true">
-        <svg viewBox="0 0 500 500" fill="none">
-          <g className="auth-orbit-outer"><circle cx="250" cy="250" r="211" /><path d="M250 39A211 211 0 0 1 461 250" /><circle cx="250" cy="39" r="4" /></g>
-          <g className="auth-orbit-inner"><circle cx="250" cy="250" r="174" strokeDasharray="1 12" /><path d="M76 250A174 174 0 0 1 250 76" /></g>
-          <g className="auth-emblem-pages"><path d="M156 175l82-28 106 30v160l-106-30-82 28z" /><path d="M156 175v160m82-188v160m106-130-106 30-82-32" /><path d="M168 194v120l60-21V173m22 1 80 23v121l-80-23" /></g>
-          <path className="auth-emblem-cross" d="M250 9v18m0 446v18M9 250h18m446 0h18" />
+        <svg viewBox="0 0 500 260" fill="none">
+          <path className="auth-access-track" d="M20 130h100m260 0h100M250 8v28m0 188v28M104 46h292v168H104z"/>
+          <g className="auth-access-left"><path d="M148 188V72h24l56 78V72h24v116h-24l-56-78v78z"/></g>
+          <g className="auth-access-right"><path d="M280 72h24v45h40V72h24v116h-24v-47h-40v47h-24z"/></g>
+          <path className="auth-access-key" d="M256 54v152"/>
         </svg>
       </div> : null}
       <div className="auth-wake-registration" aria-hidden="true"><span /><span /></div>

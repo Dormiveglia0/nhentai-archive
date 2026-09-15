@@ -25,7 +25,7 @@ test("作品详情侧板隔离背景，嵌套删除预览可取消并恢复焦�
 
 test("设置快速换章不排队，未保存表单仍保留", async ({ page }) => {
   await page.goto('/#settings');
-  const nav = page.getByRole('navigation',{name:'设置章节'});
+  const nav = page.locator('.settings-modules');
   await nav.getByRole('button',{name:/翻译/}).click();
   const field = page.getByRole('spinbutton',{name:'批量建议数量（每次）'});
   await expect(field).toBeVisible();
@@ -36,14 +36,16 @@ test("设置快速换章不排队，未保存表单仍保留", async ({ page }) 
     await nav.getByRole('button',{name:new RegExp(name)}).click();
   }
   await expect(field).toHaveValue(changed);
-  await expect(page.locator('.folio-settings-stage')).toHaveCount(1);
-  await expect(page.locator('.folio-settings-head h2')).toHaveText('机器翻译配置');
+  await expect(page.locator('.settings-module.is-open')).toHaveCount(1);
+  await expect(page.locator('.settings-module.is-open h2')).toHaveText('机器翻译配置');
   await field.fill(original);
 });
 
 test("治理内容切换保留编辑，词典侧板正确约束键盘焦点", async ({ page }) => {
   await page.goto('/#governance');
+  await page.getByRole('button',{name:'选择作品',exact:true}).click();
   await page.locator('.folio-governance-queue-card-body').first().click();
+  await expect(page.getByRole('dialog',{name:'治理作品队列'})).not.toBeVisible();
   const field = page.locator('.folio-governance-field-input').first();
   await expect(field).toBeVisible();
   const original = await field.inputValue();
@@ -83,6 +85,7 @@ test("文件维护与清单分区互换，导出选项只更新打包内容", as
   await expect(page.locator('.folio-files-main')).toBeVisible();
   await page.goto('/#export');
   await page.locator('.folio-export-work-item').first().click();
+  await page.getByRole('button',{name:/02.*配置与下载/}).click();
   const input = page.getByRole('textbox',{name:'输出名称'});
   await expect(input).toBeVisible();
   await input.evaluate(node=>node.setAttribute('data-preserved','yes'));
@@ -124,10 +127,10 @@ test("手机文件详情立即显示并可返回，减少动态效果时热门�
   await expect(sheet).not.toBeVisible();
   await expect(row).toBeFocused();
   await page.goto('/#discover');
-  const selectors=page.locator('.popular-selector');
+  const selectors=page.locator('.popular-cover');
   await expect(selectors).toHaveCount(5,{timeout:20000});
-  await selectors.nth(3).click();
-  await expect(selectors.nth(3)).toHaveAttribute('aria-pressed','true');
+  await selectors.nth(3).focus();
+  await expect(selectors.nth(3)).toHaveClass(/is-selected/);
   await expect(page.locator('.popular-studio > header > span')).toHaveText('04 / 05');
   expect(await page.locator('.folio-scroll').evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
 });

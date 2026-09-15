@@ -63,6 +63,7 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
 
       {!gallery.loading && gallery.detail ? (
         <FadeIn key={gallery.detail.gallery_id} y={12} className="folio-gallery-detail">
+          <div className="gallery-open-document">
           <GalleryHero
             detail={gallery.detail}
             title={gallery.title}
@@ -82,6 +83,7 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
               {section === "pages" && <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />}
               {section === "related" && <GalleryRelated detail={gallery.detail} blurCovers={blurCovers} />}
             </SelectionStage>
+          </div>
           </div>
         </FadeIn>
       ) : null}

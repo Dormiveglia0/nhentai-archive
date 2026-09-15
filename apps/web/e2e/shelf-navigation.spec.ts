@@ -29,35 +29,13 @@ test("我的库标签拖动后可用键盘筛选，中键保持本地范围", as
   await expect(page.locator(".folio-library-tag-selection a")).toHaveAttribute("href", href!);
 });
 
-test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async ({ page }) => {
-  const response = await page.request.get("/api/workbench/overview");
-  const overview = await response.json();
-  await page.addInitScript(() => {
-    const samples: number[] = [];
-    Object.assign(window, { metricFrames: samples });
-    const start = performance.now();
-    function sample() {
-      const text = document.querySelector(".folio-library-summary .fx-scope")?.textContent;
-      if (text) samples.push(Number(text.replaceAll(",", "")));
-      if (performance.now() - start < 4_000) requestAnimationFrame(sample);
-    }
-    requestAnimationFrame(sample);
-  });
-  await page.goto("/#library");
-  const total = page.locator(".folio-library-summary .fx-scope").first();
-  await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));
-  const frames = await page.evaluate(() => (window as unknown as { metricFrames: number[] }).metricFrames);
-  expect(frames.some((value) => value > 0 && value < overview.library.total)).toBe(true);
-  for (const reducedMotion of ["reduce", "no-preference"] as const) {
-    await page.emulateMedia({ reducedMotion });
-    await expect(total).toHaveText(overview.library.total.toLocaleString("zh-CN"));
-  }
-  await page.goto("/#library");
-  await page.locator(".folio-shelf-item").first().waitFor();
-  await expect(page.locator(".folio-scroll")).toHaveCSS("transform", "none");
-  await page.locator(".folio-scroll").evaluate((node) => { node.scrollTop = node.scrollHeight; });
-  await expect(page.locator(".folio-page-head")).toHaveClass(/is-offscreen/);
-  await expect(page.locator(".folio-scene-library-file")).toHaveCSS("animation-play-state", "paused");
+test("库的状态索引对应实际数量，切换不移动顶栏", async ({page}) => {
+ const response=await page.request.get('/api/workbench/overview');const overview=await response.json();
+ await page.goto('/#library');
+ await expect(page.locator('.library-status-index button').first().locator('strong')).toHaveText(overview.library.total.toLocaleString('zh-CN'));
+ await page.locator('.folio-scroll').evaluate(node=>{node.scrollTop=node.scrollHeight;});
+ await expect(page.locator('.folio-scroll')).toHaveCSS('transform','none');
+ expect((await page.locator('.folio-topbar').boundingBox())!.y).toBe(0);
 });
 
 for (const [route, titles] of [
@@ -114,6 +92,7 @@ for (const [route, titles] of [
 
 test("书架保留长按点击、中键和修饰键链接行为", async ({ page, context }) => {
   await page.goto("/#library");
+  await page.getByRole("group",{name:"最近作品"}).getByRole("button",{name:"继续阅读",exact:true}).click();
   const link = page.locator(".folio-shelf-item").first();
   await expect(link).toBeVisible();
   const href = await link.getAttribute("href");
@@ -135,6 +114,7 @@ test("手机书架原生滑动后可点开作品，导航焦点不会穿透", as
   const context = await browser.newContext({ storageState: process.env.E2E_STORAGE_STATE, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   await page.goto(`${process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173"}/#library`);
+  await page.getByRole("group",{name:"最近作品"}).getByRole("button",{name:"继续阅读",exact:true}).click();
   const track = page.locator(".folio-shelf-track").first();
   await expect(track).toBeVisible();
   await track.scrollIntoViewIfNeeded();

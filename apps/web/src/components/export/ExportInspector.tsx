@@ -54,7 +54,7 @@ export function ExportInspector({
   };
 
   return (
-    <aside className="folio-export-inspector">
+    <aside className="folio-export-inspector export-workflow-inspector">
       <header className="folio-export-column-head">
         <h2>打包预览</h2>
       </header>
@@ -138,7 +138,7 @@ export function ExportInspector({
           ) : null}
         </SelectionStage>
       ) : (
-        <p className="folio-export-inspector-empty">{previewLoading ? "正在读取预览..." : "点击左侧任一作品查看详情。"}</p>
+        <p className="folio-export-inspector-empty">{previewLoading ? "正在读取预览..." : "返回选择作品后查看打包预览。"}</p>
       )}
 
       {/* Sticky action zone */}
@@ -153,7 +153,7 @@ export function ExportInspector({
         {/* Selection summary + actions */}
         <div className="folio-export-action-cta">
           <span className="folio-export-summary-line">
-            已选 {count} 项 · {formatBytes(selectedSize)}
+            {count ? `已选 ${count} 项 · ${formatBytes(selectedSize)}` : focusItem ? `当前作品 · ${formatBytes(focusItem.source_file.size_bytes)}` : "尚未选择作品"}
           </span>
 
           <div className="folio-export-action-buttons">

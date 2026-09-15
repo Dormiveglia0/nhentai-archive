@@ -497,3 +497,6 @@
   .reader-thumb-skeleton,
   .reader-thumb-measuring i { animation: none; }
 }
+
+.reader-info-panel{width:min(560px,calc(100vw - 40px));max-height:calc(100dvh - 210px);top:auto;right:24px;bottom:116px;border:1px solid var(--reader-line-strong);box-shadow:0 16px 50px #0006}.reader-info-panel::before{display:none}.reader-info-panel .reader-info-meta{display:grid;grid-template-columns:96px minmax(0,1fr);gap:18px}.reader-info-panel .reader-info-cover{width:96px;height:132px;margin:0;grid-row:span 2}.reader-info-panel .reader-info-meta>h2{font-size:16px;align-self:end}.reader-info-panel .reader-info-progress{margin:0}.reader-info-panel .reader-info-tag-groups,.reader-info-panel .reader-info-meta>p{grid-column:1/-1}.reader-info-panel .reader-info-tag-groups{max-height:none}
+@media(max-width:680px){.reader-info-panel{right:12px;bottom:128px;width:calc(100% - 24px);max-height:calc(100dvh - 210px)}.reader-info-panel .reader-info-meta{grid-template-columns:70px minmax(0,1fr);gap:14px}.reader-info-panel .reader-info-cover{width:70px;height:100px}}
