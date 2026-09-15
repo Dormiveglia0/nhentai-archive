@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowRight } from "lucide-react";
 import { useLayoutEffect, useRef } from "react";
 
 import type { GovernanceAggregate, GovernanceTranslateSuggestion, MetadataFieldDiff } from "../../lib/api";
@@ -81,7 +82,7 @@ export function MetadataEditor({
         onAcceptAll={onAcceptAllTranslations}
         onDismiss={onDismissTranslation}
       />
-      <Stagger key={`${aggregate.work.id}-${onlyDiff}`} className="folio-governance-field-grid">
+      <Stagger className="folio-governance-field-grid">
         {fields.length ? (
           fields.map((field) => (
             <StaggerItem key={field.field} className="folio-governance-field-cell">
@@ -128,6 +129,7 @@ function MetadataCard({
           <ValueChips value={field.source_value} empty="未解析" accent />
         </div>
       </div>
+      <div className="governance-value-transfer" aria-hidden="true"><ArrowRight size={20}/><span>{changed ? "待保存" : "最终值"}</span></div>
       <div className="folio-governance-field-final">
         <span className="folio-governance-field-label">本地最终值</span>
         <AutoGrowTextarea
@@ -143,7 +145,7 @@ function MetadataCard({
           disabled={!field.source_value}
           onClick={() => onChange({ value: field.source_value || "", source: sourceAllowed })}
         >
-          采用来源值
+          <ArrowDown size={14}/>采用来源值
         </button>
         <button type="button" onClick={() => onChange({ value: field.current_value || "", source: "current" })}>
           恢复当前

@@ -664,3 +664,21 @@
     transition: none;
   }
 }
+
+.folio-governance-field-grid { display:grid; grid-template-columns:minmax(0,1fr); }
+.folio-governance-field-card { display:grid; grid-template-columns:minmax(0,1fr) 60px minmax(0,1fr); column-gap:18px; padding:22px 0; border:0; border-top:1px solid var(--folio-line-strong); background:transparent; }
+.folio-governance-field-head { grid-column:1/-1; padding-bottom:18px; }
+.folio-governance-field-compare { grid-column:1; display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+.folio-governance-field-column { padding:0 0 12px; border:0; }
+.governance-value-transfer { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:10px; color:var(--folio-muted); }
+.governance-value-transfer span { font-size:10px; }
+.governance-value-transfer svg { transition:transform .4s,color .4s; }
+.folio-governance-field-card.is-changed .governance-value-transfer { color:var(--folio-red); }
+.folio-governance-field-card.is-changed .governance-value-transfer svg { transform:translateX(5px); }
+.folio-governance-field-card .folio-governance-field-final { margin:0; padding:18px; align-self:stretch; background:#ffffff60; border:0; border-left:2px solid var(--folio-line); transition:border-color .3s,background .3s; }
+.folio-governance-field-card.is-changed .folio-governance-field-final { border-left-color:var(--folio-red); background:#fff9; }
+.folio-governance-field-card .folio-governance-field-input { border:0; border-bottom:1px solid var(--folio-line); background:transparent; padding:12px 0; font-size:14px; }
+.folio-governance-field-card .folio-governance-field-actions { grid-column:1/-1; justify-content:flex-start; margin-top:12px; border:0; }
+.folio-governance-field-actions button { display:inline-flex; align-items:center; gap:6px; }
+@media(max-width:640px){ .folio-governance-field-card { grid-template-columns:minmax(0,1fr); gap:16px; } .folio-governance-field-compare { grid-template-columns:repeat(2,minmax(0,1fr)); } .governance-value-transfer { flex-direction:row; } .governance-value-transfer svg { transform:rotate(90deg); } .folio-governance-field-card.is-changed .governance-value-transfer svg { transform:rotate(90deg) translateX(4px); } }
+@media(prefers-reduced-motion:reduce){ .governance-value-transfer svg, .folio-governance-field-card .folio-governance-field-final { transition:none; } }

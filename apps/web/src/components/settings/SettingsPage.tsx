@@ -3,7 +3,8 @@ import { AnimatePresence, m } from "motion/react";
 import { type FormEvent, useRef } from "react";
 
 import { SelectionStage, usePrefersReducedMotion } from "../../lib/motion";
-import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
+import { type SettingsSection } from "../folio/config";
+import { SettingsDirectory } from "./SettingsDirectory";
 import { ConnectionSection } from "./ConnectionSection";
 import { DataSection } from "./DataSection";
 import { ExportDefaultsSection } from "./ExportDefaultsSection";
@@ -12,6 +13,7 @@ import { StorageSection } from "./StorageSection";
 import { TranslationSection } from "./TranslationSection";
 import { useSettingsState } from "./useSettingsState";
 import "./SettingsPage.css";
+import "./SettingsDirectory.css";
 
 const SECTION_COPY: Record<SettingsSection, { title: string }> = {
   connection: {
@@ -46,6 +48,7 @@ export function SettingsPage({
 
   function selectSection(section: SettingsSection) {
     vm.setSection(section);
+    if (window.innerWidth > 900) return;
     const form = formRef.current;
     const scroll = form?.closest<HTMLElement>(".folio-scroll");
     if (!form || !scroll) return;
@@ -68,35 +71,7 @@ export function SettingsPage({
 
   return (
     <form ref={formRef} className={`folio-page-body folio-settings-body folio-settings-page${showActions ? "" : " is-readonly"}`} onSubmit={onSubmit}>
-      <div className="settings-directory">
-      <nav className="folio-settings-nav" aria-label="设置章节">
-        {SETTINGS_SECTIONS.map((item) => {
-          const Icon = item.icon;
-          const active = vm.section === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={active ? "is-active" : ""}
-              aria-current={active ? "page" : undefined}
-              onClick={() => selectSection(item.id)}
-            >
-              {active ? (
-                <m.span
-                  className="folio-settings-nav-active"
-                  layoutId="formal-settings-nav-active"
-                  transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
-                />
-              ) : null}
-              <Icon size={16} />
-              <strong>{item.label}</strong>
-              <small>{String(SETTINGS_SECTIONS.indexOf(item) + 1).padStart(2, "0")}</small>
-            </button>
-          );
-        })}
-      </nav>
-      <div className="settings-directory-state"><i className={vm.dirty ? "is-dirty" : ""} /><span>{syncLabel}</span></div>
-      </div>
+      <SettingsDirectory vm={vm} onSelect={selectSection} />
 
       <SelectionStage selection={vm.section} className="folio-settings-stage">
           <header className="folio-settings-head">

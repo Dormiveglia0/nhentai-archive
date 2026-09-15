@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
 import type { Job, JobLog } from "../../lib/api";
-import { canRetry, isToday, jobTypeLabel, stageLabel, targetLabel, type JobStatusFilter } from "../../lib/jobs";
+import { JOB_STATUS_GROUPS, canRetry, isToday, jobTypeLabel, stageLabel, targetLabel, type JobStatusFilter } from "../../lib/jobs";
 
 export type TaskSummary = {
   total: number;
@@ -130,7 +130,7 @@ export function useTasksState(): TasksViewModel {
   const visibleJobs = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return jobs.filter((job) => {
-      if (statusFilter !== "all" && job.status !== statusFilter) return false;
+      if (statusFilter !== "all" && !(JOB_STATUS_GROUPS[statusFilter] ?? [statusFilter]).includes(job.status)) return false;
       if (!normalized) return true;
       const haystack = [
         String(job.id),

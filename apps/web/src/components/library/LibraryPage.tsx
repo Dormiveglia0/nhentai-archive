@@ -1,5 +1,5 @@
 import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SectionSwitch } from "../folio/ui/SectionSwitch";
 import { AnimatePresence, m } from "motion/react";
 
@@ -20,6 +20,7 @@ import "./LibraryPage.css";
 let previousShelf: "reading" | "recent" = "reading";
 
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
+  const origin = useRef<HTMLElement | null>(null);
   const [shelf, updateShelf] = useState(previousShelf);
   function setShelf(value: "reading" | "recent") { previousShelf = value; updateShelf(value); }
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -160,7 +161,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
                         view={library.view}
                         blurCovers={blurCovers}
                         selected={library.selected?.id === work.id}
-                        onSelect={() => library.setSelected(work)}
+                        onSelect={(node) => { origin.current = node; library.setSelected(work); }}
                         onPickTag={library.pickTag}
                         onToggleFavorite={() => void library.toggleFavorite(work)}
                         multiSelect={library.multiSelect}
@@ -183,6 +184,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           </section>
 
           <WorkInspector
+            origin={origin.current}
             work={library.selected}
             blurCovers={blurCovers}
             onClose={() => library.setSelected(null)}

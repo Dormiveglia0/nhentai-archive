@@ -1,8 +1,8 @@
-import { Languages, Plus, X } from "lucide-react";
+import { ArrowDown, Languages, Plus, X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useState } from "react";
 
 import type { DictionaryApplyPayload } from "../../lib/api";
-import { FadeIn } from "../../lib/motion";
+import { SelectionStage } from "../../lib/motion";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 
 type Props = {
@@ -66,16 +66,13 @@ export function DictionaryEditor({ value, dictionaryId, loading, translating, mt
         </button>
       </header>
 
-      <FadeIn key={editorKey} className="folio-dictionary-editor-motion" y={8}>
+      <SelectionStage selection={editorKey} className="folio-dictionary-editor-motion">
+        <div className={`dictionary-mapping${value.zh_name.trim() ? " is-mapped" : ""}${translating ? " is-translating" : ""}`}>
+          <label><span>原文 *</span><input value={value.original_text} onChange={event=>update({original_text:event.target.value})} placeholder="选择或输入原文" /></label>
+          <div className="dictionary-mapping-link"><ArrowDown size={24} aria-hidden="true"/><button type="button" onClick={onTranslate} disabled={loading || translating || !value.original_text.trim()}><Languages size={15}/>{translating ? "翻译中…" : "机翻填入中文名"}</button></div>
+          <label><span>中文名 *</span><input value={value.zh_name} onChange={event=>update({zh_name:event.target.value})} placeholder="填写中文名" /></label>
+        </div>
         <div className="folio-dictionary-form">
-          <DictionaryField label="原文 *" wide>
-            <input value={value.original_text} onChange={(event) => update({ original_text: event.target.value })} />
-          </DictionaryField>
-
-          <DictionaryField label="中文名 *">
-            <input value={value.zh_name} onChange={(event) => update({ zh_name: event.target.value })} />
-          </DictionaryField>
-
           <div className="folio-dictionary-field">
             <FolioSelect label="类型 *" value={value.tag_type} options={TYPE_OPTIONS} onChange={(tagType) => update({ tag_type: tagType })} />
           </div>
@@ -104,15 +101,9 @@ export function DictionaryEditor({ value, dictionaryId, loading, translating, mt
           </DictionaryField>
         </div>
 
-        <div className="folio-dictionary-translate-row">
-          <button type="button" onClick={onTranslate} disabled={loading || translating || !value.original_text.trim()}>
-            <Languages size={15} />
-            {translating ? "翻译中…" : "机翻填入中文名"}
-          </button>
-          <p>机器结果只填入编辑器，仍需预览并人工确认后保存。</p>
-        </div>
+        <p className="dictionary-mapping-note">机翻结果仍需预览并确认后保存。</p>
         {mtError ? <p className="folio-dictionary-mt-error" role="alert">{mtError}</p> : null}
-      </FadeIn>
+      </SelectionStage>
     </section>
   );
 }

@@ -1,5 +1,6 @@
-import { AlertTriangle, Download, FileCheck2, FileCode2, FileJson, Package, RefreshCw } from "lucide-react";
+import { AlertTriangle, Download, FileCheck2, RefreshCw } from "lucide-react";
 
+import { ExportPackage } from "./ExportPackage";
 import type { ExportOptions, ExportPreview, ExportQueueItem } from "../../lib/api";
 import { FadeIn, SelectionStage } from "../../lib/motion";
 import { formatBytes, workTitle } from "../../lib/format";
@@ -57,6 +58,7 @@ export function ExportInspector({
       <header className="folio-export-column-head">
         <h2>打包预览</h2>
       </header>
+      <ExportPackage options={exportOptions} onChange={onSetOption} />
       {currentPreview && focusItem ? (
         <SelectionStage
           selection={currentPreview.work.id}
@@ -139,45 +141,10 @@ export function ExportInspector({
         <p className="folio-export-inspector-empty">{previewLoading ? "正在读取预览..." : "点击左侧任一作品查看详情。"}</p>
       )}
 
-      <div className="export-package-map" aria-label="打包内容">
-        <Package size={34} aria-hidden="true" />
-        <div><strong>CBZ</strong><span>{exportOptions.compress ? "标准压缩" : "不压缩"}</span></div>
-        <ul><li>漫画页面</li>{exportOptions.write_comicinfo && <li>ComicInfo.xml</li>}{exportOptions.keep_json && <li>JSON</li>}</ul>
-      </div>
       {/* Sticky action zone */}
       <div className="folio-export-action-zone">
         {/* Global option switches */}
         <div className="folio-export-options">
-          <label className={exportOptions.write_comicinfo ? "is-on" : ""}>
-            <input
-              type="checkbox"
-              checked={exportOptions.write_comicinfo}
-              onChange={(e) => onSetOption("write_comicinfo", e.target.checked)}
-              aria-label="写入 ComicInfo.xml"
-            />
-            <FileCode2 size={16} />
-            <span>ComicInfo</span>
-          </label>
-          <label className={exportOptions.keep_json ? "is-on" : ""}>
-            <input
-              type="checkbox"
-              checked={exportOptions.keep_json}
-              onChange={(e) => onSetOption("keep_json", e.target.checked)}
-              aria-label="保留 JSON"
-            />
-            <FileJson size={16} />
-            <span>保留JSON</span>
-          </label>
-          <label className={exportOptions.compress ? "is-on" : ""}>
-            <input
-              type="checkbox"
-              checked={exportOptions.compress}
-              onChange={(e) => onSetOption("compress", e.target.checked)}
-              aria-label="标准压缩"
-            />
-            <Package size={16} />
-            <span>压缩</span>
-          </label>
           <button type="button" onClick={onRefresh} className="folio-export-refresh" aria-label="刷新预览">
             <RefreshCw size={16} className={previewLoading ? "spin" : ""} />
           </button>

@@ -1,9 +1,10 @@
 import type { Job } from "./api";
 import { formatBytes } from "./format";
 
-export type JobStatusFilter = "all" | Job["status"];
+export type JobStatusFilter = "all" | Job["status"] | "active" | "attention" | "finished";
+export const JOB_STATUS_GROUPS: Partial<Record<JobStatusFilter, Job["status"][]>> = { active: ["running", "cancelling"], attention: ["paused", "failed"], finished: ["completed", "cancelled"] };
 
-export const STATUS_TABS: Array<{ key: JobStatusFilter; label: string }> = [
+export const STATUS_TABS: Array<{ key: "all" | Job["status"]; label: string }> = [
   { key: "all", label: "全部" },
   { key: "running", label: "正在运行" },
   { key: "paused", label: "已暂停" },

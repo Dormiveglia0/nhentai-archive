@@ -65,7 +65,7 @@ Gallery/history render inside `FolioChrome`. Both readers intentionally bypass t
 | Static canvas and bounded visible-scene motion | `folio/styles/base.css` + feature-local scenes |
 | Scene routing only | `folio/scenes/ModuleScene.tsx` |
 | Shared section selection / interruptible local content transition | `folio/ui/SectionSwitch.tsx`, `lib/motion/primitives.tsx::SelectionStage`; preserve form state and avoid selection-signature remounts |
-| Modal side sheets, native background inertness and focus return | `folio/ui/FolioSheet.tsx`; library inspector, dictionary import, mobile file details |
+| Modal side sheets, native background inertness and focus return | `folio/ui/FolioSheet.tsx`; library inspector uses origin + data-sheet-anchor/surface/content for reversible cover expansion; dictionary import and mobile files use ordinary side sheets |
 | Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
 | Formal summary/status metric entries and semantic tones | `folio/ui/FolioMetricGrid.tsx` + `folio/styles/workbench.css` |
 | Shared pagination, tag scroller, work shelf, and cover frame (portrait fill on cards/shelves; full-image contain on detail/reader) | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx`, `AmbientCover.tsx` |
@@ -181,3 +181,12 @@ Homepage uses a paper/ink reading composition: each SVG outline represents one o
 - `FilesPage`: inventory/maintenance switch; `matchMedia` selects desktop detail versus mobile `FolioSheet`, without duplicating detail controls.
 - `GalleryDetailPage`: preview/tags/related switch. `HistoryPage`: real date index. `ReaderToolbar`: separate identity and control bars in keyed `AnimatePresence` children.
 - Checks: `e2e/workspace-rebuild.spec.ts` plus existing auth/shelf/home suites. Keep data mutations isolated and actual source data only.
+
+## 2026-09-15 Interaction Owners
+
+- `library/WorkInspector.tsx` + `WorkInspector.css`: immersive cover/detail composition; `WorkCard` passes its source element via `LibraryPage` to `FolioSheet`. Keep source and return geometry measured; do not replace with a timed exit/remount.
+- `settings/SettingsDirectory.tsx` + `.css`: actual configuration summaries and movable module directory; this route owns its own heading.
+- `tasks/TaskFlow.tsx` + `.css`: real job groups, shared element movement and focus; `lib/jobs.ts::JOB_STATUS_GROUPS` owns combined status filtering. The tasks route owns its heading, and its old standalone scene is only a demo/history asset.
+- `export/ExportPackage.tsx` + `.css`: interactive package composition replaces duplicate option switches; changes continue through `onSetOption`.
+- `dictionary/DictionaryEditor.tsx` + `.css`: source/translation mapping controls. `governance/MetadataEditor.tsx` + `GovernanceEditor.css`: source-to-final field comparison.
+- Regression: `e2e/continuous-interactions.spec.ts` checks reversal geometry, focus restore, live draft summaries, real task groups and editable mapping/source adoption.

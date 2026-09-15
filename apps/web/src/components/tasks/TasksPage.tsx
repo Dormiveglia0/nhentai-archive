@@ -4,11 +4,13 @@ import { m } from "motion/react";
 import { FadeIn } from "../../lib/motion";
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 import { STATUS_TABS } from "../../lib/jobs";
+import { TaskFlow } from "./TaskFlow";
 import { TaskInspector } from "./TaskInspector";
 import { TaskList } from "./TaskList";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { useTasksState } from "./useTasksState";
 import "./TasksPage.css";
+import "./TaskFlow.css";
 
 export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
@@ -32,6 +34,7 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
       {tasks.error ? <FadeIn key={tasks.error} className="folio-tasks-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{tasks.error}</p></FadeIn> : null}
       {tasks.notice ? <FadeIn key={tasks.notice} className="folio-tasks-message" role="status" y={6}><span aria-hidden="true" /><p>{tasks.notice}</p></FadeIn> : null}
 
+      <TaskFlow filter={tasks.statusFilter} jobs={tasks.jobs} focusId={tasks.focus?.id ?? null} onFocus={tasks.focusJob} onFilter={tasks.setStatusFilter} loading={tasks.loading} />
       <section className="task-status-overview">
         <div className="folio-tasks-tabs" role="group" aria-label="任务状态筛选">
           {STATUS_TABS.map((tab) => (

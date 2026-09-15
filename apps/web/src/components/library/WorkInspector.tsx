@@ -1,7 +1,7 @@
+import "./WorkInspector.css";
 import { BookOpen, Download, Heart, PenTool, X } from "lucide-react";
 
 import type { LibraryTag, LibraryWork } from "../../lib/api";
-import { SelectionStage } from "../../lib/motion";
 import { libraryTagHref, pageHref } from "../../lib/navigation";
 import { FolioSheet } from "../folio/ui/FolioSheet";
 import { WorkDeleteAction } from "../folio/ui/WorkDeleteAction";
@@ -9,6 +9,7 @@ import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } fr
 
 type Props = {
   work: LibraryWork | null;
+  origin: HTMLElement | null;
   blurCovers: boolean;
   onClose: () => void;
   onPickTag: (tag: LibraryTag) => void;
@@ -16,30 +17,44 @@ type Props = {
   onDeleted: () => void;
 };
 
-export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted }: Props) {
+export function WorkInspector({ work, origin, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted }: Props) {
   const status = work ? readStatusLabel(work) : null;
   const tags = work?.tags ?? [];
   const title = work ? workTitle(work) : "作品详情";
 
   return (
-    <FolioSheet open={Boolean(work)} label="作品详情" onClose={onClose}>
-      {work && status ? <SelectionStage selection={work.id} className="library-detail-sheet">
+    <FolioSheet open={Boolean(work)} label="作品详情" onClose={onClose} className="library-focus-dialog" origin={origin}>
+      {work && status ? <div className="library-focus-layout">
+          <div className="library-focus-surface" data-sheet-surface />
+          <div className="library-focus-media">
+            <span className="library-focus-id">{String(work.remote_gallery_id ?? work.id).padStart(6, "0")}</span>
+            <div data-sheet-anchor className="library-focus-cover">
+              {work.cover_path ? <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover?w=512`} alt="" /> : <span>暂无封面</span>}
+            </div>
+            <div className="library-focus-page-count"><strong>{work.page_count}</strong><span>页</span></div>
+          </div>
+          <div className="library-focus-record" data-sheet-content>
           <header className="folio-library-inspector-head">
             <span>作品详情</span>
             <strong className={`tone-${status.tone}`}>{status.label}</strong>
             <button type="button" onClick={onClose} aria-label="关闭详情"><X size={16} /></button>
           </header>
 
-          <div className="folio-library-inspector-cover">
-            {work.cover_path ? (
-              <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover`} alt="" />
-            ) : (
-              <span className="folio-cover-fallback">NO COVER</span>
-            )}
-          </div>
-
           <h2 title={title}>{title}</h2>
           <p className="folio-library-inspector-author">{authorLine(work)}</p>
+
+          <div className="folio-library-inspector-actions">
+            <a className="is-primary" href={pageHref({ name: "reader", workId: work.id })}>
+              <BookOpen size={17} />
+              {(work.progress_percent ?? 0) > 0 && !work.completed ? "继续阅读" : "开始阅读"}
+            </a>
+            <a href={pageHref({ name: "governance", workId: work.id })}><PenTool size={16} />进入治理</a>
+            <a href={pageHref({ name: "export", workId: work.id })}><Download size={16} />导出 CBZ</a>
+            <button className={work.favorite ? "is-favorite" : ""} type="button" onClick={() => onToggleFavorite(work)} aria-pressed={work.favorite}>
+              <Heart size={16} fill={work.favorite ? "currentColor" : "none"} />{work.favorite ? "已收藏" : "收藏作品"}
+            </button>
+            <WorkDeleteAction workId={work.id} title={title} onDeleted={onDeleted} />
+          </div>
 
           <dl className="folio-library-inspector-facts">
             <div><dt>文件</dt><dd>{formatBytes(work.size_bytes)} · {work.page_count} 页</dd></div>
@@ -59,6 +74,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
                     onClick={(event) => {
                       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
                       event.preventDefault();
+                      onClose();
                       onPickTag(tag);
                     }}
                   >{tag.display}</a>
@@ -69,19 +85,9 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
             <p className="folio-library-inspector-note">该作品暂无缓存标签，可在治理或词典模块补充。</p>
           )}
 
-          <div className="folio-library-inspector-actions">
-            <a className="is-primary" href={pageHref({ name: "reader", workId: work.id })}>
-              <BookOpen size={17} />
-              {(work.progress_percent ?? 0) > 0 && !work.completed ? "继续阅读" : "开始阅读"}
-            </a>
-            <a href={pageHref({ name: "governance", workId: work.id })}><PenTool size={16} />进入治理</a>
-            <a href={pageHref({ name: "export", workId: work.id })}><Download size={16} />导出 CBZ</a>
-            <button className={work.favorite ? "is-favorite" : ""} type="button" onClick={() => onToggleFavorite(work)} aria-pressed={work.favorite}>
-              <Heart size={16} fill={work.favorite ? "currentColor" : "none"} />{work.favorite ? "已收藏" : "收藏作品"}
-            </button>
-            <WorkDeleteAction workId={work.id} title={title} onDeleted={onDeleted} />
+
           </div>
-      </SelectionStage> : null}
+      </div> : null}
     </FolioSheet>
   );
 }

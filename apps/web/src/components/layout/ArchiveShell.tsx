@@ -27,6 +27,7 @@ function chromeRoute(activePage: ShelledPageName): { page: FolioPageId; heading?
       },
     };
   }
+  if (activePage === "settings" || activePage === "tasks") return { page: activePage, heading: false };
   if (activePage === "gallery") return { page: "discover", heading: false };
   if (FOLIO_PAGE_IDS.has(activePage as FolioPageId)) return { page: activePage as FolioPageId };
   return { page: "workbench" };

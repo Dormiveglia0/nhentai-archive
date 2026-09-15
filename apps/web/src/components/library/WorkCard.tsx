@@ -11,7 +11,7 @@ type Props = {
   view: LibraryView;
   blurCovers: boolean;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (origin: HTMLElement) => void;
   onPickTag: (tag: LibraryTag) => void;
   onToggleFavorite: () => void;
   multiSelect?: boolean;
@@ -35,12 +35,12 @@ export function WorkCard({
   const title = workTitle(work);
   const progress = work.progress_percent ?? 0;
   const contentTags = (work.tags ?? []).filter((tag) => tag.type === "tag");
-  const select = multiSelect ? (onToggle ?? onSelect) : onSelect;
   const readerHref = pageHref({ name: "reader", workId: work.id });
   const selectCurrent = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    select();
+    if (multiSelect && onToggle) onToggle();
+    else onSelect(event.currentTarget.closest("article")?.querySelector<HTMLElement>(".folio-library-cover") ?? event.currentTarget);
   };
   const className = [
     "folio-library-card",
