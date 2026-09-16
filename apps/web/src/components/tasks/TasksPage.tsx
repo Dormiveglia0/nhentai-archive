@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { FolioSheet } from "../folio/ui/FolioSheet";
 import { AlertCircle, RefreshCw, Trash2, X } from "lucide-react";
 import { m } from "motion/react";
@@ -7,6 +7,7 @@ import { FadeIn } from "../../lib/motion";
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 import { STATUS_TABS } from "../../lib/jobs";
 import { TaskInspector } from "./TaskInspector";
+import { TaskBoard } from "./TaskBoard";
 import { TaskList } from "./TaskList";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { useTasksState } from "./useTasksState";
@@ -17,7 +18,8 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
   const reduce = usePrefersReducedMotion();
   const [detailOpen,setDetailOpen] = useState(false);
-  function focus(id:number) { tasks.focusJob(id);setDetailOpen(true); }
+  const origin = useRef<HTMLElement | null>(null);
+  function focus(id:number, source?: HTMLElement) { origin.current = source ?? null; tasks.focusJob(id);setDetailOpen(true); }
 
   function openLogs(id: number) {
     focus(id);
@@ -37,7 +39,8 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
       {tasks.error ? <FadeIn key={tasks.error} className="folio-tasks-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{tasks.error}</p></FadeIn> : null}
       {tasks.notice ? <FadeIn key={tasks.notice} className="folio-tasks-message" role="status" y={6}><span aria-hidden="true" /><p>{tasks.notice}</p></FadeIn> : null}
 
-      <header className="task-ledger-head"><div><h1>队列</h1><span>{tasks.summary.total} 项任务</span></div><div className="task-ledger-states">{[{key:"active" as const,label:"运行",count:tasks.summary.running+tasks.summary.cancelling},{key:"queued" as const,label:"等待",count:tasks.summary.queued},{key:"attention" as const,label:"需处理",count:tasks.summary.failed+tasks.summary.paused}].map(item=><button type="button" key={item.key} aria-pressed={tasks.statusFilter===item.key} onClick={()=>tasks.setStatusFilter(tasks.statusFilter===item.key?"all":item.key)}><strong>{item.count}</strong><span>{item.label}</span><i className={item.key==="active"&&item.count?"is-running":""}/></button>)}</div></header>
+      <header className="task-ledger-head"><div><h1>队列</h1><span>{tasks.summary.total} 项任务</span></div></header>
+      <TaskBoard jobs={tasks.jobs} filter={tasks.statusFilter} onFilter={tasks.setStatusFilter} onOpen={(id, source) => { tasks.setStatusFilter("all"); tasks.setQuery(""); focus(id, source); }}/>
       <section className="task-status-overview">
         <div className="folio-tasks-tabs" role="group" aria-label="任务状态筛选">
           {STATUS_TABS.map((tab) => (
@@ -76,7 +79,8 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
           />
         </section>
       </FadeIn>
-      <FolioSheet open={detailOpen && Boolean(tasks.focus)} label="任务详情" onClose={()=>setDetailOpen(false)} className="task-detail-sheet">
+      <FolioSheet open={detailOpen && Boolean(tasks.focus)} label="任务详情" onClose={()=>setDetailOpen(false)} className="task-detail-sheet" origin={origin.current}>
+        <div className="task-detail-surface" data-sheet-surface/>
         <header className="task-detail-head"><span>任务 #{tasks.focus?.id}</span><button type="button" aria-label="关闭任务详情" onClick={()=>setDetailOpen(false)}><X size={20}/></button></header>
         {tasks.focus ? <TaskInspector
           job={tasks.focus}

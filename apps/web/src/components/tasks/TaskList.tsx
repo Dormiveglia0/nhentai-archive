@@ -40,7 +40,7 @@ type Props = {
   emptyLabel: string;
   retryingId: number | null;
   actingId: number | null;
-  onFocus: (id: number) => void;
+  onFocus: (id: number, origin: HTMLElement) => void;
   onOpenLogs: (id: number) => void;
   onRetry: (id: number) => void;
   onPause: (id: number) => void;
@@ -60,7 +60,7 @@ export function TaskList(props: Props) {
         {props.jobs.map((job) => (
           <StaggerItem key={job.id} className="task-record-row-motion">
             <article className={`task-record-row is-${statusTone(job.status)}${props.focusId === job.id ? " is-focused" : ""}`}>
-              <button className="task-record-row-main" type="button" onClick={() => props.onFocus(job.id)} aria-pressed={props.focusId === job.id} aria-label={`查看任务 ${job.id}：${jobTypeLabel(job.type)}`}>
+              <button className="task-record-row-main" type="button" onClick={event => props.onFocus(job.id, event.currentTarget)} aria-pressed={props.focusId === job.id} aria-label={`查看任务 ${job.id}：${jobTypeLabel(job.type)}`}>
                 <span className="task-record-number">#{job.id}</span>
                 <span className="task-record-kind">
                   <span className="task-record-kind-icon"><StatusIcon status={job.status} /></span>

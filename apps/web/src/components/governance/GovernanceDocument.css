@@ -5,3 +5,26 @@
 .governance-source-drawer{margin-top:24px;border-top:1px solid var(--folio-line)}.governance-source-drawer>summary{padding:20px 0;cursor:pointer;font-size:14px}.governance-source-drawer .folio-governance-source{position:static;max-height:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding:24px;background:var(--folio-paper-bright)}
 .folio-governance-actions{left:0}
 @media(max-width:760px){.governance-document-head{gap:12px}.governance-document-head>span{display:none}.folio-governance-editor{padding:18px 12px}.governance-queue-sheet{width:100%;height:100dvh;margin:0;padding:20px}.governance-queue-sheet .folio-governance-queue-list{grid-template-columns:1fr}.governance-source-drawer .folio-governance-source{grid-template-columns:1fr}}
+
+.folio-governance-workspace{max-width:1900px}
+.folio-governance-editor{padding:0;background:none}
+.folio-governance-modebar{min-height:56px;padding:10px 0;margin-bottom:26px;border-top:0}
+.folio-governance-modebar>div>strong{font-size:12px;font-weight:400;color:var(--folio-muted)}
+.folio-governance-document{display:grid;grid-template-columns:minmax(200px,.28fr) minmax(0,1fr);gap:4vw;align-items:start}
+.folio-governance-document>.folio-governance-work{display:flex;flex-direction:column;align-items:stretch;position:sticky;top:24px;padding:0;border:0;background:none;gap:24px;min-width:0;min-height:0}
+.folio-governance-document .folio-governance-cover-frame{width:min(100%,240px);height:auto;padding:0;align-self:center;background:none;box-shadow:none;flex-shrink:0}
+.folio-governance-document .folio-governance-work-cover{width:100%;height:auto;aspect-ratio:.72;border:0;box-shadow:5px 6px 0 #cfcabc,12px 20px 35px #514c3714}
+.folio-governance-document .folio-governance-work-cover img{width:100%;height:100%;object-fit:cover}
+.folio-governance-document .folio-governance-work-copy{width:100%;min-width:0}
+.folio-governance-document .folio-governance-work-copy h2{font-size:18px;line-height:1.6;font-weight:400;overflow-wrap:anywhere}
+.folio-governance-document .folio-governance-work-copy>p{font-size:11px}
+.folio-governance-document .folio-governance-review-state{display:flex;flex-wrap:wrap;gap:9px;padding-top:20px;margin-top:20px;border-top:1px solid var(--folio-line);font-size:11px}
+.folio-governance-document .folio-governance-review-state strong{font-size:11px;margin-left:0}
+.governance-record-body{min-width:0;padding:0 28px 25px;background:var(--folio-paper-bright)}
+.governance-record-body>.folio-section-switch{margin:0 0 18px;padding:16px 0;border-bottom:1px solid var(--folio-line)}
+.governance-record-body .folio-governance-section-head{margin:0;min-height:62px;padding:10px 0;border-top:0}
+.governance-record-body .folio-governance-section-head h2{font-size:16px;font-weight:400}
+.governance-record-body .folio-governance-translation{padding:18px 0}
+@media(min-width:1900px){.folio-governance-document{grid-template-columns:300px minmax(0,1fr)}}
+@media(max-width:1000px){.folio-governance-document{grid-template-columns:180px minmax(0,1fr);gap:24px}.governance-record-body{padding-inline:20px}.folio-governance-document .folio-governance-work-copy h2{font-size:15px}}
+@media(max-width:760px){.folio-governance-document{display:block}.folio-governance-document>.folio-governance-work{position:static;display:grid;grid-template-columns:70px minmax(0,1fr);gap:20px;padding-bottom:24px}.folio-governance-document .folio-governance-cover-frame{width:70px;align-self:start}.folio-governance-document .folio-governance-work-copy h2{font-size:13px;line-height:1.5}.folio-governance-document .folio-governance-review-state{padding:10px 0 0;margin:10px 0 0;gap:7px}.folio-governance-document .folio-governance-review-state>span{display:none}.governance-record-body{padding:0 14px 16px}.folio-governance-modebar{margin-bottom:20px}.governance-record-body .folio-governance-section-head{align-items:flex-start;gap:12px;flex-wrap:wrap}.governance-record-body .folio-governance-section-tools{gap:8px}.governance-record-body .folio-governance-section-tools>button{font-size:11px;padding-inline:9px}}

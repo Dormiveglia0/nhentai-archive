@@ -59,6 +59,7 @@ export function useTasksState(): TasksViewModel {
   const [notice, setNotice] = useState<string | null>(null);
   const jobsRequestRef = useRef(0);
   const logsRequestRef = useRef(0);
+  const logsJobRef = useRef<number | null>(null);
 
   const load = useCallback(async (preferredFocusId?: number | null, initial = false, showRefreshing = false) => {
     const requestId = ++jobsRequestRef.current;
@@ -88,10 +89,16 @@ export function useTasksState(): TasksViewModel {
   const loadLogs = useCallback(async (jobId: number | null) => {
     const requestId = ++logsRequestRef.current;
     if (!jobId) {
+      logsJobRef.current = null;
       setLogs([]);
+      setLogsLoading(false);
       return;
     }
-    setLogsLoading(true);
+    if (logsJobRef.current !== jobId) {
+      logsJobRef.current = jobId;
+      setLogs([]);
+      setLogsLoading(true);
+    }
     try {
       const payload = await api.jobLogs(jobId);
       if (requestId === logsRequestRef.current) setLogs(payload.result);
@@ -155,7 +162,7 @@ export function useTasksState(): TasksViewModel {
 
   useEffect(() => {
     void loadLogs(focus?.id ?? null);
-  }, [focus?.id, loadLogs]);
+  }, [focus, loadLogs]);
 
   const summary = useMemo<TaskSummary>(() => {
     const base: TaskSummary = {

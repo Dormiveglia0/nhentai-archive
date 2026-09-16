@@ -1,8 +1,8 @@
-import { ArrowDown, ArrowRight } from "lucide-react";
-import { useLayoutEffect, useRef } from "react";
+import { ArrowRight } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import type { GovernanceAggregate, GovernanceTranslateSuggestion, MetadataFieldDiff } from "../../lib/api";
-import { Stagger, StaggerItem } from "../../lib/motion";
+import { Stagger, StaggerItem, usePrefersReducedMotion } from "../../lib/motion";
 import { GovernanceTranslationPanel } from "./GovernanceTranslationPanel";
 import { normalize, type FieldEdit, sourceLabel, splitValues, toEditableSource } from "./governanceHelpers";
 
@@ -57,7 +57,6 @@ export function MetadataEditor({
     <section id="governance-metadata" className="folio-governance-fields">
       <header className="folio-governance-section-head">
         <div>
-          <span>Decision table</span>
           <h2>字段决策</h2>
         </div>
         <div className="folio-governance-section-tools">
@@ -110,49 +109,51 @@ function MetadataCard({
   const changed = isChanged(field, edit);
   const missingRequired = !normalize(field.working_value) && REQUIRED_FIELDS.has(field.field);
   const needsDecision = missingRequired || (Boolean(normalize(field.source_value)) && field.differs_from_source);
-  return (
-    <article className={`folio-governance-field-card${needsDecision ? " is-review" : ""}${changed ? " is-changed" : ""}`}>
-      <div className="folio-governance-field-head">
-        <strong>{field.label}</strong>
-        {field.source_value ? <span>{sourceLabel(field.source)}</span> : null}
-        {field.differs_from_source ? <span>来源不同</span> : null}
-        {missingRequired ? <em>必填缺失</em> : null}
-        {changed ? <em className="is-changed">待保存</em> : null}
-      </div>
-      <div className="folio-governance-field-compare">
-        <div className="folio-governance-field-column">
-          <span className="folio-governance-field-label">当前值（库内）</span>
-          <ValueChips value={field.current_value} empty="未设置" />
-        </div>
-        <div className="folio-governance-field-column">
-          <span className="folio-governance-field-label">来源值（解析）</span>
-          <ValueChips value={field.source_value} empty="未解析" accent />
-        </div>
-      </div>
-      <div className="governance-value-transfer" aria-hidden="true"><ArrowRight size={20}/><span>{changed ? "待保存" : "最终值"}</span></div>
-      <div className="folio-governance-field-final">
-        <span className="folio-governance-field-label">本地最终值</span>
-        <AutoGrowTextarea
-          label={`本地最终值：${field.label}`}
-          value={edit?.value ?? ""}
-          onChange={(value) => onChange({ value, source: "manual" })}
-          placeholder="未设置"
-        />
-      </div>
-      <div className="folio-governance-field-actions">
-        <button
-          type="button"
-          disabled={!field.source_value}
-          onClick={() => onChange({ value: field.source_value || "", source: sourceAllowed })}
-        >
-          <ArrowDown size={14}/>采用来源值
-        </button>
-        <button type="button" onClick={() => onChange({ value: field.current_value || "", source: "current" })}>
-          恢复当前
-        </button>
-      </div>
-    </article>
-  );
+  const root = useRef<HTMLElement>(null), source = useRef<HTMLDivElement>(null), current = useRef<HTMLDivElement>(null);
+  const motion = useRef<Animation>(), copy = useRef<HTMLElement>();
+  const reduced = usePrefersReducedMotion();
+  const clearTransfer = () => { motion.current?.cancel(); copy.current?.remove(); };
+  useEffect(() => clearTransfer, []);
+
+  function adopt(from: HTMLElement | null, next: FieldEdit) {
+    clearTransfer();
+    const target = root.current?.querySelector("textarea");
+    if (!reduced && from && target && root.current && next.value) {
+      const bounds = root.current.getBoundingClientRect(), start = from.getBoundingClientRect(), end = target.getBoundingClientRect();
+      const value = document.createElement("span");
+      value.className = "governance-transfer-copy";
+      value.textContent = next.value;
+      value.setAttribute("aria-hidden", "true");
+      Object.assign(value.style, { left: `${start.x - bounds.x}px`, top: `${start.y - bounds.y}px`, width: `${start.width}px` });
+      root.current.append(value);
+      copy.current = value;
+      const animation = value.animate([
+        { transform: "translate(0,0)", opacity: .9 },
+        { transform: `translate(${end.x - start.x}px,${end.y - start.y}px)`, opacity: .65, offset: .7 },
+        { transform: `translate(${end.x - start.x}px,${end.y - start.y}px)`, opacity: 0 },
+      ], { duration: 480, easing: "cubic-bezier(.22,1,.36,1)" });
+      motion.current = animation;
+      void animation.finished.then(() => value.remove(), () => value.remove());
+    }
+    onChange(next);
+  }
+
+  return <article ref={root} className={`folio-governance-field-card${needsDecision ? " is-review" : ""}${changed ? " is-changed" : ""}`}>
+    <div className="folio-governance-field-head"><strong>{field.label}</strong>{field.differs_from_source ? <span>来源不同</span> : null}{missingRequired ? <em>必填缺失</em> : null}{changed ? <em className="is-changed">待保存</em> : null}</div>
+    <div className="governance-comparison-current">
+      <span className="folio-governance-field-label">当前值</span><div ref={current}><ValueChips value={field.current_value} empty="未设置" /></div>
+      <button type="button" onClick={() => adopt(current.current, {value:field.current_value || "",source:"current"})}>恢复当前</button>
+    </div>
+    <div className="governance-comparison-source">
+      <span className="folio-governance-field-label">{field.source_value ? sourceLabel(field.source) : "来源值"}</span><div ref={source}><ValueChips value={field.source_value} empty="未解析" accent /></div>
+      <button type="button" disabled={!field.source_value} onClick={() => adopt(source.current, {value:field.source_value || "",source:sourceAllowed})}>采用来源值<ArrowRight size={15}/></button>
+    </div>
+    <div className="folio-governance-field-final">
+      <span className="folio-governance-field-label">本地最终值</span>
+      <AutoGrowTextarea label={`本地最终值：${field.label}`} value={edit?.value ?? ""} onChange={value => {clearTransfer();onChange({value,source:"manual"});}} placeholder="未设置"/>
+      <div className="governance-value-transfer" aria-hidden="true"><span>{changed ? "待保存" : "当前生效"}</span></div>
+    </div>
+  </article>;
 }
 
 function ValueChips({ value, empty, accent = false }: { value?: string | null; empty: string; accent?: boolean }) {

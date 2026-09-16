@@ -106,6 +106,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <SelectionStage selection={gov.aggregate.work.id} className="folio-governance-document">
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
+                    <div className="governance-record-body">
                     <SectionSwitch label="治理内容" value={section} onChange={setSection} items={[{value: "metadata", label: "元数据"}, {value: "tags", label: "标签映射"}, {value: "review", label: "人工核对"}]} />
                     <SelectionStage selection={section}>
                     {section === "review" ? <>
@@ -142,6 +143,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                     />
                     </> : null}
                     </SelectionStage>
+                    </div>
                   </SelectionStage>
                 ) : null}
                 {!gov.aggregateLoading && gov.aggregate ? (

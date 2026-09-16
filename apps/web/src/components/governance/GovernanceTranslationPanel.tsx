@@ -44,8 +44,7 @@ export function GovernanceTranslationPanel({
         <div className="folio-governance-translation-mark" aria-hidden="true"><Languages size={18} /></div>
         <div>
           <h3 id="governance-translation-title">中文建议</h3>
-          <p>只为标题、副标题和简介生成候选译文；不会自动采纳，也不会自动写库。</p>
-          <small>作者、社团与标签在词典区治理；语言、页数和日期属于结构化字段，不参与翻译。</small>
+          <p>采纳后进入草稿，保存后生效。</p>
         </div>
       </div>
       <div className="folio-governance-translation-controls">

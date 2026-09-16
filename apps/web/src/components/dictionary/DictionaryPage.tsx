@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlertCircle, X, Plus } from "lucide-react";
 import { FadeIn, SelectionStage } from "../../lib/motion";
 import { FolioSheet } from "../folio/ui/FolioSheet";
@@ -13,13 +13,15 @@ import "./DictionaryEditor.css";
 
 export function DictionaryPage({ blurCovers }: { blurCovers: boolean }) {
   const dictionary = useDictionaryState();
+  const origin = useRef<HTMLElement | null>(null);
+  function newTerm() { origin.current = null; dictionary.newLocalTerm(); setEditorOpen(true); }
   const [editorOpen,setEditorOpen] = useState(false);
   function openBulk() { dictionary.setBulkOpen(true); }
   function closeBulk() { dictionary.setBulkOpen(false); }
 
   return (
     <section className={`folio-page-body folio-dictionary-page${blurCovers ? " is-private" : ""}`}>
-      <header className="dictionary-index-head"><h1>词典</h1><div><span><strong>{dictionary.summary?.configured ?? "—"}</strong> 已配置</span><span><strong>{dictionary.summary?.unconfigured ?? "—"}</strong> 未配置</span></div><button type="button" onClick={()=>{dictionary.newLocalTerm();setEditorOpen(true);}}><Plus size={17}/>新建词条</button></header>
+      <header className="dictionary-index-head"><h1>词典</h1><div><span><strong>{dictionary.summary?.configured ?? "—"}</strong> 已配置</span><span><strong>{dictionary.summary?.unconfigured ?? "—"}</strong> 未配置</span></div><button type="button" onClick={newTerm}><Plus size={17}/>新建词条</button></header>
 
       {dictionary.message ? (
         <FadeIn key={dictionary.message} className="folio-dictionary-message" role="status" y={6}>
@@ -46,13 +48,15 @@ export function DictionaryPage({ blurCovers }: { blurCovers: boolean }) {
           onRefresh={() => void dictionary.refreshList()}
           onSuggest={() => void dictionary.suggestBatch()}
           onBulkImport={openBulk}
-          onSelect={(candidate)=>{dictionary.selectCandidate(candidate);setEditorOpen(true);}}
+          onSelect={(candidate, source)=>{origin.current=source;dictionary.selectCandidate(candidate);setEditorOpen(true);}}
           onPage={dictionary.setOffset}
           onLimit={dictionary.updateLimit}
         />
       </div>
-      <FolioSheet open={editorOpen} label="编辑词条" onClose={()=>setEditorOpen(false)} className="dictionary-editor-sheet">
-        <header className="dictionary-sheet-head"><span>词条编辑</span><button type="button" aria-label="关闭词条编辑" onClick={()=>setEditorOpen(false)}><X size={20}/></button></header>
+      <FolioSheet open={editorOpen} label="编辑词条" onClose={()=>setEditorOpen(false)} className="dictionary-editor-sheet" origin={origin.current}>
+        <div className="dictionary-sheet-surface" data-sheet-surface/>
+        <header className="dictionary-sheet-head"><strong className="dictionary-selection-title" data-sheet-anchor>{dictionary.form.original_text || "新建词条"}</strong><button type="button" aria-label="关闭词条编辑" onClick={()=>setEditorOpen(false)}><X size={20}/></button></header>
+        <div data-sheet-content>
         <SelectionStage selection={dictionary.selectedKey} className="dictionary-edit-column">
         <DictionaryEditor
           value={dictionary.form}
@@ -61,7 +65,7 @@ export function DictionaryPage({ blurCovers }: { blurCovers: boolean }) {
           translating={dictionary.translating}
           mtError={dictionary.mtError}
           onChange={dictionary.updateForm}
-          onNew={dictionary.newLocalTerm}
+          onNew={newTerm}
           onTranslate={() => void dictionary.machineTranslate()}
         />
 
@@ -88,6 +92,7 @@ export function DictionaryPage({ blurCovers }: { blurCovers: boolean }) {
         onDelete={() => void dictionary.deleteTerm()}
       />
 
+      </div>
       </FolioSheet>
       <FolioSheet open={dictionary.bulkOpen} label="批量导入词典" onClose={closeBulk}>
         <div className="dictionary-import-sheet">

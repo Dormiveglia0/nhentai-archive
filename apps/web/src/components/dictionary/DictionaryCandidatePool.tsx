@@ -1,4 +1,4 @@
-import { Languages, RefreshCw, Upload } from "lucide-react";
+import { ArrowRight, Languages, RefreshCw, Upload } from "lucide-react";
 
 import type { DictionaryCandidate } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
@@ -21,7 +21,7 @@ type Props = {
   onRefresh: () => void;
   onSuggest: () => void;
   onBulkImport: () => void;
-  onSelect: (candidate: DictionaryCandidate) => void;
+  onSelect: (candidate: DictionaryCandidate, origin: HTMLElement | null) => void;
   onPage: (offset: number) => void;
   onLimit: (limit: number) => void;
 };
@@ -107,7 +107,7 @@ export function DictionaryCandidatePool(props: Props) {
           <span>状态</span>
         </div>
         <Stagger className="folio-dictionary-row-list">
-          {props.candidates.map((candidate) => {
+          {props.candidates.map((candidate, index) => {
             const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
             const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";
             const rowKey = candidateRowKey(candidate);
@@ -117,12 +117,14 @@ export function DictionaryCandidatePool(props: Props) {
                   type="button"
                   className={props.selectedKey === rowKey ? "folio-dictionary-row is-active" : "folio-dictionary-row"}
                   aria-pressed={props.selectedKey === rowKey}
-                  onClick={() => props.onSelect(candidate)}
+                  onClick={event => props.onSelect(candidate, event.currentTarget.querySelector(".folio-dictionary-term strong"))}
                 >
+                  <span className="dictionary-entry-index">{String(props.offset + index + 1).padStart(3, "0")}</span>
                   <span className="folio-dictionary-term">
                     <i data-type={candidate.type || "tag"}>{typeLabel(candidate.type)}</i>
                     <strong title={label}>{label}</strong>
                   </span>
+                  <span className="dictionary-entry-link" aria-hidden="true"><ArrowRight size={22}/></span>
                   <span className={display === "未配置" ? "folio-dictionary-display is-muted" : "folio-dictionary-display"}>{display}</span>
                   <span className="folio-dictionary-impact">{candidate.impact_work_count ?? 0} 部作品</span>
                   <span className={`folio-dictionary-status is-${statusTone(candidate)}`}>

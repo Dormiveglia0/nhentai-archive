@@ -65,8 +65,9 @@ export function TaskInspector(props: Props) {
 
   return (
     <SelectionStage selection={job.id} className="folio-tasks-inspector" role="complementary" aria-label={`任务 ${job.id} 详情`}>
+      <div className="task-inspection-ticket" data-sheet-anchor>
       <header className="folio-tasks-inspector-head">
-        <div><span>Task log</span><h2>{jobTypeLabel(job.type)}</h2><p className={`is-${statusTone(job.status)}`}><i aria-hidden="true" />{statusLabel(job.status)}</p></div>
+        <div><h2>{jobTypeLabel(job.type)}</h2><p className={`is-${statusTone(job.status)}`}><i aria-hidden="true" />{statusLabel(job.status)}</p></div>
         <strong>#{job.id}</strong>
       </header>
 
@@ -77,6 +78,8 @@ export function TaskInspector(props: Props) {
         <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{formatDurationHint(job)}</small></div>
       </section>
 
+      </div>
+      <div className="task-inspection-body" data-sheet-content>
       <InspectorSection title="任务日志" className="folio-tasks-log-section">
         {props.logsLoading ? <p className="folio-tasks-boundary">正在读取日志…</p> : props.logs.length ? (
           <ol className="folio-tasks-log">
@@ -134,6 +137,7 @@ export function TaskInspector(props: Props) {
       </InspectorSection>
 
 
+      </div>
     </SelectionStage>
   );
 }
