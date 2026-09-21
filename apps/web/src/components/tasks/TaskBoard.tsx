@@ -17,20 +17,21 @@ export function TaskBoard({ jobs, filter, onFilter, onOpen }: { jobs: Job[]; fil
     {lanes.map(({ key, label, icon: Icon }, index) => {
       const statuses: Job["status"][] = JOB_STATUS_GROUPS[key] ?? ["queued"];
       const items = jobs.filter(job => statuses.includes(job.status));
-      return <section key={key} className={`task-lane${filter === key ? " is-selected" : ""}`}>
+      return <m.section layout="position" transition={reduced?{duration:0}:{type:"spring",stiffness:130,damping:26}} key={key} className={`task-lane is-${key}${filter === key ? " is-selected" : ""}`}>
         <button className="task-lane-heading" type="button" onClick={() => onFilter(filter === key ? "all" : key)} aria-pressed={filter === key}>
           <span className="task-lane-index">0{index + 1}</span><Icon size={18}/><span>{label}</span><strong>{items.length}</strong>
         </button>
+        <div className={`task-state-symbol${items.length?" has-jobs":""}`} aria-hidden="true"><Icon strokeWidth={.65}/><span>{String(items.length).padStart(2,"0")}</span></div>
         <div className="task-lane-stack">
-          {items.length ? items.slice(0, 3).map((job, slot) => <m.button key={job.id} layoutId={`task-object-${job.id}`} className={`task-object is-${job.status}`} type="button" aria-label={`展开任务 ${job.id}：${jobTypeLabel(job.type)}`} onClick={event => onOpen(job.id, event.currentTarget)} initial={false} whileHover={reduced ? undefined : { y: -8, rotate: 0 }} transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 190, damping: 23 }} style={{ zIndex: 4 - slot }}>
+          {items.length ? items.slice(0, 1).map((job, slot) => <m.button key={job.id} layoutId={`task-object-${job.id}`} className={`task-object is-${job.status}`} type="button" aria-label={`展开任务 ${job.id}：${jobTypeLabel(job.type)}`} onClick={event => onOpen(job.id, event.currentTarget)} initial={false} whileHover={reduced ? undefined : { y: -8, rotate: 0 }} transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 190, damping: 23 }} style={{ zIndex: 4 - slot }}>
             <span className="task-object-number">#{job.id}<ArrowUpRight size={15}/></span>
             <strong>{jobTypeLabel(job.type)}</strong><span className="task-object-target">{job.meta?.title || targetLabel(job)}</span>
             <span className="task-object-progress"><m.i initial={false} animate={{scaleX:Math.max(0,Math.min(100,job.progress.percent))/100}} transition={{duration:reduced ? 0 : .5}}/></span>
             <span className="task-object-stage">{stageLabel(job.stage)}<b>{job.progress.percent}%</b></span>
           </m.button>) : <div className="task-lane-empty"><span/><span/><small>暂无{label}任务</small></div>}
         </div>
-        {items.length > 3 && <button className="task-lane-more" type="button" onClick={() => onFilter(key)}>查看全部 {items.length} 项 <ArrowUpRight size={14}/></button>}
-      </section>;
+        {items.length > 1 && <button className="task-lane-more" type="button" onClick={() => onFilter(key)}>查看全部 {items.length} 项 <ArrowUpRight size={14}/></button>}
+      </m.section>;
     })}
   </div>;
 }

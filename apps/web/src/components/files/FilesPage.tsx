@@ -27,7 +27,9 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
 
   return (
     <section className="folio-page-body folio-files-page">
-      <FileOverviewStrip overview={files.overview} />
+      <div className={`files-composition${files.category!=="all"?" has-selection":""}`}>
+      <FileOverviewStrip overview={files.overview} category={files.category} onCategory={value=>{files.setCategory(value);setSection("inventory");}} />
+      <div className="files-working-document">
       {files.error ? <FadeIn key={files.error} className="folio-files-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{files.error}</p></FadeIn> : null}
       {files.actionNotice ? (
         <FadeIn
@@ -44,8 +46,6 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
       <SectionSwitch label="文件工作区" value={section} onChange={setSection} items={[{value: "inventory", label: "文件清单"}, {value: "maintenance", label: "扫描与清理"}]} />
       <div hidden={section !== "inventory"}>
       <FileToolbar
-        category={files.category}
-        onCategory={files.setCategory}
         query={files.query}
         onQuery={files.setQuery}
         statusFilter={files.statusFilter}
@@ -106,6 +106,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
         onConfirm={files.confirmDelete}
         onCancel={files.cancelDelete}
       />
+      </div></div>
     </section>
   );
 }

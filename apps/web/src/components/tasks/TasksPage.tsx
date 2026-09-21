@@ -40,7 +40,9 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
       {tasks.notice ? <FadeIn key={tasks.notice} className="folio-tasks-message" role="status" y={6}><span aria-hidden="true" /><p>{tasks.notice}</p></FadeIn> : null}
 
       <header className="task-ledger-head"><div><h1>队列</h1><span>{tasks.summary.total} 项任务</span></div></header>
+      <div className={`task-workspace${tasks.statusFilter!=="all"?" has-selection":""}`}>
       <TaskBoard jobs={tasks.jobs} filter={tasks.statusFilter} onFilter={tasks.setStatusFilter} onOpen={(id, source) => { tasks.setStatusFilter("all"); tasks.setQuery(""); focus(id, source); }}/>
+      <div className="task-record-document">
       <section className="task-status-overview">
         <div className="folio-tasks-tabs" role="group" aria-label="任务状态筛选">
           {STATUS_TABS.map((tab) => (
@@ -79,6 +81,7 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
           />
         </section>
       </FadeIn>
+      </div></div>
       <FolioSheet open={detailOpen && Boolean(tasks.focus)} label="任务详情" onClose={()=>setDetailOpen(false)} className="task-detail-sheet" origin={origin.current}>
         <div className="task-detail-surface" data-sheet-surface/>
         <header className="task-detail-head"><span>任务 #{tasks.focus?.id}</span><button type="button" aria-label="关闭任务详情" onClick={()=>setDetailOpen(false)}><X size={20}/></button></header>

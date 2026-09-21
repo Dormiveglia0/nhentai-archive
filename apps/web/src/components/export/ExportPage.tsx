@@ -20,8 +20,9 @@ export function ExportPage({ initialWorkId, blurCovers }: { initialWorkId?: numb
   return (
     <section className="folio-page-body folio-export-page">
       <header className="export-workflow-head"><h1>导出</h1><div><span>就绪 <strong>{exports.summary?.ready ?? "—"}</strong></span><span>警告 <strong>{exports.summary?.warnings ?? "—"}</strong></span><span>阻塞 <strong>{exports.summary?.blocked ?? "—"}</strong></span></div></header>
-      <nav className="export-workflow-steps" aria-label="导出步骤"><button type="button" aria-current={step==="source"?"step":undefined} onClick={()=>setStep("source")}><span>01</span>选择作品<small>{selectionCount} 已选</small></button><ArrowRight size={20}/><button type="button" aria-current={step==="package"?"step":undefined} onClick={()=>setStep("package")}><span>02</span>配置与下载<small>CBZ / ZIP</small></button></nav>
+      <div className="export-composition"><nav className="export-workflow-steps" aria-label="导出步骤"><button type="button" aria-current={step==="source"?"step":undefined} onClick={()=>setStep("source")}><span>01</span>选择作品<small>{selectionCount} 已选</small></button><ArrowRight size={20}/><button type="button" aria-current={step==="package"?"step":undefined} onClick={()=>setStep("package")}><span>02</span>配置与下载<small>CBZ / ZIP</small></button></nav>
 
+      <div className="export-working-document">
       {exports.error ? <FadeIn key={exports.error} className="folio-export-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{exports.error}</p></FadeIn> : null}
       {exports.notice ? <FadeIn key={exports.notice} className="folio-export-message" role="status" y={6}><span aria-hidden="true" /><p>{exports.notice}</p></FadeIn> : null}
       {exports.loading ? <div className="folio-export-loading" role="status">正在读取导出队列…</div> : null}
@@ -41,6 +42,7 @@ export function ExportPage({ initialWorkId, blurCovers }: { initialWorkId?: numb
           {step==="source" && <button className="export-next" type="button" disabled={!selectionCount} onClick={()=>{setStep("package");document.querySelector(".folio-scroll")?.scrollTo({top:0});}}>配置 {selectionCount} 部作品<ArrowRight size={18}/></button>}
         </>
       ) : null}
+      </div></div>
     </section>
   );
 }

@@ -34,29 +34,21 @@
 
 /* Status objects and their expanded task document share one source geometry. */
 .task-ledger-head{padding-bottom:22px;margin-bottom:0}
-.task-board.task-ledger-states{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:34px;margin:30px 0 48px}
-.task-lane{min-width:0;position:relative;border-top:1px solid var(--folio-line-strong)}
-.task-ledger-states .task-lane-heading{display:flex;width:100%;align-items:center;gap:12px;padding:20px 0;color:var(--folio-ink);text-align:left}
-.task-lane-heading .task-lane-index{font:10px ui-monospace,monospace;color:var(--folio-muted);margin-right:6px}
-.task-lane-heading>strong{margin-left:auto;font-size:36px;font-weight:300}
+.task-board.task-ledger-states{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;margin:46px 0 52px;perspective:1500px}
+.task-lane{min-width:0;position:relative;padding:22px;background:var(--folio-paper-bright);box-shadow:3px 5px 0 var(--folio-paper-deep),8px 18px 28px #2428220a;transform:rotateY(-10deg) rotateZ(-2deg);transition:transform .5s cubic-bezier(.22,1,.36,1),background .3s}
+.task-lane:nth-child(2n){margin-top:28px;margin-bottom:-28px}.task-lane:hover,.task-lane.is-selected{transform:rotateY(0) rotateZ(0) translateY(-10px)}
+.task-ledger-states .task-lane-heading{display:flex;width:100%;align-items:center;gap:10px;padding:0 0 16px;border-bottom:1px solid var(--folio-line);color:var(--folio-ink);text-align:left}
+.task-lane-heading .task-lane-index{font:10px ui-monospace,monospace;color:var(--folio-muted);margin-right:auto}.task-lane-heading>strong{font-size:16px;font-weight:400}
 .task-lane-heading[aria-pressed=true]{color:var(--folio-red)}
-.task-lane-stack{min-height:200px;padding:8px 8px 0 0;perspective:1000px}
-.task-ledger-states .task-object{width:100%;display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:20px;background:linear-gradient(115deg,#faf8ee,#eeebdf);color:var(--folio-ink);text-align:left;box-shadow:3px 4px 0 #ccc7b7,7px 13px 25px #504b3310;border:1px solid #fffdf7;position:relative;transform-origin:50% 100%}
-.task-object+.task-object{margin-top:12px}
-.task-ledger-states .task-object>strong{font-size:21px;line-height:1.2;font-weight:400}
-.task-object-number{display:flex;justify-content:space-between;font:11px ui-monospace,monospace;color:var(--folio-muted)}
-.task-object-target{font-size:11px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-.task-object-progress{height:2px;background:var(--folio-line);margin:8px 0 2px}
-.task-ledger-states .task-object-progress i{position:static;display:block;width:100%;height:100%;transform-origin:left;background:var(--folio-green)}
-.task-object-stage{display:flex;justify-content:space-between;font-size:10px;color:var(--folio-muted);gap:8px}
-.task-object-stage b{font:11px ui-monospace,monospace}
-.task-object.is-running .task-object-number>svg{animation:task-live 2s ease-in-out infinite;color:var(--folio-green)}
-.task-object.is-failed{border-left:2px solid var(--folio-red)}
-.task-lane-empty{height:192px;display:grid;align-content:center;justify-items:center;gap:12px;color:var(--folio-muted)}
-.task-lane-empty>span{display:block;width:70%;height:1px;background:var(--folio-line);transform:skewY(-5deg)}
-.task-lane-empty>span:nth-child(2){width:55%;opacity:.5}
-.task-lane-empty small{font-size:11px;margin-top:18px}
-.task-ledger-states .task-lane-more{padding:18px 0;font-size:11px;gap:8px}
+.task-state-symbol{display:flex;align-items:center;justify-content:center;gap:16px;height:170px;color:var(--folio-green)}.task-state-symbol>svg{width:88px;height:88px}.task-state-symbol>span{font:44px ui-monospace,monospace;font-weight:200;color:var(--folio-muted)}
+.task-lane.is-active .task-state-symbol.has-jobs>svg{animation:task-symbol-turn 18s linear infinite}.task-lane.is-attention .task-state-symbol{color:var(--folio-red)}
+.task-lane-stack{min-height:158px}
+.task-ledger-states .task-object{width:100%;display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:18px 0 8px;background:none;color:var(--folio-ink);text-align:left;border-top:1px solid var(--folio-line);position:relative}
+.task-ledger-states .task-object>strong{font-size:18px;line-height:1.2;font-weight:400}.task-object-number{display:flex;justify-content:space-between;font:10px ui-monospace,monospace;color:var(--folio-muted)}.task-object-target{font-size:11px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.task-object-progress{height:2px;background:var(--folio-line);margin:8px 0 2px}.task-ledger-states .task-object-progress i{position:static;display:block;width:100%;height:100%;transform-origin:left;background:var(--folio-green)}.task-object-stage{display:flex;justify-content:space-between;font-size:10px;color:var(--folio-muted);gap:8px}.task-object-stage b{font:11px ui-monospace,monospace}
+.task-lane-empty{min-height:158px;display:flex;align-items:center;justify-content:center;border-top:1px solid var(--folio-line);color:var(--folio-muted)}.task-lane-empty>span{display:none}.task-lane-empty small{font-size:11px}.task-ledger-states .task-lane-more{padding:16px 0 0;font-size:11px;gap:8px}
+@keyframes task-symbol-turn{to{transform:rotate(360deg)}}
+.folio.is-background .task-state-symbol>svg,.folio.is-scrolling .task-state-symbol>svg,.app-route-archive[aria-hidden=true] .task-state-symbol>svg{animation-play-state:paused}
 .task-detail-sheet{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;padding:30px 5vw 50px;background:transparent;border:0;box-shadow:none;isolation:isolate}
 .task-detail-sheet::backdrop{background:transparent}
 .task-detail-surface{position:fixed;inset:0;background:#eceae2fa;z-index:-1}
@@ -74,3 +66,11 @@
 @media(max-width:1000px){.task-board.task-ledger-states{gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}.task-lane-stack{min-height:160px}.task-lane-empty{height:160px}.task-detail-sheet .folio-tasks-inspector{gap:25px;grid-template-columns:240px minmax(0,1fr)}}
 @media(max-width:680px){.task-board.task-ledger-states{gap:18px 12px;margin-top:22px}.task-lane-heading .task-lane-index{display:none}.task-ledger-states .task-lane-heading{gap:7px}.task-lane-heading>strong{font-size:28px}.task-ledger-states .task-object{padding:13px;gap:10px}.task-ledger-states .task-object>strong{font-size:16px}.task-object-stage{font-size:9px}.task-lane-heading>span{font-size:11px}.task-detail-sheet{padding:20px}.task-detail-sheet .folio-tasks-inspector{display:block;margin-top:10px}.task-inspection-ticket{position:relative;top:0;padding:20px}.task-inspection-ticket .folio-tasks-inspector-head{flex-direction:row;align-items:center}.task-inspection-ticket .folio-tasks-inspector-head>strong{font-size:32px}.task-inspection-ticket .folio-tasks-progress-detail{flex-direction:row;align-items:center;margin-top:18px;padding-top:18px}.task-inspection-body{margin-top:24px;padding:0 16px 20px}}
 @media(prefers-reduced-motion:reduce){.task-object.is-running .task-object-number>svg{animation:none}}
+
+@media(max-width:1000px){.task-lane{padding:20px;transform:none}.task-lane:nth-child(2n){margin:0}.task-state-symbol{height:120px}.task-state-symbol>svg{width:62px;height:62px}.task-state-symbol>span{font-size:34px}}
+@media(max-width:680px){.task-lane{padding:14px}.task-state-symbol{gap:8px;height:104px}.task-state-symbol>svg{width:46px;height:46px}.task-state-symbol>span{font-size:28px}.task-lane-stack,.task-lane-empty{min-height:145px}.task-ledger-states .task-object{padding-inline:0}.task-ledger-states .task-lane-more{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.task-lane{transition:none}.task-lane.is-active .task-state-symbol.has-jobs>svg{animation:none}}
+
+.task-record-document{min-width:0}.task-workspace.has-selection{display:grid;grid-template-columns:220px minmax(0,1fr);gap:36px;align-items:start;margin-top:36px}.has-selection .task-board.task-ledger-states{grid-template-columns:1fr;gap:12px;perspective:none;margin:0;position:sticky;top:20px}.has-selection .task-lane{transform:none;margin:0;padding:16px;box-shadow:none;background:var(--folio-paper-deep)}.has-selection .task-lane.is-selected{background:var(--folio-paper-bright);border-left:3px solid var(--folio-green)}.has-selection .task-lane-heading{padding:0;border:0}.has-selection .task-state-symbol,.has-selection .task-lane-stack,.has-selection .task-lane-more{display:none}.has-selection .task-record-document{background:var(--folio-paper-bright);padding:20px}.has-selection .task-record-row-main{grid-template-columns:45px minmax(100px,1fr) minmax(100px,1fr) 85px}.has-selection .task-record-time{grid-column:3}.has-selection .task-record-progress{grid-column:4}
+@media(max-width:900px){.task-workspace.has-selection{display:block;margin-top:24px}.has-selection .task-board.task-ledger-states{grid-template-columns:repeat(2,minmax(0,1fr));position:static;margin-bottom:24px}.has-selection .task-record-document{padding:14px}}
+@media(max-width:680px){.has-selection .task-record-row-main{grid-template-columns:44px minmax(0,1fr) 88px}.has-selection .task-record-time{grid-column:2}.has-selection .task-record-progress{grid-column:3}}

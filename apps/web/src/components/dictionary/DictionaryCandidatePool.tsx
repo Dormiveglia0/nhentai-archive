@@ -81,10 +81,12 @@ export function DictionaryCandidatePool(props: Props) {
         </div>
       </header>
 
+      <nav className="dictionary-type-index" aria-label="词条类型">{TYPE_OPTIONS.map((item,index)=><button type="button" key={item.value} aria-pressed={props.typeFilter===item.value} onClick={()=>props.onTypeFilter(item.value)}><small>{String(index+1).padStart(2,"0")}</small><span>{item.label}</span><ArrowRight size={15}/></button>)}</nav>
+      <div className="dictionary-index-content">
       <div className="folio-dictionary-filters">
         <FolioSearchField value={props.query} onChange={props.onQuery} placeholder="搜索原文或中文词条" />
         <div className="folio-dictionary-filter-row">
-          <FolioSelect label="类型" value={props.typeFilter} options={TYPE_OPTIONS} onChange={props.onTypeFilter} />
+
           <FolioSelect label="状态" value={props.status} options={STATUS_OPTIONS} onChange={props.onStatus} />
         </div>
         <button
@@ -153,6 +155,7 @@ export function DictionaryCandidatePool(props: Props) {
           onChange={(value) => props.onLimit(Number(value))}
         />
       </footer>
+      </div>
     </section>
   );
 }

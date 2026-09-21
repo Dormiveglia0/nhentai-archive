@@ -12,7 +12,7 @@ test('任务状态卡对应实际记录，手动刷新同步获取日志', async
     const matching = jobs.filter((job: {status:string}) => states.includes(job.status));
     const lane = page.locator('.task-lane').nth(i);
     await expect(lane.locator('.task-lane-heading strong')).toHaveText(String(matching.length));
-    await expect(lane.locator('.task-object')).toHaveCount(Math.min(matching.length, 3));
+    await expect(lane.locator('.task-object')).toHaveCount(Math.min(matching.length, 1));
   }
   await page.locator('.task-object').first().click();
   const dialog = page.getByRole('dialog', {name:'任务详情', exact:true});

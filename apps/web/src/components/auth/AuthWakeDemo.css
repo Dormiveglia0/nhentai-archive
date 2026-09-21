@@ -1,8 +1,8 @@
-.auth-wake-demo { --folio-paper:#19231f; --folio-paper-bright:#e5ebe2; --folio-ink:#e5ebe2; --folio-muted:#acb9ad; --folio-line:#ffffff25; --folio-line-strong:#829588; --folio-red:#deb374; --folio-paper-deep:#34443a; --wake-topbar: 64px; --wake-start-y: 50dvh; --wake-start-x: 0px; --wake-start-scale: .5; display: block; overflow: clip; cursor: default; }
+.auth-wake-demo { --folio-paper:#e9e7e0; --folio-paper-bright:#f7f6ef; --folio-ink:#242822; --folio-muted:#626b63; --folio-line:#24282225; --folio-line-strong:#829588; --folio-red:#9d6024; --folio-paper-deep:#d8d5ca; --wake-topbar: 64px; --wake-start-y: 50dvh; --wake-start-x: 0px; --wake-start-scale: .5; display: block; overflow: clip; cursor: default; }
 .auth-wake-real-app { position: absolute; inset: 0; z-index: 3; animation: wake-app-enter 320ms ease-out backwards; }
 .auth-wake-awake > .auth-wake-binding, .auth-wake-awake > .auth-wake-registration, .auth-wake-awake::before, .auth-wake-awake::after { display: none; }
 .auth-wake-preview { display: grid; justify-items: start; gap: 12px; }
-.auth-wake-access { width: min(480px,calc(100% - 48px)); position: absolute; z-index: 8; top: 62%; left: 50%; transform: translate(-50%,-50%); }
+.auth-wake-access { width: min(480px,calc(100% - 48px)); padding:36px; background:var(--folio-paper-bright); box-shadow:5px 6px 0 var(--folio-paper-deep),16px 30px 50px #2428220c; position: absolute; z-index: 8; top: 50%; left: 72%; transform: translate(-50%,-50%); }
 .auth-wake-identity { display: flex; align-items: center; gap: 13px; margin-bottom: 32px; }
 .auth-wake-identity > span { display: grid; place-items: center; width: 39px; height: 39px; background:#deb374; color:#19231f; font-size:18px; font-weight: 600; letter-spacing: -.08em; clip-path: polygon(0 0,76% 0,100% 24%,100% 100%,0 100%); }
 .auth-wake-identity > strong { font-size: 18px; text-transform: uppercase; font-weight: 600; letter-spacing: .1em; }
@@ -27,7 +27,7 @@
 .auth-wake-submit:disabled { opacity: 1; cursor: wait; }
 .auth-wake-submit > svg { transition: translate .3s; }
 .auth-wake-submit:hover > svg:not(.spin) { translate: 3px; }
-.auth-wake-feedback { color:#ffb4a0; font-size: 12px; min-height: 24px; margin-top: 14px; }
+.auth-wake-feedback { color:#9b3f2e; font-size: 12px; min-height: 24px; margin-top: 14px; }
 .auth-wake-feedback p { margin: 0; overflow-wrap: anywhere; }
 .auth-wake-form-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--folio-muted); }
 .auth-wake-form-foot p { margin: 0; }
@@ -35,10 +35,10 @@
 .auth-wake-status { display: grid; gap: 18px; color: var(--folio-muted); font-size: 13px; overflow-wrap: anywhere; }
 .auth-wake-status button { min-height: 44px; padding: 0 14px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); }
 .auth-wake-connecting { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--folio-muted); font-size: 13px; }
-.auth-wake-emblem { width:min(480px,80vw); position:absolute; left:50%; top:28%; transform:translate(-50%,-50%); pointer-events:none; }
+.auth-wake-emblem { width:min(560px,43vw); position:absolute; left:29%; top:48%; transform:translate(-50%,-50%); pointer-events:none; }
 .auth-wake-emblem svg { width:100%;height:100%;overflow:visible; }
 .auth-access-track { stroke:#829588; stroke-width:.7; stroke-dasharray:8 5; }
-.auth-access-left,.auth-access-right { fill:#dce5d8; transition:transform .6s cubic-bezier(.22,1,.36,1); }
+.auth-access-left,.auth-access-right { fill:#626b63; transition:transform .6s cubic-bezier(.22,1,.36,1); }
 .auth-wake-demo.is-focused .auth-access-left { transform:translateX(-10px); }
 .auth-wake-demo.is-focused .auth-access-right { transform:translateX(10px); }
 .auth-access-key { stroke:#deb374; stroke-width:2; transform-origin:256px 130px; animation:wake-key-breathe 4s ease-in-out infinite; }
@@ -48,7 +48,7 @@
 .auth-wake-registration span { position: absolute; left: 5vw; right: 5vw; height: 1px; background: var(--folio-line); }
 .auth-wake-registration span:first-child { top: 10vh; }
 .auth-wake-registration span:last-child { bottom: 10vh; }
-.auth-wake-error .auth-wake-field { border-color:#ffb4a0; }
+.auth-wake-error .auth-wake-field { border-color:#9b3f2e; }
 .auth-wake-error .auth-wake-access { animation: wake-register-error .3s ease-out; }
 .auth-wake-success .auth-wake-access { pointer-events: none; animation: wake-form-exit 180ms ease-out both; }
 .auth-wake-success .auth-wake-emblem { opacity: 0; scale: .94; transition: opacity .3s, scale .4s; }
@@ -64,7 +64,7 @@
 @keyframes wake-app-enter { from { opacity: 0; } to { opacity: 1; } }
 @keyframes wake-register-error { 0%,100% { transform: translate(-50%,-50%); } 25% { transform: translate(calc(-50% - 3px),-50%); } 60% { transform: translate(calc(-50% + 2px),-50%); } }
 @media (max-width: 760px) {
-  .auth-wake-access { width: min(480px,calc(100% - 48px)); top: 61%; left: 50%; }
+  .auth-wake-access { width: min(480px,calc(100% - 48px)); padding:36px; background:var(--folio-paper-bright); box-shadow:5px 6px 0 var(--folio-paper-deep),16px 30px 50px #2428220c; top: 61%; left: 50%; }
   .auth-wake-emblem { width:min(380px,85vw); left:50%; top:25%; }
   .auth-wake-identity { margin-bottom: 28px; }
   .auth-wake-registration span:first-child { top: 6vh; }
@@ -80,3 +80,8 @@
 @media (prefers-reduced-motion: reduce) { .auth-wake-demo *, .auth-wake-demo *::before, .auth-wake-demo *::after { animation: none !important; transition: none !important; } .auth-wake-scan { display: none; } }
 
 @media(max-height:620px) and (max-width:760px){.auth-wake-access{top:50%}}
+
+@media(max-width:900px){.auth-wake-emblem{left:50%;top:25%;width:min(320px,70vw)}.auth-wake-access{left:50%;top:61%;padding:26px}}
+@media(max-height:650px) and (min-width:901px){.auth-wake-access{padding:24px}.auth-wake-emblem{width:35vw}}
+@media(max-width:520px){.auth-wake-access{padding:24px 20px}.auth-wake-identity{margin-bottom:24px}.auth-wake-field{grid-template-columns:minmax(0,1fr) 40px 104px}.auth-wake-access h1{font-size:25px}}
+@media(max-height:620px) and (max-width:900px){.auth-wake-access{top:50%;padding-block:20px}.auth-wake-emblem{display:none}}

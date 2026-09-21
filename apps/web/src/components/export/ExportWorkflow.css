@@ -1,8 +1,10 @@
 .export-workflow-head { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:32px; }
 .export-workflow-head h1 { font-size:30px; font-weight:500; margin:0; }.export-workflow-head>div{display:flex;gap:24px;font-size:12px;color:var(--folio-muted)}.export-workflow-head strong{color:var(--folio-ink);font-weight:500}
-.export-workflow-steps { display:flex; align-items:center; gap:30px; border-block:1px solid var(--folio-line); margin-bottom:30px; }
-.export-workflow-steps button { flex:1;display:flex;align-items:center;gap:18px;padding:24px 18px;border:0;background:none;color:var(--folio-muted);font-size:18px;text-align:left;transition:background .3s,color .3s; }
-.export-workflow-steps button>span{font-size:36px;font-weight:300}.export-workflow-steps small{margin-left:auto;font-size:12px}.export-workflow-steps [aria-current]{background:var(--folio-ink);color:var(--folio-paper-bright)}
+.export-composition{display:grid;grid-template-columns:240px minmax(0,1fr);gap:4vw;align-items:start}
+.export-workflow-steps{position:sticky;top:24px;display:flex;flex-direction:column;gap:20px;perspective:1000px;padding-top:24px}
+.export-workflow-steps button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:22px;padding:26px;min-height:208px;border:0;background:var(--folio-paper-deep);color:var(--folio-muted);font-size:17px;text-align:left;transform:rotateY(-12deg) rotate(-3deg);box-shadow:3px 4px 0 #a3a28d44;transition:transform .5s cubic-bezier(.22,1,.36,1),background .3s,color .3s}
+.export-workflow-steps button>span{font-size:42px;font-weight:300}.export-workflow-steps small{font-size:11px;margin-top:auto}.export-workflow-steps [aria-current]{background:var(--folio-paper-bright);color:var(--folio-ink);transform:rotateY(0) rotate(0);border-left:3px solid var(--folio-green)}.export-workflow-steps>svg{rotate:90deg;color:var(--folio-muted);align-self:center}
+.export-working-document{min-width:0;padding:24px;background:var(--folio-paper-bright);box-shadow:4px 5px 0 var(--folio-paper-deep)}
 .folio-export-layout { display:block; }.folio-export-source[hidden],.export-package-workspace[hidden]{display:none}
 .export-package-workspace { max-width:1300px;margin:auto; }.export-package-workspace .folio-export-inspector { position:static; }
 .export-next { position:sticky;float:right;bottom:24px;display:flex;align-items:center;gap:26px;min-height:54px;margin-top:24px;padding:0 24px;background:var(--folio-ink);color:var(--folio-paper-bright);border:0;box-shadow:0 8px 22px #19231f22;font-size:14px; }
@@ -10,3 +12,7 @@
 
 .export-workflow-inspector{display:grid;grid-template-columns:minmax(280px,.7fr) minmax(0,1fr);gap:0 48px;max-height:none;overflow:visible}.export-workflow-inspector>.folio-export-column-head{grid-column:1/-1}.export-workflow-inspector>.export-package-map{align-self:start;position:sticky;top:24px}.export-workflow-inspector>.folio-export-action-zone{grid-column:1/-1}.export-workflow-inspector .folio-export-inspector-head{padding-top:0}.folio-export-work-list{max-height:none}.folio-export-work-list-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}.folio-export-work-item{padding:14px;background:var(--folio-paper-bright);min-height:102px}.folio-export-work-item.is-selected{outline:1px solid var(--folio-red);outline-offset:-1px}
 @media(max-width:800px){.export-workflow-inspector{grid-template-columns:1fr;gap:24px}.export-workflow-inspector>.export-package-map{position:static}.folio-export-work-list-body{grid-template-columns:1fr}}
+
+@media(max-width:1100px){.export-composition{grid-template-columns:175px minmax(0,1fr);gap:24px}.export-workflow-steps button{padding:20px;font-size:15px;min-height:180px}.export-working-document{padding:18px}}
+@media(max-width:760px){.export-composition{display:block}.export-workflow-steps{position:static;flex-direction:row;align-items:stretch;gap:12px;padding:0 0 26px}.export-workflow-steps button{min-height:120px;flex:1;gap:10px;font-size:13px;transform:none;padding:16px}.export-workflow-steps button>span{font-size:26px}.export-workflow-steps small{font-size:9px;margin:0}.export-workflow-steps>svg{rotate:0;transform:none;width:16px;flex-shrink:0}.export-working-document{padding:14px}}
+@media(prefers-reduced-motion:reduce){.export-workflow-steps button{transition:none}}

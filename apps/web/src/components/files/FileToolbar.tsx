@@ -1,14 +1,6 @@
 import { SearchCheck, X } from "lucide-react";
-import { m } from "motion/react";
 
 import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
-
-const CATEGORIES = [
-  { value: "all", label: "全部" },
-  { value: "work", label: "作品" },
-  { value: "orphan", label: "孤立" },
-  { value: "stale", label: "临时" },
-] as const;
 
 const STATUSES = [
   { value: "", label: "全部状态" },
@@ -27,8 +19,6 @@ const SORTS = [
 ] as const;
 
 type Props = {
-  category: string;
-  onCategory: (category: string) => void;
   query: string;
   onQuery: (query: string) => void;
   statusFilter: string;
@@ -43,8 +33,6 @@ type Props = {
 };
 
 export function FileToolbar({
-  category,
-  onCategory,
   query,
   onQuery,
   statusFilter,
@@ -59,21 +47,6 @@ export function FileToolbar({
 }: Props) {
   return (
     <section className="folio-files-toolbar" aria-label="文件筛选与批量操作" aria-busy={busy}>
-      <div className="folio-files-tabs" role="group" aria-label="文件类型">
-        {CATEGORIES.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            aria-pressed={category === item.value}
-            className={category === item.value ? "is-active" : ""}
-            onClick={() => onCategory(item.value)}
-          >
-            {category === item.value ? <m.span layoutId="folio-files-category" className="folio-files-tab-active" /> : null}
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
-
       <div className="folio-files-controls">
         <div className="folio-files-control folio-files-search-control">
           <span>快速定位</span>
