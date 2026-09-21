@@ -3,33 +3,32 @@ import { expect, test } from '@playwright/test';
 test.use({ storageState: process.env.E2E_STORAGE_STATE });
 test.skip(!process.env.E2E_STORAGE_STATE, '需要隔离的真实测试会话');
 
-test('任务状态卡对应实际记录，手动刷新同步获取日志', async ({ page }) => {
+test('任务筛选对应实际记录，桌面同步显示详情，刷新同步获取日志', async ({ page }) => {
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto('/#tasks');
-  await expect(page.locator('.task-object').first()).toBeVisible();
-  const response = await page.request.get('/api/jobs');
-  const { result: jobs } = await response.json();
-  for (const [i, states] of [['queued'], ['running', 'cancelling'], ['paused', 'failed'], ['completed', 'cancelled']].entries()) {
-    const matching = jobs.filter((job: {status:string}) => states.includes(job.status));
-    const lane = page.locator('.task-lane').nth(i);
-    await expect(lane.locator('.task-lane-heading strong')).toHaveText(String(matching.length));
-    await expect(lane.locator('.task-object')).toHaveCount(Math.min(matching.length, 1));
+  await expect(page.locator('.task-record-row-main').first()).toBeVisible();
+  const {result: jobs} = await (await page.request.get('/api/jobs')).json();
+  const filters = page.getByRole('group',{name:'任务状态筛选'});
+  for (const [i, status] of ['all','running','paused','queued','cancelling','failed','completed','cancelled'].entries()) {
+    await expect(filters.locator('button').nth(i).locator('small')).toHaveText(String(status === 'all' ? jobs.length : jobs.filter((job:{status:string})=>job.status===status).length));
   }
-  await page.locator('.task-object').first().click();
-  const dialog = page.getByRole('dialog', {name:'任务详情', exact:true});
-  await expect(dialog).toHaveAttribute('data-phase', 'open');
-  await expect(dialog.locator('.folio-tasks-log li').first()).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(dialog).not.toBeVisible();
+  await page.locator('.task-record-row-main').first().click();
+  await expect(page.locator('.folio-tasks-inspector')).toBeVisible();
+  await expect(page.getByRole('dialog',{name:'任务详情',exact:true})).toHaveCount(0);
   const logsRequest = page.waitForResponse(response => /\/api\/jobs\/\d+\/logs/.test(response.url()) && response.ok());
   await page.getByRole('button', {name:'刷新',exact:true}).click();
   await logsRequest;
-  await page.locator('.task-object').first().click();
-  await expect(dialog.locator('.folio-tasks-log li').first()).toBeVisible();
+  await expect(page.locator('.folio-tasks-log li').first()).toBeVisible();
+  const before = await filters.boundingBox();
+  await filters.locator('button').nth(1).click();
+  await expect(page.locator('.task-record-row-main')).toHaveCount(jobs.filter((job:{status:string})=>job.status==='running').length);
+  expect((await filters.boundingBox())!.y).toBe(before!.y);
 });
 
 test('任务与词条来源展开可在途中关闭并恢复来源焦点', async ({ page }) => {
   await page.emulateMedia({ reducedMotion:'no-preference' });
-  for (const entry of [{route:'tasks',selector:'.task-object',label:'任务详情'}, {route:'dictionary',selector:'.folio-dictionary-row',label:'编辑词条'}]) {
+  await page.setViewportSize({width:390,height:844});
+  for (const entry of [{route:'tasks',selector:'.task-record-row-main',label:'任务详情'}, {route:'dictionary',selector:'.folio-dictionary-row',label:'编辑词条'}]) {
     await page.goto('/#'+entry.route);
     const trigger = page.locator(entry.selector).first();
     await trigger.click();

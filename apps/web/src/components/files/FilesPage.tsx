@@ -27,7 +27,7 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
 
   return (
     <section className="folio-page-body folio-files-page">
-      <div className={`files-composition${files.category!=="all"?" has-selection":""}`}>
+      <div className="files-composition">
       <FileOverviewStrip overview={files.overview} category={files.category} onCategory={value=>{files.setCategory(value);setSection("inventory");}} />
       <div className="files-working-document">
       {files.error ? <FadeIn key={files.error} className="folio-files-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{files.error}</p></FadeIn> : null}

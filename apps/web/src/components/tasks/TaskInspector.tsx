@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, Copy, Download, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
-import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { SelectionStage } from "../../lib/motion";
 import { api, type Job, type JobLog } from "../../lib/api";
@@ -72,14 +72,23 @@ export function TaskInspector(props: Props) {
       </header>
 
       <section className="folio-tasks-progress-detail">
-        <div className="folio-tasks-progress-ring" style={{ "--task-progress": `${job.progress.percent * 3.6}deg` } as CSSProperties}>
-          <span><strong>{job.progress.percent}%</strong><small>{statusLabel(job.status)}</small></span>
-        </div>
         <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{formatDurationHint(job)}</small></div>
+        <div className="task-inspection-meter">{job.progress.percent}<small>%</small></div>
+        <span className="task-inspection-line" role="progressbar" aria-label="任务总进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress.percent}><i style={{ width: `${Math.max(0, Math.min(100, job.progress.percent))}%` }} /></span>
       </section>
 
       </div>
       <div className="task-inspection-body" data-sheet-content>
+      <InspectorSection title="操作">
+        <div className="folio-tasks-inspector-actions">
+          <button type="button" disabled={!canRetry(job) || busy} onClick={() => props.onRetry(job.id)}><RotateCcw size={15} />{props.retryingId === job.id ? "重试中" : "重试"}</button>
+          <button type="button" disabled={!canPause(job) || busy} onClick={() => props.onPause(job.id)}><Pause size={15} />暂停</button>
+          <button type="button" disabled={!canResume(job) || busy} onClick={() => props.onResume(job.id)}><Play size={15} />恢复</button>
+          <button type="button" disabled={!canCancel(job) || busy} onClick={() => props.onCancel(job.id)}><X size={15} />取消</button>
+          <button type="button" onClick={() => void copyId()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "已复制" : "复制 ID"}</button>
+          <button className="is-danger" type="button" disabled={!canDelete(job) || busy} onClick={() => props.onDelete(job.id)}><Trash2 size={15} />删除</button>
+        </div>
+      </InspectorSection>
       <InspectorSection title="任务日志" className="folio-tasks-log-section">
         {props.logsLoading ? <p className="folio-tasks-boundary">正在读取日志…</p> : props.logs.length ? (
           <ol className="folio-tasks-log">
@@ -125,16 +134,7 @@ export function TaskInspector(props: Props) {
         {job.error ? <div className="folio-tasks-error-card"><AlertTriangle size={16} /><p>{job.error}</p>{job.retry_after ? <small>远端建议等待 {job.retry_after} 秒后重试。</small> : null}</div> : <p className="folio-tasks-boundary">当前任务没有错误记录。</p>}
       </InspectorSection> : null}
 
-      <InspectorSection title="操作">
-        <div className="folio-tasks-inspector-actions">
-          <button type="button" disabled={!canRetry(job) || busy} onClick={() => props.onRetry(job.id)}><RotateCcw size={15} />{props.retryingId === job.id ? "重试中" : "重试"}</button>
-          <button type="button" disabled={!canPause(job) || busy} onClick={() => props.onPause(job.id)}><Pause size={15} />暂停</button>
-          <button type="button" disabled={!canResume(job) || busy} onClick={() => props.onResume(job.id)}><Play size={15} />恢复</button>
-          <button type="button" disabled={!canCancel(job) || busy} onClick={() => props.onCancel(job.id)}><X size={15} />取消</button>
-          <button type="button" onClick={() => void copyId()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "已复制" : "复制 ID"}</button>
-          <button className="is-danger" type="button" disabled={!canDelete(job) || busy} onClick={() => props.onDelete(job.id)}><Trash2 size={15} />删除</button>
-        </div>
-      </InspectorSection>
+
 
 
       </div>

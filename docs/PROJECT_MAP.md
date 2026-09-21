@@ -1,5 +1,17 @@
 # NH Archive Project Map
 
+## 2026-09-22 · 自主实施阶段留档：库、队列、文件、导出
+
+本阶段准备提交至 codex/rhine-frontend，不合并 main，线上部署仍为 94e5364。文件页以实际体积条、紧凑分类与清单为主体；未选中时不显示禁用批量操作。导出桌面同时显示选择与配置，手机两步流程保留同一表单节点；输出名先于下载，ComicInfo 可展开。FileStorage.css、ExportWorkflow.css 重写，沿用原 API 与删除预览/导出业务。没有新增依赖或假数据。
+
+验证：构建通过；库页 7 项、队列相关 9 项（其中导航两项修正等待条件后复测）、文件导出相关 13 项通过，最终微调后 3 项定向复测通过。1440、2560、390 三尺寸截图无横向溢出与 pageerror。使用 Playwright（Browser plugin not available）。验收未执行真实删除或下载；任务测试数据只有一条已完成记录。后续还需首页、发现、治理、词典、登录与二级页面的重构/审核，以及整站动效、性能与部署验收，不能标记总目标完成。
+
+
+## 2026-09-22 · 队列组件边界调整（工作树实施中）
+
+`TasksPage` 直接组合固定状态筛选、`TaskList` 和 `TaskInspector`，桌面内联详情，900px 以下使用 `FolioSheet`；删除仅被此页使用的 `TaskBoard.tsx`。`useTasksState` 继续拥有真实任务状态及日志请求，未改后端接口。`TaskLedger.css` 为新布局所有者。库页 `ContinueReadingRow` 增加桌面实际标签资料，手机不展示此区域；`useGridColumns` 修复严格模式重连。
+
+
 ## 2026-09-22 · 以设置页为基准的主要页面重设计
 
 用户目前仅认可设置页；本轮保留 SettingsPage/SettingsModules 原实现，不将其他页面标记为已获认可。延续真实 API、阅读器底部控件与库详情来源展开；未修改后端、schema 或引入新依赖。

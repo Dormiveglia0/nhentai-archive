@@ -85,7 +85,8 @@ test("文件维护与清单分区互换，导出选项只更新打包内容", as
   await expect(page.locator('.folio-files-main')).toBeVisible();
   await page.goto('/#export');
   await page.locator('.folio-export-work-item').first().click();
-  await page.getByRole('button',{name:/02.*配置与下载/}).click();
+  await expect(page.locator('.export-package-workspace')).toBeVisible();
+ await expect(page.locator('.folio-export-source')).toBeVisible();
   const input = page.getByRole('textbox',{name:'输出名称'});
   await expect(input).toBeVisible();
   await input.evaluate(node=>node.setAttribute('data-preserved','yes'));

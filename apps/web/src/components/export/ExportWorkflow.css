@@ -1,18 +1,30 @@
-.export-workflow-head { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:32px; }
-.export-workflow-head h1 { font-size:30px; font-weight:500; margin:0; }.export-workflow-head>div{display:flex;gap:24px;font-size:12px;color:var(--folio-muted)}.export-workflow-head strong{color:var(--folio-ink);font-weight:500}
-.export-composition{display:grid;grid-template-columns:240px minmax(0,1fr);gap:4vw;align-items:start}
-.export-workflow-steps{position:sticky;top:24px;display:flex;flex-direction:column;gap:20px;perspective:1000px;padding-top:24px}
-.export-workflow-steps button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:22px;padding:26px;min-height:208px;border:0;background:var(--folio-paper-deep);color:var(--folio-muted);font-size:17px;text-align:left;transform:rotateY(-12deg) rotate(-3deg);box-shadow:3px 4px 0 #a3a28d44;transition:transform .5s cubic-bezier(.22,1,.36,1),background .3s,color .3s}
-.export-workflow-steps button>span{font-size:42px;font-weight:300}.export-workflow-steps small{font-size:11px;margin-top:auto}.export-workflow-steps [aria-current]{background:var(--folio-paper-bright);color:var(--folio-ink);transform:rotateY(0) rotate(0);border-left:3px solid var(--folio-green)}.export-workflow-steps>svg{rotate:90deg;color:var(--folio-muted);align-self:center}
-.export-working-document{min-width:0;padding:24px;background:var(--folio-paper-bright);box-shadow:4px 5px 0 var(--folio-paper-deep)}
-.folio-export-layout { display:block; }.folio-export-source[hidden],.export-package-workspace[hidden]{display:none}
-.export-package-workspace { max-width:1300px;margin:auto; }.export-package-workspace .folio-export-inspector { position:static; }
-.export-next { position:sticky;float:right;bottom:24px;display:flex;align-items:center;gap:26px;min-height:54px;margin-top:24px;padding:0 24px;background:var(--folio-ink);color:var(--folio-paper-bright);border:0;box-shadow:0 8px 22px #19231f22;font-size:14px; }
-@media(max-width:680px){.export-workflow-head{align-items:flex-start}.export-workflow-head>div{gap:12px;flex-wrap:wrap}.export-workflow-steps{gap:10px}.export-workflow-steps button{flex-wrap:wrap;gap:10px;padding:16px 12px;font-size:14px}.export-workflow-steps button>span{font-size:24px}.export-workflow-steps small{width:100%;font-size:10px}.export-next{float:none;width:100%;justify-content:space-between}}
+.export-workflow-head { display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px; }
+.export-workflow-head h1 { font-size:30px;font-weight:500;margin:0; }.export-workflow-head>div { display:flex;gap:24px;font-size:12px;color:var(--folio-muted); }.export-workflow-head strong { color:var(--folio-ink);font-weight:500; }
+.export-workflow-steps,.export-next { display:none; }.export-working-document { min-width:0; }
+.folio-export-page .folio-export-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;align-items:start; }
+.folio-export-source .folio-export-toolbar { grid-template-columns:minmax(0,1fr);gap:14px;margin-bottom:0;padding:18px 0; }
+.folio-export-source .folio-export-toolbar-actions { justify-content:flex-start;flex-wrap:wrap; }
+.export-package-workspace { min-width:0;position:sticky;top:18px; }
+.export-package-workspace .folio-export-inspector { position:static;max-height:calc(100dvh - 110px);padding:0 24px;background:var(--folio-paper-bright);border-top:2px solid var(--folio-green);scrollbar-width:thin; }
+.export-workflow-inspector { display:flex;flex-direction:column; }
+.export-workflow-inspector>.export-package-map { padding:0;margin:18px 0; }.export-workflow-inspector .export-package-layers { gap:10px; }.export-workflow-inspector .export-package-layers>label,.export-workflow-inspector .export-package-pages { min-height:54px;padding-block:10px; }
+.folio-export-work-list { max-height:none; }.folio-export-work-list-body { display:block; }.folio-export-work-item { padding:12px;min-height:96px; }.folio-export-work-item.is-selected { background:var(--folio-red-soft); }
+.folio-export-action-zone { order:2; }.folio-export-inspector-detail { order:1; }.export-workflow-inspector>.export-package-map { order:0; }.export-workflow-inspector>.folio-export-column-head { order:-1; }
+@media(min-width:1900px) { .folio-export-work-list-body { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px; }.folio-export-page .folio-export-layout { grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); } }
+@media(max-width:900px) {
+ .folio-export-page .folio-export-layout { display:block; }.export-package-workspace { position:static; }.export-package-workspace .folio-export-inspector { max-height:none;padding:0 16px; }
+ .export-workflow-steps { display:flex;align-items:center;gap:14px;margin-bottom:20px;border-bottom:1px solid var(--folio-line); }.export-workflow-steps>svg { flex-shrink:0;width:15px;color:var(--folio-muted); }
+ .export-workflow-steps button { min-height:64px;flex:1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:12px 0;background:none;border:0;color:var(--folio-muted);font-size:12px;text-align:left; }.export-workflow-steps button>span { font:12px ui-monospace,monospace; }.export-workflow-steps small { flex-basis:100%;font-size:10px; }.export-workflow-steps [aria-current] { color:var(--folio-ink);box-shadow:0 2px var(--folio-green); }
+ .folio-export-page[data-step=source] .export-package-workspace,.folio-export-page[data-step=package] .folio-export-source { display:none; }
+ .export-next { position:sticky;bottom:16px;display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;margin-top:18px;padding:0 18px;border:0;background:var(--folio-ink);color:var(--folio-paper-bright); }
+}
+@media(max-width:600px) { .export-workflow-head h1 { font-size:26px; }.export-workflow-head>div { gap:12px;font-size:11px; } }
 
-.export-workflow-inspector{display:grid;grid-template-columns:minmax(280px,.7fr) minmax(0,1fr);gap:0 48px;max-height:none;overflow:visible}.export-workflow-inspector>.folio-export-column-head{grid-column:1/-1}.export-workflow-inspector>.export-package-map{align-self:start;position:sticky;top:24px}.export-workflow-inspector>.folio-export-action-zone{grid-column:1/-1}.export-workflow-inspector .folio-export-inspector-head{padding-top:0}.folio-export-work-list{max-height:none}.folio-export-work-list-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}.folio-export-work-item{padding:14px;background:var(--folio-paper-bright);min-height:102px}.folio-export-work-item.is-selected{outline:1px solid var(--folio-red);outline-offset:-1px}
-@media(max-width:800px){.export-workflow-inspector{grid-template-columns:1fr;gap:24px}.export-workflow-inspector>.export-package-map{position:static}.folio-export-work-list-body{grid-template-columns:1fr}}
+.export-workflow-inspector>.folio-export-column-head { min-height:60px;padding:16px 0; }
+.export-workflow-inspector .export-package-map>header { margin-bottom:16px; }
+.export-workflow-inspector .export-package-map>header input { appearance:auto;position:static;width:16px;height:16px;opacity:1;margin:0; }
 
-@media(max-width:1100px){.export-composition{grid-template-columns:175px minmax(0,1fr);gap:24px}.export-workflow-steps button{padding:20px;font-size:15px;min-height:180px}.export-working-document{padding:18px}}
-@media(max-width:760px){.export-composition{display:block}.export-workflow-steps{position:static;flex-direction:row;align-items:stretch;gap:12px;padding:0 0 26px}.export-workflow-steps button{min-height:120px;flex:1;gap:10px;font-size:13px;transform:none;padding:16px}.export-workflow-steps button>span{font-size:26px}.export-workflow-steps small{font-size:9px;margin:0}.export-workflow-steps>svg{rotate:0;transform:none;width:16px;flex-shrink:0}.export-working-document{padding:14px}}
-@media(prefers-reduced-motion:reduce){.export-workflow-steps button{transition:none}}
+.folio-export-comicinfo>summary { cursor:pointer;list-style:none; }
+.folio-export-comicinfo>summary::after { content:"＋";margin-left:8px;color:var(--folio-muted); }
+.folio-export-comicinfo[open]>summary::after { content:"−"; }
+.folio-export-comicinfo>summary:focus-visible { outline:2px solid var(--folio-green);outline-offset:3px; }

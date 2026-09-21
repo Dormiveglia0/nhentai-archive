@@ -1,21 +1,23 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
-import type { LibraryWork } from "../../../lib/api";
+import type { LibraryTag, LibraryWork } from "../../../lib/api";
 import { workTitle } from "../../../lib/format";
 import { Stagger, StaggerItem, usePrefersReducedMotion } from "../../../lib/motion";
-import { pageHref } from "../../../lib/navigation";
+import { libraryTagHref, pageHref } from "../../../lib/navigation";
 import { AmbientCover } from "./AmbientCover";
 
 type Props = {
   title: string;
   works: LibraryWork[];
   blurCovers: boolean;
+  onPickTag: (tag: LibraryTag) => void;
 };
 
-export function ContinueReadingRow({ title, works, blurCovers }: Props) {
+export function ContinueReadingRow({ title, works, blurCovers, onPickTag }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef({ pointerId: -1, startX: 0, scrollLeft: 0, moved: false });
+  const [activeIndex, setActiveIndex] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [edges, setEdges] = useState({ previous: false, next: false });
   const reduceMotion = usePrefersReducedMotion();
@@ -23,6 +25,9 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
   function updateEdges() {
     const node = track.current;
     if (!node) return;
+    const cells = Array.from(node.children) as HTMLElement[];
+    const first = cells.findIndex((cell) => cell.offsetLeft - node.offsetLeft >= node.scrollLeft - cell.clientWidth / 2);
+    setActiveIndex(Math.max(0, first));
     const previous = node.scrollLeft > 1;
     const next = node.scrollLeft + node.clientWidth < node.scrollWidth - 1;
     setEdges((current) => current.previous === previous && current.next === next ? current : { previous, next });
@@ -37,6 +42,8 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
   }, [works.length]);
 
   if (!works.length) return null;
+  const active = works[Math.min(activeIndex, works.length - 1)];
+  const tags = (active.tags ?? []).filter((tag) => tag.type === "tag");
 
   function startDrag(event: PointerEvent<HTMLDivElement>) {
     if (!event.isPrimary || event.button !== 0) return;
@@ -83,6 +90,7 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
           </div>
         ) : null}
       </div>
+      <div className="folio-shelf-composition">
       <Stagger
         ref={track}
         className={dragging ? "folio-shelf-track is-dragging" : "folio-shelf-track"}
@@ -101,12 +109,14 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
           drag.current.moved = false;
         }}
       >
-        {works.map((work) => (
-          <StaggerItem key={work.id} className="folio-shelf-cell">
+        {works.map((work, index) => (
+          <StaggerItem key={work.id} className={`folio-shelf-cell${active.id === work.id ? " is-current" : ""}`}>
             <a
               href={pageHref({ name: "reader", workId: work.id })}
               className="folio-shelf-item"
               draggable={false}
+              aria-label={`${title}：${workTitle(work)}`}
+              onFocus={() => setActiveIndex(index)}
             >
               <div className="folio-shelf-cover">
                 {work.cover_path ? (
@@ -124,6 +134,15 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
           </StaggerItem>
         ))}
       </Stagger>
+      <aside className="folio-shelf-context" aria-label="当前作品标签">
+        <div className="folio-shelf-context-index"><span>{String(Math.min(activeIndex + 1, works.length)).padStart(2, "0")}</span><span>/ {String(works.length).padStart(2, "0")}</span></div>
+        <div className="folio-shelf-context-tags" key={active.id}>
+          {tags.length ? tags.map((tag) => <a key={tag.id} href={libraryTagHref(tag)} onClick={(event) => { if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); onPickTag(tag); }}>{tag.display}</a>) : <span className="folio-shelf-no-tags">暂无标签</span>}
+        </div>
+        <a className="folio-shelf-context-title" href={pageHref({ name: "reader", workId: active.id })}>{workTitle(active)}</a>
+        <div className="folio-shelf-context-progress"><span>{active.completed ? "已读完" : `已读 ${active.progress_percent ?? 0}%`}</span><span>{active.page_count} 页</span><progress max={100} value={active.progress_percent ?? 0} /></div>
+      </aside>
+      </div>
     </section>
   );
 }

@@ -56,7 +56,7 @@ export function FileToolbar({
         <FolioSelect label="排序方式" value={sort} options={SORTS} onChange={onSort} />
       </div>
 
-      <div className={"folio-files-batch" + (selectedCount ? " is-active" : "")}>
+      <div hidden={!selectedCount} className={"folio-files-batch" + (selectedCount ? " is-active" : "")}>
         <p>
           <strong>{selectedCount || total}</strong>
           <span>{selectedCount ? "项已选择" : "项匹配当前条件 · 可直接勾选"}</span>

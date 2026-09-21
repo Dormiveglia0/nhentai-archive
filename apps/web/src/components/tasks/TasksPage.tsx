@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FolioSheet } from "../folio/ui/FolioSheet";
 import { AlertCircle, RefreshCw, Trash2, X } from "lucide-react";
 import { m } from "motion/react";
@@ -7,7 +7,6 @@ import { FadeIn } from "../../lib/motion";
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 import { STATUS_TABS } from "../../lib/jobs";
 import { TaskInspector } from "./TaskInspector";
-import { TaskBoard } from "./TaskBoard";
 import { TaskList } from "./TaskList";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { useTasksState } from "./useTasksState";
@@ -17,9 +16,16 @@ import "./TaskLedger.css";
 export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
   const reduce = usePrefersReducedMotion();
+  const [compact, setCompact] = useState(() => window.matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const update = () => setCompact(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const [detailOpen,setDetailOpen] = useState(false);
   const origin = useRef<HTMLElement | null>(null);
-  function focus(id:number, source?: HTMLElement) { origin.current = source ?? null; tasks.focusJob(id);setDetailOpen(true); }
+  function focus(id:number, source?: HTMLElement) { origin.current = source ?? null; tasks.focusJob(id);setDetailOpen(compact); }
 
   function openLogs(id: number) {
     focus(id);
@@ -32,6 +38,19 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
     void tasks.clearFinished();
   }
 
+  const inspector = tasks.focus ? <TaskInspector
+          job={tasks.focus}
+          logs={tasks.logs}
+          logsLoading={tasks.logsLoading}
+          retryingId={tasks.retryingId}
+          actingId={tasks.actingId}
+          onRetry={(id) => void tasks.retryJob(id)}
+          onPause={(id) => void tasks.pauseJob(id)}
+          onResume={(id) => void tasks.resumeJob(id)}
+          onCancel={(id) => void tasks.cancelJob(id)}
+          onDelete={(id) => void tasks.deleteJob(id)}
+        /> : null;
+
   return (
     <section className={`folio-page-body folio-tasks-page${blurCovers ? " is-private" : ""}`}>
 
@@ -40,8 +59,7 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
       {tasks.notice ? <FadeIn key={tasks.notice} className="folio-tasks-message" role="status" y={6}><span aria-hidden="true" /><p>{tasks.notice}</p></FadeIn> : null}
 
       <header className="task-ledger-head"><div><h1>队列</h1><span>{tasks.summary.total} 项任务</span></div></header>
-      <div className={`task-workspace${tasks.statusFilter!=="all"?" has-selection":""}`}>
-      <TaskBoard jobs={tasks.jobs} filter={tasks.statusFilter} onFilter={tasks.setStatusFilter} onOpen={(id, source) => { tasks.setStatusFilter("all"); tasks.setQuery(""); focus(id, source); }}/>
+      <div className="task-workspace">
       <div className="task-record-document">
       <section className="task-status-overview">
         <div className="folio-tasks-tabs" role="group" aria-label="任务状态筛选">
@@ -80,24 +98,14 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
             onDelete={(id) => void tasks.deleteJob(id)}
           />
         </section>
+        {!compact ? inspector : null}
       </FadeIn>
       </div></div>
-      <FolioSheet open={detailOpen && Boolean(tasks.focus)} label="任务详情" onClose={()=>setDetailOpen(false)} className="task-detail-sheet" origin={origin.current}>
+      {compact ? <FolioSheet open={detailOpen && Boolean(tasks.focus)} label="任务详情" onClose={()=>setDetailOpen(false)} className="task-detail-sheet" origin={origin.current}>
         <div className="task-detail-surface" data-sheet-surface/>
         <header className="task-detail-head"><span>任务 #{tasks.focus?.id}</span><button type="button" aria-label="关闭任务详情" onClick={()=>setDetailOpen(false)}><X size={20}/></button></header>
-        {tasks.focus ? <TaskInspector
-          job={tasks.focus}
-          logs={tasks.logs}
-          logsLoading={tasks.logsLoading}
-          retryingId={tasks.retryingId}
-          actingId={tasks.actingId}
-          onRetry={(id) => void tasks.retryJob(id)}
-          onPause={(id) => void tasks.pauseJob(id)}
-          onResume={(id) => void tasks.resumeJob(id)}
-          onCancel={(id) => void tasks.cancelJob(id)}
-          onDelete={(id) => void tasks.deleteJob(id)}
-        /> : null}
-      </FolioSheet>
+        {inspector}
+      </FolioSheet> : null}
     </section>
   );
 }

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefC
 
 export function useGridColumns(): [RefCallback<HTMLDivElement>, number] {
   const observer = useRef<ResizeObserver | null>(null);
+  const element = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState(0);
 
   const ref = useCallback<RefCallback<HTMLDivElement>>((node) => {
     observer.current?.disconnect();
+    element.current = node;
     if (!node) return;
 
     const measure = () => {
@@ -28,7 +30,11 @@ export function useGridColumns(): [RefCallback<HTMLDivElement>, number] {
     observer.current.observe(node);
   }, []);
 
-  useEffect(() => () => observer.current?.disconnect(), []);
+  useEffect(() => {
+    // StrictMode reconnects effects without reattaching callback refs.
+    if (element.current) observer.current?.observe(element.current);
+    return () => observer.current?.disconnect();
+  }, []);
   return [ref, columns];
 }
 

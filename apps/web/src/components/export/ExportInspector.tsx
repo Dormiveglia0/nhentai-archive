@@ -86,14 +86,14 @@ export function ExportInspector({
           </div>
 
           {/* ComicInfo.xml preview card */}
-          <div className={`folio-export-comicinfo${writesComicInfo ? "" : " is-off"}`}>
-            <div className="folio-export-comicinfo-title">
+          <details className={`folio-export-comicinfo${writesComicInfo ? "" : " is-off"}`}>
+            <summary className="folio-export-comicinfo-title">
               <FileCheck2 size={16} />
               <h3>ComicInfo.xml</h3>
               <span className={`folio-export-tag ${writesComicInfo ? "is-ok" : "is-muted"}`}>
                 {writesComicInfo ? "将写入" : "不写入"}
               </span>
-            </div>
+            </summary>
             {writesComicInfo ? (
               comicEntries.length ? (
                 <dl className="folio-export-comicinfo-rows">
@@ -110,7 +110,7 @@ export function ExportInspector({
             ) : (
               <p className="empty-inline">本次导出不写入 ComicInfo.xml，文件将保持源内容。</p>
             )}
-          </div>
+          </details>
 
           {/* Issues area */}
           {issues.length ? (
