@@ -96,7 +96,7 @@
 }
 
 .folio-history-bucket + .folio-history-bucket {
-  margin-top: 36px;
+  margin-top: 12px;
 }
 
 .folio-history-bucket-head {
@@ -129,20 +129,16 @@
   font-size: 12px;
 }
 
-.folio-history-rows {
-  border-top: 1px solid var(--folio-line-strong);
-}
+.folio-history-rows { min-width:0; }
 
-.folio-history-row-wrap {
-  border-bottom: 1px solid var(--folio-line);
-}
+.folio-history-row-wrap { min-width:0; }
 
 .folio-history-row {
   width: 100%;
   min-height: 96px;
   padding: 12px 10px 12px 0;
   display: grid;
-  grid-template-columns: 52px minmax(180px, 1fr) minmax(150px, 220px) 28px;
+  grid-template-columns: 66px minmax(180px, 1fr) minmax(150px, 220px) 28px;
   align-items: center;
   gap: 16px;
   border: 0;
@@ -152,7 +148,7 @@
   text-decoration: none;
   position: relative;
   overflow: hidden;
-  transition: padding 260ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms ease;
+  transition: background-color 200ms ease;
 }
 
 .folio-history-row::before {
@@ -170,7 +166,6 @@
 
 .folio-history-row:hover,
 .folio-history-row:focus-visible {
-  padding-left: 12px;
   background: rgba(255, 255, 255, 0.24);
 }
 
@@ -440,4 +435,4 @@
 
 .history-heading{font-size:30px;font-weight:500;margin:30px 0 18px}
 .history-workspace{display:block}.folio-history-bucket{display:grid;grid-template-columns:160px minmax(0,1fr);gap:28px;border-top:1px solid var(--folio-line-strong);padding:24px 0}.folio-history-bucket-head{display:block;border:0;padding:12px 0;position:sticky;top:20px;align-self:start}.folio-history-bucket-head>span{display:none}.folio-history-bucket-head h2{font-size:24px;font-weight:400;margin-bottom:8px}.folio-history-bucket-head small{font-size:12px;color:var(--folio-muted)}.folio-history-row{border:0;border-bottom:1px solid var(--folio-line);padding:16px 0}.folio-history-cover{width:66px;height:90px}.folio-history-row:hover{background:var(--folio-paper-bright)}
-@media(max-width:760px){.folio-history-bucket{grid-template-columns:1fr;gap:12px}.folio-history-bucket-head{display:flex;align-items:center;gap:16px;position:static;padding:0}.folio-history-bucket-head h2{margin:0;font-size:20px}}
+@media(max-width:760px){.folio-history-cover{width:48px;height:66px}.folio-history-bucket{grid-template-columns:1fr;gap:12px}.folio-history-bucket-head{display:flex;align-items:center;gap:16px;position:static;padding:0}.folio-history-bucket-head h2{margin:0;font-size:20px}}

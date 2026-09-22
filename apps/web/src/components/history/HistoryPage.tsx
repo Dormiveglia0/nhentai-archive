@@ -84,13 +84,13 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
                         <span className="folio-history-main">
                           <strong>{entry.title_japanese || entry.pretty_title || entry.title}</strong>
                           <small>
-                            <span>{timeOfDay(entry.last_opened_at)}</span>
+                            <span>{entry.date.slice(5)} · {timeOfDay(entry.last_opened_at)}</span>
                             <span>打开 {entry.read_events} 次</span>
                             <span>最远第 {entry.furthest_page} / {entry.page_count} 页</span>
                           </small>
                         </span>
                         <span className={`folio-history-progress is-${progress.tone}`}>
-                          <span><strong>{progress.text}</strong><small>{percent}%</small></span>
+                          <span><strong>{progress.text}</strong>{entry.completed ? <small>{percent}%</small> : null}</span>
                           <i style={{ "--folio-history-progress": `${percent}%` } as CSSProperties}><span /></i>
                         </span>
                         <ArrowUpRight className="folio-history-open" size={17} />

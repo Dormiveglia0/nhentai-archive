@@ -18,12 +18,18 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
   return <section className="popular-studio" aria-label="今日热门">
     <header><h2>今日热门</h2><span>{current ? `${String(index + 1).padStart(2, "0")} / ${String(visible.length).padStart(2, "0")}` : "读取中…"}</span></header>
     {current ? <div className="popular-composition">
-      <div className="popular-array" role="list">
-        {visible.map((item, i) => <div className="popular-slot" role="listitem" key={item.gallery_id} onPointerEnter={event=>{if(event.pointerType==="mouse")setSelected(item.gallery_id);}}>
+      <div className="popular-array" role="list" onKeyDown={event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const next = Math.max(0, Math.min(visible.length - 1, index + (event.key === "ArrowRight" ? 1 : -1)));
+        setSelected(visible[next].gallery_id);
+        event.currentTarget.querySelectorAll<HTMLButtonElement>(".popular-position")[next]?.focus({preventScroll:true});
+      }}>
+        {visible.map((item, i) => <div className={`popular-slot${i === index ? " is-selected" : ""}`} role="listitem" key={item.gallery_id}>
           <m.a className={`popular-cover${i === index ? " is-selected" : ""}`} href={hrefFor(item.gallery_id)}
             aria-label={`打开作品详情：${title(item)}`} onFocus={() => setSelected(item.gallery_id)}
             onClick={event => { if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return; event.preventDefault(); onOpen(item.gallery_id); }}
-            animate={{ y: reduce ? 0 : i === index ? -28 : Math.abs(i-index)===1 ? -8 : 0, rotate:reduce?0:i === index ? 0 : (i-2)*3 }}
+            animate={{ y: reduce ? 0 : i === index ? -8 : 0, rotate: 0 }}
             transition={reduce ? {duration: 0} : {type: "spring", stiffness: 150, damping: 23}}>
             {item.thumbnail.url ? <AmbientCover className="is-fill-portrait" src={item.thumbnail.url} alt="" privateBlur={blurCovers} loading="lazy" /> : <span className="folio-cover-fallback">暂无封面</span>}
           </m.a>

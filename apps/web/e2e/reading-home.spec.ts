@@ -15,14 +15,14 @@ test("首页日期切片、快速切换和键盘读数对应真实统计", async
   await page.keyboard.press("Home");
   await expect(slider).toHaveValue("0");
   await expect(page.locator(".reading-dial-center>strong")).toHaveText(activity[0].date.slice(5).replace("-", " / "));
-  await expect(page.locator(".reading-dial-center>div>b")).toHaveText(String(Math.round(activity[0].seconds / 60)));
+  await expect(page.locator(".reading-dial-center>div>b")).toHaveText(String(activity[0].seconds < 60 ? activity[0].seconds : Math.round(activity[0].seconds / 60)));
   for (let i = 0; i < 12; i++) await page.keyboard.press("ArrowRight");
   await expect(slider).toHaveValue("12");
   await expect(page.locator(".reading-slice.is-selected")).toHaveAttribute("data-date", activity[12].date);
   await page.keyboard.press("End");
   await page.getByRole("button", { name: "前一天", exact: true }).click();
   await expect(slider).toHaveValue(String(activity.length - 2));
-  await expect(page.locator(".reading-dial-center>div>b")).toHaveText(String(Math.round(activity[activity.length - 2].seconds / 60)));
+  await expect(page.locator(".reading-dial-center>div>b")).toHaveText(String(activity[activity.length - 2].seconds < 60 ? activity[activity.length - 2].seconds : Math.round(activity[activity.length - 2].seconds / 60)));
   await page.getByRole("button", { name: "暂停动效" }).click();
   await expect(page.locator(".reading-home")).toHaveClass(/is-still/);
   const link = page.locator(".reading-latest a").first();

@@ -21,6 +21,8 @@ type Props = {
 export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
   const [section, setSection] = useState<"pages" | "tags" | "related">("pages");
   const gallery = useGalleryDetail(galleryId);
+  const hasRelated = Boolean(gallery.detail?.related.length);
+  const activeSection = section === "related" && !hasRelated ? "pages" : section;
   const backLabel = returnTo?.startsWith("reader/")
     ? "返回阅读器"
     : returnTo === "files"
@@ -77,11 +79,11 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
             onDeleted={gallery.reload}
           />
           <div className="gallery-content-workspace">
-            <SectionSwitch label="作品内容" value={section} onChange={setSection} items={[{value: "pages", label: "页面预览"}, {value: "tags", label: "作品标签"}, {value: "related", label: "相关作品"}]} />
-            <SelectionStage selection={section}>
-              {section === "tags" && <GalleryTags detail={gallery.detail} />}
-              {section === "pages" && <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />}
-              {section === "related" && <GalleryRelated detail={gallery.detail} blurCovers={blurCovers} />}
+            <SectionSwitch label="作品内容" value={activeSection} onChange={setSection} items={[{value: "pages", label: "页面预览"}, {value: "tags", label: "作品标签"}, ...(hasRelated ? [{value: "related" as const, label: "相关作品"}] : [])]} />
+            <SelectionStage selection={activeSection}>
+              {activeSection === "tags" && <GalleryTags detail={gallery.detail} />}
+              {activeSection === "pages" && <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />}
+              {activeSection === "related" && <GalleryRelated detail={gallery.detail} blurCovers={blurCovers} />}
             </SelectionStage>
           </div>
           </div>
