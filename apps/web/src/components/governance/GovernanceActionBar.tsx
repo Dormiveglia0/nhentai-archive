@@ -20,7 +20,7 @@ export function GovernanceActionBar({
   onReload: () => Promise<void>;
 }) {
   return (
-    <div className="folio-governance-actions">
+    <div className={`folio-governance-actions${changedCount || writeBack ? " has-changes" : ""}`}>
       <button className="folio-governance-action is-primary" type="button" onClick={() => void onSave()} disabled={saving || (!writeBack && changedCount === 0)}>
         <Save size={17} />
         {saving ? "保存中..." : writeBack && !changedCount ? "回写源文件" : `保存修改${changedCount ? ` (${changedCount})` : ""}`}

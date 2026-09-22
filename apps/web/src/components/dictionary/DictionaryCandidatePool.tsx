@@ -1,4 +1,4 @@
-import { ArrowRight, Languages, RefreshCw, Upload } from "lucide-react";
+import { Languages, RefreshCw, Upload } from "lucide-react";
 
 import type { DictionaryCandidate } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
@@ -68,7 +68,7 @@ export function DictionaryCandidatePool(props: Props) {
     <section className="folio-dictionary-candidates" aria-label="词条索引">
       <header className="folio-dictionary-panel-head">
         <div>
-          <p>{props.loading ? "正在读取缓存…" : `当前页 ${props.candidates.length} 项`}</p>
+          <p>{props.loading ? "正在读取词条…" : `当前页 ${props.candidates.length} 项`}</p>
         </div>
         <div className="folio-dictionary-head-actions">
           <button className="folio-line-button" type="button" onClick={props.onBulkImport}>
@@ -81,7 +81,7 @@ export function DictionaryCandidatePool(props: Props) {
         </div>
       </header>
 
-      <nav className="dictionary-type-index" aria-label="词条类型">{TYPE_OPTIONS.map((item,index)=><button type="button" key={item.value} aria-pressed={props.typeFilter===item.value} onClick={()=>props.onTypeFilter(item.value)}><small>{String(index+1).padStart(2,"0")}</small><span>{item.label}</span><ArrowRight size={15}/></button>)}</nav>
+      <nav className="dictionary-type-index" aria-label="词条类型">{TYPE_OPTIONS.map((item)=><button type="button" key={item.value} aria-pressed={props.typeFilter===item.value} onClick={()=>props.onTypeFilter(item.value)}><span>{item.label}</span></button>)}</nav>
       <div className="dictionary-index-content">
       <div className="folio-dictionary-filters">
         <FolioSearchField value={props.query} onChange={props.onQuery} placeholder="搜索原文或中文词条" />
@@ -97,19 +97,18 @@ export function DictionaryCandidatePool(props: Props) {
         >
           <Languages size={15} />
           <span>{props.suggesting ? "生成建议中…" : `为当前候选生成建议${props.batchCount ? ` (${props.batchCount})` : ""}`}</span>
-          <small>只生成待审核项，不直接应用到作品</small>
         </button>
       </div>
 
       <div className="folio-dictionary-table" aria-label="候选术语">
         <div className="folio-dictionary-table-head" aria-hidden="true">
           <span>原文</span>
-          <span>建议翻译</span>
+          <span>中文译文</span>
           <span>影响</span>
           <span>状态</span>
         </div>
         <Stagger className="folio-dictionary-row-list">
-          {props.candidates.map((candidate, index) => {
+          {props.candidates.map((candidate) => {
             const label = candidate.name || candidate.slug || String(candidate.id ?? candidate.dictionary_id);
             const display = candidate.display && candidate.display !== label ? candidate.display : "未配置";
             const rowKey = candidateRowKey(candidate);
@@ -121,12 +120,10 @@ export function DictionaryCandidatePool(props: Props) {
                   aria-pressed={props.selectedKey === rowKey}
                   onClick={event => props.onSelect(candidate, event.currentTarget.querySelector(".folio-dictionary-term strong"))}
                 >
-                  <span className="dictionary-entry-index">{String(props.offset + index + 1).padStart(3, "0")}</span>
                   <span className="folio-dictionary-term">
                     <i data-type={candidate.type || "tag"}>{typeLabel(candidate.type)}</i>
                     <strong title={label}>{label}</strong>
                   </span>
-                  <span className="dictionary-entry-link" aria-hidden="true"><ArrowRight size={22}/></span>
                   <span className={display === "未配置" ? "folio-dictionary-display is-muted" : "folio-dictionary-display"}>{display}</span>
                   <span className="folio-dictionary-impact">{candidate.impact_work_count ?? 0} 部作品</span>
                   <span className={`folio-dictionary-status is-${statusTone(candidate)}`}>

@@ -3,7 +3,6 @@ import { AlertTriangle, PenLine, ListFilter, X, Tags, ScanText, CheckCheck } fro
 import { useState } from "react";
 import { FolioSheet } from "../folio/ui/FolioSheet";
 import { m } from "motion/react";
-import { usePrefersReducedMotion } from "../../lib/motion";
 import { FadeIn, SelectionStage } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { GovernanceActionBar } from "./GovernanceActionBar";
@@ -25,7 +24,6 @@ type Props = {
 };
 
 export function GovernancePage({ initialWorkId, blurCovers }: Props) {
-  const reduce=usePrefersReducedMotion();
   const [section, setSection] = useState<"metadata" | "tags" | "review">("metadata");
   const gov = useGovernanceState(initialWorkId);
   const [queueOpen,setQueueOpen]=useState(false);
@@ -107,7 +105,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 {gov.aggregateLoading ? <div className="folio-governance-loading" role="status">正在读取作品元数据…</div> : null}
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <SelectionStage selection={gov.aggregate.work.id} className="folio-governance-document">
-                    <aside className="governance-work-index"><GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} /><nav role="group" className="governance-section-selector" aria-label="治理内容">{[{id:"metadata" as const,label:"元数据",icon:ScanText},{id:"tags" as const,label:"标签映射",icon:Tags},{id:"review" as const,label:"人工核对",icon:CheckCheck}].map((item,i)=><m.button type="button" key={item.id} aria-pressed={section===item.id} onClick={()=>setSection(item.id)} animate={{x:reduce?0:section===item.id?8:0}} transition={reduce?{duration:0}:{type:"spring",stiffness:170,damping:24}}><span aria-hidden="true">0{i+1}</span><item.icon strokeWidth={1}/><strong>{item.label}</strong></m.button>)}</nav></aside>
+                    <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} /><aside className="governance-work-index"><nav role="group" className="governance-section-selector" aria-label="治理内容">{[{id:"metadata" as const,label:"元数据",icon:ScanText},{id:"tags" as const,label:"标签映射",icon:Tags},{id:"review" as const,label:"人工核对",icon:CheckCheck}].map((item,i)=><m.button type="button" key={item.id} aria-pressed={section===item.id} onClick={()=>setSection(item.id)}><span aria-hidden="true">0{i+1}</span><item.icon strokeWidth={1}/><strong>{item.label}</strong>{section === item.id ? <m.i layoutId="governance-section" /> : null}</m.button>)}</nav></aside>
                     <div className="governance-record-body">
 
                     <SelectionStage selection={section}>

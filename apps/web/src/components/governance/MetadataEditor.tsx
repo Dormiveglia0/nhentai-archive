@@ -73,6 +73,7 @@ export function MetadataEditor({
           </button>
         </div>
       </header>
+      <details className="governance-translation-disclosure"><summary>中文建议</summary>
       <GovernanceTranslationPanel
         suggestions={translationSuggestions}
         translating={translating}
@@ -81,6 +82,7 @@ export function MetadataEditor({
         onAcceptAll={onAcceptAllTranslations}
         onDismiss={onDismissTranslation}
       />
+      </details>
       <Stagger className="folio-governance-field-grid">
         {fields.length ? (
           fields.map((field) => (
@@ -138,7 +140,7 @@ function MetadataCard({
     onChange(next);
   }
 
-  return <article ref={root} className={`folio-governance-field-card${needsDecision ? " is-review" : ""}${changed ? " is-changed" : ""}`}>
+  return <article ref={root} className={`folio-governance-field-card${/title|summary|description/.test(field.field) ? " is-long-field" : ""}${needsDecision ? " is-review" : ""}${changed ? " is-changed" : ""}`}>
     <div className="folio-governance-field-head"><strong>{field.label}</strong>{field.differs_from_source ? <span>来源不同</span> : null}{missingRequired ? <em>必填缺失</em> : null}{changed ? <em className="is-changed">待保存</em> : null}</div>
     <div className="governance-comparison-current">
       <span className="folio-governance-field-label">当前值</span><div ref={current}><ValueChips value={field.current_value} empty="未设置" /></div>
