@@ -191,14 +191,34 @@ class ArchiveService:
     def source_file(self, work_id: int, available: bool = True) -> dict[str, Any] | None:
         return self.libraries.source_file(work_id, available)
 
-    def read_page(self, work_id: int, page_index: int, lease: str | None = None) -> tuple[bytes, str]:
+    def read_page(self, work_id: int, page_index: int, lease: str | None = None, source_revision: str | None = None) -> tuple[bytes, str]:
+        if lease and source_revision:
+            raise ValueError("不能同时指定缓存和直接阅读版本")
         archive_file = self.source_file(work_id) or self.source_file(work_id, available=False)
-        if lease or self.cache.required(archive_file):
+        if lease or (not source_revision and self.cache.required(archive_file)):
             with self.cache.source(work_id, lease) as (path, pages, _cache_id):
                 return self._read_archive_page(path, pages, page_index)
         if not archive_file:
             raise FileNotFoundError(f"Archive not found for work {work_id}")
-        return self._read_archive_page(self.libraries.resolve_file(archive_file), self.list_pages(work_id), page_index)
+        with self.cache._lock:
+            archive_file = self.cache.direct_source(work_id, source_revision)
+            pages = self.list_pages(work_id)
+            page = next((row for row in pages if row["page_index"] == page_index), None)
+            if not page:
+                raise FileNotFoundError(f"Page {page_index} not found")
+            if archive_file["library_kind"] != "mounted":
+                path = self.libraries.resolve_file(archive_file)
+                before = path.stat()
+                if archive_file["library_item_id"] and (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (
+                    archive_file["size_bytes"], archive_file["mtime_ns"], archive_file["device"], archive_file["inode"]):
+                    raise FileNotFoundError("源归档已变化，请重新扫描后打开作品")
+                result = self._read_archive_page(path, [page], page_index)
+                after = path.stat()
+                if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
+                    raise ValueError("源归档在阅读时发生变化，请重新打开作品")
+                return result
+        with self.cache.mounted_read(archive_file, page) as (path, media_type):
+            return path.read_bytes(), media_type
 
     @staticmethod
     def _read_archive_page(path: Path, pages: list[dict[str, Any]], page_index: int) -> tuple[bytes, str]:
@@ -220,16 +240,23 @@ class ArchiveService:
                 raise ValueError("页面超过64MB或归档已加密，无法读取")
             return archive.read(member), page["media_type"]
 
-    def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320, lease: str | None = None) -> tuple[bytes, str]:
+    def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320, lease: str | None = None,
+                            source_revision: str | None = None) -> tuple[bytes, str]:
         """Return a downscaled JPEG for a page, generating and caching it on first use."""
+        if lease and source_revision:
+            raise ValueError("不能同时指定缓存和直接阅读版本")
         width = max(64, min(width, 1024))
         origin = self.source_file(work_id) or self.source_file(work_id, available=False)
-        if lease or self.cache.required(origin):
+        if lease or (not source_revision and self.cache.required(origin)):
             with self.cache.source(work_id, lease) as (path, pages, cache_id):
                 cache_path = self.settings.thumbs_dir / f"{work_id}-c{cache_id}-{page_index}-{width}.jpg"
                 return self._read_thumbnail(cache_path, width, lambda: self._read_archive_page(path, pages, page_index)[0])
-        cache_path = self.settings.thumbs_dir / f"{work_id}-{page_index}-{width}.jpg"
-        return self._read_thumbnail(cache_path, width, lambda: self.read_page(work_id, page_index)[0])
+        origin = self.cache.direct_source(work_id, source_revision)
+        revision = self.cache.revision(origin)
+        # Preserve legacy URLs/cache names; indexed sources and prepared readers use versioned thumbnails.
+        suffix = f"-r{revision}" if source_revision or origin["library_item_id"] else ""
+        cache_path = self.settings.thumbs_dir / f"{work_id}{suffix}-{page_index}-{width}.jpg"
+        return self._read_thumbnail(cache_path, width, lambda: self.read_page(work_id, page_index, source_revision=revision)[0])
 
     def read_cover_thumbnail(self, work_id: int, width: int = 512) -> tuple[bytes, str]:
         work = self.get_work(work_id)

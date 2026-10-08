@@ -28,25 +28,35 @@ class ReaderService:
             "last_read_at": None,
         }
 
-    def update_state(self, work_id: int, page_index: int, completed: bool = False, cache_lease: str | None = None) -> dict[str, Any]:
+    def update_state(self, work_id: int, page_index: int, completed: bool = False, cache_lease: str | None = None,
+                     source_revision: str | None = None) -> dict[str, Any]:
+        if cache_lease and source_revision:
+            raise ValueError("不能同时指定缓存和直接阅读版本")
         work = self.db.fetchone("SELECT page_count FROM works WHERE id = ?", (work_id,))
         if not work:
             raise ValueError(f"Work {work_id} does not exist")
         page_count = int(work["page_count"])
-        snapshot_matches = True
+        snapshot = None
         if cache_lease:
             from app.services.archive_manifest import unpack_manifest
             snapshot = self.cache.touch_lease(work_id, cache_lease) if self.cache else None
             if not snapshot:
                 raise ValueError("阅读缓存不可用")
-            snapshot_matches = len(unpack_manifest(snapshot["manifest"])) == page_count and self.cache.is_current(snapshot)
-            if not snapshot_matches:
-                return self.get_state(work_id)
-        bounded_page = max(1, min(page_index, page_count)) if page_count else 0
-        progress_percent = round((bounded_page / page_count) * 100) if page_count else 0
-        is_completed = snapshot_matches and (completed or (page_count > 0 and bounded_page >= page_count))
-
         with self.db.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            work = conn.execute("SELECT page_count FROM works WHERE id = ?", (work_id,)).fetchone()
+            if not work:
+                raise ValueError(f"Work {work_id} does not exist")
+            page_count = int(work["page_count"])
+            if snapshot and (len(unpack_manifest(snapshot["manifest"])) != page_count or not self.cache.is_current(snapshot)):
+                return self.get_state(work_id)
+            if source_revision:
+                if not self.cache:
+                    raise ValueError("阅读源不可用")
+                self.cache.direct_source(work_id, source_revision)
+            bounded_page = max(1, min(page_index, page_count)) if page_count else 0
+            progress_percent = round((bounded_page / page_count) * 100) if page_count else 0
+            is_completed = completed or (page_count > 0 and bounded_page >= page_count)
             conn.execute(
                 """
                 INSERT INTO reader_progress (
@@ -64,7 +74,10 @@ class ReaderService:
             )
         return self.get_state(work_id)
 
-    def start_session(self, work_id: int, client_key: str, page_index: int, cache_lease: str | None = None) -> dict[str, Any]:
+    def start_session(self, work_id: int, client_key: str, page_index: int, cache_lease: str | None = None,
+                      source_revision: str | None = None) -> dict[str, Any]:
+        if cache_lease and source_revision:
+            raise ValueError("不能同时指定缓存和直接阅读版本")
         work = self.db.fetchone("SELECT page_count FROM works WHERE id = ?", (work_id,))
         if not work:
             raise ValueError(f"Work {work_id} does not exist")
@@ -77,12 +90,21 @@ class ReaderService:
         bounded_page = max(1, min(page_index, page_count)) if page_count else 0
 
         with self.db.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            if source_revision:
+                if not self.cache:
+                    raise ValueError("阅读源不可用")
+                source = self.cache.direct_source(work_id, source_revision)
+                from app.services.archive_manifest import unpack_manifest
+                page_count = len(unpack_manifest(source["manifest"])) if source.get("manifest") else int(
+                    conn.execute("SELECT page_count FROM works WHERE id = ?", (work_id,)).fetchone()["page_count"])
+                bounded_page = max(1, min(page_index, page_count)) if page_count else 0
             inserted = conn.execute(
                 """
-                INSERT OR IGNORE INTO reading_sessions (client_key, work_id, last_page_index, cache_lease)
-                VALUES (?, ?, ?, ?)
+                INSERT OR IGNORE INTO reading_sessions (client_key, work_id, last_page_index, cache_lease, page_count)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (client_key, work_id, bounded_page, cache_lease),
+                (client_key, work_id, bounded_page, cache_lease, page_count),
             ).rowcount
             row = conn.execute(
                 "SELECT * FROM reading_sessions WHERE client_key = ?",
@@ -109,11 +131,12 @@ class ReaderService:
         if not work:
             raise ValueError(f"Work {work_id} does not exist")
         page_count = int(work["page_count"])
-        session = self.db.fetchone("SELECT cache_lease FROM reading_sessions WHERE id = ? AND work_id = ?", (session_id, work_id))
+        session = self.db.fetchone("SELECT cache_lease, page_count FROM reading_sessions WHERE id = ? AND work_id = ?", (session_id, work_id))
+        if session:
+            page_count = int(session["page_count"])
         if session and session["cache_lease"] and self.cache:
-            from app.services.archive_manifest import unpack_manifest
             try:
-                page_count = len(unpack_manifest(self.cache.touch_lease(work_id, session["cache_lease"])["manifest"]))
+                self.cache.touch_lease(work_id, session["cache_lease"])
             except ValueError:
                 if not finished:
                     raise

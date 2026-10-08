@@ -5,12 +5,14 @@ class ReaderStatePatch(BaseModel):
     page_index: int
     completed: bool = False
     cache_lease: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+    source_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class ReadingSessionStart(BaseModel):
     session_key: str = Field(min_length=8, max_length=128)
     page_index: int = 1
     cache_lease: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
+    source_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class ReadingSessionPatch(BaseModel):

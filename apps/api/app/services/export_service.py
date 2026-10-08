@@ -203,8 +203,18 @@ class ExportService:
             raise ValueError("; ".join(blocker["message"] for blocker in preview["blockers"]))
 
         comic_info_xml = comicinfo.to_xml(preview["comic_info"]) if opts["write_comicinfo"] else None
-        with self._export_source(work_id, checkpoint) as source_path:
-            comicinfo.reseal_cbz_to(source_path, destination, comic_info_xml, opts["keep_json"], opts["compress"], checkpoint)
+        origin = self.libraries.source_file(work_id) or self.libraries.source_file(work_id, available=False)
+        if origin and origin["library_kind"] == "mounted" and not self.cache.required(origin):
+            with self.cache.mounted_read(origin, options={"xml": comic_info_xml, "keep_json": opts["keep_json"], "compress": opts["compress"]}, checkpoint=checkpoint) as (path, _type):
+                with path.open("rb") as source:
+                    if isinstance(destination, Path):
+                        with destination.open("wb") as output:
+                            shutil.copyfileobj(source, output, 1024 * 1024)
+                    else:
+                        shutil.copyfileobj(source, destination, 1024 * 1024)
+        else:
+            with self._export_source(work_id, checkpoint) as source_path:
+                comicinfo.reseal_cbz_to(source_path, destination, comic_info_xml, opts["keep_json"], opts["compress"], checkpoint)
         return preview["output_name"]
 
     @contextmanager
@@ -230,8 +240,12 @@ class ExportService:
             # ponytail: share the lifecycle lock during local export; per-work locks if throughput requires it.
             with self.cache._lock:
                 try:
+                    origin = self.cache.direct_source(work_id, self.cache.revision(origin))
                     path = self.libraries.resolve_file(origin)
                     before = path.stat()
+                    if origin["library_item_id"] and (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (
+                        origin["size_bytes"], origin["mtime_ns"], origin["device"], origin["inode"]):
+                        raise ValueError("源归档已变化，请重新扫描后导出")
                     yield path
                     after = path.stat()
                     if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):

@@ -150,7 +150,8 @@ CREATE TABLE IF NOT EXISTS reading_sessions (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   ended_at TEXT,
   duration_seconds INTEGER NOT NULL DEFAULT 0 CHECK(duration_seconds >= 0),
-  last_page_index INTEGER NOT NULL DEFAULT 0
+  last_page_index INTEGER NOT NULL DEFAULT 0,
+  page_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS remote_reading_sessions (
@@ -397,6 +398,10 @@ class Database:
         )
         _add_column_if_missing(conn, "reading_sessions", _table_columns(conn, "reading_sessions"),
                                "cache_lease", "TEXT")
+        if "page_count" not in _table_columns(conn, "reading_sessions"):
+            _add_column_if_missing(conn, "reading_sessions", _table_columns(conn, "reading_sessions"),
+                                   "page_count", "INTEGER NOT NULL DEFAULT 0")
+            conn.execute("UPDATE reading_sessions SET page_count = COALESCE((SELECT page_count FROM works WHERE id = work_id), 0)")
         _add_column_if_missing(conn, "media_libraries", _table_columns(conn, "media_libraries"),
                                "resolved_root_path", "TEXT")
         item_columns = _table_columns(conn, "library_items")

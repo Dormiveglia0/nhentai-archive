@@ -2,7 +2,7 @@
 
 ## Current Slice
 
-In-progress 2026-10-09 update: see `docs/MEDIA_LIBRARY_UPDATE.md` for the complete media-library/cache/scraping/subscription/SMTP scope and stage gates. Directory indexing, versioned reading cache, file ownership, governance/export source compatibility and streamed archive packaging are implemented on the working branch; the deployed UI baseline below remains live. Bounded direct mounted IO, watchers, scraping, subscriptions/SMTP and settings/dialog integration remain incomplete. Do not deploy yet.
+In-progress 2026-10-09 update: see `docs/MEDIA_LIBRARY_UPDATE.md` for the complete media-library/cache/scraping/subscription/SMTP scope and stage gates. Directory indexing, versioned reading cache, file ownership, governance/export source compatibility, streamed archive packaging and bounded direct mounted IO/revision protection are implemented on the working branch; the deployed UI baseline below remains live. Watchers, scraping, subscriptions/SMTP and settings/dialog integration remain incomplete. Do not deploy yet.
 
 Current frontend baseline (2026-10-08, final review): the homepage uses small functional headings, one natural-aspect real cover, its reading action/progress and three ordered recent entries; no giant text or decorative carousel. Library details keep the native sharp modal, gallery-style cover without a background mat, reading/favorite and equal edit/export/delete rows. Search stays right of add-tag; selected tags scroll in their own track inside the query row, with full counts and icon-only clear. Phone filters use native details, and view controls belong to results. Discover keeps its restored independent gallery layout and readable native horizontal popular cards on phones. Reader controls cover an unchanged full viewport; mode is in settings, and jump pages use the paper style. Hidden archive decorations pause during reading.
 
@@ -106,6 +106,7 @@ Root: `apps/api/app/`
 - `services/reader_service.py`
   - `get_state()`, `update_state()` persist page progress without incrementing visit counts.
   - `start_session()` creates one idempotent local-reader visit and one `reading_history` open; `update_session()` accepts only monotonic cumulative visible-time totals, the latest bounded page, and an optional finished marker.
+  - `reading_sessions.page_count` snapshots local session bounds and is backfilled on migration; rescans do not rebase historical sessions. Progress validates cached/direct image identity inside its SQLite write transaction.
   - `start_remote_session()` snapshots one cached gallery into an idempotent remote visit; `update_remote_session()` applies the same monotonic visible-time and bounded-page rules without creating local progress or history.
 - `services/library_service.py`
   - Local-only library reads; queries only `works`, `reader_progress`, `work_files`, `work_tags`, `local_tag_dictionary`. Never calls NH API.
@@ -163,6 +164,7 @@ Root: `apps/api/app/`
   - Whole-CBZ preparation uses existing jobs, bounded native copy/CRC processes, immutable manifests, atomic publication, quota/TTL/LRU and renewable leases. Schema adds `archive_cache`, `archive_cache_leases` and `reading_sessions.cache_lease`. Lifespan recovers interrupted copies, starts maintenance and closes workers. Originals and persistent covers/tags are preserved; reading thumbnails share cache lifetime.
   - `api/works.py`: POST `/works/{id}/reading-source`, DELETE `/works/{id}/reading-source/{lease}`; page/thumbnail reads, progress and sessions accept a lease. `api/library.py`: GET/PATCH `/library/cache`, POST `/library/cache/clear`. `api/jobs.py` dispatches retry/resume/cancel to cache workers.
   - `ReaderService` protects immutable snapshots and current progress. `useReaderData.ts` prepares/polls real sources, serializes progress and releases after saves; `useReadingSession.ts` renews the lease. `ReaderPage.*` owns preparation progress and task actions. Failed `ReaderImage` placeholders retain refs, and `WebtoonView` observes replacement elements for jump/retry behavior. Task rows omit logs; inspector detail logs remain.
+  - Direct preparation returns pages/`source_revision`; page/thumb/progress/session-start APIs accept its64-hex identity, which survives metadata-only reseals. Mounted cache-off page/export IO uses four bounded child processes plus16 short waiters, with timeout/cancel and blocked-worker retention. Ephemeral output is removed after the request. Direct operations protect deletion/write-back. Retry reloads a changed source; late old-progress errors are ignored after a new source opens.
 - `services/workbench_service.py`
   - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`

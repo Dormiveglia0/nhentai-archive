@@ -63,9 +63,10 @@ def release_reading_source(work_id: int, lease: str):
 
 
 @router.get("/{work_id}/pages/{page_index}")
-def get_page(work_id: int, page_index: int, lease: str | None = Query(default=None, pattern=r"^[a-f0-9]{32}$")):
+def get_page(work_id: int, page_index: int, lease: str | None = Query(default=None, pattern=r"^[a-f0-9]{32}$"),
+             source_revision: str | None = Query(default=None, pattern=r"^[a-f0-9]{64}$")):
     try:
-        body, media_type = services.archive.read_page(work_id, page_index, lease)
+        body, media_type = services.archive.read_page(work_id, page_index, lease, source_revision)
         return Response(content=body, media_type=media_type)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -77,9 +78,10 @@ def get_page(work_id: int, page_index: int, lease: str | None = Query(default=No
 
 @router.get("/{work_id}/pages/{page_index}/thumb")
 def get_page_thumbnail(work_id: int, page_index: int, w: int = Query(default=320, ge=64, le=1024),
-                       lease: str | None = Query(default=None, pattern=r"^[a-f0-9]{32}$")):
+                       lease: str | None = Query(default=None, pattern=r"^[a-f0-9]{32}$"),
+                       source_revision: str | None = Query(default=None, pattern=r"^[a-f0-9]{64}$")):
     try:
-        body, media_type = services.archive.read_page_thumbnail(work_id, page_index, w, lease)
+        body, media_type = services.archive.read_page_thumbnail(work_id, page_index, w, lease, source_revision)
         return Response(
             content=body,
             media_type=media_type,
@@ -101,9 +103,9 @@ def get_reader_state(work_id: int):
 @router.patch("/{work_id}/reader-state")
 def patch_reader_state(work_id: int, patch: ReaderStatePatch):
     try:
-        return services.reader.update_state(work_id, patch.page_index, patch.completed, patch.cache_lease)
+        return services.reader.update_state(work_id, patch.page_index, patch.completed, patch.cache_lease, patch.source_revision)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=409 if patch.source_revision else 404, detail=str(exc)) from exc
 
 
 @router.patch("/{work_id}/favorite")
@@ -117,9 +119,9 @@ def patch_favorite(work_id: int, patch: FavoritePatch):
 @router.post("/{work_id}/reading-sessions")
 def start_reading_session(work_id: int, payload: ReadingSessionStart):
     try:
-        return services.reader.start_session(work_id, payload.session_key, payload.page_index, payload.cache_lease)
+        return services.reader.start_session(work_id, payload.session_key, payload.page_index, payload.cache_lease, payload.source_revision)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=409 if payload.source_revision else 404, detail=str(exc)) from exc
 
 
 @router.patch("/{work_id}/reading-sessions/{session_id}")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import multiprocessing
 import os
@@ -82,6 +83,45 @@ def _copy_source(connection, source: dict[str, Any], destination: str) -> None:
         connection.close()
 
 
+def _read_mounted(connection, source: dict[str, Any], destination: str, page: dict | None, options: dict) -> None:
+    from app.services.archive_service import ArchiveService
+    from app.services.comicinfo import reseal_cbz_to
+    try:
+        try:
+            import resource
+            resource.setrlimit(resource.RLIMIT_AS, (512 * 1024**2, 512 * 1024**2))
+        except ImportError:
+            pass
+        root = MediaLibraryService.validate_root(Path(source["root_path"]), source["root_boundaries"])
+        if source.get("resolved_root_path") and str(root) != source["resolved_root_path"]:
+            raise ValueError("库根目录已变化，请重新扫描")
+        path = MediaLibraryService.source_path(root, source["relative_path"], json.loads(source["config_json"]).get("follow_symlinks", False))
+        expected = (source["size_bytes"], source["mtime_ns"], source["device"], source["inode"])
+        def check_version():
+            info = path.stat()
+            if (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino) != expected:
+                raise ValueError("源归档已变化，请重新扫描后打开作品")
+        check_version()
+        media_type = "application/zip"
+        if page is not None:
+            body, media_type = ArchiveService._read_archive_page(path, [page], page["page_index"])
+            Path(destination).write_bytes(body)
+        else:
+            def checkpoint():
+                connection.send(("progress", None))
+                connection.recv()
+            reseal_cbz_to(path, Path(destination), options["xml"], options["keep_json"], options["compress"], checkpoint)
+        check_version()
+        connection.send(("done", media_type))
+    except Exception as exc:
+        try:
+            connection.send(("invalid" if isinstance(exc, (ValueError, FileNotFoundError)) else "error", str(exc)[:500] or type(exc).__name__))
+        except (BrokenPipeError, EOFError):
+            pass
+    finally:
+        connection.close()
+
+
 class ArchiveCacheService:
     def __init__(self, db: Database, settings: Settings, libraries: MediaLibraryService):
         self.db, self.settings, self.libraries = db, settings, libraries
@@ -89,6 +129,9 @@ class ArchiveCacheService:
         self._lock = threading.RLock()
         self._workers: dict[int, threading.Thread] = {}
         self._processes: dict[int, Any] = {}
+        self._direct_processes: dict[str, dict[str, Any]] = {}
+        self._direct_slots = threading.BoundedSemaphore(4)
+        self._direct_waiters = 0
         self._closing = threading.Event()
         self._maintenance = None
 
@@ -137,7 +180,11 @@ class ArchiveCacheService:
         if not source:
             raise FileNotFoundError("作品源文件不可用或源库已移除")
         if not self.required(source):
-            return {"status": "direct", "cache_id": None, "lease": None}
+            source = self.direct_source(work_id)
+            pages = unpack_manifest(source["manifest"]) if source.get("manifest") else self.db.fetchall(
+                "SELECT * FROM work_pages WHERE work_id = ? ORDER BY page_index", (work_id,))
+            return {"status": "direct", "cache_id": None, "lease": None,
+                    "source_revision": self.revision(source), "pages": [{**p, "work_id": work_id} for p in pages]}
         if not source.get("manifest") or not source.get("fingerprint"):
             raise ValueError("作品尚未完成扫描")
         with self._lock:
@@ -178,6 +225,104 @@ class ArchiveCacheService:
         return {"status": job["status"] if job and (row["status"] in {"queued", "downloading", "blocked"} or job["status"] == "paused")
                 else "failed" if row["status"] == "blocked" else row["status"],
                 "cache_id": row["id"], "lease": None, "job": job, "error": row["last_error"]}
+
+    @staticmethod
+    def revision(source: dict[str, Any]) -> str:
+        # Image identity survives metadata-only reseals; file ID distinguishes alternate copies.
+        return hashlib.sha256(json.dumps([source["id"], source.get("fingerprint") or source.get("sha256"),
+                                          source["size_bytes"] if not source.get("fingerprint") else None]).encode()).hexdigest()
+
+    def direct_source(self, work_id: int, revision: str | None = None) -> dict[str, Any]:
+        source = self.libraries.source_file(work_id) or self.libraries.source_file(work_id, available=False)
+        if not source or (source["library_item_id"] and source["source_status"] != "ready"):
+            raise ValueError("源文件索引尚未就绪，请重新扫描后打开作品")
+        if revision and self.revision(source) != revision:
+            raise ValueError("源归档已变化，请重新打开作品")
+        return source
+
+    def direct_in_use(self, work_id: int) -> bool:
+        with self._lock:
+            self._reap_direct()
+            return any(row["work_id"] == work_id for row in self._direct_processes.values())
+
+    def _reap_direct(self) -> None:
+        for token, row in list(self._direct_processes.items()):
+            if row["blocked"] and not row["process"].is_alive():
+                row["process"].join()
+                row["path"].unlink(missing_ok=True)
+                self._direct_processes.pop(token)
+                self._direct_slots.release()
+
+    @contextmanager
+    def mounted_read(self, source: dict[str, Any], page: dict | None = None, options: dict | None = None, checkpoint=None):
+        token = uuid.uuid4().hex
+        path = self.settings.archive_cache_dir / f"direct-{token}.tmp"
+        connection = child = process = None
+        acquired = False
+        try:
+            with self._lock:
+                self._reap_direct()
+                # ponytail: four processes/16 short waiters preserve HTTP capacity; reuse workers if spawn latency warrants it.
+                if self._closing.is_set() or self._direct_waiters >= 16:
+                    raise OSError("挂载读取繁忙，请稍后重试")
+                self._direct_waiters += 1
+            try:
+                acquired = self._direct_slots.acquire(timeout=2)
+            finally:
+                with self._lock:
+                    self._direct_waiters -= 1
+            if not acquired or self._closing.is_set():
+                raise OSError("挂载读取繁忙，请稍后重试")
+            with self._lock:
+                current = self.direct_source(source["work_id"], self.revision(source))
+                if _version(current) != _version(source):
+                    raise ValueError("源归档已变化，请重新打开作品")
+                source = {**source, "root_boundaries": self.libraries.root_boundaries(source["library_id"])}
+                source.pop("manifest", None)
+                context = multiprocessing.get_context("spawn")
+                connection, child = context.Pipe()
+                process = context.Process(target=_read_mounted, args=(child, source, str(path), page, options or {}), daemon=True)
+                process.start()
+                child.close()
+                self._direct_processes[token] = {"work_id": source["work_id"], "process": process, "path": path, "blocked": False}
+            timeout = json.loads(source["config_json"]).get("io_timeout_seconds", 30)
+            deadline = time.monotonic() + timeout
+            while True:
+                before = time.monotonic()
+                if checkpoint:
+                    checkpoint()
+                deadline += time.monotonic() - before
+                if self._closing.is_set():
+                    raise OSError("应用正在停止挂载读取")
+                if connection.poll(.1):
+                    kind, value = connection.recv()
+                    if kind == "invalid":
+                        raise ValueError(value)
+                    if kind == "error":
+                        raise OSError(value)
+                    if kind == "done":
+                        break
+                    connection.send(True)
+                    deadline = time.monotonic() + timeout
+                elif time.monotonic() > deadline:
+                    raise TimeoutError(f"源归档读取超过{timeout}秒，请检查挂载后重试")
+            yield path, value
+        except (BrokenPipeError, EOFError) as exc:
+            raise OSError("挂载读取进程已中断") from exc
+        finally:
+            if connection is not None:
+                connection.close()
+            if child is not None:
+                child.close()
+            stopped = process is None or process.pid is None or self._stop(process)
+            with self._lock:
+                if stopped:
+                    self._direct_processes.pop(token, None)
+                    path.unlink(missing_ok=True)
+                    if acquired:
+                        self._direct_slots.release()
+                else:
+                    self._direct_processes[token] = {"work_id": source["work_id"], "process": process, "path": path, "blocked": True}
 
     def _start(self, cache_id: int, job_id: int) -> None:
         if job_id in self._workers:
@@ -411,6 +556,7 @@ class ArchiveCacheService:
             return self._sweep(clear=clear)
 
     def _reap(self) -> None:
+        self._reap_direct()
         for cache_id, child in list(self._processes.items()):
             if child is not None and not child.is_alive():
                 child.join()
@@ -427,6 +573,8 @@ class ArchiveCacheService:
             self.db.execute("UPDATE archive_cache SET status = 'failed', last_error = '应用重启，可重试阅读准备' "
                             "WHERE status IN ('queued', 'downloading', 'blocked')")
             ready = {r["id"] for r in self.db.fetchall("SELECT id FROM archive_cache WHERE status = 'ready'")}
+            for path in self.settings.archive_cache_dir.glob("direct-*.tmp"):
+                path.unlink(missing_ok=True)
             for path in self.settings.archive_cache_dir.iterdir():
                 if path.stem.isascii() and path.stem.isdigit() and path.suffix in {".cbz", ".part"}:
                     if path.suffix == ".part" or int(path.stem) not in ready:
@@ -435,6 +583,8 @@ class ArchiveCacheService:
 
     def close(self) -> None:
         self._closing.set()
+        for row in list(self._direct_processes.values()):
+            self._stop(row["process"])
         for process in list(self._processes.values()):
             self._stop(process)
         if self._maintenance is not None:

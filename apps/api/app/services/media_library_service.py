@@ -192,7 +192,7 @@ class MediaLibraryService:
         return self.db.fetchone(
             f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
             i.mtime_ns, i.device, i.inode, i.relative_path, l.id AS library_id,
-            l.kind AS library_kind, l.root_path, l.read_only, l.config_json
+            l.kind AS library_kind, l.root_path, l.resolved_root_path, l.read_only, l.config_json
             FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
             LEFT JOIN media_libraries l ON l.id = i.library_id
             WHERE f.work_id = ? AND f.kind = 'source_cbz'

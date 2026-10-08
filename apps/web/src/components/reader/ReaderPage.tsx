@@ -46,7 +46,7 @@ export function ReaderPage({ source }: Props) {
   useReadingSession(
     data.isRemote
       ? source.kind === "remote" && data.pageCount > 0 ? { kind: "remote", id: source.galleryId } : null
-      : data.work ? { kind: "local", id: data.work.id, cacheLease: data.cacheLease } : null,
+      : data.work ? { kind: "local", id: data.work.id, cacheLease: data.cacheLease, sourceRevision: data.sourceRevision } : null,
     data.pageIndex,
   );
 
@@ -198,6 +198,7 @@ export function ReaderPage({ source }: Props) {
         onFlip={flip}
         onJump={jump}
         onToggleChrome={toggleChrome}
+        onPrepareRetry={data.retrySource}
       />
 
       {feedbackError ? <div className="reader-feedback is-error" role="alert"><AlertTriangle size={15} /><span>{feedbackError}</span></div> : null}

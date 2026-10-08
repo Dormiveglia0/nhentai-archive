@@ -568,6 +568,8 @@ class GovernanceService:
         """复用 write_back_comicinfo 的前置防护判定，但不动盘。"""
         if self.settings is None:
             return False, ["未配置 library 目录"]
+        if self.cache and self.cache.direct_in_use(work_id):
+            return False, ["作品正在读取或导出，请结束后再回写"]
         row = next((file for file in self.libraries.files(work_id) if file["kind"] == "source_cbz"), None)
         if not row:
             return False, ["源 CBZ 不存在或不是有效 ZIP"]

@@ -79,6 +79,8 @@ def download(
         return _download_response(lambda path: services.exports.write_cbz(work_id, path, options), "application/vnd.comicbook+zip")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/exports/download")
@@ -93,6 +95,8 @@ def download_bundle(payload: ExportBatchRequest):
         return _download_response(lambda path: services.exports.write_bundle(items, path, options), "application/zip")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/exports/bulk-jobs")

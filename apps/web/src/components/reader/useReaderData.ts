@@ -31,6 +31,7 @@ export function useReaderData(source: ReaderSource) {
   const [queued, setQueued] = useState(false);
   const [revision, setRevision] = useState(0);
   const [cacheLease, setCacheLease] = useState<string | null>(null);
+  const [sourceRevision, setSourceRevision] = useState<string | null>(null);
   const [preparingJob, setPreparingJob] = useState<Job | null>(null);
 
   const loadRequest = useRef(0);
@@ -38,8 +39,10 @@ export function useReaderData(source: ReaderSource) {
   const mounted = useRef(true);
   const currentSourceKey = useRef(sourceKey);
   currentSourceKey.current = sourceKey;
+  const currentReadingVersion = useRef<string | null>(null);
+  currentReadingVersion.current = cacheLease || sourceRevision;
   const persistTimer = useRef<number | null>(null);
-  const pendingPersist = useRef<{ workId: number; next: number; done: boolean; lease: string | null } | null>(null);
+  const pendingPersist = useRef<{ workId: number; next: number; done: boolean; lease: string | null; sourceRevision: string | null } | null>(null);
   const persistTail = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
@@ -67,14 +70,14 @@ export function useReaderData(source: ReaderSource) {
     setPageIndex(1);
     setCompleted(false);
     setCacheLease(null);
+    setSourceRevision(null);
     setPreparingJob(null);
 
     async function load() {
       try {
         if (stableSource.kind === "local") {
-          const [nextWork, nextPages, nextState] = await Promise.all([
+          const [nextWork, nextState] = await Promise.all([
             api.work(stableSource.workId),
-            api.pages(stableSource.workId),
             api.readerState(stableSource.workId),
           ]);
           if (request !== loadRequest.current) return;
@@ -95,11 +98,12 @@ export function useReaderData(source: ReaderSource) {
           if (prepared.status === "failed" || prepared.status === "cancelled") {
             throw new Error(prepared.error || prepared.job?.error || "阅读准备已取消");
           }
-          const readyPages = prepared.pages ?? nextPages.result;
+          const readyPages = prepared.pages ?? [];
           const pageCount = readyPages.length;
           setWork(nextWork);
           setLocalPages(readyPages);
           setCacheLease(openedLease);
+          setSourceRevision(prepared.source_revision ?? null);
           setPageIndex(pageCount ? clamp(nextState.page_index || 1, 1, pageCount) : 1);
           setCompleted(Boolean(nextState.completed) && nextState.page_count === pageCount);
         } else {
@@ -120,7 +124,7 @@ export function useReaderData(source: ReaderSource) {
       const pending = pendingPersist.current;
       pendingPersist.current = null;
       if (pending) persistTail.current = persistTail.current.catch(() => undefined)
-        .then(() => api.updateReaderState(pending.workId, pending.next, pending.done, pending.lease, true)).catch(() => undefined);
+        .then(() => api.updateReaderState(pending.workId, pending.next, pending.done, pending.lease, true, pending.sourceRevision)).catch(() => undefined);
       return persistTail.current;
     };
     const release = () => {
@@ -157,11 +161,12 @@ export function useReaderData(source: ReaderSource) {
 
   const pages = useMemo<ReaderPageItem[]>(() => {
     if (stableSource.kind === "local") {
+      const query = cacheLease ? `?lease=${cacheLease}` : sourceRevision ? `?source_revision=${sourceRevision}` : "";
       return localPages.map((page) => ({
-        key: `local-${stableSource.workId}-${cacheLease || "direct"}-${page.page_index}`,
+        key: `local-${stableSource.workId}-${cacheLease || sourceRevision || "direct"}-${page.page_index}`,
         pageIndex: page.page_index,
-        src: `/api/works/${stableSource.workId}/pages/${page.page_index}${cacheLease ? `?lease=${cacheLease}` : ""}`,
-        thumbSrc: `/api/works/${stableSource.workId}/pages/${page.page_index}/thumb${cacheLease ? `?lease=${cacheLease}` : ""}`,
+        src: `/api/works/${stableSource.workId}/pages/${page.page_index}${query}`,
+        thumbSrc: `/api/works/${stableSource.workId}/pages/${page.page_index}/thumb${query}`,
       }));
     }
     return (gallery?.pages ?? []).filter((page) => Boolean(page.url)).map((page, index) => ({
@@ -169,7 +174,7 @@ export function useReaderData(source: ReaderSource) {
       pageIndex: index + 1,
       src: page.url!,
     }));
-  }, [cacheLease, gallery?.pages, localPages, stableSource]);
+  }, [cacheLease, gallery?.pages, localPages, sourceRevision, stableSource]);
 
   const isRemote = stableSource.kind === "remote";
   const pageCount = pages.length;
@@ -194,17 +199,17 @@ export function useReaderData(source: ReaderSource) {
     if (persistTimer.current) window.clearTimeout(persistTimer.current);
     const workId = stableSource.workId;
     const requestSource = sourceKey;
-    pendingPersist.current = { workId, next, done, lease: cacheLease };
+    pendingPersist.current = { workId, next, done, lease: cacheLease, sourceRevision };
     persistTimer.current = window.setTimeout(() => {
       persistTimer.current = null;
       pendingPersist.current = null;
       persistTail.current = persistTail.current.catch(() => undefined)
-        .then(() => api.updateReaderState(workId, next, done, cacheLease))
+        .then(() => api.updateReaderState(workId, next, done, cacheLease, false, sourceRevision))
         .catch((reason) => {
-          if (mounted.current && currentSourceKey.current === requestSource) setActionError(reason instanceof Error ? reason.message : String(reason));
+          if (mounted.current && currentSourceKey.current === requestSource && currentReadingVersion.current === (cacheLease || sourceRevision)) setActionError(reason instanceof Error ? reason.message : String(reason));
         });
     }, PERSIST_DEBOUNCE_MS);
-  }, [cacheLease, sourceKey, stableSource]);
+  }, [cacheLease, sourceKey, sourceRevision, stableSource]);
 
   const setPage = useCallback((next: number, done = false) => {
     if (!pageCount) return;
@@ -217,6 +222,20 @@ export function useReaderData(source: ReaderSource) {
   }, [pageCount, persistLocal]);
 
   const markCompleted = useCallback(() => setPage(pageCount, true), [pageCount, setPage]);
+
+  const retrySource = useCallback(async () => {
+    if (stableSource.kind !== "local" || !sourceRevision) return true;
+    try {
+      const prepared = await api.prepareReadingSource(stableSource.workId);
+      if (prepared.lease) await api.releaseReadingSource(stableSource.workId, prepared.lease);
+      if (!mounted.current || currentSourceKey.current !== sourceKey || currentReadingVersion.current !== sourceRevision) return false;
+      if (prepared.status === "direct" && prepared.source_revision === sourceRevision) return true;
+      setRevision((value) => value + 1);
+    } catch (reason) {
+      if (mounted.current && currentSourceKey.current === sourceKey && currentReadingVersion.current === sourceRevision) setActionError(reason instanceof Error ? reason.message : String(reason));
+    }
+    return false;
+  }, [sourceKey, sourceRevision, stableSource]);
 
   const toggleFavorite = useCallback(async () => {
     if (!work) return;
@@ -258,6 +277,7 @@ export function useReaderData(source: ReaderSource) {
     importing,
     queued,
     cacheLease,
+    sourceRevision,
     preparingJob,
     isRemote,
     sourceKey,
@@ -273,6 +293,7 @@ export function useReaderData(source: ReaderSource) {
     gallery,
     setPage,
     markCompleted,
+    retrySource,
     toggleFavorite,
     importRemote,
     reload: () => {

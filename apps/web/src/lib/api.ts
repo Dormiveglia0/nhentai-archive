@@ -736,6 +736,7 @@ export type ReadingSource = {
   status: string;
   cache_id: number | null;
   lease: string | null;
+  source_revision?: string | null;
   pages?: PageInfo[];
   job?: Job | null;
   error?: string | null;
@@ -1314,11 +1315,11 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ favorite }),
     }),
-  startReadingSession: (id: number, sessionKey: string, pageIndex: number, cacheLease: string | null = null) =>
+  startReadingSession: (id: number, sessionKey: string, pageIndex: number, cacheLease: string | null = null, sourceRevision: string | null = null) =>
     request<ReadingSession>(`/api/works/${id}/reading-sessions`, {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex, cache_lease: cacheLease }),
+      body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex, cache_lease: cacheLease, source_revision: sourceRevision }),
     }),
   updateReadingSession: (id: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false) =>
     request<ReadingSession>(`/api/works/${id}/reading-sessions/${sessionId}`, {
@@ -1340,11 +1341,11 @@ export const api = {
       body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished }),
       keepalive,
     }),
-  updateReaderState: (id: number, pageIndex: number, completed = false, cacheLease: string | null = null, keepalive = false) =>
+  updateReaderState: (id: number, pageIndex: number, completed = false, cacheLease: string | null = null, keepalive = false, sourceRevision: string | null = null) =>
     request<ReaderState>(`/api/works/${id}/reader-state`, {
       method: "PATCH",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ page_index: pageIndex, completed, cache_lease: cacheLease }),
+      body: JSON.stringify({ page_index: pageIndex, completed, cache_lease: cacheLease, source_revision: sourceRevision }),
       keepalive,
     }),
   jobs: jobsWithCacheCoherence,

@@ -16,6 +16,7 @@ type ReaderViewportProps = {
   onFlip: (delta: number) => void;
   onJump: (pageIndex: number) => void;
   onToggleChrome: () => void;
+  onPrepareRetry: () => Promise<boolean>;
 };
 
 export function ReaderViewport({
@@ -30,10 +31,14 @@ export function ReaderViewport({
   onFlip,
   onJump,
   onToggleChrome,
+  onPrepareRetry,
 }: ReaderViewportProps) {
   const [retryToken, setRetryToken] = useState(0);
   const emptyHint = isRemote ? "远端详情未返回可阅读页面 URL。" : "此作品没有可读取页面。";
   const current = pages.find((page) => page.pageIndex === pageIndex) ?? pages[0] ?? null;
+  const retry = async () => {
+    if (await onPrepareRetry()) setRetryToken((value) => value + 1);
+  };
 
   return (
     <div className="reader-viewport">
@@ -47,7 +52,7 @@ export function ReaderViewport({
           onReachPage={onJump}
           onToggleChrome={onToggleChrome}
           retryToken={retryToken}
-          onRetry={() => setRetryToken((value) => value + 1)}
+          onRetry={() => void retry()}
           emptyHint={emptyHint}
         />
       ) : (
@@ -59,7 +64,7 @@ export function ReaderViewport({
           onFlip={onFlip}
           onToggleChrome={onToggleChrome}
           retryToken={retryToken}
-          onRetry={() => setRetryToken((value) => value + 1)}
+          onRetry={() => void retry()}
           emptyHint={emptyHint}
         />
       )}

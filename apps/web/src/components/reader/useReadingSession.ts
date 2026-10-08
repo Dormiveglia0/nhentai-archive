@@ -23,13 +23,14 @@ function createSessionKey() {
 }
 
 export type ReadingSessionSource =
-  | { kind: "local"; id: number; cacheLease?: string | null }
+  | { kind: "local"; id: number; cacheLease?: string | null; sourceRevision?: string | null }
   | { kind: "remote"; id: number }
   | null;
 
 export function useReadingSession(source: ReadingSessionSource, pageIndex: number) {
   const cacheLease = source?.kind === "local" ? source.cacheLease ?? null : null;
-  const sourceKey = source ? `${source.kind}:${source.id}:${cacheLease ?? ""}` : "";
+  const sourceRevision = source?.kind === "local" ? source.sourceRevision ?? null : null;
+  const sourceKey = source ? `${source.kind}:${source.id}:${cacheLease ?? sourceRevision ?? ""}` : "";
   const sourceKind = source?.kind ?? null;
   const sourceId = source?.id ?? null;
   const pageRef = useRef(pageIndex);
@@ -79,7 +80,7 @@ export function useReadingSession(source: ReadingSessionSource, pageIndex: numbe
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
-    const started = sourceKind === "local" ? api.startReadingSession(sourceId, sessionKey, pageRef.current, cacheLease)
+    const started = sourceKind === "local" ? api.startReadingSession(sourceId, sessionKey, pageRef.current, cacheLease, sourceRevision)
       : api.startRemoteReadingSession(sourceId, sessionKey, pageRef.current);
     void started
       .then((session) => {
@@ -97,5 +98,5 @@ export function useReadingSession(source: ReadingSessionSource, pageIndex: numbe
       stopClock();
       flush(true, true);
     };
-  }, [cacheLease, sessionKey, sourceId, sourceKind]);
+  }, [cacheLease, sessionKey, sourceId, sourceKind, sourceRevision]);
 }
