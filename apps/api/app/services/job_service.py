@@ -122,50 +122,57 @@ class JobService:
         current_job = self.checkpoint(job_id)
         percent = max(0, min(100, percent if percent is not None else round((current / total) * 100) if total else 0))
         with self.db.connect() as conn:
-            conn.execute(
+            updated = conn.execute(
                 """
                 UPDATE jobs
                 SET status = ?, stage = ?, progress_current = ?, progress_total = ?,
                     progress_percent = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = ? AND status IN ('queued', 'running')
                 """,
                 (status, stage, current, total, percent, job_id),
             )
-            if current_job["stage"] != stage:
+            if updated.rowcount and current_job["stage"] != stage:
                 self._log_with_conn(conn, job_id, "info", f"进入阶段: {stage}")
 
     def complete(self, job_id: int, target_update: dict[str, Any] | None = None) -> None:
-        job = self.checkpoint(job_id)
-        target = job["target"]
-        if target_update:
-            target.update(target_update)
-        with self.db.connect() as conn:
-            conn.execute(
-                """
-                UPDATE jobs
-                SET status = 'completed', stage = 'completed', progress_current = 1,
-                    progress_total = 1, progress_percent = 100, target_json = ?,
-                    error = NULL, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                """,
-                (json.dumps(target, ensure_ascii=False), job_id),
-            )
-            self._log_with_conn(conn, job_id, "info", "任务已完成")
+        while True:
+            job = self.checkpoint(job_id)
+            if job["status"] == "completed" and not target_update:
+                return
+            if job["status"] not in {"queued", "running", "completed"}:
+                raise ValueError("仅运行中的任务可以完成")
+            target = job["target"] | (target_update or {})
+            with self.db.connect() as conn:
+                updated = conn.execute(
+                    """
+                    UPDATE jobs
+                    SET status = 'completed', stage = 'completed', progress_current = 1,
+                        progress_total = 1, progress_percent = 100, target_json = ?,
+                        error = NULL, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND status IN ('queued', 'running', 'completed')
+                    """,
+                    (json.dumps(target, ensure_ascii=False), job_id),
+                )
+                if updated.rowcount:
+                    if job["status"] != "completed":
+                        self._log_with_conn(conn, job_id, "info", "任务已完成")
+                    return
 
     def fail(self, job_id: int, message: str, retry_after: int | None = None) -> None:
         if self.get(job_id)["status"] in {"cancelled", "cancelling"}:
             return
         with self.db.connect() as conn:
-            conn.execute(
+            updated = conn.execute(
                 """
                 UPDATE jobs
                 SET status = 'failed', stage = 'failed', error = ?, retry_after = ?,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = ? AND status NOT IN ('cancelled', 'cancelling')
                 """,
                 (message, retry_after, job_id),
             )
-            self._log_with_conn(conn, job_id, "error", message)
+            if updated.rowcount:
+                self._log_with_conn(conn, job_id, "error", message)
 
     def retry(self, job_id: int) -> dict[str, Any]:
         with self.db.connect() as conn:

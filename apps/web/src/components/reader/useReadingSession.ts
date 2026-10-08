@@ -23,12 +23,13 @@ function createSessionKey() {
 }
 
 export type ReadingSessionSource =
-  | { kind: "local"; id: number }
+  | { kind: "local"; id: number; cacheLease?: string | null }
   | { kind: "remote"; id: number }
   | null;
 
 export function useReadingSession(source: ReadingSessionSource, pageIndex: number) {
-  const sourceKey = source ? `${source.kind}:${source.id}` : "";
+  const cacheLease = source?.kind === "local" ? source.cacheLease ?? null : null;
+  const sourceKey = source ? `${source.kind}:${source.id}:${cacheLease ?? ""}` : "";
   const sourceKind = source?.kind ?? null;
   const sourceId = source?.id ?? null;
   const pageRef = useRef(pageIndex);
@@ -78,8 +79,9 @@ export function useReadingSession(source: ReadingSessionSource, pageIndex: numbe
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
-    const start = sourceKind === "local" ? api.startReadingSession : api.startRemoteReadingSession;
-    void start(sourceId, sessionKey, pageRef.current)
+    const started = sourceKind === "local" ? api.startReadingSession(sourceId, sessionKey, pageRef.current, cacheLease)
+      : api.startRemoteReadingSession(sourceId, sessionKey, pageRef.current);
+    void started
       .then((session) => {
         sessionId = session.id;
         if (!alive) flush(true, true);
@@ -95,5 +97,5 @@ export function useReadingSession(source: ReadingSessionSource, pageIndex: numbe
       stopClock();
       flush(true, true);
     };
-  }, [sessionKey, sourceId, sourceKind]);
+  }, [cacheLease, sessionKey, sourceId, sourceKind]);
 }

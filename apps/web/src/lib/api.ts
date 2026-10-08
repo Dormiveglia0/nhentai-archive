@@ -726,6 +726,15 @@ export type ReaderState = {
   last_read_at: string | null;
 };
 
+export type ReadingSource = {
+  status: string;
+  cache_id: number | null;
+  lease: string | null;
+  pages?: PageInfo[];
+  job?: Job | null;
+  error?: string | null;
+};
+
 export type JobMeta = {
   title?: string | null;
   page_count?: number | null;
@@ -1290,6 +1299,8 @@ export const api = {
   works: () => request<{ result: Work[] }>("/api/works"),
   work: (id: number) => request<LibraryWork>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
+  prepareReadingSource: (id: number) => request<ReadingSource>(`/api/works/${id}/reading-source`, { method: "POST" }),
+  releaseReadingSource: (id: number, lease: string) => request<{ released: boolean }>(`/api/works/${id}/reading-source/${lease}`, { method: "DELETE", keepalive: true }),
   readerState: (id: number) => request<ReaderState>(`/api/works/${id}/reader-state`),
   setWorkFavorite: (id: number, favorite: boolean) =>
     request<LibraryWork>(`/api/works/${id}/favorite`, {
@@ -1297,11 +1308,11 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ favorite }),
     }),
-  startReadingSession: (id: number, sessionKey: string, pageIndex: number) =>
+  startReadingSession: (id: number, sessionKey: string, pageIndex: number, cacheLease: string | null = null) =>
     request<ReadingSession>(`/api/works/${id}/reading-sessions`, {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex }),
+      body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex, cache_lease: cacheLease }),
     }),
   updateReadingSession: (id: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false) =>
     request<ReadingSession>(`/api/works/${id}/reading-sessions/${sessionId}`, {
@@ -1323,11 +1334,12 @@ export const api = {
       body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished }),
       keepalive,
     }),
-  updateReaderState: (id: number, pageIndex: number, completed = false) =>
+  updateReaderState: (id: number, pageIndex: number, completed = false, cacheLease: string | null = null, keepalive = false) =>
     request<ReaderState>(`/api/works/${id}/reader-state`, {
       method: "PATCH",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ page_index: pageIndex, completed })
+      body: JSON.stringify({ page_index: pageIndex, completed, cache_lease: cacheLease }),
+      keepalive,
     }),
   jobs: jobsWithCacheCoherence,
   jobLogs: (id: number) => request<{ result: JobLog[] }>(`/api/jobs/${id}/logs`),

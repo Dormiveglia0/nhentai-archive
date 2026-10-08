@@ -15,8 +15,13 @@ from app.container import services
 async def lifespan(_app: FastAPI):
     services.jobs.recover_interrupted()
     services.library_index.recover_interrupted()
+    services.archive.cache.recover_interrupted()
+    services.archive.cache.start()
     services.export_jobs.sweep_exports()
-    yield
+    try:
+        yield
+    finally:
+        services.archive.cache.close()
 
 
 def create_app(enforce_auth: bool | None = None) -> FastAPI:

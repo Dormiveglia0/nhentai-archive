@@ -7,6 +7,24 @@ from app.container import services
 router = APIRouter(prefix="/library")
 
 
+@router.get("/cache")
+def reading_cache():
+    return services.archive.cache.summary()
+
+
+@router.patch("/cache")
+def configure_reading_cache(payload: dict):
+    try:
+        return services.archive.cache.configure(payload)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/cache/clear")
+def clear_reading_cache():
+    return services.archive.cache.sweep(clear=True)
+
+
 @router.get("/summary")
 def summary():
     return services.library.summary()

@@ -4,10 +4,13 @@ import hashlib
 import json
 import mimetypes
 import multiprocessing
+import os
+import stat
 import time
 import zipfile
 import zlib
 from io import BytesIO
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from typing import Any
 from xml.etree import ElementTree
@@ -22,6 +25,26 @@ from app.services.media_library_service import MediaLibraryService
 MAX_ENTRIES = 50000
 MAX_COVER_BYTES = 64 * 1024 * 1024
 MAX_MANIFEST_BYTES = 32 * 1024 * 1024
+
+
+@contextmanager
+def open_archive(path: Path):
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0))
+    with os.fdopen(fd, "rb") as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise ValueError("源归档不是普通文件")
+        # ZipFile has no public metadata limit. Its own bounded EOCD/ZIP64 reader
+        # lets us reject oversized directories before ZipFile allocates them.
+        end = zipfile._EndRecData(handle)
+        if not end:
+            raise zipfile.BadZipFile("归档缺少ZIP目录")
+        if end[zipfile._ECD_ENTRIES_TOTAL] > MAX_ENTRIES or end[zipfile._ECD_SIZE] > MAX_MANIFEST_BYTES:
+            raise ValueError("归档目录过大，最多50000项或32MB")
+        handle.seek(0)
+        with zipfile.ZipFile(handle) as archive:
+            if len(archive.infolist()) > MAX_ENTRIES:
+                raise ValueError("归档条目超过50000项")
+            yield archive
 
 
 class MountUnavailable(OSError):
@@ -127,10 +150,8 @@ def unpack_manifest(body: bytes) -> list[dict[str, Any]]:
 
 def inspect_archive(path: Path) -> dict[str, Any]:
     """Only read ZIP headers, ComicInfo and one cover; never hash/copy the archive."""
-    with zipfile.ZipFile(path) as archive:
+    with open_archive(path) as archive:
         entries = archive.infolist()
-        if len(entries) > MAX_ENTRIES:
-            raise ValueError("归档条目超过50000项")
         images, metadata, warnings = [], {}, []
         for position, info in enumerate(entries):
             if info.is_dir():

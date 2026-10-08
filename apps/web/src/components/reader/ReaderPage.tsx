@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowLeft, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { goBack } from "../../lib/navigation";
+import { api } from "../../lib/api";
 import {
   arrowDelta,
   clamp,
@@ -45,7 +46,7 @@ export function ReaderPage({ source }: Props) {
   useReadingSession(
     data.isRemote
       ? source.kind === "remote" && data.pageCount > 0 ? { kind: "remote", id: source.galleryId } : null
-      : data.work ? { kind: "local", id: data.work.id } : null,
+      : data.work ? { kind: "local", id: data.work.id, cacheLease: data.cacheLease } : null,
     data.pageIndex,
   );
 
@@ -149,6 +150,22 @@ export function ReaderPage({ source }: Props) {
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
   }, [activePanel, data.pageCount, flip, jumpOpen, openPanel, prefs.direction, prefs.mode, toggleFullscreen, zoomBy]);
+
+  if (data.preparingJob && data.loading) {
+    const job = data.preparingJob;
+    return <section className="reader-shell reader-error-shell">
+      <div className="reader-error-card reader-preparation" role="status">
+        <strong>{job.status === "paused" ? "阅读准备已暂停" : "正在准备阅读"}</strong>
+        <progress max={100} value={job.progress.percent} aria-label="归档缓存进度" />
+        <p>{job.status === "queued" ? "等待下载" : job.stage === "verifying_archive" ? "校验归档" : `${job.progress.percent}%`}</p>
+        <div>
+          <button type="button" onClick={() => { void (job.status === "paused" ? api.resumeJob(job.id) : api.pauseJob(job.id)).catch((reason) => setUiError(String(reason))); }}>{job.status === "paused" ? "继续" : "暂停"}</button>
+          <button type="button" onClick={() => { void api.cancelJob(job.id).then(goBack).catch((reason) => setUiError(String(reason))); }}>取消</button>
+        </div>
+        {uiError ? <p role="alert">{uiError}</p> : null}
+      </div>
+    </section>;
+  }
 
   if (data.error) {
     return (

@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Clock3, Download, FileText, Loader2, Pause, Play, RotateCcw, Trash2, Workflow, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock3, Download, Loader2, Pause, Play, RotateCcw, Trash2, Workflow, X } from "lucide-react";
 import { api, type Job } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
@@ -7,7 +7,7 @@ import { canCancel, canDelete, canDownloadBulkExport, canPause, canResume, canRe
 type Props = {
   jobs: Job[]; focusId: number | null; loading: boolean; emptyLabel: string; blurCovers: boolean;
   retryingId: number | null; actingId: number | null;
-  onFocus: (id: number) => void; onOpenLogs: (id: number) => void; onRetry: (id: number) => void;
+  onFocus: (id: number) => void; onRetry: (id: number) => void;
   onPause: (id: number) => void; onResume: (id: number) => void; onCancel: (id: number) => void; onDelete: (id: number) => void;
 };
 
@@ -45,7 +45,6 @@ export function TaskList(props: Props) {
                 : canPause(job) ? <button type="button" aria-label="暂停" disabled={props.actingId === job.id} onClick={() => props.onPause(job.id)}><Pause size={15} /><span>暂停</span></button>
                 : canResume(job) ? <button type="button" aria-label="恢复" disabled={props.actingId === job.id} onClick={() => props.onResume(job.id)}><Play size={15} /><span>恢复</span></button> : null}
               {canCancel(job) ? <button className="is-danger" type="button" aria-label="取消" disabled={props.actingId === job.id} onClick={() => props.onCancel(job.id)}><X size={15} /><span>取消</span></button> : null}
-              <button type="button" aria-label="日志" onClick={() => props.onOpenLogs(job.id)}><FileText size={15} /><span>日志</span></button>
               {canDelete(job) ? <button className="is-danger" type="button" aria-label="删除" disabled={props.actingId === job.id} onClick={() => props.onDelete(job.id)}><Trash2 size={15} /><span>删除</span></button> : null}
             </div>
           </article>

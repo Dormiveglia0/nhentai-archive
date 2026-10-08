@@ -1,4 +1,5 @@
 import json
+import threading
 
 import pytest
 
@@ -6,6 +7,45 @@ from app.config import Settings
 from app.database import Database
 from app.services.import_service import ImportService
 from app.services.job_service import JobActive, JobCancelled, JobService
+
+
+def test_progress_and_completion_preserve_pause_or_cancel_between_checkpoint_and_write(tmp_path, monkeypatch):
+    jobs = _service(tmp_path)
+    checkpoint = jobs.checkpoint
+    job_id = jobs.create("library_scan", {})["id"]
+    def pause_after_checkpoint(value):
+        result = checkpoint(value)
+        jobs.pause(value)
+        return result
+    monkeypatch.setattr(jobs, "checkpoint", pause_after_checkpoint)
+    jobs.mark_running(job_id, "scanning")
+    assert jobs.get(job_id)["status"] == "paused"
+    jobs.resume(job_id)
+    paused = threading.Event()
+    first = [True]
+    def pause_once(value):
+        result = checkpoint(value)
+        if first[0]:
+            first[0] = False
+            jobs.pause(value)
+            paused.set()
+        return result
+    monkeypatch.setattr(jobs, "checkpoint", pause_once)
+    finished = threading.Thread(target=jobs.complete, args=(job_id,), daemon=True)
+    finished.start()
+    assert paused.wait(1)
+    assert jobs.get(job_id)["status"] == "paused"
+    jobs.resume(job_id)
+    finished.join(2)
+    assert not finished.is_alive() and jobs.get(job_id)["status"] == "completed"
+    job_id = jobs.create("library_scan", {})["id"]
+    def cancel_after_checkpoint(value):
+        result = checkpoint(value)
+        jobs.cancel(value)
+        return result
+    monkeypatch.setattr(jobs, "checkpoint", cancel_after_checkpoint)
+    jobs.update_progress(job_id, "running", "scanning", 1, 2)
+    assert jobs.get(job_id)["status"] in {"cancelled", "cancelling"}
 
 
 def _service(tmp_path):

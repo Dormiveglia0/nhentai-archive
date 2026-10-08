@@ -40,7 +40,7 @@ def build_services() -> SimpleNamespace:
     media_libraries = archive.libraries
     library_index = LibraryIndexService(settings, db, media_libraries)
     discover = DiscoverService(db, client)
-    reader = ReaderService(db)
+    reader = ReaderService(db, archive.cache)
     library = LibraryService(db)
     translation = TranslationService(db)
     dictionary = DictionaryService(db, client, translation)

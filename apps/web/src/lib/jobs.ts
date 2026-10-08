@@ -32,6 +32,7 @@ export function jobTypeLabel(type: string) {
     remote_import: "远端下载",
     bulk_export: "批量导出",
     library_scan: "扫描库",
+    archive_cache: "阅读缓存",
   };
   return labels[type] ?? type;
 }
@@ -40,7 +41,8 @@ export function jobTypeDescription(type: string) {
   const labels: Record<string, string> = {
     remote_import: "从远端存储下载并解析入库",
     bulk_export: "打包多部作品为可下载合集（临时产物·下载即删）",
-    library_scan: "扫描库目录并把未索引的 CBZ 入库",
+    library_scan: "扫描目录变化并更新作品索引",
+    archive_cache: "下载作品归档以供本地阅读",
   };
   return labels[type] ?? "任务";
 }
@@ -58,6 +60,9 @@ export function stageLabel(stage: string) {
     fetching_gallery: "获取作品信息",
     requesting_download_url: "请求下载地址",
     downloading_cbz: "下载 CBZ",
+    caching_archive: "缓存归档",
+    verifying_archive: "校验归档",
+    scanning: "扫描目录",
     indexing_archive: "解析入库",
     packaging: "打包合集",
     ingesting: "入库中",
@@ -92,6 +97,7 @@ export function targetLabel(job: Job) {
 export function canRetry(job: Job) {
   if (job.status !== "failed") return false;
   if (job.type === "bulk_export") return true;
+  if (job.type === "library_scan" || job.type === "archive_cache") return true;
   return job.type === "remote_import" && Boolean(numberTarget(job, "gallery_id"));
 }
 
@@ -163,7 +169,7 @@ export function formatTime(value?: string | null) {
 
 export function formatDurationHint(job: Job) {
   if (job.retry_after && job.status === "failed") return `约 ${job.retry_after} 秒后可重试`;
-  if (job.stage === "downloading_cbz") {
+  if (job.stage === "downloading_cbz" || job.stage === "caching_archive" || job.stage === "verifying_archive") {
     const bytes = job.progress.total > 0
       ? `${formatBytes(job.progress.current)} / ${formatBytes(job.progress.total)}`
       : `已下载 ${formatBytes(job.progress.current)}`;

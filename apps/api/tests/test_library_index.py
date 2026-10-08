@@ -245,10 +245,10 @@ def test_malformed_metadata_and_bad_first_page_use_readable_cover(tmp_path):
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="requires a POSIX pipe")
-def test_blocked_source_read_times_out_or_cancels_without_leaving_worker(tmp_path):
+def test_non_regular_source_is_rejected_without_blocking_and_can_cancel(tmp_path):
     os.mkfifo(tmp_path / "blocked.cbz")
     started = time.monotonic()
-    with pytest.raises(TimeoutError):
+    with pytest.raises(OSError, match="普通文件"):
         inspect_mounted_archive(tmp_path, "blocked.cbz", False, 0.4, lambda: None)
     assert time.monotonic() - started < 3
     def cancel():

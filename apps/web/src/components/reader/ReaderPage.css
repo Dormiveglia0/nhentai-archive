@@ -54,6 +54,13 @@
 .reader-error-card > div { grid-column: 2; display: flex; gap: 8px; }
 .reader-error-card button { min-height: 44px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(23, 24, 21, .16); background: transparent; color: inherit; font-size: 13px; }
 .reader-error-card button:hover { background: var(--reader-red); color: #faf7ef; border-color: var(--reader-red); }
+.reader-preparation { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.reader-preparation > div { grid-column: 1; }
+.reader-preparation p { margin: 0; }
+.reader-preparation progress { width: 100%; height: 4px; appearance: none; border: 0; background: var(--reader-line); }
+.reader-preparation progress::-webkit-progress-bar { background: rgba(23, 24, 21, .12); }
+.reader-preparation progress::-webkit-progress-value { background: var(--reader-red); }
+.reader-preparation progress::-moz-progress-bar { background: var(--reader-red); }
 @keyframes reader-page-reveal { from { opacity: .3; } to { opacity: 1; } }
 @keyframes reader-loading-draw { 0%, 100% { stroke-dashoffset: 1; opacity: .4; } 50% { stroke-dashoffset: 0; opacity: 1; } }
 @media (max-width: 760px) {

@@ -183,6 +183,33 @@ class MediaLibraryService:
         config = self._config(json.loads(row["config_json"]))
         return self.source_path(Path(row["root_path"]), row["relative_path"], config["follow_symlinks"]), row
 
+    def source_file(self, work_id: int, available: bool = True, item_id: int | None = None) -> dict[str, Any] | None:
+        ready = " AND (f.library_item_id IS NULL OR i.status = 'ready')" if available else ""
+        selected = " AND f.library_item_id = ?" if item_id is not None else ""
+        return self.db.fetchone(
+            f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
+            i.mtime_ns, i.device, i.inode, i.relative_path, l.id AS library_id,
+            l.kind AS library_kind, l.root_path, l.read_only, l.config_json
+            FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
+            LEFT JOIN media_libraries l ON l.id = i.library_id
+            WHERE f.work_id = ? AND f.kind = 'source_cbz'
+            AND (f.library_item_id IS NULL OR l.removed_at IS NULL){ready}{selected}
+            ORDER BY f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
+            l.kind = 'local' DESC, f.id DESC LIMIT 1""", (work_id, item_id) if item_id is not None else (work_id,),
+        )
+
+    def resolve_file(self, row: dict[str, Any], for_write: bool = False) -> Path:
+        if row["library_item_id"]:
+            return self.resolve_item(row["library_item_id"], for_write)[0]
+        path = Path(row["path"]).resolve()
+        if for_write:
+            managed = self.db.fetchone("SELECT * FROM media_libraries WHERE kind = 'managed'")
+            if managed["read_only"]:
+                raise PermissionError("该目录库只读，不能修改源文件")
+            if self.settings.library_dir.resolve() not in path.parents:
+                raise PermissionError("源文件不在受管 library 目录内")
+        return path
+
     @staticmethod
     def source_path(root: Path, relative: str, follow_symlinks: bool = False) -> Path:
         parts = PurePosixPath(relative).parts
@@ -229,6 +256,11 @@ class MediaLibraryService:
         data_root = self.settings.data_dir.resolve()
         if root == data_root or root in data_root.parents:
             raise ValueError("库根目录不能包含应用数据与缓存")
+        for owned in (self.settings.covers_dir, self.settings.thumbs_dir, self.settings.page_cache_dir,
+                      self.settings.tmp_dir, self.settings.data_dir / "cache", self.settings.export_dir):
+            owned = owned.resolve()
+            if root == owned or owned in root.parents or root in owned.parents:
+                raise ValueError("不能将应用缓存、封面或导出目录注册为媒体库")
 
     @staticmethod
     def _config(value: dict[str, Any]) -> dict[str, Any]:

@@ -264,6 +264,27 @@ CREATE TABLE IF NOT EXISTS library_items (
   UNIQUE(library_id, relative_path)
 );
 
+CREATE TABLE IF NOT EXISTS archive_cache (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_id INTEGER NOT NULL REFERENCES works(id) ON DELETE CASCADE,
+  library_item_id INTEGER REFERENCES library_items(id) ON DELETE SET NULL,
+  version TEXT NOT NULL,
+  manifest BLOB NOT NULL,
+  size_bytes INTEGER NOT NULL CHECK(size_bytes >= 0),
+  status TEXT NOT NULL DEFAULT 'queued',
+  job_id INTEGER REFERENCES jobs(id) ON DELETE SET NULL,
+  last_error TEXT,
+  created_at REAL NOT NULL,
+  accessed_at REAL NOT NULL,
+  UNIQUE(library_item_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS archive_cache_leases (
+  token TEXT PRIMARY KEY,
+  cache_id INTEGER NOT NULL REFERENCES archive_cache(id) ON DELETE CASCADE,
+  expires_at REAL NOT NULL
+);
+
 CREATE TRIGGER IF NOT EXISTS rebase_reader_progress_on_page_change
 AFTER UPDATE OF page_count ON works
 WHEN NEW.page_count <> OLD.page_count
@@ -279,6 +300,9 @@ END;
 """
 
 INDEXES = """
+CREATE INDEX IF NOT EXISTS idx_archive_cache_access ON archive_cache(status, accessed_at);
+CREATE INDEX IF NOT EXISTS idx_archive_cache_work ON archive_cache(work_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_archive_cache_leases ON archive_cache_leases(cache_id, expires_at);
 CREATE INDEX IF NOT EXISTS idx_work_files_work_kind_created
   ON work_files(work_id, kind, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_works_favorite_updated
@@ -367,6 +391,8 @@ class Database:
             conn, "work_files", _table_columns(conn, "work_files"),
             "library_item_id", "INTEGER REFERENCES library_items(id) ON DELETE SET NULL",
         )
+        _add_column_if_missing(conn, "reading_sessions", _table_columns(conn, "reading_sessions"),
+                               "cache_lease", "TEXT")
 
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:

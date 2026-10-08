@@ -4,7 +4,7 @@ const WORK_ID = process.env.E2E_WORK_ID ?? "1";
 
 test.beforeEach(async ({ page }) => {
   await page.goto(`/#reader/${WORK_ID}`);
-  await expect(page.locator(".reader-counter")).toHaveText(/\d+\s*\/\s*\d+/);
+  await expect(page.locator(".reader-counter")).toHaveText(/\d+\s*\/\s*[1-9]\d*/);
 });
 
 test("显示页码计数并能下一页", async ({ page }) => {
@@ -135,7 +135,7 @@ test("阅读器退场未完成时浏览器返回仍能重新打开阅读器", as
 test("任一失败图片会批量重试当前所有失败页", async ({ page }) => {
   const attempts = new Map<string, number>();
   let available = false;
-  await page.route(new RegExp(`/api/works/${WORK_ID}/pages/\\d+$`), async (route) => {
+  await page.route(new RegExp(`/api/works/${WORK_ID}/pages/\\d+(?:\\?.*)?$`), async (route) => {
     const path = new URL(route.request().url()).pathname;
     const pageIndex = Number(path.split("/").at(-1));
     if (pageIndex > 2) {
@@ -158,10 +158,14 @@ test("任一失败图片会批量重试当前所有失败页", async ({ page }) 
 
   for (const index of [1, 2]) {
     const image = page.locator(`.reader-webtoon [data-page-index='${index}']`);
-    await image.scrollIntoViewIfNeeded();
+    await image.evaluate((node) => node.scrollIntoView({ block: "center" }));
     await expect(image).toHaveClass(/reader-img-error/);
   }
   await expect(page.locator(".reader-img-error")).toHaveCount(2);
+  await page.keyboard.press("g");
+  await page.getByRole("textbox", { name: "目标页码" }).fill("1");
+  await page.getByRole("button", { name: "跳转", exact: true }).click();
+  await expect(page.locator(".reader-img-error[data-page-index='1']")).toBeInViewport();
   const failedPaths = await page.locator(".reader-img-error").evaluateAll((items, workId) => items.map((item) => `/api/works/${workId}/pages/${item.getAttribute("data-page-index")}`), WORK_ID);
   available = true;
   await page.getByRole("button", { name: "重试全部" }).first().click();

@@ -1,4 +1,5 @@
 from pathlib import Path
+import zipfile
 
 from fastapi import APIRouter, HTTPException, Query, Response
 from fastapi.responses import FileResponse
@@ -45,19 +46,40 @@ def list_pages(work_id: int):
     return {"result": services.archive.list_pages(work_id)}
 
 
-@router.get("/{work_id}/pages/{page_index}")
-def get_page(work_id: int, page_index: int):
+@router.post("/{work_id}/reading-source")
+def prepare_reading_source(work_id: int):
     try:
-        body, media_type = services.archive.read_page(work_id, page_index)
+        return services.archive.cache.prepare(work_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.delete("/{work_id}/reading-source/{lease}")
+def release_reading_source(work_id: int, lease: str):
+    services.archive.cache.release(work_id, lease)
+    return {"released": True}
+
+
+@router.get("/{work_id}/pages/{page_index}")
+def get_page(work_id: int, page_index: int, lease: str | None = Query(default=None, pattern=r"^[a-f0-9]{32}$")):
+    try:
+        body, media_type = services.archive.read_page(work_id, page_index, lease)
         return Response(content=body, media_type=media_type)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, zipfile.BadZipFile) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/{work_id}/pages/{page_index}/thumb")
-def get_page_thumbnail(work_id: int, page_index: int, w: int = 320):
+def get_page_thumbnail(work_id: int, page_index: int, w: int = Query(default=320, ge=64, le=1024),
+                       lease: str | None = Query(default=None, pattern=r"^[a-f0-9]{32}$")):
     try:
-        body, media_type = services.archive.read_page_thumbnail(work_id, page_index, w)
+        body, media_type = services.archive.read_page_thumbnail(work_id, page_index, w, lease)
         return Response(
             content=body,
             media_type=media_type,
@@ -65,6 +87,10 @@ def get_page_thumbnail(work_id: int, page_index: int, w: int = 320):
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, zipfile.BadZipFile) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/{work_id}/reader-state")
@@ -75,7 +101,7 @@ def get_reader_state(work_id: int):
 @router.patch("/{work_id}/reader-state")
 def patch_reader_state(work_id: int, patch: ReaderStatePatch):
     try:
-        return services.reader.update_state(work_id, patch.page_index, patch.completed)
+        return services.reader.update_state(work_id, patch.page_index, patch.completed, patch.cache_lease)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -91,7 +117,7 @@ def patch_favorite(work_id: int, patch: FavoritePatch):
 @router.post("/{work_id}/reading-sessions")
 def start_reading_session(work_id: int, payload: ReadingSessionStart):
     try:
-        return services.reader.start_session(work_id, payload.session_key, payload.page_index)
+        return services.reader.start_session(work_id, payload.session_key, payload.page_index, payload.cache_lease)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

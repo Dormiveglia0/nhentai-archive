@@ -1,4 +1,4 @@
-import { CSSProperties, forwardRef, useEffect, useRef, useState } from "react";
+import { CSSProperties, forwardRef, type Ref, useEffect, useRef, useState } from "react";
 import { RotateCw } from "lucide-react";
 import "./ReaderPanels.css";
 
@@ -17,9 +17,9 @@ type ReaderImageProps = {
 /**
  * 阅读页图片,自带加载失败占位 + 重试。重试通过改变内部 key 强制重挂 <img>
  * 触发同一 src 的重新请求(失败响应不进缓存),避免给远端 URL 追加查询参数。
- * forwardRef 指向 <img>,供 webtoon 的 IntersectionObserver 收集节点。
+ * forwardRef 指向当前图片或失败占位，连续阅读仍能观察和跳转失败页。
  */
-export const ReaderImage = forwardRef<HTMLImageElement, ReaderImageProps>(function ReaderImage(
+export const ReaderImage = forwardRef<HTMLElement, ReaderImageProps>(function ReaderImage(
   { src, alt, className, style, loading, pageIndex, retryToken, onRetry },
   ref
 ) {
@@ -37,7 +37,7 @@ export const ReaderImage = forwardRef<HTMLImageElement, ReaderImageProps>(functi
 
   if (errored) {
     return (
-      <div className={className ? `reader-img-error ${className}` : "reader-img-error"} style={style} data-page-index={pageIndex}>
+      <div ref={ref as Ref<HTMLDivElement>} className={className ? `reader-img-error ${className}` : "reader-img-error"} style={style} data-page-index={pageIndex}>
         <span>图片加载失败</span>
         <button
           type="button"
@@ -53,7 +53,7 @@ export const ReaderImage = forwardRef<HTMLImageElement, ReaderImageProps>(functi
   return (
     <img
       key={attempt}
-      ref={ref}
+      ref={ref as Ref<HTMLImageElement>}
       className={className}
       style={style}
       src={src}

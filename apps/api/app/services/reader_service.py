@@ -7,8 +7,9 @@ from app.database import Database
 
 
 class ReaderService:
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, cache=None):
         self.db = db
+        self.cache = cache
 
     def get_state(self, work_id: int) -> dict[str, Any]:
         state = self.db.fetchone("SELECT * FROM reader_progress WHERE work_id = ?", (work_id,))
@@ -27,14 +28,23 @@ class ReaderService:
             "last_read_at": None,
         }
 
-    def update_state(self, work_id: int, page_index: int, completed: bool = False) -> dict[str, Any]:
+    def update_state(self, work_id: int, page_index: int, completed: bool = False, cache_lease: str | None = None) -> dict[str, Any]:
         work = self.db.fetchone("SELECT page_count FROM works WHERE id = ?", (work_id,))
         if not work:
             raise ValueError(f"Work {work_id} does not exist")
         page_count = int(work["page_count"])
+        snapshot_matches = True
+        if cache_lease:
+            from app.services.archive_manifest import unpack_manifest
+            snapshot = self.cache.touch_lease(work_id, cache_lease) if self.cache else None
+            if not snapshot:
+                raise ValueError("阅读缓存不可用")
+            snapshot_matches = len(unpack_manifest(snapshot["manifest"])) == page_count and self.cache.is_current(snapshot)
+            if not snapshot_matches:
+                return self.get_state(work_id)
         bounded_page = max(1, min(page_index, page_count)) if page_count else 0
         progress_percent = round((bounded_page / page_count) * 100) if page_count else 0
-        is_completed = completed or (page_count > 0 and bounded_page >= page_count)
+        is_completed = snapshot_matches and (completed or (page_count > 0 and bounded_page >= page_count))
 
         with self.db.connect() as conn:
             conn.execute(
@@ -54,20 +64,25 @@ class ReaderService:
             )
         return self.get_state(work_id)
 
-    def start_session(self, work_id: int, client_key: str, page_index: int) -> dict[str, Any]:
+    def start_session(self, work_id: int, client_key: str, page_index: int, cache_lease: str | None = None) -> dict[str, Any]:
         work = self.db.fetchone("SELECT page_count FROM works WHERE id = ?", (work_id,))
         if not work:
             raise ValueError(f"Work {work_id} does not exist")
         page_count = int(work["page_count"])
+        if cache_lease:
+            from app.services.archive_manifest import unpack_manifest
+            if not self.cache:
+                raise ValueError("阅读缓存不可用")
+            page_count = len(unpack_manifest(self.cache.touch_lease(work_id, cache_lease)["manifest"]))
         bounded_page = max(1, min(page_index, page_count)) if page_count else 0
 
         with self.db.connect() as conn:
             inserted = conn.execute(
                 """
-                INSERT OR IGNORE INTO reading_sessions (client_key, work_id, last_page_index)
-                VALUES (?, ?, ?)
+                INSERT OR IGNORE INTO reading_sessions (client_key, work_id, last_page_index, cache_lease)
+                VALUES (?, ?, ?, ?)
                 """,
-                (client_key, work_id, bounded_page),
+                (client_key, work_id, bounded_page, cache_lease),
             ).rowcount
             row = conn.execute(
                 "SELECT * FROM reading_sessions WHERE client_key = ?",
@@ -94,6 +109,14 @@ class ReaderService:
         if not work:
             raise ValueError(f"Work {work_id} does not exist")
         page_count = int(work["page_count"])
+        session = self.db.fetchone("SELECT cache_lease FROM reading_sessions WHERE id = ? AND work_id = ?", (session_id, work_id))
+        if session and session["cache_lease"] and self.cache:
+            from app.services.archive_manifest import unpack_manifest
+            try:
+                page_count = len(unpack_manifest(self.cache.touch_lease(work_id, session["cache_lease"])["manifest"]))
+            except ValueError:
+                if not finished:
+                    raise
         bounded_page = max(1, min(page_index, page_count)) if page_count else 0
 
         with self.db.connect() as conn:
@@ -111,7 +134,8 @@ class ReaderService:
             if not updated:
                 raise ValueError(f"Reading session {session_id} does not exist")
             row = conn.execute("SELECT * FROM reading_sessions WHERE id = ?", (session_id,)).fetchone()
-            return dict(row)
+            result = dict(row)
+        return result
 
     def start_remote_session(self, gallery_id: int, client_key: str, page_index: int) -> dict[str, Any]:
         cached = self.db.fetchone("SELECT payload_json FROM remote_galleries WHERE gallery_id = ?", (gallery_id,))

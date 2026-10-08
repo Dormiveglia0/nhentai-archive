@@ -30,6 +30,8 @@ class ArchiveService:
         self.settings = settings
         self.settings.ensure_directories()
         self.libraries = MediaLibraryService(settings, db)
+        from app.services.archive_cache_service import ArchiveCacheService
+        self.cache = ArchiveCacheService(db, settings, self.libraries)
 
     def ingest_cbz(
         self,
@@ -179,30 +181,24 @@ class ArchiveService:
         return [{**page, "work_id": work_id} for page in unpack_manifest(item["manifest"])] if item else []
 
     def source_file(self, work_id: int, available: bool = True) -> dict[str, Any] | None:
-        ready = " AND (f.library_item_id IS NULL OR i.status = 'ready')" if available else ""
-        return self.db.fetchone(
-            f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
-            i.mtime_ns, i.relative_path, l.kind AS library_kind, l.root_path, l.read_only, l.config_json
-            FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
-            LEFT JOIN media_libraries l ON l.id = i.library_id
-            WHERE f.work_id = ? AND f.kind = 'source_cbz'
-            AND (f.library_item_id IS NULL OR l.removed_at IS NULL){ready}
-            ORDER BY f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
-            l.kind = 'local' DESC, f.id DESC LIMIT 1""", (work_id,),
-        )
+        return self.libraries.source_file(work_id, available)
 
-    def read_page(self, work_id: int, page_index: int) -> tuple[bytes, str]:
-        page = next((row for row in self.list_pages(work_id) if row["page_index"] == page_index), None)
-        if not page:
-            raise FileNotFoundError(f"Page {page_index} not found for work {work_id}")
-        archive_file = self.source_file(work_id)
+    def read_page(self, work_id: int, page_index: int, lease: str | None = None) -> tuple[bytes, str]:
+        archive_file = self.source_file(work_id) or self.source_file(work_id, available=False)
+        if lease or self.cache.required(archive_file):
+            with self.cache.source(work_id, lease) as (path, pages, _cache_id):
+                return self._read_archive_page(path, pages, page_index)
         if not archive_file:
             raise FileNotFoundError(f"Archive not found for work {work_id}")
-        if archive_file["library_item_id"]:
-            path, _item = self.libraries.resolve_item(archive_file["library_item_id"])
-        else:
-            path = archive_file["path"]
-        with zipfile.ZipFile(path) as archive:
+        return self._read_archive_page(self.libraries.resolve_file(archive_file), self.list_pages(work_id), page_index)
+
+    @staticmethod
+    def _read_archive_page(path: Path, pages: list[dict[str, Any]], page_index: int) -> tuple[bytes, str]:
+        from app.services.archive_manifest import MAX_COVER_BYTES, open_archive
+        page = next((row for row in pages if row["page_index"] == page_index), None)
+        if not page:
+            raise FileNotFoundError(f"Page {page_index} not found")
+        with open_archive(path) as archive:
             if "archive_position" in page:
                 entries = archive.infolist()
                 if page["archive_position"] >= len(entries):
@@ -211,12 +207,19 @@ class ArchiveService:
                 if (member.filename, member.file_size, member.CRC) != (page["archive_member"], page["size_bytes"], page["crc"]):
                     raise FileNotFoundError("源归档已改变，请重新扫描")
             else:
-                member = page["archive_member"]
+                member = archive.getinfo(page["archive_member"])
+            if member.file_size > MAX_COVER_BYTES or member.flag_bits & 1:
+                raise ValueError("页面超过64MB或归档已加密，无法读取")
             return archive.read(member), page["media_type"]
 
-    def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320) -> tuple[bytes, str]:
+    def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320, lease: str | None = None) -> tuple[bytes, str]:
         """Return a downscaled JPEG for a page, generating and caching it on first use."""
         width = max(64, min(width, 1024))
+        origin = self.source_file(work_id) or self.source_file(work_id, available=False)
+        if lease or self.cache.required(origin):
+            with self.cache.source(work_id, lease) as (path, pages, cache_id):
+                cache_path = self.settings.thumbs_dir / f"{work_id}-c{cache_id}-{page_index}-{width}.jpg"
+                return self._read_thumbnail(cache_path, width, lambda: self._read_archive_page(path, pages, page_index)[0])
         cache_path = self.settings.thumbs_dir / f"{work_id}-{page_index}-{width}.jpg"
         return self._read_thumbnail(cache_path, width, lambda: self.read_page(work_id, page_index)[0])
 
@@ -328,6 +331,9 @@ class ArchiveService:
 
 def _make_thumbnail(body: bytes, width: int) -> bytes:
     with Image.open(BytesIO(body)) as image:
+        if image.width * image.height > 30000000:
+            raise ValueError("页面图片像素超过3000万，无法生成缩略图")
+        image.draft("RGB", (width, max(1, round(image.height * min(1, width / image.width)))))
         image = image.convert("RGB")
         if image.width > width:
             height = round(image.height * (width / image.width))

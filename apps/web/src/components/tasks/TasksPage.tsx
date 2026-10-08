@@ -1,7 +1,7 @@
 import { AlertCircle, RefreshCw, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { SlidingIndicator, FadeIn, transitionTabs, usePrefersReducedMotion } from "../../lib/motion";
+import { SlidingIndicator, FadeIn, transitionTabs } from "../../lib/motion";
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 import { STATUS_TABS } from "../../lib/jobs";
 import { TaskInspector } from "./TaskInspector";
@@ -13,7 +13,6 @@ import "./TasksPage.css";
 export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const reduced = usePrefersReducedMotion();
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 900px)").matches);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 900px)");
@@ -21,14 +20,6 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
     media.addEventListener("change", change);
     return () => media.removeEventListener("change", change);
   }, []);
-
-  function openLogs(id: number) {
-    focusJob(id);
-    window.requestAnimationFrame(() => {
-      const scope = dialogRef.current?.open ? dialogRef.current : document.querySelector(".folio-tasks-layout");
-      scope?.querySelector(".folio-tasks-log-section")?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
-    });
-  }
 
   function focusJob(id: number) {
     tasks.focusJob(id);
@@ -84,7 +75,6 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
             retryingId={tasks.retryingId}
             actingId={tasks.actingId}
             onFocus={focusJob}
-            onOpenLogs={openLogs}
             onRetry={(id) => void tasks.retryJob(id)}
             onPause={(id) => void tasks.pauseJob(id)}
             onResume={(id) => void tasks.resumeJob(id)}

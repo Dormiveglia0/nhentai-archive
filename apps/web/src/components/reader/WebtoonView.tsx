@@ -15,7 +15,8 @@ type WebtoonViewProps = {
 };
 
 export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome, retryToken, onRetry, emptyHint }: WebtoonViewProps) {
-  const itemRefs = useRef<Map<number, HTMLImageElement>>(new Map());
+  const itemRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const observerRef = useRef<IntersectionObserver | null>(null);
   // -1 哨兵:确保进入 webtoon 时下方“外部跳页”effect 至少滚动一次到当前页,
   // 否则初值等于 pageIndex 会被提前 return,列表停在顶部并把进度回写成第 1 页。
   const lastReported = useRef<number>(-1);
@@ -38,8 +39,9 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
       },
       { root, threshold: 0, rootMargin: "-45% 0px -45% 0px" }
     );
+    observerRef.current = observer;
     itemRefs.current.forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); observerRef.current = null; };
   }, [pages, onReachPage]);
 
   // 外部跳页（缩略图/键盘）→ 滚动到目标
@@ -62,7 +64,12 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
         <ReaderImage
           key={page.key}
           ref={(node) => {
-            if (node) itemRefs.current.set(page.pageIndex, node);
+            const previous = itemRefs.current.get(page.pageIndex);
+            if (previous) observerRef.current?.unobserve(previous);
+            if (node) {
+              itemRefs.current.set(page.pageIndex, node);
+              observerRef.current?.observe(node);
+            }
             else itemRefs.current.delete(page.pageIndex);
           }}
           pageIndex={page.pageIndex}
