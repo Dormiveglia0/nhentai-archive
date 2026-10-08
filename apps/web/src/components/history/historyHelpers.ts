@@ -1,15 +1,16 @@
 import type { ReadingHistoryEntry } from "../../lib/api";
+import { parseUtcTimestamp } from "../../lib/format";
 
-// 把 YYYY-MM-DD(UTC 日期)按 UTC 的相对今天归入桶。
+// The API groups records by the browser's local date.
 export function dateBucket(date: string): string {
   const today = new Date();
-  const todayStr = toUtcDateStr(today);
+  const todayStr = toLocalDateStr(today);
   const yesterday = new Date(today);
-  yesterday.setUTCDate(today.getUTCDate() - 1);
-  const yesterdayStr = toUtcDateStr(yesterday);
+  yesterday.setDate(today.getDate() - 1);
+  const yesterdayStr = toLocalDateStr(yesterday);
   const weekAgo = new Date(today);
-  weekAgo.setUTCDate(today.getUTCDate() - 6);
-  const weekAgoStr = toUtcDateStr(weekAgo);
+  weekAgo.setDate(today.getDate() - 6);
+  const weekAgoStr = toLocalDateStr(weekAgo);
 
   if (date === todayStr) return "今天";
   if (date === yesterdayStr) return "昨天";
@@ -17,17 +18,16 @@ export function dateBucket(date: string): string {
   return date;
 }
 
-function toUtcDateStr(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
 export function timeOfDay(iso: string): string {
-  // last_opened_at 形如 "2026-06-23 08:15:42"(UTC)。只取 HH:MM。
-  const match = /\d{2}:\d{2}/.exec(iso);
-  return match ? match[0] : iso;
+  const date = parseUtcTimestamp(iso);
+  return date ? new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date) : iso;
 }
 
 export type HistoryBucket = { label: string; entries: ReadingHistoryEntry[] };

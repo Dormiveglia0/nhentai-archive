@@ -3,7 +3,7 @@ import { AnimatePresence, m } from "motion/react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
 import { api, type RemoteTag } from "../../lib/api";
-import { duration, ease } from "../../lib/motion";
+import { duration, ease, SlidingIndicator } from "../../lib/motion";
 import { tagSearchHref } from "../../lib/navigation";
 import type { TagFilter } from "./discoverTypes";
 import { defaultDisplayTag } from "../folio/ui/TagScroller";
@@ -193,13 +193,13 @@ export function TagFilterSelector({ selected, onSelect }: Props) {
             </label>
 
             <div className="folio-discover-tag-scope" role="group" aria-label="标签候选分类">
-              <button type="button" aria-pressed={scope === "tag"} className={scope === "tag" ? "is-active" : ""} onClick={() => setScope("tag")}>内容标签</button>
-              <button type="button" aria-pressed={scope === "meta"} className={scope === "meta" ? "is-active" : ""} onClick={() => setScope("meta")}>作者与作品信息</button>
+              <button type="button" aria-pressed={scope === "tag"} className={`folio-slide-choice${scope === "tag" ? " is-active" : ""}`} onClick={() => setScope("tag")}>{scope === "tag" ? <SlidingIndicator layoutId="discover-tag-scope" /> : null}内容标签</button>
+              <button type="button" aria-pressed={scope === "meta"} className={`folio-slide-choice${scope === "meta" ? " is-active" : ""}`} onClick={() => setScope("meta")}>{scope === "meta" ? <SlidingIndicator layoutId="discover-tag-scope" /> : null}作者与作品信息</button>
             </div>
 
             <div className="folio-discover-tag-mode" role="group" aria-label="标签筛选关系">
-              <button type="button" aria-pressed={mode === "include"} className={mode === "include" ? "is-active" : ""} onClick={() => setMode("include")}>＋ 包含所选</button>
-              <button type="button" aria-pressed={mode === "exclude"} className={mode === "exclude" ? "is-active is-excluded" : ""} onClick={() => setMode("exclude")}>− 排除所选</button>
+              <button type="button" aria-pressed={mode === "include"} className={`folio-slide-choice${mode === "include" ? " is-active" : ""}`} onClick={() => setMode("include")}>{mode === "include" ? <SlidingIndicator layoutId="discover-tag-mode" /> : null}＋ 包含所选</button>
+              <button type="button" aria-pressed={mode === "exclude"} className={`folio-slide-choice${mode === "exclude" ? " is-active is-excluded" : ""}`} onClick={() => setMode("exclude")}>{mode === "exclude" ? <SlidingIndicator layoutId="discover-tag-mode" /> : null}− 排除所选</button>
             </div>
 
             <div className="folio-discover-tag-options">

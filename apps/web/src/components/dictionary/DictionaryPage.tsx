@@ -1,6 +1,7 @@
 import { AlertCircle, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef } from "react";
+import type { DictionaryCandidate } from "../../lib/api";
 
 import { duration, ease, FadeIn, usePrefersReducedMotion } from "../../lib/motion";
 import { BulkImportPanel } from "./BulkImportPanel";
@@ -13,11 +14,18 @@ import { useDictionaryState } from "./useDictionaryState";
 import "./DictionaryPage.css";
 import "./DictionaryEditor.css";
 
-export function DictionaryPage() {
+export function DictionaryPage({ blurCovers }: { blurCovers: boolean }) {
   const dictionary = useDictionaryState();
   const reduceMotion = usePrefersReducedMotion();
   const modalRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  function selectCandidate(candidate: DictionaryCandidate) {
+    dictionary.selectCandidate(candidate);
+    if (window.matchMedia("(max-width: 860px)").matches) {
+      window.requestAnimationFrame(() => document.querySelector(".folio-dictionary-editor")?.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" }));
+    }
+  }
 
   function openBulk() {
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -69,7 +77,7 @@ export function DictionaryPage() {
           onRefresh={() => void dictionary.refreshList()}
           onSuggest={() => void dictionary.suggestBatch()}
           onBulkImport={openBulk}
-          onSelect={dictionary.selectCandidate}
+          onSelect={selectCandidate}
           onPage={dictionary.setOffset}
           onLimit={dictionary.updateLimit}
         />
@@ -86,6 +94,7 @@ export function DictionaryPage() {
       </div>
 
       <DictionaryEvidencePanel
+        blurCovers={blurCovers}
         evidence={dictionary.evidence}
         loading={dictionary.evidenceLoading}
         preview={dictionary.preview}
@@ -131,7 +140,7 @@ export function DictionaryPage() {
               onKeyDown={(event) => trapFocus(event, modalRef.current)}
             >
               <button autoFocus className="folio-dictionary-modal-close" type="button" onClick={closeBulk} aria-label="关闭批量导入"><X size={18} /></button>
-              <header><span>Dictionary import</span><h2 id="folio-dictionary-bulk-title">批量导入</h2></header>
+              <header><h2 id="folio-dictionary-bulk-title">批量导入</h2></header>
               <BulkImportPanel onImported={() => void dictionary.refreshList()} />
             </m.section>
           </m.div>

@@ -212,7 +212,7 @@
     width: 100%;
   }
 
-  .folio-library-toolbar {
+  .folio-toolbar.folio-library-toolbar {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
@@ -320,7 +320,7 @@
   }
 
   .folio-page-head {
-    min-height: 168px;
+    min-height: 124px;
     padding: 27px 20px 24px;
     align-items: center;
   }
@@ -334,7 +334,7 @@
   }
 
   .folio-page-copy h1 {
-    font-size: 43px;
+    font-size: 34px;
   }
 
 
@@ -452,7 +452,7 @@
     border-top: 1px solid var(--folio-line);
   }
 
-  .folio-library-toolbar {
+  .folio-toolbar.folio-library-toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 

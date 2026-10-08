@@ -1,12 +1,14 @@
 import { AnimatePresence, m } from "motion/react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { AuthGate } from "./components/auth/AuthGate";
 import { AuthWakeDemo } from "./components/auth/AuthWakeDemo";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { FolioRouteFallback, ReaderRouteFallback } from "./components/layout/RouteFallback";
 import { api } from "./lib/api";
-import { duration, ease, usePrefersReducedMotion } from "./lib/motion";
+import { cancelPageTransition, duration, ease, transitionTabs, usePrefersReducedMotion } from "./lib/motion";
+import { FOLIO_PAGES } from "./components/folio/config";
 import { pageFromLocation, pageHref, type Page } from "./lib/navigation";
 
 const FrontendDemo = lazy(() =>
@@ -68,10 +70,23 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => Promise<void> }) {
 function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
   const reduceMotion = usePrefersReducedMotion();
   const [page, setPage] = useState<Page>(() => pageFromLocation());
+  const routeRef = useRef(page);
+  routeRef.current = page;
   const [blurCovers, setBlurCovers] = useState(true);
 
   useEffect(() => {
-    const sync = () => setPage(pageFromLocation());
+    const sync = () => {
+      const next = pageFromLocation();
+      const previous = routeRef.current;
+      if ([previous.name, next.name].some(name => name === "reader" || name === "readerRemote")) {
+        cancelPageTransition();
+        // Commit before a finishing reader exit can restore stale children.
+        flushSync(() => setPage(next));
+      } else {
+        transitionTabs<Page["name"]>(FOLIO_PAGES.map(item => item.id), previous.name, next.name,
+          name => setPage(name === next.name ? next : { name } as Page));
+      }
+    };
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
@@ -156,8 +171,8 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
               {archivePage.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "governance" ? <GovernancePage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
-              {archivePage.name === "dictionary" ? <DictionaryPage /> : null}
-              {archivePage.name === "tasks" ? <TasksPage /> : null}
+              {archivePage.name === "dictionary" ? <DictionaryPage blurCovers={blurCovers} /> : null}
+              {archivePage.name === "tasks" ? <TasksPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "export" ? <ExportPage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
               {archivePage.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "settings" ? <SettingsPage onBlurCoversChange={setBlurCovers} /> : null}

@@ -12,7 +12,7 @@ export function authorLine(work: LibraryWork): string {
   const group = tagOfType(tags, "group");
   const parts = [artist?.display, group?.display].filter(Boolean) as string[];
   if (parts.length) return parts.join(" / ");
-  return work.source === "remote" ? "作者标签待缓存" : "本地导入";
+  return work.source === "remote" ? "未知作者" : "本地导入";
 }
 
 export function languageLabel(work: LibraryWork): string {

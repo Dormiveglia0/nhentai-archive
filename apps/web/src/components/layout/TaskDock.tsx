@@ -131,7 +131,7 @@ export function TaskDock() {
 
           <a className="folio-task-dock-head" href={pageHref({ name: "tasks" })}>
             <span className="folio-task-dock-mark" aria-hidden="true"><Target size={17} /><i /></span>
-            <span><small>LIVE OPERATIONS</small><strong>任务动态</strong></span>
+            <strong>任务动态</strong>
             <em>{relevantCount}</em>
             <ArrowUpRight size={16} />
           </a>

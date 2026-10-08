@@ -94,11 +94,11 @@ export function FolioChrome({
     const previousRoute = animatedRouteRef.current;
     animatedRouteRef.current = routeKey;
     const scroll = scrollRef.current;
-    if (!scroll || previousRoute === null || previousRoute === routeKey || reduceMotion) return;
+    if (!scroll || previousRoute === null || previousRoute === routeKey || reduceMotion || typeof document.startViewTransition === "function") return;
     // Animate the viewport, so a long page does not become one oversized moving layer.
     const animation = scroll.animate(
-      [{ opacity: .55, transform: "translateX(12px)" }, { opacity: 1, transform: "translateX(0)" }],
-      { duration: duration.pageEnter * 1000, easing: "cubic-bezier(.22, 1, .36, 1)" },
+      [{ opacity: .3, transform: "translateX(28px)" }, { opacity: 1, transform: "translateX(0)" }],
+      { duration: duration.slow * 1000, easing: "cubic-bezier(.22, 1, .36, 1)" },
     );
     animation.finished.then(updateBindingProgress, () => undefined);
     return () => animation.cancel();

@@ -36,7 +36,6 @@ export function FilesDemo() {
           <EmptyCanvas icon={Folder} title="未读取本机目录" copy="路径、文件体积和可回收空间在公开演示中保持空白。" />
         </section>
         <aside className="folio-inspector">
-          <span>File health</span>
           <h2>文件详情</h2>
           <p>选择文件后显示哈希、源路径、索引状态与维护操作。</p>
           <div className="folio-inspector-lines"><i /><i /><i /><i /></div>

@@ -22,8 +22,8 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
     <section className="folio-discover-popular" aria-label="今日热门">
       <header className="folio-discover-popular-title">
         <span className="folio-discover-popular-mark" aria-hidden="true"><Flame size={16} /></span>
-        <span><small>Trending now</small><strong>今日热门</strong></span>
-        <em>{loading ? "LIVE / 读取中" : `TOP / ${String(visibleItems.length).padStart(2, "0")}`}</em>
+        <span><strong>今日热门</strong></span>
+        <em>{loading ? "读取中" : `${visibleItems.length} 部`}</em>
       </header>
 
       {loading && !visibleItems.length ? (
@@ -43,7 +43,6 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
                   role="listitem"
                   style={{
                     "--popular-ratio": coverRatio,
-                    "--popular-mobile-width": `${Math.min(138, Math.max(86, coverRatio * 124))}px`,
                   } as CSSProperties}
                 >
                   <a
@@ -66,7 +65,7 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
                           loading="lazy"
                         />
                       ) : (
-                        <span className="folio-cover-fallback">NO COVER</span>
+                        <span className="folio-cover-fallback">暂无封面</span>
                       )}
                       <b>{String(index + 1).padStart(2, "0")}</b>
                     </span>

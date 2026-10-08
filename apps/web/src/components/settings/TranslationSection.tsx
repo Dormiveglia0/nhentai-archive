@@ -1,9 +1,8 @@
 import { Check, Eye, EyeOff, Languages, LoaderCircle, RefreshCw, Wand2 } from "lucide-react";
-import { m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
-import { usePrefersReducedMotion } from "../../lib/motion";
+import { SlidingIndicator } from "../../lib/motion";
 import { FolioField, FolioSelect } from "../folio/ui/FolioPrimitives";
 import { StatusDot } from "./settingsHelpers";
 import type { SettingsVM } from "./useSettingsState";
@@ -19,7 +18,6 @@ const PLAN_OPTIONS = [
 ] as const;
 
 export function TranslationSection({ vm }: { vm: SettingsVM }) {
-  const reduceMotion = usePrefersReducedMotion();
   const mt = vm.settings?.machine_translation ?? null;
   const isDeepl = vm.mtProvider === "deepl";
   const lastVerify = mt?.last_verify ?? null;
@@ -66,14 +64,14 @@ export function TranslationSection({ vm }: { vm: SettingsVM }) {
   return (
     <section className="folio-settings-section" aria-label="机器翻译配置">
       <div className="folio-choice-row" aria-label="翻译服务">
-        <button className={vm.mtProvider === "google_free" ? "is-active" : ""} type="button" onClick={() => vm.setMtProvider("google_free")}>
-          {vm.mtProvider === "google_free" ? <m.i className="folio-choice-active" layoutId={reduceMotion ? undefined : "formal-translation-provider"} /> : null}
+        <button aria-pressed={vm.mtProvider === "google_free"} className={vm.mtProvider === "google_free" ? "is-active" : ""} type="button" onClick={() => vm.setMtProvider("google_free")}>
+          {vm.mtProvider === "google_free" ? <SlidingIndicator className="folio-choice-active" layoutId="formal-translation-provider" /> : null}
           <span>Google 免费翻译</span>
           <small>无需 API Key，适合直接开始</small>
           <Check size={16} />
         </button>
-        <button className={isDeepl ? "is-active" : ""} type="button" onClick={() => vm.setMtProvider("deepl")}>
-          {isDeepl ? <m.i className="folio-choice-active" layoutId={reduceMotion ? undefined : "formal-translation-provider"} /> : null}
+        <button aria-pressed={isDeepl} className={isDeepl ? "is-active" : ""} type="button" onClick={() => vm.setMtProvider("deepl")}>
+          {isDeepl ? <SlidingIndicator className="folio-choice-active" layoutId="formal-translation-provider" /> : null}
           <span>DeepL API</span>
           <small>需要独立 Key 与套餐配置</small>
           <Check size={16} />

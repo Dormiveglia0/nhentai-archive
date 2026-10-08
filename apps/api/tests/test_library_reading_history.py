@@ -96,3 +96,16 @@ def test_reading_history_paginates(tmp_path):
     assert out["total"] == 5
     assert out["num_pages"] == 3
     assert len(out["result"]) == 2
+
+
+def test_reading_history_groups_and_paginates_by_local_day(tmp_path):
+    _settings, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    work_id = _import(archive, tmp_path, "local-day")
+    for timestamp in ["2026-06-20 15:00:00", "2026-06-20 17:00:00", "2026-06-21 01:00:00"]:
+        db.execute("INSERT INTO reading_history (work_id, page_index, opened_at) VALUES (?, 1, ?)", (work_id, timestamp))
+    out = library.reading_history(per_page=1, timezone_offset_minutes=480)
+    assert (out["total"], out["num_pages"]) == (2, 2)
+    assert (out["result"][0]["date"], out["result"][0]["read_events"]) == ("2026-06-21", 2)
+    previous = library.reading_history(page=2, per_page=1, timezone_offset_minutes=480)
+    assert (previous["result"][0]["date"], previous["result"][0]["read_events"]) == ("2026-06-20", 1)

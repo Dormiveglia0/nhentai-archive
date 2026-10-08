@@ -1,5 +1,5 @@
+import { SlidingIndicator } from "../../../lib/motion";
 import { Grid2X2, Library, List } from "lucide-react";
-import { m } from "motion/react";
 import { useState } from "react";
 
 import type { FolioPageId } from "../../folio/config";
@@ -39,17 +39,17 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
         ]} />
         <div className="folio-view-switch" aria-label="视图方式">
           <button className={view === "grid" ? "is-active" : ""} type="button" aria-label="封面墙视图" onClick={() => setView("grid")}>
-            {view === "grid" ? <m.span className="folio-control-active" layoutId="folio-view-active" /> : null}
+            {view === "grid" ? <SlidingIndicator className="folio-control-active" layoutId="folio-view-active" /> : null}
             <Grid2X2 size={16} />
           </button>
           <button className={view === "list" ? "is-active" : ""} type="button" aria-label="列表视图" onClick={() => setView("list")}>
-            {view === "list" ? <m.span className="folio-control-active" layoutId="folio-view-active" /> : null}
+            {view === "list" ? <SlidingIndicator className="folio-control-active" layoutId="folio-view-active" /> : null}
             <List size={17} />
           </button>
         </div>
       </div>
 
-      <div className="folio-split-layout">
+      <div>
         <section className="folio-ruled-panel">
           <PanelHeading title="作品" description={query ? "当前搜索不会发送到服务器。" : "全部入库作品会显示在这里。"} />
           <EmptyCanvas
@@ -60,12 +60,6 @@ export function LibraryDemo({ onNavigate }: { onNavigate: (page: FolioPageId) =>
             onAction={() => onNavigate("discover")}
           />
         </section>
-        <aside className="folio-inspector">
-          <span>Inspector</span>
-          <h2>作品详情</h2>
-          <p>选择一部作品后，这里显示封面、阅读进度、来源与标签。</p>
-          <div className="folio-inspector-lines"><i /><i /><i /><i /></div>
-        </aside>
       </div>
     </div>
   );

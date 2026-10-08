@@ -6,19 +6,15 @@ import { formatBytes } from "../../lib/format";
 
 export function GovernanceSourceRail({
   aggregate,
-  bulkMode,
 }: {
   aggregate: GovernanceAggregate | null;
-  bulkMode: boolean;
 }) {
   const sourceFile = aggregate?.files.find((file) => file.kind === "source_cbz");
 
   return (
-    <aside className="folio-governance-source" aria-label="当前作品治理清单">
+    <aside className="folio-governance-source" aria-label="当前作品整理清单">
       <header>
-        <span>Review checklist</span>
         <h2>处理清单</h2>
-        <p>{bulkMode ? "先预览每部作品将发生的变化，再决定是否应用。" : "查看待处理问题。"}</p>
       </header>
 
       {aggregate ? (

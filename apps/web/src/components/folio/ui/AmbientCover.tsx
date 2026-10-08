@@ -10,6 +10,7 @@ type Props = {
   loading?: ImgHTMLAttributes<HTMLImageElement>["loading"];
   draggable?: boolean;
   onError?: ImgHTMLAttributes<HTMLImageElement>["onError"];
+  onLoad?: ImgHTMLAttributes<HTMLImageElement>["onLoad"];
 };
 
 export function AmbientCover({
@@ -20,6 +21,7 @@ export function AmbientCover({
   loading,
   draggable,
   onError,
+  onLoad,
 }: Props) {
   const classes = ["folio-ambient-cover", privateBlur ? "is-private" : "", className]
     .filter(Boolean)
@@ -43,8 +45,10 @@ export function AmbientCover({
         loading={loading}
         decoding="async"
         draggable={draggable}
-        onLoad={({ currentTarget: image }) => {
+        onLoad={event => {
+          const image = event.currentTarget;
           image.dataset.orientation = image.naturalWidth > image.naturalHeight ? "landscape" : "portrait";
+          onLoad?.(event);
         }}
         onError={onError}
       />

@@ -36,14 +36,14 @@ export type PageDefinition = {
 };
 
 export const FOLIO_PAGES: PageDefinition[] = [
-  { id: "workbench", label: "首页", title: "首页", description: "继续阅读，查看最近导入和任务进度。", icon: House },
+  { id: "workbench", label: "首页", title: "首页", description: "继续阅读，查看最近添加的作品。", icon: House },
   { id: "library", label: "我的库", title: "我的库", description: "浏览、筛选和管理已收藏的漫画。", icon: Library },
-  { id: "discover", label: "发现", title: "发现 / 导入", description: "搜索漫画，在线阅读或加入我的库。", icon: Search },
-  { id: "governance", label: "治理", title: "治理工作台", description: "补全作品信息，整理标签与文件。", icon: PenLine },
-  { id: "dictionary", label: "词典", title: "词典治理", description: "管理标签翻译与别名。", icon: Languages },
-  { id: "tasks", label: "队列", title: "任务中心", description: "追踪导入、扫描、治理与导出的处理过程。", icon: Workflow },
-  { id: "export", label: "导出", title: "导出中心", description: "选择作品并下载 CBZ。", icon: Download },
-  { id: "files", label: "文件", title: "文件管理", description: "查看文件状态，整理存储空间。", icon: FileArchive },
+  { id: "discover", label: "发现", title: "发现", description: "搜索漫画，在线阅读或加入我的库。", icon: Search },
+  { id: "governance", label: "整理", title: "作品整理", description: "补全作品信息，整理标签与文件。", icon: PenLine },
+  { id: "dictionary", label: "词典", title: "词典", description: "管理标签翻译与别名。", icon: Languages },
+  { id: "tasks", label: "队列", title: "队列", description: "查看任务进度与日志。", icon: Workflow },
+  { id: "export", label: "导出", title: "导出", description: "选择作品并下载 CBZ。", icon: Download },
+  { id: "files", label: "文件", title: "文件", description: "查看文件状态，整理存储空间。", icon: FileArchive },
   { id: "settings", label: "设置", title: "设置", description: "集中管理连接、翻译、阅读、导出与本地存储。", icon: Settings },
 ];
 

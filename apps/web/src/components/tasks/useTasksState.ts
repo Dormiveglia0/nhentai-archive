@@ -87,8 +87,9 @@ export function useTasksState(): TasksViewModel {
 
   const loadLogs = useCallback(async (jobId: number | null) => {
     const requestId = ++logsRequestRef.current;
+    setLogs([]);
     if (!jobId) {
-      setLogs([]);
+      setLogsLoading(false);
       return;
     }
     setLogsLoading(true);
@@ -140,6 +141,7 @@ export function useTasksState(): TasksViewModel {
         job.stage,
         stageLabel(job.stage),
         targetLabel(job),
+        job.meta?.title ?? "",
         job.error ?? "",
       ]
         .join(" ")

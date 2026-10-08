@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../../lib/api";
 import {
@@ -13,6 +13,7 @@ import {
 } from "./readerHelpers";
 
 export function useReaderPrefs() {
+  const modeChanged = useRef(false);
   const [prefs, setPrefs] = useState<ReaderPrefs>(() => {
     if (typeof window === "undefined") return DEFAULT_PREFS;
     return parsePrefs(window.localStorage.getItem(PREFS_KEY));
@@ -29,7 +30,7 @@ export function useReaderPrefs() {
   useEffect(() => {
     let active = true;
     void api.settings().then((settings) => {
-      if (!active) return;
+      if (!active || modeChanged.current) return;
       setPrefs((current) => ({
         ...current,
         mode: settings.reader.default_mode === "scroll" ? "webtoon" : "single",
@@ -38,7 +39,10 @@ export function useReaderPrefs() {
     return () => { active = false; };
   }, []);
 
-  const setMode = useCallback((mode: Mode) => setPrefs((p) => ({ ...p, mode })), []);
+  const setMode = useCallback((mode: Mode) => {
+    modeChanged.current = true;
+    setPrefs((p) => ({ ...p, mode }));
+  }, []);
   const setDirection = useCallback((direction: Direction) => setPrefs((p) => ({ ...p, direction })), []);
   const setFit = useCallback((fit: Fit) => setPrefs((p) => ({ ...p, fit })), []);
 

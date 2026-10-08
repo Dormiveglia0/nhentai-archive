@@ -4,11 +4,10 @@ import { useId, useRef, useState } from "react";
 
 import { duration, ease } from "../../../lib/motion";
 
-export function FolioPanelHeading({ title, description }: { title: string; description: string }) {
+export function FolioPanelHeading({ title }: { title: string; description?: string }) {
   return (
     <header className="folio-panel-heading">
       <h2>{title}</h2>
-      <p>{description}</p>
     </header>
   );
 }

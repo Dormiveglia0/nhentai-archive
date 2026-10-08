@@ -5,13 +5,14 @@ import { FadeIn, Stagger, StaggerItem } from "../../lib/motion";
 import { tagSearchHref } from "../../lib/navigation";
 
 type Props = {
+  blurCovers: boolean;
   evidence: DictionaryEvidence | null;
   loading: boolean;
   preview: DictionaryPreview | null;
   form: DictionaryApplyPayload;
 };
 
-export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Props) {
+export function DictionaryEvidencePanel({ evidence, loading, preview, form, blurCovers }: Props) {
   const remote = evidence?.remote_tag ?? null;
   const relatedWorks = evidence?.related_works ?? [];
   const coTags = evidence?.co_tags ?? [];
@@ -23,8 +24,8 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
   return (
     <section className="folio-dictionary-evidence" aria-labelledby="folio-dictionary-evidence-title">
       <header className="folio-dictionary-evidence-head">
-        <div><BookOpen size={17} /><strong id="folio-dictionary-evidence-title">应用预览与证据</strong></div>
-        <p>{loading ? "正在读取关联信息…" : "查看标签搭配与关联漫画。"}</p>
+        <div><BookOpen size={17} /><strong id="folio-dictionary-evidence-title">影响与关联作品</strong></div>
+        {loading ? <p role="status">正在读取关联信息…</p> : null}
       </header>
 
       {!hasContext ? (
@@ -81,7 +82,7 @@ export function DictionaryEvidencePanel({ evidence, loading, preview, form }: Pr
                 {relatedWorks.map((work) => (
                   <StaggerItem key={work.id} className="folio-dictionary-work-cell">
                     <article>
-                      {work.cover_path ? <img src={`/api/works/${work.id}/cover`} alt="" loading="lazy" decoding="async" /> : <div aria-hidden="true" />}
+                      {work.cover_path ? <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover?w=240`} alt="" loading="lazy" decoding="async" /> : <div aria-hidden="true" />}
                       <span><strong title={work.title_japanese || work.title}>{work.title_japanese || work.title}</strong><small>{work.remote_gallery_id ? `ID ${work.remote_gallery_id}` : "本地"} · {work.page_count}P</small></span>
                     </article>
                   </StaggerItem>

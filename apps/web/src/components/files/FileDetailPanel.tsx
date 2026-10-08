@@ -1,8 +1,9 @@
 import { ArrowUpRight, BookOpen, Check, Clipboard, Download, FileQuestion, Images, PenLine, Trash2, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { FileEntry } from "../../lib/api";
+import { parseUtcTimestamp } from "../../lib/format";
 import { duration, ease } from "../../lib/motion";
 import { pageHref, tagSearchHref } from "../../lib/navigation";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
@@ -17,18 +18,30 @@ type Props = {
 };
 
 function shortTime(value?: string | null): string {
-  if (!value) return "—";
-  return value.replace("T", " ").slice(0, 16);
+  const date = parseUtcTimestamp(value);
+  return date ? new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date) : value || "—";
 }
 
 export function FileDetailPanel({ focus, blurCovers, busy, onClose, onDelete }: Props) {
-  return (
-    <section className={`folio-files-detail${focus ? " is-active" : ""}`} aria-label="文件详情">
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const change = () => setMobile(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  useEffect(() => {
+    if (mobile && focus && !dialogRef.current?.open) dialogRef.current?.showModal();
+  }, [focus, mobile]);
+  function close() {
+    dialogRef.current?.close();
+    onClose();
+  }
+  const content = <>
       <header className="folio-files-column-head">
-        <span>Selection</span>
         <h2>文件详情</h2>
-        <p>核对来源、索引状态与维护边界。</p>
-        <button className="folio-files-detail-close" type="button" onClick={onClose} aria-label="关闭文件详情"><X size={17} /></button>
+        <button className="folio-files-detail-close" type="button" onClick={close} aria-label="关闭文件详情"><X size={17} /></button>
       </header>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -40,8 +53,13 @@ export function FileDetailPanel({ focus, blurCovers, busy, onClose, onDelete }: 
           <FileDetail key={focus.id} focus={focus} blurCovers={blurCovers} busy={busy} onClose={onClose} onDelete={onDelete} />
         )}
       </AnimatePresence>
-    </section>
-  );
+  </>;
+  if (!mobile) return <section className={`folio-files-detail${focus ? " is-active" : ""}`} aria-label="文件详情">{content}</section>;
+  return focus ? <dialog ref={dialogRef} className="folio-files-detail is-active" aria-label="文件详情" onCancel={event => { event.preventDefault(); close(); }} onClick={event => {
+    if (event.target !== event.currentTarget) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
+  }}>{content}</dialog> : null;
 }
 
 function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: FileEntry }) {
@@ -91,7 +109,7 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
           {isWork && focus.cover_path && focus.work_id ? (
             <img
               className={blurCovers ? "folio-media-blurred" : ""}
-              src={"/api/works/" + focus.work_id + "/cover"}
+              src={"/api/works/" + focus.work_id + "/cover?w=512"}
               alt=""
               loading="lazy"
               decoding="async"
@@ -119,7 +137,7 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
               </a>
             ) : null}
             <a href={pageHref({ name: "governance", workId: focus.work_id })}>
-              <PenLine size={15} />进入治理<ArrowUpRight size={13} />
+              <PenLine size={15} />编辑信息<ArrowUpRight size={13} />
             </a>
             <a href={pageHref({ name: "export", workId: focus.work_id })}>
               <Download size={15} />进入导出<ArrowUpRight size={13} />

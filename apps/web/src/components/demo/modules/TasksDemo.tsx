@@ -1,5 +1,5 @@
+import { SlidingIndicator } from "../../../lib/motion";
 import { Workflow } from "lucide-react";
-import { m } from "motion/react";
 import { useState } from "react";
 
 import { FolioEmptyState as EmptyCanvas, FolioSearchField as SearchField } from "../../folio/ui/FolioPrimitives";
@@ -27,7 +27,7 @@ export function TasksDemo() {
         <div className="folio-tabs" role="tablist" aria-label="任务状态筛选">
           {tabs.map((item) => (
             <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "is-active" : ""} onClick={() => setTab(item.id)}>
-              {tab === item.id ? <m.span className="folio-control-active" layoutId="folio-task-tab-active" /> : null}
+              {tab === item.id ? <SlidingIndicator className="folio-control-active" layoutId="folio-task-tab-active" /> : null}
               <span>{item.label}</span>
             </button>
           ))}
@@ -38,10 +38,9 @@ export function TasksDemo() {
       <div className="folio-split-layout">
         <section className="folio-ruled-panel">
           <div className="folio-table-head"><span>任务</span><span>阶段</span><span>进度</span><span>状态</span></div>
-          <EmptyCanvas icon={Workflow} title="没有任务" copy="导入、扫描、治理或导出开始后，任务会按时间顺序出现在这里。" />
+          <EmptyCanvas icon={Workflow} title="没有任务" copy="导入、扫描、整理或导出开始后，可在这里查看进度。" />
         </section>
         <aside className="folio-inspector">
-          <span>Task log</span>
           <h2>运行详情</h2>
           <p>选择任务后显示阶段、进度、开始时间与错误日志。</p>
           <div className="folio-inspector-lines"><i /><i /><i /><i /></div>

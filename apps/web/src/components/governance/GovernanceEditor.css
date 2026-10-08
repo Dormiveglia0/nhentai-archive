@@ -1,15 +1,15 @@
 .folio-governance-fields,
 .folio-governance-tags {
   min-width: 0;
-  margin-top: 30px;
+  margin-top: 22px;
   scroll-margin-top: 92px;
   border-top: 1px solid var(--folio-line-strong);
   border-bottom: 1px solid var(--folio-line-strong);
 }
 
 .folio-governance-section-head {
-  min-height: 82px;
-  padding: 14px 0;
+  min-height: 72px;
+  padding: 10px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -246,57 +246,31 @@
 }
 
 .folio-governance-translation {
-  padding: 18px 0;
   border-bottom: 1px solid var(--folio-line);
 }
 
-.folio-governance-translation-intro {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  align-items: start;
-  gap: 12px;
-}
-
-.folio-governance-translation-mark {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(173, 56, 46, 0.42);
-  color: var(--folio-red);
-  position: relative;
-}
-
-.folio-governance-translation-mark::after {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-top: 1px solid var(--folio-red);
-  border-right: 1px solid var(--folio-red);
-  position: absolute;
-  top: 3px;
-  right: 3px;
-}
-
-.folio-governance-translation-intro h3 {
-  margin: 0;
+.folio-governance-translation > summary {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  list-style: none;
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 15px;
 }
 
-.folio-governance-translation-intro p,
-.folio-governance-translation-intro small {
-  display: block;
-  color: var(--folio-muted);
-  font-size: 12px;
-  line-height: 1.6;
+.folio-governance-translation > summary::-webkit-details-marker { display: none; }
+.folio-governance-translation > summary > svg { color: var(--folio-red); }
+.folio-governance-translation > summary > svg:last-child {
+  margin-left: auto;
+  transition: transform 180ms ease;
 }
-
-.folio-governance-translation-intro p { margin: 5px 0 0; }
-.folio-governance-translation-intro small { margin-top: 3px; }
+.folio-governance-translation[open] { padding-bottom: 16px; }
+.folio-governance-translation[open] > summary > svg:last-child { transform: rotate(180deg); }
 
 .folio-governance-translation-controls {
-  margin-top: 16px;
+  margin-top: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -504,19 +478,19 @@
 }
 
 .folio-governance-tag.is-pending {
-  border-color: rgba(183, 125, 39, 0.48);
-  background: rgba(183, 125, 39, 0.07);
+  border-color: rgba(173, 56, 46, 0.48);
+  background: rgba(173, 56, 46, 0.07);
 }
 
 .folio-governance-tag.is-unmapped {
   border-style: dashed;
-  border-color: rgba(183, 125, 39, 0.52);
-  background: rgba(183, 125, 39, 0.05);
+  border-color: rgba(173, 56, 46, 0.52);
+  background: rgba(173, 56, 46, 0.05);
 }
 
 .folio-governance-tag.is-preserved {
-  border-color: rgba(70, 101, 84, 0.34);
-  color: #466554;
+  border-color: rgba(23, 24, 21, 0.34);
+  color: var(--folio-green);
 }
 
 .folio-governance-tag.is-conflict {

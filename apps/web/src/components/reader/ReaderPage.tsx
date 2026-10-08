@@ -168,8 +168,7 @@ export function ReaderPage({ source }: Props) {
   const feedbackError = data.actionError || uiError;
 
   return (
-    <section className={`reader-shell reader-source-${data.isRemote ? "remote" : "local"}`}>
-      <div className="reader-atmosphere" aria-hidden="true"><i /><i /><i /></div>
+    <section className={`reader-shell reader-source-${data.isRemote ? "remote" : "local"}${chromeVisible ? " is-chrome-visible" : ""}`}>
       <ReaderViewport
         pages={data.pages}
         pageIndex={data.pageIndex}
@@ -191,23 +190,21 @@ export function ReaderPage({ source }: Props) {
         visible={chromeVisible}
         title={data.title}
         isRemote={data.isRemote}
-        pageIndex={data.pageIndex}
-        pageCount={data.pageCount}
         mode={prefs.mode}
         direction={prefs.direction}
         fit={prefs.fit}
+        zoom={zoom}
         importing={data.importing}
         queued={data.queued}
         activePanel={activePanel}
         onBack={goBack}
-        onFlip={flip}
         onSetMode={setModeAndReset}
         onToggleDirection={toggleDirection}
         onCycleFit={cycleFit}
         onZoom={zoomBy}
+        onResetZoom={() => setZoom(1)}
         onToggleFullscreen={() => void toggleFullscreen()}
         onOpenPanel={openPanel}
-        onOpenJump={() => setJumpOpen(true)}
         onImport={() => void data.importRemote()}
         onPanelHoverChange={setInteractionPinned}
       />
@@ -217,6 +214,7 @@ export function ReaderPage({ source }: Props) {
         pageIndex={data.pageIndex}
         pageCount={data.pageCount}
         onJump={jump}
+        onOpenJump={() => setJumpOpen(true)}
         onScrubChange={setInteractionPinned}
       />
 
@@ -251,6 +249,7 @@ export function ReaderPage({ source }: Props) {
 
       <ReaderJumpDialog
         open={jumpOpen}
+        pageIndex={data.pageIndex}
         pageCount={data.pageCount}
         onJump={jump}
         onClose={() => setJumpOpen(false)}

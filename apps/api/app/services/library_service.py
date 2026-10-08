@@ -252,14 +252,16 @@ class LibraryService:
             ]
         }
 
-    def reading_history(self, page: int = 1, per_page: int = 30) -> dict[str, Any]:
+    def reading_history(self, page: int = 1, per_page: int = 30, timezone_offset_minutes: int = 0) -> dict[str, Any]:
         page = max(1, int(page))
         per_page = max(1, min(int(per_page), 100))
+        timezone_modifier = f"{max(-840, min(int(timezone_offset_minutes), 840)):+d} minutes"
         total = int(
             self.db.fetchone(
                 "SELECT COUNT(*) AS value FROM ("
-                " SELECT 1 FROM reading_history GROUP BY work_id, date(opened_at)"
-                ")"
+                " SELECT 1 FROM reading_history GROUP BY work_id, date(opened_at, ?)"
+                ")",
+                [timezone_modifier],
             )["value"]
         )
         num_pages = max(1, (total + per_page - 1) // per_page)
@@ -268,7 +270,7 @@ class LibraryService:
             """
             SELECT
               h.work_id AS id,
-              date(h.opened_at) AS date,
+              date(h.opened_at, ?) AS date,
               MAX(h.opened_at) AS last_opened_at,
               COUNT(*) AS read_events,
               MAX(h.page_index) AS furthest_page,
@@ -279,11 +281,11 @@ class LibraryService:
             FROM reading_history h
             JOIN works w ON w.id = h.work_id
             LEFT JOIN reader_progress rp ON rp.work_id = h.work_id
-            GROUP BY h.work_id, date(h.opened_at)
+            GROUP BY h.work_id, date(h.opened_at, ?)
             ORDER BY last_opened_at DESC, h.work_id DESC
             LIMIT ? OFFSET ?
             """,
-            [per_page, offset],
+            [timezone_modifier, timezone_modifier, per_page, offset],
         )
         result = [
             {

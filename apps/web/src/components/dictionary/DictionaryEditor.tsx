@@ -56,8 +56,7 @@ export function DictionaryEditor({ value, dictionaryId, loading, translating, mt
     <section className="folio-dictionary-editor" aria-labelledby="folio-dictionary-editor-title">
       <header className="folio-dictionary-panel-head">
         <div>
-          <span>Term editor</span>
-          <h2 id="folio-dictionary-editor-title">术语编辑器</h2>
+          <h2 id="folio-dictionary-editor-title">编辑词条</h2>
           <p>{value.remote_tag_id ? `远端标签 #${value.remote_tag_id}` : "本地自定义词条"}</p>
         </div>
         <button className="folio-line-button" type="button" onClick={onNew}>

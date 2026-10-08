@@ -1173,7 +1173,7 @@ export const api = {
   libraryRecentAdded: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-added?limit=${limit}`),
   libraryRecentRead: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-read?limit=${limit}`),
   libraryReadingHistory: (page = 1, per_page = 30) =>
-    request<ReadingHistoryPage>(`/api/library/reading-history?page=${page}&per_page=${per_page}`),
+    request<ReadingHistoryPage>(`/api/library/reading-history?page=${page}&per_page=${per_page}&timezone_offset_minutes=${-new Date().getTimezoneOffset()}`),
   libraryStatistics: (days = 30) => {
     const timezoneOffset = -new Date().getTimezoneOffset();
     return request<ReadingStatistics>(`/api/library/statistics?days=${days}&timezone_offset_minutes=${timezoneOffset}`);

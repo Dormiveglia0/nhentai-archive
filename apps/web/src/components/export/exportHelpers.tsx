@@ -40,9 +40,9 @@ export function Cover({
   return (
     <span className="folio-export-cover">
       {coverPath ? (
-        <img className={blurCovers ? "is-blurred" : ""} src={`/api/works/${workId}/cover`} alt="" loading="lazy" decoding="async" />
+        <img className={blurCovers ? "is-blurred" : ""} src={`/api/works/${workId}/cover?w=240`} alt="" loading="lazy" decoding="async" />
       ) : (
-        <em>NO COVER</em>
+        <em>暂无封面</em>
       )}
     </span>
   );

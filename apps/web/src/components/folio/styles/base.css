@@ -10,14 +10,14 @@
   --folio-line-strong: rgba(23, 24, 21, 0.58);
   --folio-red: #ad382e;
   --folio-red-soft: rgba(173, 56, 46, 0.1);
-  --folio-green: #445f52;
+  --folio-green: #3c4039;
   width: 100vw;
   height: 100dvh;
   display: grid;
   grid-template-rows: 78px minmax(0, 1fr) 68px;
   color: var(--folio-ink);
   background: var(--folio-paper);
-  font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   position: fixed;
   inset: 0;
   overflow: clip;
@@ -61,6 +61,15 @@
 .folio.is-scrolling .folio-atmosphere *::before,
 .folio.is-scrolling .folio-atmosphere *::after {
   animation-play-state: paused;
+}
+
+.app-route-archive[aria-hidden="true"] .folio,
+.app-route-archive[aria-hidden="true"] .folio *,
+.app-route-archive[aria-hidden="true"] .folio::before,
+.app-route-archive[aria-hidden="true"] .folio::after,
+.app-route-archive[aria-hidden="true"] .folio *::before,
+.app-route-archive[aria-hidden="true"] .folio *::after {
+  animation-play-state: paused !important;
 }
 
 .folio-binding {
@@ -312,7 +321,7 @@
   right: -8vw;
   bottom: -24%;
   border-radius: 44% 56% 61% 39% / 62% 38% 62% 38%;
-  background: radial-gradient(ellipse at 44% 48%, rgba(68, 95, 82, 0.1), transparent 66%);
+  background: radial-gradient(ellipse at 44% 48%, rgba(23, 24, 21, 0.1), transparent 66%);
   filter: blur(12px);
   mix-blend-mode: multiply;
   animation: folio-atmosphere-review-balance 10s ease-in-out infinite alternate;
@@ -430,10 +439,10 @@
   left: auto;
   right: 7vw;
   bottom: -8%;
-  border-top-color: rgba(68, 95, 82, 0.07);
+  border-top-color: rgba(23, 24, 21, 0.07);
   background:
-    repeating-linear-gradient(180deg, rgba(68, 95, 82, 0.026) 0 1px, transparent 1px 46px),
-    linear-gradient(180deg, rgba(68, 95, 82, 0.025), transparent 72%);
+    repeating-linear-gradient(180deg, rgba(23, 24, 21, 0.026) 0 1px, transparent 1px 46px),
+    linear-gradient(180deg, rgba(23, 24, 21, 0.025), transparent 72%);
   animation-delay: -5.6s;
 }
 

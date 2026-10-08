@@ -112,7 +112,7 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
                 {work.cover_path ? (
                   <AmbientCover className="is-fill-portrait" src={`/api/works/${work.id}/cover?w=512`} alt="" privateBlur={blurCovers} loading="lazy" draggable={false} />
                 ) : (
-                  <span className="folio-cover-fallback">NO COVER</span>
+                  <span className="folio-cover-fallback">暂无封面</span>
                 )}
                 {(work.progress_percent ?? 0) > 0 ? (
                   <span className="folio-shelf-progress" style={{ width: `${work.progress_percent ?? 0}%` }} />

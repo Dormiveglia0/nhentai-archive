@@ -174,7 +174,7 @@ export function ThumbnailOverlay({ open, pages, pageIndex, onJump, onClose }: Th
         >
           <div ref={fieldRef} className="reader-thumb-layout">
             <header className="reader-thumb-head" onClick={(event) => event.stopPropagation()}>
-              <span><small>PAGE INDEX</small><strong>页面索引 · {pages.length} 页</strong></span>
+              <strong>页面索引 · {pages.length} 页</strong>
               <button ref={closeButton} type="button" onClick={onClose} aria-label="关闭页面索引"><X size={18} /></button>
             </header>
             {layout.tileW > 0 ? <m.div

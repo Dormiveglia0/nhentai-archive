@@ -219,7 +219,6 @@ export function useFilesState() {
   }, [clearPending]);
 
   const toggleSelected = useCallback((id: string) => {
-    setFocusId(id);
     setActionNotice(null);
     setSelected((current) => {
       const next = new Set(current);

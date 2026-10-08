@@ -1,54 +1,44 @@
 import { expect, test } from "@playwright/test";
 
-test.use({ storageState: process.env.E2E_STORAGE_STATE });
 test.skip(!process.env.E2E_STORAGE_STATE, "需要独立测试会话");
 
-test("首页页片对应真实作品，拖动与键盘翻阅同步作品详情，日期联动阅读数据", async ({ page }) => {
-  const searchPromise = page.waitForResponse(response => response.url().includes('/api/library/search?'));
-  await page.goto('/#workbench');
-  const { result: works } = await (await searchPromise).json();
-  expect(works.length).toBeGreaterThan(3);
-  const stage = page.getByRole('slider', { name: '翻阅最近作品' });
-  await expect(page.locator('.folio-studio-stage svg > g')).toHaveCount(works.length);
-  await expect(page.locator('.folio-studio-work-title')).toHaveAttribute('href', `#reader/${works[0].id}`);
-  await stage.focus(); await page.keyboard.press('ArrowRight');
-  await expect(stage).toHaveAttribute('aria-valuenow', '2');
-  await expect(page.locator('.folio-studio-work-title')).toHaveAttribute('href', `#reader/${works[1].id}`);
-  const rect = (await stage.boundingBox())!;
-  await page.mouse.move(rect.x + rect.width / 2, rect.y + rect.height / 2); await page.mouse.down();
-  await page.mouse.move(rect.x + rect.width / 2 - 48, rect.y + rect.height / 2, { steps: 6 }); await page.mouse.up();
-  await expect(stage).toHaveAttribute('aria-valuenow', '4');
-  await expect(page.locator('.folio-studio-work-title')).toHaveAttribute('href', `#reader/${works[3].id}`);
-  await page.getByRole('button', { name: '上一本', exact: true }).click();
-  await expect(stage).toHaveAttribute('aria-valuenow', '3');
-  await page.getByRole('button', { name: '暂停动效' }).click();
-  await expect(page.locator('.folio-home-studio')).toHaveClass(/is-still/);
-  const bar = page.locator('.folio-studio-bars button').first();
-  const date = (await bar.getAttribute('aria-label'))!.split('，')[0];
-  await bar.click();
-  await expect(page.locator('.folio-studio-duration > span').first()).toHaveText(date);
-  await expect(page.locator('.folio-studio-activity strong')).toContainText('分钟');
-  await page.getByRole('button', { name: '查看30天阅读汇总' }).click();
-  await expect(page.locator('.folio-studio-duration > span').first()).toHaveText('近 30 天阅读');
+test("首页只展示真实作品，优先继续阅读，无重复标题、拖动和统计面板", async ({ page, request }) => {
+  const recent = await (await request.get("/api/library/search?per_page=4&sort=recent_added")).json();
+  const continuing = await (await request.get("/api/library/continue-reading?limit=1")).json();
+  const ids = [...new Set([...continuing.result, ...recent.result].map(work => work.id))].slice(0, 4);
+  await page.goto("/#workbench");
+  const books = page.locator(".folio-home-book");
+  await expect(books).toHaveCount(ids.length);
+  for (let index = 0; index < ids.length; index++) await expect(books.nth(index).locator("a").first()).toHaveAttribute("href", `#reader/${ids[index]}`);
+  await expect(page.locator(".folio-page-copy h1, .folio-studio-ledger, .folio-studio-console, [role='slider']")).toHaveCount(0);
+  await expect(page.locator(".folio-brand-mark .folio-monogram")).toHaveText("NH");
+  await expect(page.locator(".folio-brand-mark img")).toHaveCount(0);
+  expect(await page.locator(".folio-home h1, .folio-home h2").evaluateAll(nodes => nodes.every(node => parseFloat(getComputedStyle(node).fontSize) <= 20))).toBe(true);
 });
 
-test("窄屏空作品不生成假页片，数据失败可重试，减少动态效果可用", async ({ page }) => {
+test("窄屏空作品不生成假封面，读取失败可重试且减少动态效果可用", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.route('**/api/library/summary', route => route.abort());
-  await page.route('**/api/library/search?*', async route => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/library/continue-reading?*", route => route.abort());
+  await page.route("**/api/library/search?*", async route => {
     const response = await route.fetch(); const data = await response.json();
     await route.fulfill({ json: { ...data, result: [] } });
   });
-  await page.goto('/#workbench');
-  await expect(page.getByRole('alert')).toContainText('部分数据加载失败');
-  await expect(page.locator('.folio-studio-total > strong')).toHaveText('—');
-  await expect(page.locator('.folio-studio-stage svg > g')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '下一本', exact: true })).toBeDisabled();
-  await expect(page.locator('.folio-home-studio')).toHaveClass(/is-still/);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.unroute('**/api/library/summary'); await page.unroute('**/api/library/search?*');
-  await page.getByRole('button', { name: '重试', exact: true }).click();
-  await expect(page.getByRole('alert')).toHaveCount(0);
-  await expect(page.locator('.folio-studio-work-title')).toBeVisible();
+  await page.goto("/#workbench");
+  await expect(page.getByRole("alert")).toContainText("部分数据加载失败");
+  await expect(page.locator(".folio-home-book")).toHaveCount(0);
+  await expect(page.locator(".folio-home-entry").getByRole("link", { name: "发现作品" })).toHaveAttribute("href", "#discover");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+  await page.unroute("**/api/library/continue-reading?*");
+  await page.unroute("**/api/library/search?*");
+  await page.getByRole("button", { name: "重试", exact: true }).click();
+  await expect(page.locator(".folio-home-book").first()).toBeVisible();
+});
+
+for (const [width, height] of [[320, 740], [844, 390]]) test(`${width}×${height} 首页阅读入口在首屏且内容不横向溢出`, async ({ page }) => {
+  await page.setViewportSize({ width, height });
+  await page.goto("/#workbench");
+  await expect(page.locator(".folio-home-featured")).toBeVisible();
+  await expect(page.locator(".folio-home-read")).toBeInViewport({ ratio: 1 });
+  expect(await page.locator(".folio-scroll").evaluate(node => node.scrollWidth > node.clientWidth + 1)).toBe(false);
 });

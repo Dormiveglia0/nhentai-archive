@@ -2,9 +2,15 @@
 
 ## Current Slice
 
+Current frontend baseline (2026-10-08, final review): the homepage uses small functional headings, one natural-aspect real cover, its reading action/progress and three ordered recent entries; no giant text or decorative carousel. Library details keep the native sharp modal, gallery-style cover without a background mat, reading/favorite and equal edit/export/delete rows. Search stays right of add-tag; selected tags scroll in their own track inside the query row, with full counts and icon-only clear. Phone filters use native details, and view controls belong to results. Discover keeps its restored independent gallery layout and readable native horizontal popular cards on phones. Reader controls cover an unchanged full viewport; mode is in settings, and jump pages use the paper style. Hidden archive decorations pause during reading.
+
+`transitionTabs()` commits the final target once. Shared `SlidingIndicator` uses control-group coordinates and native 450ms transforms, preserving interruption and reduced motion without animating parent-page scroll changes. The queue's 52px tabs do not grow when long/empty lists swap. Phone task/file inspectors are native modal dialogs with Escape, sticky close headers and focus restoration; file checkboxes only select. Phone single-item export/dictionary/governance selection reaches the corresponding editor while batch selection stays in place. Governance fields precede tags/review, optional translation is folded, duplicate subtitles are removed and checks are compact. Export summaries distinguish current work from bulk selection; even one remaining bulk item downloads the selected work rather than the current preview. Keep the original NH logo, independent black/red favicon, sharp controls and allowed small metric corners. No dependency or schema changes; history adds the optional backward-compatible local timezone offset described below.
+
+Deployment (2026-10-08, final refined): image `ui-20261008-refined` / `latest` (`bce20c33aa80`) runs as the existing healthy `nh-archive-app-1` on port 4349. All 83 served static files match the verified build (`index-D99C43UL.js`). All 21 application tables plus `sqlite_sequence` (22 total), 110 works and 107 jobs match `/tmp/nh-ui-deploy-20261008-refined/before-deploy.db`. The complete production-build browser suite passed 106 tests and the final image passed 236 API tests. Rollback: `rollback-20261008-048ee8d656e8`. Compose and live data remain under `/opt/nhentai`; that source checkout still has the earlier frontend. Rebuild from this worktree or a checkout containing the revision. See `docs/UI_AUDIT.md` for business, motion, visual and performance evidence and `docs/DESIGNER_AUDIT.md` for the independent D01–D17 review.
+
 Implemented loop:
 
-`discover remote gallery -> dictionary display/mapping -> detail modal -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress -> governance metadata/tag review -> export preview/rename/download CBZ (single or .zip bundle) to the user`
+`discover remote gallery -> dictionary display/mapping -> detail page -> remote reader or create import job -> download CBZ -> index local archive/work_tags -> local reader -> save progress -> governance metadata/tag review -> export preview/rename/download CBZ (single or .zip bundle) to the user`
 
 This stage also implements real NH API Key settings and rewrites the discover page into a unified Folio feed. No fake works, fake jobs, fake file counts, or adult sample assets are seeded.
 
@@ -106,6 +112,7 @@ Root: `apps/api/app/`
   - `search(q, page, per_page, sort, read_status, source, language, tag_ids, favorite_only)`: SQL-backed pagination. Keyword matches title/japanese/pretty/gallery-id and joined tag names/zh. `tag_ids` is AND semantics (work must carry every selected remote tag). Sort keys are whitelisted in `SORT_ORDERS`; favorite-only is a real `works.favorite` predicate.
   - `set_favorite(work_id, favorite)`: updates only the local flag and returns the same full local work shape used by the library and reader.
   - `statistics(days, timezone_offset_minutes, limit)`: real local + remote reading overview, filled daily activity and most-read works by time/visits; author/tag affinity and collection shares remain local-library-only. It reads session starts in the browser's local-day boundary, attributes a session to its start day, resolves pre-import remote sessions to the later local work, and never fabricates historical time before tracking existed.
+  - `reading_history(page, per_page, timezone_offset_minutes=0)`: group, count and paginate on the same local day expression; clamp offsets to ±840 minutes. The browser supplies its offset, while omitted offsets retain the UTC behavior. Shared frontend timestamp parsing treats timezone-less API dates as UTC and preserves explicit zones.
   - `recent_added(limit)`, `recent_read(limit)`, `continue_reading(limit)`: real shelves from `works`/`reader_progress`; empty when no real rows.
   - `tag_filters(q, limit)`: distinct used remote tags joined to dictionary `zh_name`, ranked by work count; excludes `language` type (language has its own facet).
   - Internals: `WORK_COLUMNS`/`WORK_JOINS` shared select (adds progress, source-CBZ size, tag_count), `_build_filters()`, `_top()`, `_attach_tags()` (one batched tag query per result page, sorted by `CARD_TAG_TYPES` priority).
@@ -193,7 +200,7 @@ Implemented:
 - `GET /api/library/recent-added?limit=`
 - `GET /api/library/recent-read?limit=`
 - `GET /api/library/continue-reading?limit=`
-- `GET /api/library/reading-history?page=&per_page=`
+- `GET /api/library/reading-history?page=&per_page=&timezone_offset_minutes=`
 - `GET /api/library/statistics?days=&timezone_offset_minutes=`
 - `GET /api/library/tag-filters?q=&limit=`
 - `POST /api/library/scan/preview`
@@ -270,7 +277,8 @@ Root: `apps/web/src/`
   - Routes include local `#reader/{work_id}`, remote `#reader/remote/{gallery_id}`, `#governance`, and `#governance/{work_id}`.
   - Formal tag surfaces keep native anchor semantics: discovery/remote-reader contexts use `tagSearchHref()`, while library/statistics contexts use `libraryTagHref()` so middle/modifier click preserves the owning data scope in a new tab.
 - `lib/motion/`
-  - `MotionProvider` uses `domMax` for the shared navigation layout spring and respects user reduced-motion settings. Lists stagger at up to 50ms per item with a 320ms total delay budget; pages retain shorter horizontal entrance/exit and header scenes pause offscreen. Binding progress uses transform instead of top/height animations. Do not remove visible animations as a performance shortcut.
+  - `pageTransition.ts` starts native View Transitions for archive/demo navigation, skips reduced motion, and guards skipped callbacks so rapid clicks resolve to the latest route. Reader changes call `cancelPageTransition()` to invalidate pending archive updates. Both `ready` and `finished` cancellation rejections are handled. CSS excludes the document root from capture; `.folio-scroll` alone supplies the old/new content snapshots.
+  - `MotionProvider` keeps `domMax` for existing drag/layout interactions and respects user reduced-motion settings. Formal navigation and segmented indicators use native 450ms transforms in control-group coordinates. Lists stagger at up to 50ms per item with a 320ms total delay budget; pages retain shorter horizontal entrance/exit and header scenes pause offscreen. Binding progress uses transform instead of top/height animations. Do not remove visible animations as a performance shortcut.
   - 阶段 0 动画原语层。`tokens.ts`(时长/缓动/stagger 常量,全站统一节奏)、`primitives.tsx`(`FadeIn`/`Stagger`/`StaggerItem`/`Reveal`/`Presence`,基于 `motion/react`)、`useReducedMotion.ts`（通过 useSyncExternalStore 订阅媒体查询，系统设置改变时同步已挂载组件）、`index.ts` 出口。`FadeIn` 透传合法 div/ARIA 属性，因此消息的 `role`、`aria-label` 等语义不会被动画包装层吞掉。后续页面动画一律从此取用,优先复用共享 token。
 - `components/effects/NumberTicker.tsx`
   - Restores the original spring count-up when entering the viewport and settles on the actual formatted value. Under reduced motion, jump both spring and source to the actual value so switching the preference back cannot reset the display to zero.
@@ -291,7 +299,7 @@ Root: `apps/web/src/`
   - Dev proxy defaults `/api` to `http://127.0.0.1:8001`.
   - Set `VITE_API_PROXY_TARGET=http://127.0.0.1:<port>` when verifying against a temporary backend port.
 - `components/layout/ArchiveShell.tsx`
-  - Folio-only shell for every non-reader route. History reuses the library module context with its own heading; gallery detail reuses discover context while suppressing the repeated page heading. `scrollKey` selects each route/detail scroll position. FolioChrome animates only the visible scroll viewport with native Web Animations; rapid navigation cancels the previous animation and reduced motion skips it. The initial authenticated mount uses only the login reveal. Background paper glow is bounded to 760×560px rather than a full-screen animated texture; decorative background animations pause during scroll and resume 150ms after it stops. Background changes fade in without simultaneously scaling two full-screen layers. `TaskDock` remains outside the chrome.
+  - Folio-only shell for every non-reader route. History reuses the library context; gallery details suppress the repeated heading. `scrollKey` preserves route scroll positions. Native View Transitions show both departing and arriving content; FolioChrome provides Web Animations fallback when unavailable. The initial authenticated mount uses the login reveal. Background glow and scenes pause during scrolling/offscreen, and respect reduced motion. `TaskDock` remains outside the chrome.
 - `components/layout/RouteFallback.tsx`
   - Honest, data-free loading surfaces for lazy formal routes and the immersive reader. `RouteFallback.css` owns the paper-sheet loop and reduced-motion fallback; it must not duplicate page titles, metrics, or fake content.
 - `components/layout/TaskDock.tsx`
@@ -360,13 +368,13 @@ Root: `apps/web/src/`
 - `components/dictionary/BulkImportPanel.tsx`
   - Paste-based CSV/TSV/comma import with row-level preview before write.
 - `components/library/LibraryPage.tsx`
-  - Direct Folio composition for `#library`: real summary, custom filter workbench, optional shelves, result index, batch tray, cards, pager, and inspector. It contains no API orchestration and imports no demo code.
+  - Direct Folio composition for `#library`: real summary, filters, optional shelves, results, batch tray, cards, pager and a floating work-detail modal. It imports no demo code.
 - `components/library/useLibraryState.ts`
   - Owns the existing real summary/shelf/search flow, stale-request invalidation, filters, paging, focused work, and cross-page multi-selection. The grid passes a measured whole-row page size: for example, five columns request 25 rather than the incomplete hardcoded 24. Independent overview requests still run in parallel.
 - `components/library/LibraryPage.css`
-  - Production-only library layout and responsive behavior. Mobile work details use an opaque bottom sheet with a backdrop; all replaced legacy library/inspector/batch rules were removed from `styles/app.css`.
+  - Production-only full-width result layout and responsive behavior. Shared `folio/ui/WorkDetail.css` owns the centered desktop/mobile modal; old sticky inspector rules are deleted.
 - `components/library/LibrarySummaryStrip.tsx`
-  - Real summary strip: 总收藏 / 已读 / 阅读中 / 未读 / 待补标签 / 占用容量. No broad 待治理 fabrication; 待补标签 = works with zero `work_tags`, while detailed governance state lives in the governance page.
+  - Real summary: 作品总数 / 已收藏 / 已读 / 阅读中 / 未读 / 占用容量. Counts come from library summary; detailed review state belongs to the editing page.
 - `components/library/LibraryToolbar.tsx`
   - Search form (submit on Enter), custom Folio language/status/source/sort selects, `LibraryTagFilter`, animated grid/list view toggle, reset, and removable selected-tag chips. Language options come from real summary facets.
 - `components/library/LibraryTagFilter.tsx`
@@ -374,7 +382,7 @@ Root: `apps/web/src/`
 - `components/library/WorkCard.tsx`
   - Cover-first card with direct semantic controls: read status, source/language, author/group, page/ID, custom progress, content-only Tag row, and reader action. The Tag row filters strictly to `type=tag`; on mobile it becomes a centered two-column, three-row keyword grid instead of repeating author/language metadata or hiding useful tags. Language display skips generic translation markers and prefers a concrete language tag. Selection buttons are not nested; double-clicking the cover opens the reader.
 - `components/library/WorkInspector.tsx`
-  - Sticky desktop inspector and mobile bottom sheet for real file size/pages, source/ID, language, reading progress and local tag drill-downs. Its action grid keeps reader full-width, governance/export together, and favorite/delete together on the final row.
+  - Native modal `<dialog>` for real file size/pages, source/ID, language, reading progress and grouped local tag links. Fetches full tags through `api.work()`, supports Escape/backdrop close and focus restoration, and closes before hash navigation opens a reader. Reader/favorite/edit/export/delete share gallery detail action styles in `folio/ui/WorkDetail.css`.
 - `components/folio/ui/ContinueReadingRow.tsx`
   - Shared real-data shelves for library/workbench. Mouse capture starts after 6px movement; normal/held clicks, keyboard, middle/modifier links remain native. Touch uses browser scrolling; previous/next buttons offer a gesture-free alternative. `AmbientCover` preserves the complete cover and privacy blur; progress and read actions stay visible. Shelves and library cards use the optional 512px cover thumbnail with asynchronous decoding, avoiding full-resolution decoding in small frames.
 - `components/library/libraryHelpers.ts`
@@ -387,7 +395,7 @@ Root: `apps/web/src/`
     - local `workId`: reads indexed CBZ pages and persists progress;
     - remote `galleryId`: reads remote `pages[].url` from gallery detail, records visible-time sessions without local progress/history, and exposes the import queue action.
   - `useReaderData.ts` owns latest-request/unmount guards, separate load/action feedback, normalized readable remote pages, debounced local progress and guarded import state. `WebtoonView` observes the actual reader scroller through a center band, so tall continuous pages update current-page progress reliably.
-  - `ReaderToolbar` hides single-page direction controls in continuous mode; `ReaderScrubber` provides keyboard/touch progress without a native slider. `ReaderInfoPanel` groups real author/group, parody/character, content, category and language tags, retains the real gallery-display link, and contains no duplicate reader settings. `ThumbnailOverlay` clips its own width so large page counts cannot create a document-level horizontal scrollbar. `ThumbnailOverlay` and `ReaderJumpDialog` remain focus-restoring modal surfaces.
+  - `ReaderToolbar` keeps essential controls in a compact paper surface and fit/direction/zoom inside a native Popover; single-page controls remain hidden in continuous mode. `ReaderScrubber` combines previous/next/page entry with a native keyboard/touch range input. Layout reserves control space; continuous pages reserve dimensions during loading. Mouse focus does not pin the toolbar indefinitely, while keyboard focus and open panels do. `useReaderPrefs` preserves a mode the user selected before settings resolve. `ReaderInfoPanel` retains grouped full tags, local favorite/progress and gallery links. Thumbnail and jump overlays preserve focus and viewport clipping.
 - `components/governance/GovernancePage.tsx`
   - Direct Folio composition for `#governance`: real queue rail, single/bulk modebar, automatic-check + human-review panel, metadata document and source-check rail. It imports no demo code and does not adapt legacy DOM.
   - Loads `/api/governance/queue`, auto-selects a real work when available, and loads `/api/works/{id}/governance` through `useGovernanceState`.
@@ -426,23 +434,21 @@ Root: `apps/web/src/`
   - `fileHelpers.tsx` — byte/kind/status formatting and delete-target conversion.
 - `components/tasks/` — task center:
   - `TasksPage.tsx` — direct Folio composition for `#tasks`: real status metrics, animated status index, search/refresh/confirmed clear, semantic task list, and source-of-truth inspector. It imports no demo code.
-  - `TasksPage.css` — production-only responsive table/card layout, custom progress visuals, inspector progress ring and logs. The replaced global `.tasks-*` rules were removed from `styles/app.css`; visible operational text stays at 10px or above.
+  - `TasksPage.css` — grouped job cards, responsive status/search controls, sticky detail card, native SVG progress ring and logs; mobile selection scrolls to details.
   - `useTasksState.ts` — polls `/api/jobs` every 2.5s only while the document is visible, filters by status/query, tracks focus, loads logs, and calls pause/resume/cancel/retry/delete. Job/log request tokens prevent stale poll or fast-focus responses from overwriting current state; single-record deletion now confirms before mutation.
-  - `TaskSummaryStrip.tsx` — counts real queued/running/failed/completed jobs and today's updated jobs in the Folio hairline metric strip.
-  - `TaskList.tsx` — semantic task rows with an independent focus button and action region, custom ARIA progress, target/stage/time, real download/retry/pause/resume/cancel/log/delete capabilities; no nested interactive controls or native progress chrome.
+  - `TaskSummaryStrip.tsx` — real running/queued/paused/failed counts in shared Folio metric cards.
+  - `TaskList.tsx` — active/ended groups with separate focus buttons and action regions, ARIA progress, real work titles/stages/times and download/retry/pause/resume/cancel/log/delete capabilities. Stable job keys preserve card state while polling.
   - `TaskInspector.tsx` — focused job target, circular progress, errors/retry-after, bulk-export or scan facts, real controls, copy feedback, and durable job log timeline.
   - `taskHelpers.ts` — known job/stage/status labels, target formatting, retry eligibility, and time formatting.
   - Failed bulk exports and failed `remote_import` jobs with a real `gallery_id` can retry; running/queued jobs can pause/cancel; paused jobs can resume/cancel. Browser visual QA never triggers these mutations.
 - `components/workbench/` — presentation homepage:
-  - `WorkbenchPage.tsx` — first directly migrated Folio route. Keeps the real overview hook/API flow while owning new semantic page structure; it does not wrap the legacy dashboard or import demo content.
-  - `WorkbenchPage.css` — production-only shelves, bottom overview and refresh controls. The replaced `.workbench-*` rules were removed from `styles/app.css`.
-  - `WorkbenchPage.tsx` loads librarySummary and libraryStatistics(30) independently, preserving available data and retry on partial failure. HomeHero renders an interactive SVG paper installation and real reading data.
-  - The homepage metric strip is removed; existing library/settings statistics retain their owners.
-  - `folio/ui/HomeHero.tsx` / `HomeHero.css` — interactive homepage shared with demo: draggable cover wall and spatial carousel share the same real cover elements.
+  - `WorkbenchPage.tsx` loads real recent works, library summary and 30-day reading statistics with independent partial-failure handling, retry and stale-request guards. Query-string concept previews remain separate.
+  - `WorkbenchPage.css` owns the page wrapper and loading feedback.
+  - `folio/ui/HomeHero.tsx` / `HomeHero.css` pairs the selected real cover with title/progress/reading actions, SVG page outlines, dragging/keyboard navigation, actual status counts and daily reading bars. It is shared with the empty demo and honors privacy blur, reduced motion and offscreen pause.
   - Shared byte formatting comes directly from `lib/format.ts`; the old module ledger/helper are removed.
-  - Reuses `ContinueReadingRow` (from folio/ui) with direct shared Folio shelf markup for both the 继续阅读 and 最近导入 shelves; shelves render nothing when no real rows exist. `blurCovers` is honored throughout.
+  - Shared `ContinueReadingRow` shelves remain on the library page; homepage no longer imports them.
 - `styles/app.css`
-  - Shared NH Archive design system matching warm paper, editorial headings, terracotta actions, right inspectors, and task dock.
+  - Shared NH Archive design system matching warm paper, ink typography, vermilion actions, floating work details, feature panels, and task dock.
 
 ## Data Directory
 
@@ -475,6 +481,8 @@ npm run build
 - Cover thumbnail endpoint: `GET /api/works/{id}/cover?w=512` validates width 64–1024, reads the extracted cover (works even if the CBZ is missing), reuses atomic JPEG caching under `thumbs/`, and follows existing reimport invalidation. Omitting `w` preserves the original file endpoint; no schema changes.
 
 设置标题场景由 `folio/scenes/SettingsScene.tsx` 与 `styles/scenes.css` / `feedback-motion.css` 维护：无外框的三条竖向滑轨与齿轮共享9秒校准节奏，正式页与演示页复用；不读取配置或模拟保存状态。
+
+### Historical Homepage Directions (superseded by the final 2026-10-08 baseline)
 
 2026-09-07 首页阶段：导航显示“首页”，保留 #workbench 路由；首屏使用 HomeHero，书架与管理概览在其下方。FolioChrome 首页不再渲染标准标题场景，其他页面标题移除说明段落。队列为文件经过处理环的流转，治理为条目依次归整到档案；动画前缀分别 queue/edit。站点图标为 public/icon.svg（朱红 NH 组合字母），index.html favicon 与首页复用。
 

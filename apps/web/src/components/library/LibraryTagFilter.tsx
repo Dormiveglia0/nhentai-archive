@@ -3,7 +3,7 @@ import { AnimatePresence, m } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { api, type LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
-import { duration, ease } from "../../lib/motion";
+import { duration, ease, SlidingIndicator } from "../../lib/motion";
 import { libraryTagHref } from "../../lib/navigation";
 
 type Props = {
@@ -27,7 +27,9 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape" || !open) return;
+      setOpen(false);
+      window.requestAnimationFrame(() => rootRef.current?.querySelector<HTMLButtonElement>(":scope > button")?.focus());
     }
     document.addEventListener("pointerdown", closeOnOutsidePointer);
     window.addEventListener("keydown", closeOnEscape);
@@ -35,7 +37,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
       document.removeEventListener("pointerdown", closeOnOutsidePointer);
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -82,12 +84,12 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
             {selected.map((tag) => (
               <span key={tag.id} className={(tag.type || "tag") === "tag" ? undefined : "is-meta"}>
                 <b>{tagTypeLabel(tag.type)}</b>
-                <a href={libraryTagHref(tag)}>{tag.display}</a>
+                <a href={libraryTagHref(tag)} title={tag.display}>{tag.display}</a>
                 <button type="button" aria-label={`移除标签 ${tag.display}`} onClick={() => toggle(tag)}><X size={12} /></button>
               </span>
             ))}
           </div>
-          <button type="button" className="folio-library-tag-clear" onClick={() => onChange([])}><X size={13} />清空</button>
+          <button type="button" className="folio-library-tag-clear" aria-label="清空标签" title="清空标签" onClick={() => onChange([])}><X size={15} /></button>
         </div>
       ) : null}
 
@@ -99,7 +101,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
         onClick={() => setOpen((value) => !value)}
       >
         <Tags size={16} />
-        <strong>{selected.length ? `${selected.length} 个条件` : "添加标签"}</strong>
+        <strong>{selected.length ? `标签 ${selected.length}` : "添加标签"}</strong>
         <ChevronDown size={15} />
       </button>
 
@@ -122,6 +124,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => { if (event.key === "Enter") event.preventDefault(); }}
                 placeholder="标签、作者、社团或中文译名"
                 aria-label="搜索本地标签"
               />
@@ -129,8 +132,8 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
             </label>
 
             <div className="folio-library-tag-scope" role="group" aria-label="本地标签候选分类">
-              <button type="button" aria-pressed={scope === "tag"} className={scope === "tag" ? "is-active" : ""} onClick={() => setScope("tag")}>内容标签</button>
-              <button type="button" aria-pressed={scope === "meta"} className={scope === "meta" ? "is-active" : ""} onClick={() => setScope("meta")}>作者与作品信息</button>
+              <button type="button" aria-pressed={scope === "tag"} className={`folio-slide-choice${scope === "tag" ? " is-active" : ""}`} onClick={() => setScope("tag")}>{scope === "tag" ? <SlidingIndicator layoutId="library-tag-scope" /> : null}内容标签</button>
+              <button type="button" aria-pressed={scope === "meta"} className={`folio-slide-choice${scope === "meta" ? " is-active" : ""}`} onClick={() => setScope("meta")}>{scope === "meta" ? <SlidingIndicator layoutId="library-tag-scope" /> : null}作者与作品信息</button>
             </div>
 
             <div className="folio-library-tag-options">

@@ -1,8 +1,7 @@
 import { BarChart3, Check, Eye, EyeOff, HardDrive } from "lucide-react";
-import { AnimatePresence, m } from "motion/react";
 import { useState } from "react";
 
-import { duration, ease } from "../../../lib/motion";
+import { SlidingIndicator, transitionTabs } from "../../../lib/motion";
 import { SETTINGS_SECTIONS, type SettingsSection } from "../../folio/config";
 import {
   FolioEmptyState as EmptyCanvas,
@@ -38,31 +37,21 @@ export function SettingsDemo({
         {SETTINGS_SECTIONS.map((item) => {
           const Icon = item.icon;
           return (
-            <button key={item.id} type="button" className={section === item.id ? "is-active" : ""} aria-current={section === item.id ? "page" : undefined} onClick={() => onSection(item.id)}>
+            <button key={item.id} type="button" className={section === item.id ? "is-active" : ""} aria-current={section === item.id ? "page" : undefined} onClick={() => transitionTabs(SETTINGS_SECTIONS.map(item => item.id), section, item.id, onSection, "settings")}>
               {section === item.id ? (
-                <m.span className="folio-settings-nav-active" layoutId="folio-settings-nav-active" transition={{ type: "spring", stiffness: 420, damping: 34 }} />
+                <SlidingIndicator className="folio-settings-nav-active" layoutId="folio-settings-nav-active" />
               ) : null}
               <Icon size={16} />
               <strong>{item.label}</strong>
-              <small>{item.description}</small>
             </button>
           );
         })}
       </nav>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <m.section
-          key={section}
-          className="folio-settings-stage"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: duration.fast, ease: ease.standard }}
-        >
+      <section className="folio-settings-stage">
           <div className="folio-settings-head">
             <div>
               <h2>{current.label}</h2>
-              <p>{current.description}</p>
             </div>
             <div className="folio-settings-state"><i />演示配置</div>
           </div>
@@ -94,11 +83,11 @@ export function SettingsDemo({
             <>
               <div className="folio-choice-row">
                 <button className={provider === "google" ? "is-active" : ""} type="button" onClick={() => setProvider("google")}>
-                  {provider === "google" ? <m.i className="folio-choice-active" layoutId="folio-provider-active" /> : null}
+                  {provider === "google" ? <SlidingIndicator className="folio-choice-active" layoutId="folio-provider-active" /> : null}
                   <span>Google 免费翻译</span><small>无需 API Key</small><Check size={16} />
                 </button>
                 <button className={provider === "deepl" ? "is-active" : ""} type="button" onClick={() => setProvider("deepl")}>
-                  {provider === "deepl" ? <m.i className="folio-choice-active" layoutId="folio-provider-active" /> : null}
+                  {provider === "deepl" ? <SlidingIndicator className="folio-choice-active" layoutId="folio-provider-active" /> : null}
                   <span>DeepL API</span><small>需要独立 Key</small><Check size={16} />
                 </button>
               </div>
@@ -122,10 +111,10 @@ export function SettingsDemo({
                 <span>默认阅读模式</span>
                 <div>
                   <button className={reader === "single" ? "is-active" : ""} type="button" onClick={() => setReader("single")}>
-                    {reader === "single" ? <m.span className="folio-control-active" layoutId="folio-reader-active" /> : null}<span>单页</span>
+                    {reader === "single" ? <SlidingIndicator className="folio-control-active" layoutId="folio-reader-active" /> : null}<span>单页</span>
                   </button>
                   <button className={reader === "scroll" ? "is-active" : ""} type="button" onClick={() => setReader("scroll")}>
-                    {reader === "scroll" ? <m.span className="folio-control-active" layoutId="folio-reader-active" /> : null}<span>连续滚动</span>
+                    {reader === "scroll" ? <SlidingIndicator className="folio-control-active" layoutId="folio-reader-active" /> : null}<span>连续滚动</span>
                   </button>
                 </div>
               </div>
@@ -154,8 +143,7 @@ export function SettingsDemo({
               <EmptyCanvas icon={HardDrive} title="存储状态保持空白" copy="连接服务后查看磁盘占用与文件状态。" />
             </>
           ) : null}
-        </m.section>
-      </AnimatePresence>
+      </section>
     </div>
   );
 }

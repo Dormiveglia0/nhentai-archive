@@ -6,7 +6,7 @@ import { formatBytes } from "./fileHelpers";
 
 const WARNING_LABELS: Record<string, string> = {
   has_progress: "含阅读进度",
-  has_governance: "含治理元数据",
+  has_governance: "含整理信息",
   already_gone: "目标已不存在",
   forbidden_path: "路径不在受管目录内",
 };
@@ -63,7 +63,6 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
       }}
     >
       <header>
-        <span>Deletion impact</span>
         <h2 id="folio-files-delete-title">确认删除</h2>
       </header>
       {label ? <strong className="folio-files-delete-label">{label}</strong> : null}

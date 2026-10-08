@@ -17,7 +17,6 @@ export function GovernanceTagBoard({
     <section id="governance-tags" className="folio-governance-tags">
       <header className="folio-governance-section-head">
         <div>
-          <span>Tags</span>
           <h2>标签</h2>
         </div>
         <a className="folio-line-button" href={pageHref({ name: "dictionary" })}>

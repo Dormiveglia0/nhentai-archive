@@ -107,7 +107,6 @@ export function DictionaryDemo({ announce }: { announce: (message: string) => vo
               }}
             >
               <button autoFocus className="folio-modal-close" type="button" aria-label="关闭批量导入" onClick={closeBulk}><X size={18} /></button>
-              <span>Dictionary</span>
               <h2 id="folio-bulk-title">批量导入</h2>
               <p>每行输入一条术语映射；演示页只验证界面，不写入数据库。</p>
               <textarea rows={7} placeholder="每行输入：原文, 中文显示" />

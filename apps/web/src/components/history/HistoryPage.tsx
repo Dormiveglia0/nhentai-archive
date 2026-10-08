@@ -82,7 +82,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
                           {entry.cover_path ? (
                             <img
                               className={blurCovers ? "is-blurred" : ""}
-                              src={`/api/works/${entry.id}/cover`}
+                              src={`/api/works/${entry.id}/cover?w=240`}
                               alt=""
                               loading="lazy"
                             />
@@ -97,7 +97,7 @@ export function HistoryPage({ blurCovers }: { blurCovers: boolean }) {
                           </small>
                         </span>
                         <span className={`folio-history-progress is-${progress.tone}`}>
-                          <span><strong>{progress.text}</strong><small>{percent}%</small></span>
+                          <span><strong>{progress.text}</strong></span>
                           <i style={{ "--folio-history-progress": `${percent}%` } as CSSProperties}><span /></i>
                         </span>
                         <ArrowUpRight className="folio-history-open" size={17} />

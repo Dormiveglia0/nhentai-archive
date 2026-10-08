@@ -17,7 +17,7 @@ export function DemoCommandBar({
     workbench: { label: "刷新视图", icon: RefreshCw, action: () => announce("演示环境没有可刷新的数据。") },
     library: { label: "发现作品", icon: Search, action: () => onNavigate("discover") },
     discover: { label: "打开随机作品", icon: Search, action: () => announce("演示环境未连接远端源。") },
-    governance: { label: "刷新队列", icon: RefreshCw, action: () => announce("演示环境没有治理队列。") },
+    governance: { label: "刷新队列", icon: RefreshCw, action: () => announce("演示环境没有整理队列。") },
     dictionary: { label: "新建本地词条", icon: Plus, action: () => announce("可在术语编辑器中填写新词条；演示页不会写入。") },
     tasks: { label: "刷新任务", icon: RefreshCw, action: () => announce("演示环境没有任务。") },
     export: { label: "生成 CBZ", icon: PackageOpen, action: () => announce("请先从作品选择作品。") },

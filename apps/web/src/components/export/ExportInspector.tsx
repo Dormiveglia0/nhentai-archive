@@ -10,6 +10,7 @@ type ExportInspectorProps = {
   preview: ExportPreview | null;
   selectedItems: ExportQueueItem[];
   selectedSize: number;
+  multiSelect: boolean;
   exportOptions: ExportOptions;
   previewLoading: boolean;
   downloading: boolean;
@@ -27,6 +28,7 @@ export function ExportInspector({
   preview,
   selectedItems,
   selectedSize,
+  multiSelect,
   exportOptions,
   previewLoading,
   downloading,
@@ -39,7 +41,7 @@ export function ExportInspector({
   onDownloadOne,
 }: ExportInspectorProps) {
   const count = selectedItems.length;
-  const downloadLabel = count > 1 ? `下载所选 ${count} 项 (.zip)` : "下载此作品";
+  const downloadLabel = multiSelect ? `下载所选${count ? ` ${count} 项` : ""}${count > 1 ? " (.zip)" : ""}` : "下载此作品";
   const currentPreview = preview && focusItem && preview.work.id === focusItem.work.id ? preview : null;
   const comicEntries = currentPreview ? Object.entries(currentPreview.comic_info) : [];
   const writesComicInfo = currentPreview?.will_write.includes("ComicInfo.xml") ?? false;
@@ -48,18 +50,16 @@ export function ExportInspector({
   const issues = currentPreview ? [...currentPreview.blockers, ...currentPreview.warnings] : [];
   const canDownloadCurrent = Boolean(currentPreview && !previewLoading && currentPreview.blockers.length === 0);
   const canDownloadSelection = selectedItems.some((item) => item.blockers.length === 0);
-  const primaryDisabled = downloading || (count > 1 ? !canDownloadSelection : !canDownloadCurrent);
+  const primaryDisabled = downloading || (multiSelect ? !canDownloadSelection : !canDownloadCurrent);
   const primaryDownload = () => {
-    if (count > 1) onDownload();
+    if (multiSelect) onDownload();
     else if (currentPreview) onDownloadOne(currentPreview.work.id);
   };
 
   return (
     <aside className="folio-export-inspector">
       <header className="folio-export-column-head">
-        <span>Export manifest</span>
         <h2>作品信息</h2>
-        <p>预览最终写入字段与打包选项</p>
       </header>
       {currentPreview && focusItem ? (
         <FadeIn
@@ -108,7 +108,7 @@ export function ExportInspector({
                   ))}
                 </dl>
               ) : (
-                <p className="empty-inline">暂无可写入的元数据字段，请先在治理中心补全。</p>
+                <p className="empty-inline">暂无可写入的元数据字段，请先在整理页补全。</p>
               )
             ) : (
               <p className="empty-inline">本次导出不写入 ComicInfo.xml，文件将保持源内容。</p>
@@ -131,7 +131,7 @@ export function ExportInspector({
           ) : null}
 
           {/* Selected covers strip */}
-          {count > 1 ? (
+          {multiSelect && count > 1 ? (
             <FadeIn y={6} className="folio-export-selected-strip" aria-label="已选作品">
               {selectedItems.slice(0, 6).map((item) => (
                 <Cover key={item.work.id} workId={item.work.id} coverPath={item.work.cover_path} blurCovers={blurCovers} />
@@ -186,7 +186,7 @@ export function ExportInspector({
         {/* Selection summary + actions */}
         <div className="folio-export-action-cta">
           <span className="folio-export-summary-line">
-            已选 {count} 项 · {formatBytes(selectedSize)}
+            {multiSelect ? `已选 ${count} 项 · ${formatBytes(selectedSize)}` : focusItem ? `当前作品 · ${formatBytes(focusItem.source_file.size_bytes)}` : "请选择作品"}
           </span>
 
           <div className="folio-export-action-buttons">
@@ -201,7 +201,7 @@ export function ExportInspector({
             </button>
 
             {/* Secondary action: download only current */}
-            {count > 1 && currentPreview && currentPreview.blockers.length === 0 ? (
+            {multiSelect && count > 1 && currentPreview && currentPreview.blockers.length === 0 ? (
               <button
                 type="button"
                 className="folio-export-secondary"

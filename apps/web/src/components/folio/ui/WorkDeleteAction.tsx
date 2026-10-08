@@ -76,7 +76,7 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
         disabled={busy}
       >
         {busy && !preview ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}
-        删除本地作品
+        删除
       </button>
       {!preview && error ? <span className="folio-work-delete-inline-error" role="alert">{error}</span> : null}
 
@@ -96,18 +96,17 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
           }}
         >
           <header>
-            <span>Deletion impact</span>
             <h2 id={titleId}>确认删除本地作品</h2>
           </header>
           <strong className="folio-work-delete-title">{title}</strong>
           <p id={summaryId}>
             将永久删除 {preview.files_to_delete} 个受管文件并移除作品记录，预计释放 {formatBytes(preview.reclaim_bytes)}。
-            标签关联、阅读进度和治理记录也会一并清除，此操作不可恢复。
+            标签关联、阅读进度和整理记录也会一并清除，此操作不可恢复。
           </p>
           {item?.has_progress || item?.has_governance ? (
             <ul className="folio-work-delete-warnings">
               {item.has_progress ? <li><AlertTriangle size={14} />含阅读进度</li> : null}
-              {item.has_governance ? <li><AlertTriangle size={14} />含治理记录</li> : null}
+              {item.has_governance ? <li><AlertTriangle size={14} />含整理记录</li> : null}
             </ul>
           ) : null}
           {error ? <p className="folio-work-delete-error" role="alert">{error}</p> : null}

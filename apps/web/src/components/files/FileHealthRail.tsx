@@ -59,9 +59,7 @@ export function FileHealthRail({
   return (
     <aside className="folio-files-rail">
       <header className="folio-files-column-head">
-        <span>Maintenance</span>
         <h2>维护与健康</h2>
-        <p>删除前可预览文件清单。</p>
       </header>
 
       <RailSection icon={ShieldCheck} title="索引健康">
@@ -98,12 +96,11 @@ export function FileHealthRail({
           </ul>
         ) : <p className="folio-files-dim">正在统计可清理空间…</p>}
 
-        <p className="folio-files-dim">预览完成后会打开独立确认窗口，不会直接删除。</p>
       </RailSection>
 
       <RailSection icon={HardDrive} title="目录扫描">
         <div className="folio-files-scan-action">
-          <span><strong>扫描未索引 CBZ</strong><small>仅在确认后创建后台任务</small></span>
+          <span><strong>扫描未索引 CBZ</strong></span>
           <button type="button" onClick={onScanPreview} disabled={busy} aria-busy={scanBusy}>
             {scanBusy ? <RefreshCw className="folio-files-spin" size={14} /> : <Search size={14} />}预览
           </button>

@@ -27,7 +27,6 @@ export function ExportDemo() {
         <section className="folio-export-recipe">
           <div className="folio-recipe-head">
             <div>
-              <span>Export recipe</span>
               <h2>CBZ 配方</h2>
             </div>
             <PackageOpen size={27} />

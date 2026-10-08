@@ -14,7 +14,6 @@ export function ExportDefaultsSection({ vm }: { vm: SettingsVM }) {
     <section className="folio-settings-section folio-settings-export" aria-label="CBZ 默认配方">
       <div className="folio-settings-recipe-head">
         <div>
-          <span>Default recipe</span>
           <strong>作品名.cbz</strong>
         </div>
         <a className="folio-line-button" href={pageHref({ name: "export" })}>

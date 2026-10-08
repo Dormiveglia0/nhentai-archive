@@ -29,7 +29,7 @@ export function DictionaryActionBar({
     <footer className="folio-dictionary-actions">
       <div className="folio-dictionary-action-state">
         <span className={previewReady ? "is-ready" : ""} aria-hidden="true" />
-        <p><strong>{previewReady ? "影响范围已预览" : "写入前需要预览"}</strong><small>预览不会修改词典或作品</small></p>
+        <p><strong>{previewReady ? "影响范围已预览" : "写入前需要预览"}</strong></p>
       </div>
       <button className="folio-dictionary-action" type="button" onClick={onPreview} disabled={loading || !hasOriginal || !hasTranslation}>
         <SearchCheck size={16} />

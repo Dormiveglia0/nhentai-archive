@@ -56,7 +56,6 @@ export function MetadataEditor({
     <section id="governance-metadata" className="folio-governance-fields">
       <header className="folio-governance-section-head">
         <div>
-          <span>Decision table</span>
           <h2>字段决策</h2>
         </div>
         <div className="folio-governance-section-tools">

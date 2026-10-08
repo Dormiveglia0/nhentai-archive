@@ -51,23 +51,7 @@
   line-height: 1.65;
 }
 
-.folio-settings-page .folio-settings-state {
-  min-width: max-content;
-  padding: 7px 10px;
-  border: 1px solid var(--folio-line);
-  color: var(--folio-green);
-  background: rgba(68, 95, 82, 0.045);
-}
 
-.folio-settings-page .folio-settings-state.is-dirty {
-  border-color: rgba(173, 56, 46, 0.34);
-  color: var(--folio-red);
-  background: var(--folio-red-soft);
-}
-
-.folio-settings-page .folio-settings-state.is-loading i {
-  animation: folio-settings-sync 1s ease-in-out infinite;
-}
 
 .folio-settings-section {
   min-width: 0;
@@ -167,7 +151,7 @@
   flex-wrap: wrap;
   gap: 9px;
   border: 1px solid var(--folio-line);
-  background: rgba(68, 95, 82, 0.045);
+  background: rgba(23, 24, 21, 0.045);
   font-size: 13px;
 }
 
@@ -811,13 +795,13 @@
   cursor: pointer;
 }
 
-.folio-reading-period button i {
+.folio-reading-period button .folio-slide-indicator {
   background: var(--folio-ink);
   position: absolute;
   inset: 0;
 }
 
-.folio-reading-period button span { position: relative; z-index: 1; }
+.folio-reading-period button span:not(.folio-slide-indicator) { position: relative; z-index: 1; }
 .folio-reading-period button.is-active { color: var(--folio-paper-bright); }
 
 .folio-reading-atlas-error {
@@ -1101,7 +1085,7 @@
 .folio-reading-recent > header > span { display: flex; align-items: flex-start; flex-direction: column; gap: 3px; }
 .folio-reading-work-ranking > header > div { padding: 3px; display: flex; border: 1px solid var(--folio-line); }
 .folio-reading-work-ranking > header button { min-height: 29px; padding: 0 9px; border: 0; background: transparent; color: var(--folio-muted); font-size: 11px; cursor: pointer; }
-.folio-reading-work-ranking > header button.is-active { background: var(--folio-ink); color: var(--folio-paper-bright); }
+.folio-reading-work-ranking > header button.is-active { color: var(--folio-paper-bright); }
 .folio-reading-work-ranking ol,
 .folio-reading-recent ol,
 .folio-reading-distribution ol { margin: 0; padding: 0; list-style: none; }
@@ -1413,11 +1397,6 @@
     display: block;
   }
 
-  .folio-settings-page .folio-settings-state {
-    width: max-content;
-    margin-top: 14px;
-  }
-
   .folio-settings-inline-actions > .folio-line-button {
     flex: 1 1 calc(50% - 5px);
   }
@@ -1592,10 +1571,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .folio-settings-page .folio-settings-state.is-loading i {
-    animation: none;
-  }
-
   .folio-reading-metrics article,
   .folio-reading-work-ranking li > a,
   .folio-reading-work-ranking li > a > svg { transition: none; }

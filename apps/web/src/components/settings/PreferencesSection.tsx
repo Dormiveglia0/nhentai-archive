@@ -1,12 +1,10 @@
 import { KeyRound, ShieldCheck } from "lucide-react";
-import { m } from "motion/react";
 
-import { usePrefersReducedMotion } from "../../lib/motion";
+import { SlidingIndicator } from "../../lib/motion";
 import { FolioToggleRow } from "../folio/ui/FolioPrimitives";
 import type { SettingsVM } from "./useSettingsState";
 
 export function PreferencesSection({ vm }: { vm: SettingsVM }) {
-  const reduceMotion = usePrefersReducedMotion();
   return (
     <section className="folio-settings-section" aria-label="访问与阅读配置">
       <div className="folio-settings-subhead">
@@ -81,18 +79,17 @@ export function PreferencesSection({ vm }: { vm: SettingsVM }) {
       <div className="folio-segment-field">
         <span>默认阅读模式</span>
         <div>
-          <button className={vm.readerMode === "single" ? "is-active" : ""} type="button" onClick={() => vm.setReaderMode("single")}>
-            {vm.readerMode === "single" ? <m.span className="folio-control-active" layoutId={reduceMotion ? undefined : "formal-reader-mode"} /> : null}
+          <button aria-pressed={vm.readerMode === "single"} className={vm.readerMode === "single" ? "is-active" : ""} type="button" onClick={() => vm.setReaderMode("single")}>
+            {vm.readerMode === "single" ? <SlidingIndicator className="folio-control-active" layoutId="formal-reader-mode" /> : null}
             <span>单页</span>
           </button>
-          <button className={vm.readerMode === "scroll" ? "is-active" : ""} type="button" onClick={() => vm.setReaderMode("scroll")}>
-            {vm.readerMode === "scroll" ? <m.span className="folio-control-active" layoutId={reduceMotion ? undefined : "formal-reader-mode"} /> : null}
+          <button aria-pressed={vm.readerMode === "scroll"} className={vm.readerMode === "scroll" ? "is-active" : ""} type="button" onClick={() => vm.setReaderMode("scroll")}>
+            {vm.readerMode === "scroll" ? <SlidingIndicator className="folio-control-active" layoutId="formal-reader-mode" /> : null}
             <span>连续滚动</span>
           </button>
         </div>
       </div>
 
-      <p className="folio-settings-note">这里只保存默认值；阅读器内仍可随时临时切换阅读方式。</p>
     </section>
   );
 }

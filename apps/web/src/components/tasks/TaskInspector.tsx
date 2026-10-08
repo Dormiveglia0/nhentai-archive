@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, Copy, Download, Pause, Play, RotateCcw, Trash2, X } from "lucide-react";
-import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { api, type Job, type JobLog } from "../../lib/api";
 import {
@@ -24,6 +24,7 @@ import {
 
 type Props = {
   job: Job | null;
+  blurCovers: boolean;
   logs: JobLog[];
   logsLoading: boolean;
   retryingId: number | null;
@@ -46,7 +47,7 @@ export function TaskInspector(props: Props) {
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  if (!job) return <aside className="folio-tasks-inspector"><div className="folio-tasks-inspector-empty">选择一个任务查看阶段、进度与日志。</div></aside>;
+  if (!job) return null;
 
   const galleryId = numberTarget(job, "gallery_id");
   const workId = numberTarget(job, "work_id");
@@ -65,21 +66,22 @@ export function TaskInspector(props: Props) {
   return (
     <aside className="folio-tasks-inspector" aria-label={`任务 ${job.id} 详情`}>
       <header className="folio-tasks-inspector-head">
-        <div><span>Task log</span><h2>{jobTypeLabel(job.type)}</h2><p className={`is-${statusTone(job.status)}`}><i aria-hidden="true" />{statusLabel(job.status)}</p></div>
+        <div><h2>{jobTypeLabel(job.type)}</h2><p className={`is-${statusTone(job.status)}`}>{statusLabel(job.status)}</p></div>
         <strong>#{job.id}</strong>
       </header>
 
       <section className="folio-tasks-progress-detail">
-        <div className="folio-tasks-progress-ring" style={{ "--task-progress": `${job.progress.percent * 3.6}deg` } as CSSProperties}>
-          <span><strong>{job.progress.percent}%</strong><small>{statusLabel(job.status)}</small></span>
+        <div className="folio-tasks-progress-ring" role="progressbar" aria-label="任务进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress.percent}>
+          <svg viewBox="0 0 92 92" aria-hidden="true"><circle cx="46" cy="46" r="40" /><circle className="folio-tasks-ring-value" cx="46" cy="46" r="40" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - job.progress.percent} /></svg>
+          <strong>{job.progress.percent}%</strong>
         </div>
-        <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong><small>{formatDurationHint(job)}</small></div>
+        <div><span>当前阶段</span><strong>{stageLabel(job.stage)}</strong>{job.status === "running" || job.status === "queued" || job.status === "paused" ? <small>{formatDurationHint(job)}</small> : null}</div>
       </section>
 
       <InspectorSection title="目标信息">
         {job.meta?.title ? (
           <div className="folio-tasks-inspector-work">
-            {job.meta.cover_url ? <img src={job.meta.cover_url} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true" />}
+            {job.meta.cover_url ? <img className={props.blurCovers ? "folio-media-blurred" : ""} src={job.meta.cover_url} alt="" loading="lazy" decoding="async" /> : <span aria-hidden="true" />}
             <div><strong>{job.meta.title}</strong>{job.meta.page_count ? <small>{job.meta.page_count}P</small> : null}</div>
           </div>
         ) : null}
@@ -110,18 +112,16 @@ export function TaskInspector(props: Props) {
         </InspectorSection>
       ) : null}
 
-      <InspectorSection title="错误 / 提示">
-        {job.error ? <div className="folio-tasks-error-card"><AlertTriangle size={16} /><p>{job.error}</p>{job.retry_after ? <small>远端建议等待 {job.retry_after} 秒后重试。</small> : null}</div> : <p className="folio-tasks-boundary">当前任务没有错误记录。</p>}
-      </InspectorSection>
+      {job.error ? <InspectorSection title="错误"><div className="folio-tasks-error-card"><AlertTriangle size={16} /><p>{job.error}</p>{job.retry_after ? <small>{job.retry_after} 秒后可重试</small> : null}</div></InspectorSection> : null}
 
       <InspectorSection title="操作">
         <div className="folio-tasks-inspector-actions">
-          <button type="button" disabled={!canRetry(job) || busy} onClick={() => props.onRetry(job.id)}><RotateCcw size={15} />{props.retryingId === job.id ? "重试中" : "重试"}</button>
-          <button type="button" disabled={!canPause(job) || busy} onClick={() => props.onPause(job.id)}><Pause size={15} />暂停</button>
-          <button type="button" disabled={!canResume(job) || busy} onClick={() => props.onResume(job.id)}><Play size={15} />恢复</button>
-          <button type="button" disabled={!canCancel(job) || busy} onClick={() => props.onCancel(job.id)}><X size={15} />取消</button>
+          {canRetry(job) ? <button type="button" disabled={busy} onClick={() => props.onRetry(job.id)}><RotateCcw size={15} />{props.retryingId === job.id ? "重试中" : "重试"}</button> : null}
+          {canPause(job) ? <button type="button" disabled={busy} onClick={() => props.onPause(job.id)}><Pause size={15} />暂停</button> : null}
+          {canResume(job) ? <button type="button" disabled={busy} onClick={() => props.onResume(job.id)}><Play size={15} />恢复</button> : null}
+          {canCancel(job) ? <button type="button" disabled={busy} onClick={() => props.onCancel(job.id)}><X size={15} />取消</button> : null}
           <button type="button" onClick={() => void copyId()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "已复制" : "复制 ID"}</button>
-          <button className="is-danger" type="button" disabled={!canDelete(job) || busy} onClick={() => props.onDelete(job.id)}><Trash2 size={15} />删除</button>
+          {canDelete(job) ? <button className="is-danger" type="button" disabled={busy} onClick={() => props.onDelete(job.id)}><Trash2 size={15} />删除</button> : null}
         </div>
       </InspectorSection>
 

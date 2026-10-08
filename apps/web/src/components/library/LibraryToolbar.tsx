@@ -1,5 +1,4 @@
-import { Grid2X2, Heart, List, RotateCcw, Search, X } from "lucide-react";
-import { m } from "motion/react";
+import { ChevronDown, Heart, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { LibrarySummary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
@@ -24,8 +23,6 @@ type Props = {
   onTags: (tags: LibraryTagFilterItem[]) => void;
   favoriteOnly: boolean;
   onFavoriteOnly: (value: boolean) => void;
-  view: LibraryView;
-  onView: (view: LibraryView) => void;
   summary: LibrarySummary | null;
   canReset: boolean;
   onReset: () => void;
@@ -33,10 +30,18 @@ type Props = {
 
 export function LibraryToolbar(props: Props) {
   const [draft, setDraft] = useState(props.q);
+  const [filtersOpen, setFiltersOpen] = useState(() => !window.matchMedia("(max-width: 700px)").matches);
 
   useEffect(() => {
     setDraft(props.q);
   }, [props.q]);
+
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 700px)");
+    const change = () => setFiltersOpen(!mobile.matches);
+    mobile.addEventListener("change", change);
+    return () => mobile.removeEventListener("change", change);
+  }, []);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -63,8 +68,7 @@ export function LibraryToolbar(props: Props) {
 
   return (
     <section className="folio-library-toolbar" aria-label="作品搜索与筛选">
-      <div className="folio-library-query">
-        <form className="folio-library-search" onSubmit={submit}>
+      <form className="folio-library-query folio-library-search" onSubmit={submit}>
           <div className="folio-library-search-field">
             <Search size={17} />
             <input
@@ -77,35 +81,12 @@ export function LibraryToolbar(props: Props) {
             {draft ? <button className="folio-library-search-clear" type="button" onClick={clearSearch} aria-label="清除文字搜索"><X size={15} /></button> : null}
             <i />
           </div>
-          <button type="submit"><Search size={15} />检索</button>
-        </form>
-
         <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
-      </div>
+        <button type="submit"><Search size={15} />搜索</button>
+      </form>
 
-      <div className="folio-view-switch folio-library-view-switch" aria-label="作品视图方式">
-        <button
-          className={props.view === "grid" ? "is-active" : ""}
-          type="button"
-          aria-label="封面墙视图"
-          aria-pressed={props.view === "grid"}
-          onClick={() => props.onView("grid")}
-        >
-          {props.view === "grid" ? <m.span className="folio-control-active" layoutId="folio-library-view" /> : null}
-          <Grid2X2 size={16} />
-        </button>
-        <button
-          className={props.view === "list" ? "is-active" : ""}
-          type="button"
-          aria-label="列表视图"
-          aria-pressed={props.view === "list"}
-          onClick={() => props.onView("list")}
-        >
-          {props.view === "list" ? <m.span className="folio-control-active" layoutId="folio-library-view" /> : null}
-          <List size={17} />
-        </button>
-      </div>
-
+      <details className="folio-library-filters" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
+      <summary><SlidersHorizontal size={16} />筛选与排序<ChevronDown size={16} /></summary>
       <div className="folio-library-filter-row">
         <FolioSelect label="语言" value={props.language} options={languageOptions} onChange={props.onLanguage} />
         <FolioSelect label="阅读状态" value={props.readStatus} options={READ_STATUS_OPTIONS} onChange={props.onReadStatus} />
@@ -130,6 +111,7 @@ export function LibraryToolbar(props: Props) {
           重置筛选
         </button>
       </div>
+      </details>
     </section>
   );
 }

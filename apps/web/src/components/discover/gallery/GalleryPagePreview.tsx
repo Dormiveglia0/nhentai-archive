@@ -68,7 +68,7 @@ export function GalleryPagePreview({ detail, blurCovers }: { detail: GalleryDeta
   return (
     <section className="folio-gallery-preview">
       <header className="folio-gallery-section-head">
-        <div><Images size={18} /><span><h2>页面预览</h2><p>{isLocal ? "本地页面" : "在线页面"}</p></span></div>
+        <div><Images size={18} /><h2>页面预览</h2></div>
         <small>{pages.length ? `${visiblePages.length} / ${pages.length} 页` : `${detail.page_count || 0} 页`}</small>
       </header>
 

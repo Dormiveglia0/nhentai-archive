@@ -2,6 +2,13 @@ import type { LibraryWork } from "./api";
 
 const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB"];
 
+export function parseUtcTimestamp(value?: string | null): Date | null {
+  if (!value) return null;
+  const normalized = value.replace(" ", "T");
+  const date = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized) ? normalized : `${normalized}Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function formatBytes(bytes?: number): string {
   if (!bytes || bytes <= 0) return "0 B";
   const exponent = Math.min(BYTE_UNITS.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));

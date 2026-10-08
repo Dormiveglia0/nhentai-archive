@@ -1,6 +1,6 @@
 import { AlertCircle, Archive, CheckCircle2, ShieldAlert, TriangleAlert } from "lucide-react";
 
-import { FadeIn } from "../../lib/motion";
+import { FadeIn, usePrefersReducedMotion } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { FolioMetricGrid, type FolioMetricTone } from "../folio/ui/FolioMetricGrid";
 import { ExportInspector } from "./ExportInspector";
@@ -11,6 +11,13 @@ import "./ExportPage.css";
 
 export function ExportPage({ initialWorkId, blurCovers }: { initialWorkId?: number; blurCovers: boolean }) {
   const exports = useExportState(initialWorkId);
+  const reduced = usePrefersReducedMotion();
+  function pickItem(id: number) {
+    exports.pickItem(id);
+    if (!exports.multiSelect && window.matchMedia("(max-width: 1000px)").matches) {
+      window.requestAnimationFrame(() => document.querySelector(".folio-export-inspector")?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" }));
+    }
+  }
   const focusItem = exports.focusId ? exports.items.find((item) => item.work.id === exports.focusId) ?? null : null;
   const metrics = [
     { label: "全部作品", value: exports.summary?.total, icon: Archive, tone: "neutral" },
@@ -44,9 +51,9 @@ export function ExportPage({ initialWorkId, blurCovers }: { initialWorkId?: numb
           <div className="folio-export-layout">
             <section className="folio-export-source" aria-labelledby="folio-export-source-title">
               <header className="folio-export-column-head"><h2 id="folio-export-source-title">选择作品</h2><p>{exports.visibleItems.length} 项匹配当前条件</p></header>
-              {exports.visibleItems.length ? <ExportWorkList items={exports.visibleItems} selectedIds={exports.selectedIds} focusId={exports.focusId} multiSelect={exports.multiSelect} blurCovers={blurCovers} onPick={exports.pickItem} /> : <FolioEmptyState icon={Archive} title="没有匹配的作品" copy={exports.query ? "调整搜索词或筛选条件后重试。" : "当前筛选条件下没有条目。"} />}
+              {exports.visibleItems.length ? <ExportWorkList items={exports.visibleItems} selectedIds={exports.selectedIds} focusId={exports.focusId} multiSelect={exports.multiSelect} blurCovers={blurCovers} onPick={pickItem} /> : <FolioEmptyState icon={Archive} title="没有匹配的作品" copy={exports.query ? "调整搜索词或筛选条件后重试。" : "当前筛选条件下没有条目。"} />}
             </section>
-            <ExportInspector focusItem={focusItem} preview={exports.preview} selectedItems={exports.selectedItems} selectedSize={exports.selectedSize} exportOptions={exports.exportOptions} previewLoading={exports.previewLoading} downloading={exports.downloading} blurCovers={blurCovers} outputNames={exports.outputNames} onRename={exports.renameOutput} onSetOption={exports.setExportOption} onRefresh={() => void exports.refreshPreview()} onDownload={() => void exports.downloadSelected()} onDownloadOne={(id) => void exports.downloadOne(id)} />
+            <ExportInspector focusItem={focusItem} preview={exports.preview} selectedItems={exports.selectedItems} selectedSize={exports.selectedSize} multiSelect={exports.multiSelect} exportOptions={exports.exportOptions} previewLoading={exports.previewLoading} downloading={exports.downloading} blurCovers={blurCovers} outputNames={exports.outputNames} onRename={exports.renameOutput} onSetOption={exports.setExportOption} onRefresh={() => void exports.refreshPreview()} onDownload={() => void exports.downloadSelected()} onDownloadOne={(id) => void exports.downloadOne(id)} />
           </div>
         </>
       ) : null}

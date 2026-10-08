@@ -1,5 +1,5 @@
+import { SlidingIndicator } from "../../lib/motion";
 import { CheckCheck, Layers3, XCircle } from "lucide-react";
-import { m } from "motion/react";
 
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 
@@ -18,7 +18,7 @@ export function ExportToolbar({ query, statusFilter, onQueryChange, onStatusFilt
       <div className="folio-export-tabs" role="group" aria-label="导出状态筛选">
         {STATUS_CHIPS.map(({ value, label }) => (
           <button key={value} type="button" aria-pressed={statusFilter === value} className={statusFilter === value ? "is-active" : ""} onClick={() => onStatusFilterChange(value)}>
-            {statusFilter === value ? <m.span layoutId="folio-export-tab-active" /> : null}<strong>{label}</strong>
+            {statusFilter === value ? <SlidingIndicator layoutId="folio-export-tab-active" /> : null}<strong>{label}</strong>
           </button>
         ))}
       </div>

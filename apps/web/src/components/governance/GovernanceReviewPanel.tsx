@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Clock3, RotateCcw, ShieldCheck } from "lucide-react";
 
 import type { GovernanceAggregate } from "../../lib/api";
+import { parseUtcTimestamp } from "../../lib/format";
 import { Stagger, StaggerItem } from "../../lib/motion";
 
 type Props = {
@@ -21,9 +22,7 @@ export function GovernanceReviewPanel({ aggregate, changedCount, busy, note, onN
     <section className="folio-governance-review" aria-labelledby="governance-review-title">
       <header className="folio-governance-review-head">
         <div>
-          <span>Automatic checks + human review</span>
           <h2 id="governance-review-title">检查与核对</h2>
-          <p>检查作品信息后，标记为“已核对”。</p>
         </div>
         <div className="folio-governance-review-badge" data-state={review.state}>
           {approved ? <CheckCircle2 size={17} /> : review.state === "stale" ? <AlertTriangle size={17} /> : <Clock3 size={17} />}
@@ -37,16 +36,13 @@ export function GovernanceReviewPanel({ aggregate, changedCount, busy, note, onN
             <article className="folio-governance-check-card" data-status={check.status}>
               <header>
                 <span>{check.label}</span>
-                <strong>{check.issues.length ? `${check.issues.length} 项提示` : "自动检查通过"}</strong>
+                <strong>{check.issues.length ? `${check.issues.length} 项提示` : <><CheckCircle2 size={14} />通过</>}</strong>
               </header>
-              <p>{check.description}</p>
               {check.issues.length ? (
                 <ul>
                   {check.issues.map((issue) => <li key={issue.code}>{issue.label}</li>)}
                 </ul>
-              ) : (
-                <div className="folio-governance-check-pass"><CheckCircle2 size={14} />当前未发现规则问题</div>
-              )}
+              ) : null}
             </article>
           </StaggerItem>
         ))}
@@ -105,8 +101,8 @@ function reviewLabel(state: GovernanceAggregate["review"]["state"]) {
 
 function formatReviewTime(value?: string | null) {
   if (!value) return "此前";
-  const parsed = new Date(value.includes("T") ? value : `${value.replace(" ", "T")}Z`);
-  if (Number.isNaN(parsed.getTime())) return value;
+  const parsed = parseUtcTimestamp(value);
+  if (!parsed) return value;
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
     month: "2-digit",

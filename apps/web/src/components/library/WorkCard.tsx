@@ -3,6 +3,7 @@ import { BookOpen, Check, Heart } from "lucide-react";
 import type { LibraryTag, LibraryWork } from "../../lib/api";
 import { libraryTagHref, navigate, pageHref } from "../../lib/navigation";
 import { TagScroller } from "../folio/ui/TagScroller";
+import { AmbientCover } from "../folio/ui/AmbientCover";
 import type { LibraryView } from "./LibraryToolbar";
 import { authorLine, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
 
@@ -66,9 +67,9 @@ export function WorkCard({
           </span>
         ) : null}
         {work.cover_path ? (
-          <img className={blurCovers ? "folio-media-blurred" : ""} src={`/api/works/${work.id}/cover?w=512`} alt="" loading="lazy" decoding="async" />
+          <AmbientCover className="is-fill-portrait" src={`/api/works/${work.id}/cover?w=512`} alt="" privateBlur={blurCovers} loading="lazy" />
         ) : (
-          <span className="folio-cover-fallback">NO COVER</span>
+          <span className="folio-cover-fallback">暂无封面</span>
         )}
         {work.completed ? <span className="folio-library-read-mark" aria-label="已读"><Check size={13} /></span> : null}
         <span className={`folio-library-status tone-${status.tone}`}>{status.label}</span>
@@ -89,7 +90,7 @@ export function WorkCard({
       <div className="folio-library-card-body">
         <div className="folio-library-card-meta">
           <span>{work.source === "remote" ? "远端入库" : "本地导入"}</span>
-          <em>{languageLabel(work)}</em>
+          <em title={languageLabel(work)}>{languageLabel(work)}</em>
         </div>
 
         <a href={readerHref} className="folio-library-card-title" onClick={selectCurrent}>
@@ -113,7 +114,7 @@ export function WorkCard({
           className="folio-library-card-tags"
           tags={contentTags as LibraryTag[]}
           hrefForTag={libraryTagHref}
-          emptyLabel="暂无内容 Tag"
+          emptyLabel="暂无内容标签"
           onPickTag={(tag) => onPickTag(tag as LibraryTag)}
         />
 

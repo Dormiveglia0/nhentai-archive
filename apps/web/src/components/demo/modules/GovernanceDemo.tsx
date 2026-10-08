@@ -17,7 +17,6 @@ export function GovernanceDemo() {
         <section className="folio-editor-stage">
           <div className="folio-editor-head">
             <div>
-              <span>Metadata</span>
               <h2>元数据对照编辑</h2>
             </div>
             <button className={"folio-filter-toggle" + (onlyDiff ? " is-active" : "")} type="button" aria-pressed={onlyDiff} onClick={() => setOnlyDiff((value) => !value)}>
@@ -37,7 +36,6 @@ export function GovernanceDemo() {
         </section>
 
         <aside className="folio-source-rail">
-          <span>Source check</span>
           <h2>来源对照</h2>
           <p>标题、标签、页数与远端画廊信息会在此并列展示。</p>
           <div className="folio-inspector-lines"><i /><i /><i /><i /></div>

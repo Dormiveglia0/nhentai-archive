@@ -1,5 +1,4 @@
 import {
-  Activity,
   ArrowUpRight,
   BookOpen,
   CalendarDays,
@@ -15,7 +14,8 @@ import { AnimatePresence, m } from "motion/react";
 import { type CSSProperties, useState } from "react";
 
 import type { ReadingSessionRank, ReadingStatistics, ReadingTagRank, ReadingWorkRank } from "../../lib/api";
-import { duration, ease, stagger, usePrefersReducedMotion } from "../../lib/motion";
+import { parseUtcTimestamp } from "../../lib/format";
+import { SlidingIndicator, duration, ease, stagger, usePrefersReducedMotion } from "../../lib/motion";
 import { libraryTagHref, pageHref } from "../../lib/navigation";
 import { NumberTicker } from "../effects/NumberTicker";
 import { AmbientCover } from "../folio/ui/AmbientCover";
@@ -56,9 +56,7 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
     <section className={`folio-reading-atlas${loading ? " is-loading" : ""}`} aria-label="阅读统计与作品报表" aria-busy={loading}>
       <header className="folio-reading-atlas-head">
         <div>
-          <span className="folio-reading-atlas-kicker"><Activity size={14} />READING ATLAS</span>
           <h2>阅读图谱</h2>
-          <p>查看本地与在线阅读记录，以及我的库的收藏分布。</p>
         </div>
         <div className="folio-reading-period" aria-label="统计周期">
           {PERIODS.map((periodOption) => (
@@ -69,7 +67,7 @@ export function ReadingStatisticsReport({ statistics, loading, error, periodDays
               onClick={() => onPeriodDays(periodOption.value)}
               aria-pressed={periodDays === periodOption.value}
             >
-              {periodDays === periodOption.value ? <m.i layoutId={reduceMotion ? undefined : "folio-reading-period"} /> : null}
+              {periodDays === periodOption.value ? <SlidingIndicator layoutId="folio-reading-period" /> : null}
               <span>{periodOption.label}</span>
             </button>
           ))}
@@ -247,10 +245,10 @@ function WorkRanking({ statistics }: { statistics: ReadingStatistics | null }) {
   return (
     <section className="folio-reading-work-ranking">
       <header>
-        <span><strong>作品深读榜</strong><small>点击回到对应的本地或远端阅读器</small></span>
+        <span><strong>作品深读榜</strong></span>
         <div aria-label="作品排行口径">
-          <button type="button" className={mode === "time" ? "is-active" : ""} onClick={() => setMode("time")}>按时长</button>
-          <button type="button" className={mode === "sessions" ? "is-active" : ""} onClick={() => setMode("sessions")}>按次数</button>
+          <button type="button" aria-pressed={mode === "time"} className={`folio-slide-choice${mode === "time" ? " is-active" : ""}`} onClick={() => setMode("time")}>{mode === "time" ? <SlidingIndicator layoutId="reading-rank-mode" /> : null}按时长</button>
+          <button type="button" aria-pressed={mode === "sessions"} className={`folio-slide-choice${mode === "sessions" ? " is-active" : ""}`} onClick={() => setMode("sessions")}>{mode === "sessions" ? <SlidingIndicator layoutId="reading-rank-mode" /> : null}按次数</button>
         </div>
       </header>
       {rows.length ? (
@@ -279,7 +277,7 @@ function WorkRankRow({ row, index, mode }: { row: ReadingWorkRank; index: number
     <li className={index === 0 ? "is-leader" : ""}>
       <a href={href}>
         <em>{String(index + 1).padStart(2, "0")}</em>
-        {row.work_id != null && row.cover_path ? <AmbientCover className="folio-reading-rank-cover" src={`/api/works/${row.work_id}/cover`} alt="" loading="lazy" /> : <span className="folio-reading-rank-cover" />}
+        {row.work_id != null && row.cover_path ? <AmbientCover className="folio-reading-rank-cover" src={`/api/works/${row.work_id}/cover?w=240`} alt="" loading="lazy" /> : <span className="folio-reading-rank-cover" />}
         <span><strong>{title}</strong><small>{formatDuration(row.reading_seconds)} · {row.reading_sessions} 次会话</small></span>
         <b>{mode === "time" ? formatDuration(row.reading_seconds) : `${row.reading_sessions} 次`}</b>
         <ArrowUpRight size={14} />
@@ -291,7 +289,7 @@ function WorkRankRow({ row, index, mode }: { row: ReadingWorkRank; index: number
 function RecentSessions({ sessions }: { sessions: ReadingSessionRank[] }) {
   return (
     <section className="folio-reading-recent">
-      <header><span><strong>最近足迹</strong><small>本周期最新的阅读会话</small></span><a href={pageHref({ name: "history" })}>完整历史 <History size={13} /></a></header>
+      <header><span><strong>最近足迹</strong></span><a href={pageHref({ name: "history" })}>完整历史 <History size={13} /></a></header>
       {sessions.length ? (
         <ol>
           {sessions.slice(0, 6).map((session) => (
@@ -357,8 +355,7 @@ function formatShortDate(value: string) {
 }
 
 function formatTimestamp(value: string) {
-  const normalized = value.includes("T") ? value : value.replace(" ", "T");
-  const date = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized) ? normalized : `${normalized}Z`);
-  if (Number.isNaN(date.getTime())) return value.slice(5, 16);
+  const date = parseUtcTimestamp(value);
+  if (!date) return value.slice(5, 16);
   return SESSION_DATE_FORMAT.format(date);
 }

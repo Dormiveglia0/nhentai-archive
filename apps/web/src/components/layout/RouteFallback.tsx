@@ -17,7 +17,7 @@ export function ReaderRouteFallback() {
   return (
     <section className="reader-route-loading" role="status" aria-label="正在打开阅读器">
       <PageSheets />
-      <span><strong>正在打开阅读器</strong><small>装载页面索引</small></span>
+      <strong>正在打开阅读器</strong>
     </section>
   );
 }

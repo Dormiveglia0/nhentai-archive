@@ -20,11 +20,8 @@ export function GovernanceActionBar({
   onReload: () => Promise<void>;
 }) {
   return (
-    <div className="folio-governance-actions">
-      <button className="folio-governance-action is-primary" type="button" onClick={() => void onSave()} disabled={saving || (!writeBack && changedCount === 0)}>
-        <Save size={17} />
-        {saving ? "保存中..." : writeBack && !changedCount ? "回写源文件" : `保存修改${changedCount ? ` (${changedCount})` : ""}`}
-      </button>
+    <>
+      <section className="folio-governance-writeback-section" aria-label="源文件回写">
       <label className="folio-governance-writeback">
         <input
           type="checkbox"
@@ -34,18 +31,26 @@ export function GovernanceActionBar({
         <i aria-hidden="true"><span /></i>
         <span><strong>同时回写 ComicInfo</strong><small>就地改写源 CBZ，不可撤销</small></span>
       </label>
-      <a className="folio-governance-action" href={pageHref({ name: "dictionary" })}>
+      </section>
+    <div className="folio-governance-actions">
+      <button className="folio-governance-action is-primary" type="button" onClick={() => void onSave()} disabled={saving || (!writeBack && changedCount === 0)}>
+        <Save size={17} />
+        {saving ? "保存中..." : writeBack && !changedCount ? "回写源文件" : `保存修改${changedCount ? ` (${changedCount})` : ""}`}
+      </button>
+
+      <a className="folio-governance-action is-secondary" aria-label="管理词典" title="管理词典" href={pageHref({ name: "dictionary" })}>
         <Tags size={16} />
-        管理词典
+        <span>管理词典</span>
       </a>
-      <a className="folio-governance-action" href={pageHref({ name: "export", workId })}>
+      <a className="folio-governance-action is-secondary" aria-label="进入导出" title="进入导出" href={pageHref({ name: "export", workId })}>
         <Download size={16} />
-        进入导出
+        <span>进入导出</span>
       </a>
-      <button className="folio-governance-action" type="button" onClick={() => void onReload()}>
+      <button className="folio-governance-action is-secondary" aria-label="重新读取" title="重新读取" type="button" onClick={() => void onReload()}>
         <RefreshCw size={16} />
-        重新读取
+        <span>重新读取</span>
       </button>
     </div>
+    </>
   );
 }

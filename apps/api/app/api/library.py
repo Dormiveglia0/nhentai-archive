@@ -51,8 +51,8 @@ def tag_filters(q: str = "", limit: int = 40):
 
 
 @router.get("/reading-history")
-def reading_history(page: int = 1, per_page: int = 30):
-    return services.library.reading_history(page, per_page)
+def reading_history(page: int = 1, per_page: int = 30, timezone_offset_minutes: int = 0):
+    return services.library.reading_history(page, per_page, timezone_offset_minutes)
 
 
 @router.get("/statistics")

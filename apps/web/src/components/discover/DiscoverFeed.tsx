@@ -31,7 +31,7 @@ export function DiscoverFeed(props: Props) {
   return (
     <section className="folio-discover-feed" aria-busy={props.loading}>
       <header className="folio-discover-feed-head">
-        <FolioPanelHeading title="远端索引" description="浏览漫画，或按标签查找。" />
+        <FolioPanelHeading title="作品" />
         <span>{props.loading ? "读取中…" : discoverCount(props.items.length, props.total)}</span>
       </header>
 

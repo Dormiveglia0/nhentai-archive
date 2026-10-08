@@ -77,7 +77,6 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
             ))
           : <p className="folio-settings-data-empty">正在读取路径…</p>}
       </div>
-      <p className="folio-settings-note">清理与删除必须在文件管理中先预览影响范围；本页不会修改或扫描目录。</p>
     </section>
   );
 }

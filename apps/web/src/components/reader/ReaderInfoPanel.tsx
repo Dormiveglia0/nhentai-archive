@@ -75,7 +75,7 @@ export function ReaderInfoPanel({
           onMouseLeave={() => onHoverChange(false)}
         >
           <header className="reader-panel-head">
-            <span><small>READER INDEX</small><strong>作品信息</strong></span>
+            <strong>作品信息</strong>
             <button ref={closeButton} type="button" onClick={onClose} aria-label="关闭作品信息"><X size={17} /></button>
           </header>
 
@@ -90,7 +90,6 @@ export function ReaderInfoPanel({
               <span><strong>{progressPercent}%</strong><small>{isRemote ? "远端只读预览" : "本地阅读进度"}</small></span>
               <i><span style={{ width: `${progressPercent}%` }} /></i>
             </div>
-            {isRemote ? <p>远端预览不会保存阅读位置；入库后可持续记录进度。</p> : null}
             {tagGroups.length ? (
               <div className="reader-info-tag-groups">
                 {tagGroups.map((group) => (
@@ -129,10 +128,10 @@ export function ReaderInfoPanel({
             )}
             {galleryId != null ? (
               <a href={pageHref({ name: "gallery", galleryId, returnTo })}>
-                <span>查看作品展示页</span><ArrowUpRight size={14} />
+                <span>作品详情</span><ArrowUpRight size={14} />
               </a>
             ) : null}
-            {!isRemote && workId != null ? <a href={pageHref({ name: "governance", workId })}>进入元数据治理</a> : null}
+            {!isRemote && workId != null ? <a href={pageHref({ name: "governance", workId })}>编辑作品信息</a> : null}
           </div>
         </FadeInOut>
       ) : null}

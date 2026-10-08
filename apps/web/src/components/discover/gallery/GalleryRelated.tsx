@@ -21,7 +21,7 @@ export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; 
   return (
     <section className="folio-gallery-related">
       <header className="folio-gallery-section-head">
-        <div><Layers3 size={18} /><span><h2>相关作品</h2><p>更多相关漫画。</p></span></div>
+        <div><Layers3 size={18} /><h2>相关作品</h2></div>
         <small>{related.length} 项</small>
       </header>
       <Stagger className="folio-gallery-related-list">
@@ -34,7 +34,7 @@ export function GalleryRelated({ detail, blurCovers }: { detail: GalleryDetail; 
                 <a className="folio-gallery-related-media" href={galleryHref(item.gallery_id)} aria-label={`打开作品详情：${relatedTitle}`}>
                   {item.thumbnail.url ? (
                     <img className={blurCovers ? "is-blurred" : ""} src={item.thumbnail.url} alt="" loading="lazy" />
-                  ) : <span className="folio-gallery-related-empty">NO COVER</span>}
+                  ) : <span className="folio-gallery-related-empty">暂无封面</span>}
                   <small>{item.imported ? "已入库" : `ID ${item.gallery_id}`}</small>
                 </a>
                 <div className="folio-gallery-related-copy">

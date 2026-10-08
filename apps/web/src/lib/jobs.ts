@@ -1,5 +1,5 @@
 import type { Job } from "./api";
-import { formatBytes } from "./format";
+import { formatBytes, parseUtcTimestamp } from "./format";
 
 export type JobStatusFilter = "all" | Job["status"];
 
@@ -151,7 +151,7 @@ export function numberTarget(job: Job, key: string) {
 
 export function formatTime(value?: string | null) {
   if (!value) return "未知";
-  const date = parseJobDate(value);
+  const date = parseUtcTimestamp(value);
   if (!date) return value;
   return new Intl.DateTimeFormat("zh-CN", {
     month: "2-digit",
@@ -174,7 +174,7 @@ export function formatDurationHint(job: Job) {
 }
 
 export function isToday(value?: string | null) {
-  const date = parseJobDate(value);
+  const date = parseUtcTimestamp(value);
   if (!date) return false;
   const today = new Date();
   return (
@@ -182,11 +182,4 @@ export function isToday(value?: string | null) {
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate()
   );
-}
-
-function parseJobDate(value?: string | null) {
-  if (!value) return null;
-  const normalized = value.includes("T") ? value : value.replace(" ", "T");
-  const date = new Date(normalized);
-  return Number.isNaN(date.getTime()) ? null : date;
 }

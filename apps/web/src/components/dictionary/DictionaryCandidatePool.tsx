@@ -1,4 +1,5 @@
-import { Languages, RefreshCw, Upload } from "lucide-react";
+import { ChevronDown, Languages, RefreshCw, SlidersHorizontal, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { DictionaryCandidate } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
@@ -63,13 +64,19 @@ const TYPE_LABELS: Record<string, string> = {
 
 export function DictionaryCandidatePool(props: Props) {
   const currentPage = Math.floor(props.offset / props.limit) + 1;
+  const [filtersOpen, setFiltersOpen] = useState(() => !window.matchMedia("(max-width: 640px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const change = () => setFiltersOpen(!media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
 
   return (
     <section className="folio-dictionary-candidates" aria-labelledby="folio-dictionary-candidate-title">
       <header className="folio-dictionary-panel-head">
         <div>
-          <span>Candidate pool</span>
-          <h2 id="folio-dictionary-candidate-title">候选术语池</h2>
+          <h2 id="folio-dictionary-candidate-title">候选词条</h2>
           <p>{props.loading ? "正在读取缓存…" : `当前页 ${props.candidates.length} 项`}</p>
         </div>
         <div className="folio-dictionary-head-actions">
@@ -85,20 +92,22 @@ export function DictionaryCandidatePool(props: Props) {
 
       <div className="folio-dictionary-filters">
         <FolioSearchField value={props.query} onChange={props.onQuery} placeholder="搜索原文或中文词条" />
-        <div className="folio-dictionary-filter-row">
-          <FolioSelect label="类型" value={props.typeFilter} options={TYPE_OPTIONS} onChange={props.onTypeFilter} />
-          <FolioSelect label="状态" value={props.status} options={STATUS_OPTIONS} onChange={props.onStatus} />
-        </div>
-        <button
-          className="folio-dictionary-suggest"
-          type="button"
-          onClick={props.onSuggest}
-          disabled={props.loading || props.suggesting || props.batchCount === 0}
-        >
-          <Languages size={15} />
-          <span>{props.suggesting ? "生成建议中…" : `为当前候选生成建议${props.batchCount ? ` (${props.batchCount})` : ""}`}</span>
-          <small>只生成待审核项，不直接应用到作品</small>
-        </button>
+        <details className="folio-dictionary-filter-details" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
+          <summary><SlidersHorizontal size={16} />筛选与翻译<ChevronDown size={16} /></summary>
+          <div className="folio-dictionary-filter-row">
+            <FolioSelect label="类型" value={props.typeFilter} options={TYPE_OPTIONS} onChange={props.onTypeFilter} />
+            <FolioSelect label="状态" value={props.status} options={STATUS_OPTIONS} onChange={props.onStatus} />
+          </div>
+          <button
+            className="folio-dictionary-suggest"
+            type="button"
+            onClick={props.onSuggest}
+            disabled={props.loading || props.suggesting || props.batchCount === 0}
+          >
+            <Languages size={15} />
+            <span>{props.suggesting ? "生成建议中…" : `生成翻译建议${props.batchCount ? ` (${props.batchCount})` : ""}`}</span>
+          </button>
+        </details>
       </div>
 
       <div className="folio-dictionary-table" aria-label="候选术语">

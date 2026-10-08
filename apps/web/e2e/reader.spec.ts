@@ -17,7 +17,7 @@ test("显示页码计数并能下一页", async ({ page }) => {
 
 test("切换到连续滚动模式", async ({ page }) => {
   if (!await page.locator(".reader-webtoon").count()) {
-    await page.getByRole("button", { name: "单页", exact: true }).click();
+    await selectMode(page, "连续");
   }
   await expect(page.locator(".reader-webtoon")).toBeVisible();
 });
@@ -26,7 +26,7 @@ test("连续滚动触摸滑动不会唤出控制栏", async ({ page }) => {
   await expect.poll(() => page.locator(".reader-webtoon, .reader-single").count()).toBeGreaterThan(0);
   if (!await page.locator(".reader-webtoon").count()) {
     await revealChrome(page);
-    await page.getByRole("button", { name: "单页", exact: true }).click();
+    await selectMode(page, "连续");
   }
   const webtoon = page.locator(".reader-webtoon");
   await expect(webtoon).toBeVisible();
@@ -53,7 +53,7 @@ test("单页模式移动鼠标和侧边翻页不唤出控制栏，只有中间�
   await expect.poll(() => page.locator(".reader-webtoon, .reader-single").count()).toBeGreaterThan(0);
   if (await page.locator(".reader-webtoon").count()) {
     await revealChrome(page);
-    await page.getByRole("button", { name: /连续/ }).click();
+    await selectMode(page, "单页");
   }
   await expect(page.locator(".reader-single")).toBeVisible();
   await page.mouse.move(720, 500);
@@ -105,6 +105,7 @@ test("阅读器隔离后台页面并在返回后恢复入口焦点", async ({ pa
 
   const readerRoute = page.locator(".app-route-reader");
   const archiveRoute = page.locator(".app-route-archive");
+  await expect(readerRoute).toHaveCount(1);
   await expect(readerRoute).toBeFocused();
   await expect(readerRoute).toHaveAttribute("role", "main");
   await expect(archiveRoute).toHaveAttribute("aria-hidden", "true");
@@ -120,9 +121,20 @@ test("阅读器隔离后台页面并在返回后恢复入口焦点", async ({ pa
   await expect(entry).toBeFocused();
 });
 
+test("阅读器退场未完成时浏览器返回仍能重新打开阅读器", async ({ page }) => {
+  await page.goto("/#library");
+  await expect(page.locator(".folio-library-page")).toBeVisible();
+  await page.goBack();
+  const reader = page.locator(".app-route-reader");
+  await expect(reader).toHaveCount(1);
+  await expect(page.locator(".reader-shell")).toBeVisible();
+  await expect(reader).toBeFocused();
+  await expect(page.locator(".app-route-archive")).toHaveAttribute("aria-hidden", "true");
+});
+
 test("任一失败图片会批量重试当前所有失败页", async ({ page }) => {
   const attempts = new Map<string, number>();
-  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+  let available = false;
   await page.route(new RegExp(`/api/works/${WORK_ID}/pages/\\d+$`), async (route) => {
     const path = new URL(route.request().url()).pathname;
     const pageIndex = Number(path.split("/").at(-1));
@@ -132,8 +144,8 @@ test("任一失败图片会批量重试当前所有失败页", async ({ page }) 
     }
     const attempt = (attempts.get(path) ?? 0) + 1;
     attempts.set(path, attempt);
-    if (attempt === 1) await route.fulfill({ status: 503, body: "retry" });
-    else await route.fulfill({ status: 200, contentType: "image/png", body: png });
+    if (!available) await route.fulfill({ status: 503, body: "retry" });
+    else await route.continue();
   });
   await page.request.patch(`/api/works/${WORK_ID}/reader-state`, { data: { page_index: 1, completed: false } });
   await page.reload();
@@ -141,12 +153,24 @@ test("任一失败图片会批量重试当前所有失败页", async ({ page }) 
   await expect.poll(() => page.locator(".reader-webtoon, .reader-single").count()).toBeGreaterThan(0);
   if (!await page.locator(".reader-webtoon").count()) {
     await revealChrome(page);
-    await page.getByRole("button", { name: "单页", exact: true }).click();
+    await selectMode(page, "连续");
   }
 
-  await expect.poll(() => page.locator(".reader-img-error").count()).toBeGreaterThanOrEqual(2);
+  for (const index of [1, 2]) {
+    const image = page.locator(`.reader-webtoon [data-page-index='${index}']`);
+    await image.scrollIntoViewIfNeeded();
+    await expect(image).toHaveClass(/reader-img-error/);
+  }
+  await expect(page.locator(".reader-img-error")).toHaveCount(2);
   const failedPaths = await page.locator(".reader-img-error").evaluateAll((items, workId) => items.map((item) => `/api/works/${workId}/pages/${item.getAttribute("data-page-index")}`), WORK_ID);
+  available = true;
   await page.getByRole("button", { name: "重试全部" }).first().click();
+  await expect(page.locator(".reader-img-error")).toHaveCount(0);
+  for (const index of [1, 2]) {
+    const image = page.locator(`.reader-webtoon img[data-page-index='${index}']`);
+    await image.scrollIntoViewIfNeeded();
+    await expect.poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth > 0)).toBe(true);
+  }
   await expect.poll(() => failedPaths.every((path) => (attempts.get(path) ?? 0) >= 2)).toBeTruthy();
   await expect(page.locator(".reader-img-error")).toHaveCount(0);
 });
@@ -189,7 +213,7 @@ test("打开缩略图浮层并跳页", async ({ page }) => {
   await page.locator(".reader-thumb-tile").nth(2).click();
   await expect(page.locator(".reader-thumb-field")).toHaveCount(0);
   await revealChrome(page);
-  await expect(page.locator(".reader-counter")).toContainText("3 /");
+  await expect(page.locator(".reader-counter")).toHaveText(/^3\s*\//);
 });
 
 test("打开作品信息面板", async ({ page }) => {
@@ -206,9 +230,10 @@ test("底部进度条点击跳页", async ({ page }) => {
   await track.click({ position: { x: box.width - 2, y: box.height / 2 } });
   await revealChrome(page);
   const counter = page.locator(".reader-counter");
-  const text = (await counter.textContent()) ?? "";
-  const [current, total] = text.split("/").map((part) => Number(part.trim()));
-  expect(current).toBe(total);
+  await expect.poll(async () => {
+    const [current, total] = ((await counter.textContent()) ?? "").split("/").map(part => Number(part.trim()));
+    return current === total;
+  }).toBe(true);
 });
 
 test("g 键数字跳页", async ({ page }) => {
@@ -219,7 +244,7 @@ test("g 键数字跳页", async ({ page }) => {
   await input.press("Enter");
   await expect(page.locator(".reader-jump")).toHaveCount(0);
   await revealChrome(page);
-  await expect(page.locator(".reader-counter")).toContainText("3 /");
+  await expect(page.locator(".reader-counter")).toHaveText(/^3\s*\//);
 });
 
 async function revealChrome(page: import("@playwright/test").Page) {
@@ -246,4 +271,13 @@ async function sampleReaderClip(page: import("@playwright/test").Page) {
 
 function hasIntermediateClip(values: string[]) {
   return values.some((value) => (value.match(/-?[\d.]+/g) ?? []).some((number) => Number(number) > 1 && Number(number) < 99));
+}
+
+async function selectMode(page: import("@playwright/test").Page, mode: "单页" | "连续") {
+  await revealChrome(page);
+  await page.getByRole("button", { name: "阅读设置", exact: true }).click();
+  await page.getByRole("button", { name: mode, exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".reader-display-options")).not.toBeVisible();
+  await page.getByRole("button", { name: "阅读设置", exact: true }).blur();
 }

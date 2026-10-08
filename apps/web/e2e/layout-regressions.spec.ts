@@ -127,13 +127,20 @@ test("快速切换只保留当前页面，视窗动画完成后释放位移并�
 });
 
 
-test("作品卡和书架的竖向封面贴边填充，横向封面完整展示", async ({ page }) => {
+test("作品卡和书架的竖向封面贴边填充，横向封面完整展示", async ({ page, request }) => {
+  const work = await (await request.get(`/api/works/${process.env.E2E_LANDSCAPE_WORK_ID ?? "5"}`)).json();
   for (const width of [2560, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1440 });
     await page.goto('/#library');
+    await page.locator('.folio-shelf-cover').first().scrollIntoViewIfNeeded();
     const portraits = page.locator('.folio-shelf-cover .folio-ambient-cover-artwork[data-orientation="portrait"]');
     await expect(portraits.first()).toHaveCSS('object-fit', 'cover');
-    const landscape = page.locator('.folio-shelf-cover .folio-ambient-cover-artwork[data-orientation="landscape"]');
+    const search = page.getByRole('searchbox', { name: '搜索作品' });
+    await search.fill(String(work.remote_gallery_id));
+    await search.press('Enter');
+    const card = page.locator('.folio-library-card').filter({ has: page.locator(`a[href='#reader/${work.id}']`) });
+    await card.scrollIntoViewIfNeeded();
+    const landscape = card.locator('.folio-ambient-cover-artwork[data-orientation="landscape"]');
     await expect(landscape.first()).toHaveCSS('object-fit', 'contain');
     await page.goto('/#discover');
     const first = page.locator('.folio-discover-card').first();

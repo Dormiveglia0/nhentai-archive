@@ -1,7 +1,7 @@
-import { AlertCircle, RefreshCw, Trash2 } from "lucide-react";
-import { m } from "motion/react";
+import { AlertCircle, RefreshCw, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
-import { FadeIn } from "../../lib/motion";
+import { SlidingIndicator, FadeIn, transitionTabs, usePrefersReducedMotion } from "../../lib/motion";
 import { FolioSearchField } from "../folio/ui/FolioPrimitives";
 import { STATUS_TABS } from "../../lib/jobs";
 import { TaskInspector } from "./TaskInspector";
@@ -10,13 +10,39 @@ import { TaskSummaryStrip } from "./TaskSummaryStrip";
 import { useTasksState } from "./useTasksState";
 import "./TasksPage.css";
 
-export function TasksPage() {
+export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const reduced = usePrefersReducedMotion();
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 900px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const change = () => { dialogRef.current?.close(); setMobile(media.matches); };
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
 
   function openLogs(id: number) {
-    tasks.focusJob(id);
-    window.requestAnimationFrame(() => document.querySelector(".folio-tasks-log-section")?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    focusJob(id);
+    window.requestAnimationFrame(() => {
+      const scope = dialogRef.current?.open ? dialogRef.current : document.querySelector(".folio-tasks-layout");
+      scope?.querySelector(".folio-tasks-log-section")?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+    });
   }
+
+  function focusJob(id: number) {
+    tasks.focusJob(id);
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      window.requestAnimationFrame(() => { if (!dialogRef.current?.open) dialogRef.current?.showModal(); });
+    }
+  }
+
+  const inspector = <TaskInspector
+    job={tasks.focus} blurCovers={blurCovers} logs={tasks.logs} logsLoading={tasks.logsLoading}
+    retryingId={tasks.retryingId} actingId={tasks.actingId}
+    onRetry={(id) => void tasks.retryJob(id)} onPause={(id) => void tasks.pauseJob(id)}
+    onResume={(id) => void tasks.resumeJob(id)} onCancel={(id) => void tasks.cancelJob(id)} onDelete={(id) => void tasks.deleteJob(id)}
+  />;
 
   function clearFinished() {
     if (!tasks.finishedCount) return;
@@ -34,13 +60,13 @@ export function TasksPage() {
       <section className="folio-tasks-toolbar">
         <div className="folio-tasks-tabs" role="group" aria-label="任务状态筛选">
           {STATUS_TABS.map((tab) => (
-            <button key={tab.key} type="button" aria-pressed={tasks.statusFilter === tab.key} className={tasks.statusFilter === tab.key ? "is-active" : ""} onClick={() => tasks.setStatusFilter(tab.key)}>
-              {tasks.statusFilter === tab.key ? <m.span className="folio-tasks-tab-active" layoutId="folio-formal-task-tab" /> : null}
+            <button key={tab.key} type="button" aria-pressed={tasks.statusFilter === tab.key} className={tasks.statusFilter === tab.key ? "is-active" : ""} onClick={() => transitionTabs(STATUS_TABS.map(item => item.key), tasks.statusFilter, tab.key, tasks.setStatusFilter, "tasks")}>
+              {tasks.statusFilter === tab.key ? <SlidingIndicator className="folio-tasks-tab-active" layoutId="folio-formal-task-tab" /> : null}
               <span>{tab.label}</span><small>{tab.key === "all" ? tasks.summary.total : tasks.summary[tab.key]}</small>
             </button>
           ))}
         </div>
-        <FolioSearchField value={tasks.query} onChange={tasks.setQuery} placeholder="搜索任务 ID、Gallery ID、阶段或错误" />
+        <FolioSearchField value={tasks.query} onChange={tasks.setQuery} placeholder="搜索任务、编号或错误" />
         <div className="folio-tasks-toolbar-actions">
           <button type="button" onClick={() => void tasks.refresh()} disabled={tasks.refreshing} aria-busy={tasks.refreshing}><RefreshCw size={15} className={tasks.refreshing ? "spin" : ""} />刷新</button>
           <button className="is-danger" type="button" onClick={clearFinished} disabled={!tasks.finishedCount}><Trash2 size={15} />清空已结束{tasks.finishedCount ? ` (${tasks.finishedCount})` : ""}</button>
@@ -53,10 +79,11 @@ export function TasksPage() {
             jobs={tasks.visibleJobs}
             focusId={tasks.focus?.id ?? null}
             loading={tasks.loading}
-            emptyLabel={tasks.jobs.length ? "没有匹配当前筛选条件的任务。" : "导入、扫描、治理或导出开始后，任务会按时间顺序出现在这里。"}
+            blurCovers={blurCovers}
+            emptyLabel={tasks.jobs.length ? "没有符合筛选条件的任务。" : "导入或导出作品后，可在这里查看进度。"}
             retryingId={tasks.retryingId}
             actingId={tasks.actingId}
-            onFocus={tasks.focusJob}
+            onFocus={focusJob}
             onOpenLogs={openLogs}
             onRetry={(id) => void tasks.retryJob(id)}
             onPause={(id) => void tasks.pauseJob(id)}
@@ -65,19 +92,16 @@ export function TasksPage() {
             onDelete={(id) => void tasks.deleteJob(id)}
           />
         </section>
-        <TaskInspector
-          job={tasks.focus}
-          logs={tasks.logs}
-          logsLoading={tasks.logsLoading}
-          retryingId={tasks.retryingId}
-          actingId={tasks.actingId}
-          onRetry={(id) => void tasks.retryJob(id)}
-          onPause={(id) => void tasks.pauseJob(id)}
-          onResume={(id) => void tasks.resumeJob(id)}
-          onCancel={(id) => void tasks.cancelJob(id)}
-          onDelete={(id) => void tasks.deleteJob(id)}
-        />
+        {mobile ? null : inspector}
       </FadeIn>
+      {mobile ? <dialog ref={dialogRef} className="folio-tasks-dialog" aria-label="任务详情" onClick={event => {
+        if (event.target !== event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close();
+      }}>
+        <header><span>任务详情</span><button type="button" aria-label="关闭任务详情" onClick={() => dialogRef.current?.close()}><X size={18} /></button></header>
+        {inspector}
+      </dialog> : null}
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("收藏可从馆藏卡、右侧预览和阅读器统一操作并快速筛选", async ({ page, request }) => {
+test("收藏可从作品卡、详情弹窗和阅读器统一操作并快速筛选", async ({ page, request }) => {
   await page.addInitScript(() => {
     Object.defineProperty(globalThis.crypto, "randomUUID", { configurable: true, value: undefined });
   });
@@ -32,16 +32,16 @@ test("收藏可从馆藏卡、右侧预览和阅读器统一操作并快速筛�
   await favoriteFilter.click();
 
   await card.locator(".folio-library-card-title").click();
-  const inspector = page.locator(".folio-library-inspector.is-open");
+  const inspector = page.locator(".folio-work-dialog");
   await expect(inspector).toBeVisible();
   await inspector.getByRole("button", { name: "已收藏" }).click();
-  await expect(inspector.getByRole("button", { name: "收藏作品" })).toBeVisible();
-  const favoriteBox = await inspector.getByRole("button", { name: "收藏作品" }).boundingBox();
-  const deleteBox = await inspector.getByRole("button", { name: "删除本地作品" }).boundingBox();
+  await expect(inspector.getByRole("button", { name: "收藏", exact: true })).toBeVisible();
+  const favoriteBox = await inspector.getByRole("button", { name: "收藏", exact: true }).boundingBox();
+  const deleteBox = await inspector.getByRole("button", { name: "删除", exact: true }).boundingBox();
   expect(favoriteBox).not.toBeNull();
   expect(deleteBox).not.toBeNull();
-  expect(Math.abs(favoriteBox!.y - deleteBox!.y)).toBeLessThanOrEqual(2);
-  await inspector.locator(".folio-library-inspector-actions").screenshot({ path: "/tmp/nh-archive-inspector-actions.png" });
+  expect(favoriteBox!.y + favoriteBox!.height <= deleteBox!.y || favoriteBox!.x + favoriteBox!.width <= deleteBox!.x).toBe(true);
+  await inspector.locator(".folio-work-detail-actions").screenshot({ path: "/tmp/nh-archive-inspector-actions.png" });
 
   await inspector.locator(`a[href='#reader/${work.id}']`).click();
   await expect(page.locator(".reader-shell")).toBeVisible();

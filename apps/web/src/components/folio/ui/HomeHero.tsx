@@ -1,93 +1,72 @@
-import { Pause, Play, ChevronLeft, ChevronRight } from "lucide-react";
-import { m, useSpring } from "motion/react";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import type { LibrarySummary, ReadingStatistics, LibraryWork } from "../../../lib/api";
+import { ArrowRight, ArrowUpRight, BookOpen } from "lucide-react";
+import { m } from "motion/react";
+import { useState, type CSSProperties } from "react";
+import type { LibraryWork } from "../../../lib/api";
 import { usePrefersReducedMotion } from "../../../lib/motion";
 import { workTitle } from "../../../lib/format";
 import { pageHref } from "../../../lib/navigation";
-import { NumberTicker } from "../../effects/NumberTicker";
+import { AmbientCover } from "./AmbientCover";
 import "./HomeHero.css";
 
-export function HomeHero({ summary, statistics, works = [] }: { summary?: LibrarySummary; statistics?: ReadingStatistics; works?: LibraryWork[] }) {
+export function HomeHero({ works = [], blurCovers = true, loading = false }: {
+  works?: LibraryWork[]; blurCovers?: boolean; loading?: boolean;
+}) {
   const reduced = usePrefersReducedMotion();
-  const [active, setActive] = useState(0);
-  const selected = Math.min(active, Math.max(0, works.length - 1));
-  const work = works[selected];
-  const [paused, setPaused] = useState(false);
-  const [hidden, setHidden] = useState(document.hidden);
-  const [day, setDay] = useState<number | null>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(true);
-  const drag = useRef<{ x: number; index: number } | null>(null);
-  const tiltX = useSpring(0, { stiffness: 80, damping: 22 });
-  const tiltY = useSpring(0, { stiffness: 80, damping: 22 });
-  const activity = statistics?.activity ?? [];
-  const selectedDay = day === null ? undefined : activity[day];
-  const maxSeconds = Math.max(1, ...activity.map(item => item.seconds));
-  const still = reduced || paused || hidden || !visible;
-  useEffect(() => {
-    const update = () => setHidden(document.hidden);
-    document.addEventListener("visibilitychange", update);
-    return () => document.removeEventListener("visibilitychange", update);
-  }, []);
-  useEffect(() => {
-    if (!stageRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
-    observer.observe(stageRef.current);
-    return () => observer.disconnect();
-  }, []);
-  const statuses = [["未读", summary?.unread], ["在读", summary?.reading], ["读完", summary?.completed]] as const;
-  return <section className={`folio-home-studio${still ? " is-still" : ""}`} aria-label="首页">
-    <h1 className="folio-home-sr">首页</h1>
-    <header className="folio-studio-mast"><span><i /> NH / ARCHIVE</span><span>阅读轨迹</span><span>{statistics ? `${statistics.period.start_date} — ${statistics.period.end_date}` : "—"}</span></header>
-    <div className="folio-studio-body">
-      <aside className="folio-studio-ledger">
-        <div className="folio-studio-total"><span>作品</span><strong>{summary ? <NumberTicker value={summary.total} /> : "—"}</strong><small>{summary ? <NumberTicker value={summary.total_pages} /> : "—"} 页</small></div>
-        <div className="folio-studio-status">{statuses.map(([label, value], index) => <div key={label} style={{ "--delay": `${index * 100}ms` } as CSSProperties}><span>{label}</span><strong>{value === undefined ? "—" : <NumberTicker value={value} />}</strong><i><b style={{ transform: `scaleX(${summary?.total ? (value ?? 0) / summary.total : 0})` }} /></i></div>)}</div>
-        <div className="folio-studio-favorite"><span>收藏</span><strong>{summary ? <NumberTicker value={summary.favorites} /> : "—"}</strong><span className="folio-studio-star" aria-hidden="true">✳</span></div>
-      </aside>
-      <div className="folio-studio-artwork">
-        <div className="folio-studio-art-label"><span>最近添加 · {works.length} 部作品</span><span>拖动翻阅</span></div>
-        <div ref={stageRef} className="folio-studio-stage" role="slider" tabIndex={works.length ? 0 : -1} aria-label="翻阅最近作品" aria-disabled={!works.length} aria-valuemin={works.length ? 1 : 0} aria-valuemax={works.length} aria-valuenow={works.length ? selected + 1 : 0} aria-valuetext={work ? workTitle(work) : "暂无作品"} onKeyDown={event => {
-          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) { event.preventDefault(); setActive(event.key === "Home" ? 0 : event.key === "End" ? works.length - 1 : Math.max(0, Math.min(works.length - 1, selected + (event.key === "ArrowLeft" ? -1 : 1)))); }
-        }} onPointerDown={event => { if (event.button !== 0) return; drag.current = { x: event.clientX, index: selected }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={event => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          if (!reduced) { tiltY.set((event.clientX - rect.x - rect.width / 2) / rect.width * 12); tiltX.set(-(event.clientY - rect.y - rect.height / 2) / rect.height * 12); }
-          if (drag.current) setActive(Math.max(0, Math.min(works.length - 1, drag.current.index + Math.round((drag.current.x - event.clientX) / 24))));
-        }} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }} onPointerLeave={() => { tiltX.set(0); tiltY.set(0); }}>
-          <div className="folio-studio-orbit" aria-hidden="true"><i /><i /><i /><i /></div>
-          <m.div className="folio-studio-tilt" style={{ rotateX: reduced ? 0 : tiltX, rotateY: reduced ? 0 : tiltY }}>
-            <div className="folio-studio-drift">
-              <svg viewBox="0 0 640 640" fill="none" aria-hidden="true">
-                {works.map((item, i) => <m.g key={item.id} initial={false}
-                  animate={{ rotate: (i - (works.length - 1) / 2) * 3 - selected * 1.4, scale: i === selected ? 1.08 : 1 - i * .008, x: i === selected ? 12 : 0 }}
-                  style={{ transformOrigin: "320px 320px" }} transition={{ duration: reduced ? 0 : .7, ease: [.22, 1, .36, 1] }}>
-                  <rect x="170" y="120" width="300" height="400" stroke="var(--folio-ink)" strokeWidth={i === selected ? 2 : .7} opacity={i === selected ? 1 : .3} />
-                  <rect x="170" y="120" width="300" height="400" pathLength="100" stroke="var(--folio-red)" strokeWidth="1.3" strokeDasharray={`${item.completed ? 100 : Math.max(0, Math.min(100, item.progress_percent ?? 0))} 100`} />
-                </m.g>)}
-                {!works.length ? <path d="M100 170Q210 130 320 190Q430 130 540 170V470Q430 430 320 490Q210 430 100 470ZM320 190V490" stroke="var(--folio-line-strong)" /> : null}
+  const [failedCovers, setFailedCovers] = useState<number[]>([]);
+  const [ratios, setRatios] = useState<Record<number, number>>({});
+  const featured = works[0], recent = works.slice(1, 4);
+  const continuing = featured && !featured.completed && (featured.progress_percent ?? 0) > 0;
+  const progress = Math.min(100, Math.max(0, featured?.progress_percent ?? 0));
+  const readHref = (work: LibraryWork) => pageHref({ name: "reader", workId: work.id });
+  function cover(work: LibraryWork, primary = false) {
+    return work.cover_path && !failedCovers.includes(work.id)
+      ? <AmbientCover src={`/api/works/${work.id}/cover?w=${primary ? 768 : 384}`} alt="作品封面" privateBlur={blurCovers} loading={primary ? "eager" : "lazy"} draggable={false}
+        onLoad={event => {
+          const image = event.currentTarget;
+          setRatios(value => ({ ...value, [work.id]: image.naturalWidth / image.naturalHeight }));
+        }} onError={() => setFailedCovers(value => [...value, work.id])} />
+      : <span className="folio-home-cover-empty">{failedCovers.includes(work.id) ? "封面读取失败" : "暂无封面"}</span>;
+  }
+  function retry(work: LibraryWork) {
+    return failedCovers.includes(work.id) ? <button className="folio-home-cover-retry" type="button" onClick={() => setFailedCovers(value => value.filter(id => id !== work.id))}>重新加载封面</button> : null;
+  }
+  return <section className={`folio-home${featured ? "" : " is-empty"}`} aria-label="阅读与最近作品" aria-busy={loading}>
+    {featured ? <div className="folio-home-hero">
+      <section className="folio-home-current" aria-label={continuing ? "继续阅读" : featured.completed ? "再次阅读" : "开始阅读"}>
+        <header><h1>{continuing ? "继续阅读" : featured.completed ? "再次阅读" : "开始阅读"}</h1><a href={pageHref({ name: "history" })}>阅读历史<ArrowUpRight size={15} /></a></header>
+        <m.article className="folio-home-book folio-home-featured" data-work-id={featured.id}
+          initial={reduced ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5, ease: [.22, 1, .36, 1] }}>
+          <div className="folio-home-cover-slot">
+            <a className="folio-home-cover" href={readHref(featured)} aria-label={`阅读 ${workTitle(featured)}`} style={{ "--home-cover-ratio": ratios[featured.id] ?? .75 } as CSSProperties}>
+              {cover(featured, true)}<span className="folio-home-cover-mark" aria-hidden="true" />
+            </a>
+            {retry(featured)}
+          </div>
+          <div className="folio-home-featured-copy">
+            <a className="folio-home-book-title" href={readHref(featured)} title={workTitle(featured)}>{workTitle(featured)}</a>
+            <div className="folio-home-reading-progress">
+              <span>{featured.completed ? "已读完" : continuing ? `第 ${featured.reader_page_index || 1} 页` : "尚未阅读"}</span><span>{featured.page_count} 页</span>
+              <svg viewBox="0 0 100 2" preserveAspectRatio="none" fill="none" role="progressbar" aria-label="阅读进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+                <path className="folio-home-progress-track" d="M0 1H100" /><m.path d="M0 1H100" pathLength="1" initial={reduced ? false : { pathLength: 0 }} animate={{ pathLength: progress / 100 }} transition={{ duration: .6, delay: .15 }} />
               </svg>
             </div>
-          </m.div>
-          <div className="folio-studio-crosshair" aria-hidden="true">+</div>
-        </div>
-        <div className="folio-studio-art-foot"><span>墨线 · 作品</span><div className="folio-studio-playback"><button aria-label={paused ? "播放动效" : "暂停动效"} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}</button></div><span>朱红 · 已读进度</span></div>
-      </div>
-      <aside className="folio-studio-console">
-        <div className="folio-studio-book-index"><span>最近添加</span><span>{works.length ? String(selected + 1).padStart(2, "0") : "—"} / {works.length}</span></div>
-        {work ? <div className="folio-studio-current" key={work.id}>
-          <a className="folio-studio-work-title" href={pageHref({ name: "reader", workId: work.id })}>{workTitle(work)}</a>
-          <div className="folio-studio-work-meta"><span>{work.page_count} 页</span><span>{work.completed ? "已读完" : (work.progress_percent ?? 0) > 0 ? `已读 ${Math.round(work.progress_percent ?? 0)}%` : "未读"}</span></div>
-          <div className="folio-studio-book-progress"><i style={{ transform: `scaleX(${work.completed ? 1 : Math.max(0, Math.min(1, (work.progress_percent ?? 0) / 100))})` }} /></div>
-        </div> : <p className="folio-studio-no-work">暂无作品</p>}
-        <div className="folio-studio-book-turn"><button aria-label="上一本" disabled={!works.length || selected === 0} onClick={() => setActive(selected - 1)}><ChevronLeft size={18} /></button><button aria-label="下一本" disabled={!works.length || selected === works.length - 1} onClick={() => setActive(selected + 1)}><ChevronRight size={18} /></button></div>
-        <div className="folio-studio-duration"><span>{selectedDay ? selectedDay.date : "近 30 天阅读"}</span><strong>{statistics ? <NumberTicker value={Math.round((selectedDay?.seconds ?? statistics.overview.total_seconds) / 60)} /> : "—"}<small>分钟</small></strong><span>{selectedDay ? `${selectedDay.works} 部作品 · ${selectedDay.sessions} 次阅读` : `${statistics ? statistics.overview.active_days : "—"} 天有阅读记录`}</span></div>
-      </aside>
-    </div>
-    <footer className="folio-studio-activity">
-      <div><button className="folio-studio-period-reset" aria-label="查看30天阅读汇总" onClick={() => setDay(null)}>阅读节律</button><strong aria-live="polite">{selectedDay ? `${selectedDay.date.slice(5)} · ${Math.round(selectedDay.seconds / 60)} 分钟` : "30 DAYS"}</strong></div>
-      <div className="folio-studio-bars" aria-label="每日阅读时长">{activity.map((item, index) => <button key={item.date} aria-label={`${item.date}，阅读 ${Math.round(item.seconds / 60)} 分钟`} aria-pressed={day === index} onMouseEnter={() => setDay(index)} onFocus={() => setDay(index)} onClick={() => setDay(index)} style={{ "--bar": `${Math.max(2, item.seconds / maxSeconds * 100)}%`, "--delay": `${index * 15}ms` } as CSSProperties}><i /><small>{index === 0 || index === activity.length - 1 ? item.date.slice(5) : ""}</small></button>)}</div>
-      <span className="folio-studio-colophon" aria-hidden="true">NH<br />ARCHIVE</span>
-    </footer>
+            <div className="folio-home-entry"><a className="folio-home-read" href={readHref(featured)}><BookOpen size={17} />{continuing ? "继续阅读" : featured.completed ? "再次阅读" : "开始阅读"}<ArrowRight size={18} /></a></div>
+          </div>
+        </m.article>
+      </section>
+      {recent.length ? <section className="folio-home-recent" aria-label="最近添加的作品">
+        <header><h2>最近添加</h2><a href={pageHref({ name: "library" })}>查看全部<ArrowUpRight size={15} /></a></header>
+        <div className="folio-home-recent-list">{recent.map((work, index) => <m.article className="folio-home-book" key={work.id} data-work-id={work.id}
+          initial={reduced ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5, delay: reduced ? 0 : (index + 1) * .06, ease: [.22, 1, .36, 1] }}>
+          <div className="folio-home-cover-slot"><a className="folio-home-cover" href={readHref(work)} aria-label={`阅读 ${workTitle(work)}`} style={{ "--home-cover-ratio": ratios[work.id] ?? .75 } as CSSProperties}>{cover(work)}</a>{retry(work)}</div>
+          <a className="folio-home-recent-work" href={readHref(work)}><strong title={workTitle(work)}>{workTitle(work)}</strong><span>{work.page_count} 页<ArrowUpRight size={16} /></span></a>
+        </m.article>)}</div>
+      </section> : null}
+      <a className="folio-home-discover" href={pageHref({ name: "discover" })}>发现作品<ArrowRight size={18} /></a>
+    </div> : <div className="folio-home-empty">
+      <BookOpen size={42} strokeWidth={1} aria-hidden="true" />
+      <h1 role={loading ? "status" : undefined}>{loading ? "正在读取作品…" : "库里还没有作品"}</h1>
+      <div className="folio-home-entry"><a className="folio-home-read" href={pageHref({ name: "discover" })}>发现作品<ArrowRight size={18} /></a><a className="folio-home-files" href={pageHref({ name: "files" })}>扫描本地文件<ArrowUpRight size={16} /></a></div>
+    </div>}
   </section>;
 }

@@ -2,7 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { GovernanceQueue, GovernanceQueueItem } from "../../lib/api";
-import { Stagger, StaggerItem } from "../../lib/motion";
+import { SlidingIndicator, Stagger, StaggerItem } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
 import { workTitle } from "../../lib/format";
 
@@ -22,13 +22,13 @@ const FILE_REASONS = new Set(["missing_source", "missing_comicinfo", "missing_co
 
 export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, selectedIds, onToggleSelected }: Props) {
   const [filter, setFilter] = useState<QueueFilter>(() => (queue.summary.total ? "review" : "all"));
-  const filters: Array<{ id: QueueFilter; label: string; count: number; description: string }> = [
-    { id: "review", label: "待核对", count: queue.summary.total, description: "尚未人工核对，或核对后内容已经变化。" },
-    { id: "metadata", label: "元数据", count: queue.summary.missing_metadata, description: "标题或语言缺失；其余字段在对照表中人工判断。" },
-    { id: "dictionary", label: "词典", count: countMatching(queue, DICTIONARY_REASONS), description: "无标签、未映射、译名待复核或词典冲突。" },
-    { id: "files", label: "文件", count: countMatching(queue, FILE_REASONS), description: "源 CBZ、封面或 ComicInfo.xml 不可用。" },
-    { id: "approved", label: "已核对", count: queue.summary.approved, description: "已核对的作品；信息更改后需重新核对。" },
-    { id: "all", label: "全部", count: queue.result.length, description: "显示全部作品，不代表其已经通过审核。" },
+  const filters: Array<{ id: QueueFilter; label: string; count: number }> = [
+    { id: "review", label: "待核对", count: queue.summary.total },
+    { id: "metadata", label: "元数据", count: queue.summary.missing_metadata },
+    { id: "dictionary", label: "词典", count: countMatching(queue, DICTIONARY_REASONS) },
+    { id: "files", label: "文件", count: countMatching(queue, FILE_REASONS) },
+    { id: "approved", label: "已核对", count: queue.summary.approved },
+    { id: "all", label: "全部", count: queue.result.length },
   ];
   const visibleItems = useMemo(
     () => queue.result.filter((item) => matchesFilter(item, filter)),
@@ -39,14 +39,13 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
     <aside className="folio-governance-queue">
       <div className="folio-governance-queue-head">
         <div>
-          <span>Queue</span>
-          <h2>治理待办</h2>
+          <h2>待处理作品</h2>
         </div>
         <strong className="folio-governance-queue-count">
           <NumberTicker value={queue.summary.total} />
         </strong>
       </div>
-      <div className="folio-governance-queue-filters" role="group" aria-label="按问题类型筛选治理队列">
+      <div className="folio-governance-queue-filters" role="group" aria-label="按问题类型筛选整理队列">
         {filters.map((item) => (
           <button
             key={item.id}
@@ -55,12 +54,12 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
             aria-pressed={filter === item.id}
             onClick={() => setFilter(item.id)}
           >
+            {filter === item.id ? <SlidingIndicator className="folio-governance-filter-active" layoutId="governance-queue-filter" /> : null}
             <span>{item.label}</span>
             <strong>{item.count}</strong>
           </button>
         ))}
       </div>
-      <p className="folio-governance-filter-explainer">{filters.find((item) => item.id === filter)?.description}</p>
       {visibleItems.length ? (
         <Stagger key={`${filter}-${visibleItems.map((item) => item.work.id).join("-")}`} className="folio-governance-queue-list">
           {visibleItems.map((item) => (

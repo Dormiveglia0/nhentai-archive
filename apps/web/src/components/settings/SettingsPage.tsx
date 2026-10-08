@@ -2,7 +2,7 @@ import { AlertTriangle, RefreshCw, Save } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { type FormEvent, useRef } from "react";
 
-import { duration, ease, usePrefersReducedMotion } from "../../lib/motion";
+import { SlidingIndicator, transitionTabs } from "../../lib/motion";
 import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
 import { ConnectionSection } from "./ConnectionSection";
 import { DataSection } from "./DataSection";
@@ -46,17 +46,16 @@ export function SettingsPage({
   onBlurCoversChange: (value: boolean) => void;
 }) {
   const vm = useSettingsState(onBlurCoversChange);
-  const reduceMotion = usePrefersReducedMotion();
   const current = SECTION_COPY[vm.section];
   const formRef = useRef<HTMLFormElement>(null);
 
   function selectSection(section: SettingsSection) {
-    vm.setSection(section);
+    transitionTabs(SETTINGS_SECTIONS.map(item => item.id), vm.section, section, vm.setSection, "settings");
     const form = formRef.current;
     const scroll = form?.closest<HTMLElement>(".folio-scroll");
     if (!form || !scroll) return;
     const top = scroll.scrollTop + form.getBoundingClientRect().top - scroll.getBoundingClientRect().top;
-    scroll.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+    if (scroll.scrollTop > top) scroll.scrollTo({ top, behavior: "auto" });
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -69,7 +68,6 @@ export function SettingsPage({
     void vm.load();
   }
 
-  const syncLabel = vm.loading ? "正在同步" : vm.dirty ? "有未保存更改" : vm.settings ? "已同步" : "等待配置";
   const showActions = vm.dirty || (vm.section !== "data" && vm.section !== "storage");
 
   return (
@@ -87,37 +85,19 @@ export function SettingsPage({
               onClick={() => selectSection(item.id)}
             >
               {active ? (
-                <m.span
-                  className="folio-settings-nav-active"
-                  layoutId="formal-settings-nav-active"
-                  transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }}
-                />
+                <SlidingIndicator className="folio-settings-nav-active" layoutId="formal-settings-nav-active" />
               ) : null}
               <Icon size={16} />
               <strong>{item.label}</strong>
-              <small>{item.description}</small>
             </button>
           );
         })}
       </nav>
 
-      <AnimatePresence mode="wait" initial={false}>
-        <m.section
-          key={vm.section}
-          className="folio-settings-stage"
-          initial={{ opacity: 0, y: reduceMotion ? 0 : 10, clipPath: reduceMotion ? "none" : "inset(0 0 8% 0)" }}
-          animate={{ opacity: 1, y: 0, clipPath: "inset(0 0 0% 0)" }}
-          exit={{ opacity: 0, y: reduceMotion ? 0 : -7, clipPath: reduceMotion ? "none" : "inset(0 0 6% 0)" }}
-          transition={{ duration: reduceMotion ? 0 : duration.fast, ease: ease.standard }}
-        >
+        <section className="folio-settings-stage">
           <header className="folio-settings-head">
             <div>
               <h2>{current.title}</h2>
-              <p>{current.copy}</p>
-            </div>
-            <div className={`folio-settings-state${vm.dirty ? " is-dirty" : ""}${vm.loading ? " is-loading" : ""}`}>
-              <i />
-              {syncLabel}
             </div>
           </header>
 
@@ -156,16 +136,14 @@ export function SettingsPage({
               </m.div>
             ) : null}
           </AnimatePresence>
-        </m.section>
-      </AnimatePresence>
+        </section>
 
       {showActions ? (
         <footer className="folio-settings-actions">
           <div className="folio-settings-action-state">
             <span className={vm.dirty ? "is-dirty" : ""} />
             <p>
-              <strong>{vm.dirty ? "设置尚未保存" : "当前配置已同步"}</strong>
-              <small>{vm.dirty ? "更改尚未保存" : "密码与密钥已隐藏"}</small>
+              <strong>{vm.loading ? "正在读取配置" : vm.dirty ? "设置尚未保存" : vm.settings ? "当前配置已同步" : "等待配置"}</strong>
             </p>
           </div>
           <div className="folio-settings-action-buttons">

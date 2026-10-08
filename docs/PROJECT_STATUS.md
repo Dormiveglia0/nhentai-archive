@@ -2,13 +2,19 @@
 
 ## Current Version
 
-Feature-complete local loop after Phase 7 task center and final governance/export closure.
+Feature-complete local loop after Phase 7 task center and final governance/export closure. Latest UI revision (2026-10-08): `ui-20261008-refined` / `latest` (`bce20c33aa80`) is deployed on port 4349; 106 browser checks and 236 backend tests pass.
 
 Current real slice:
 
 `NH API Key settings -> remote discover/search/detail -> dictionary mapping -> remote reader or import job -> real task center status/pause/resume/cancel/log/retry -> local CBZ/work_tags -> library summary/search/filter/shelves/history/favorites -> local reader -> progress + visible-time session save -> settings statistics/report -> per-work/bulk governance queue/metadata/dictionary confirmation -> export preview/rename/download CBZ (single, sync .zip, or temporary bulk-export task artifact) to the user`
 
 ## Completed
+
+- 最终全站复查与优化（2026-10-08，覆盖以下全部旧首页、工具栏和动画方向）：首页取消大字及宣传装饰，以小标题、真实继续阅读封面/动作/页码和三部有序近期作品建立用途；手机与横屏单独适配。库查询使用独立网格，标签自身横滚，提交始终在添加标签右侧，390/320七至十项不挤走搜索；手机高级筛选原生折叠。共享16组选项指示条改为控制组局部坐标的450ms原生transform，只提交最终目标、保留快速打断与减少动态效果；队列滚动240px后切换长/空列表逐帧保持52px、纵向溢出0。手机任务/文件详情采用原生弹窗，焦点/关闭头/列表位置保持，文件复选只选择。独立设计子agent发现D01–D17并逐项复拍关闭：热门真实标题、紧凑摘要与工具条、历史去重、设置只读栏清理、词典首候选可见与编辑承接、整理字段优先/折叠辅助翻译/输入避开底栏、单部导出承接及摘要。修复批量仅一项可能下载错误预览的逻辑，阅读器隐藏归档动画暂停。UTC时间统一本地显示，历史API可选时区偏移保持UTC默认；无新增依赖或schema。保留原NH Logo、黑红favicon、锐利几何、原发现详情、贴边库封面及覆盖式阅读控件。最终证据见 `docs/UI_AUDIT.md` 与独立 `docs/DESIGNER_AUDIT.md`。
+
+- 上轮全站验收修订（2026-10-08，首页、工具栏和指示器已由上述最终复查更新）：首页采用纸墨大字、真实继续阅读入口、完整主封面、有限次 SVG 展页和紧凑最近作品；不再平铺三张大封面。库详情封面按图片原比例贴边显示，取消留白底，保留发现详情的细边、阴影和角标；阅读/收藏与等宽编辑/导出/删除两行排布保留。所有分组选项统一使用连续弹簧滑动指示条，跨项跳转只更新最终目标，取消中间页面挂载和请求；覆盖顶部/手机导航、设置、队列、文件、导出、视图、标签、治理筛选、统计和阅读模式。修复快速退出后重新进入阅读器被旧退场动画移除的问题；词典关联封面跟随隐私设置，小型作品列表改用缩略图。保留原 NH Logo、独立黑红 favicon、凌厉直角、固定搜索位置、图片覆盖式阅读控件、原发现详情和真实数据。无新增依赖、API 或数据库变更。
+
+- 首轮全站界面重构（2026-10-08，已由上述反馈修订更新首页、详情和阅读布局）：首页重做为真实封面、标题与阅读动作、SVG 页片/进度和每日阅读数据；我的库移除常驻右栏，作品详情使用原生悬浮弹窗，完整标签来自 `api.work()`，远端作品详情共享同一布局。阅读器改为纸色顶部工具栏、原生设置 Popover 和底部进度条，优化整页适配与窄屏布局；队列改为真实进行中/已结束任务卡片、状态筛选和日志详情。顶部切页展示旧页退出/新页进入，并保留导航弹簧、快速切换与减少动态效果。长语言标签省略显示，网站图标及导航图标使用黑红线条，统一字号/状态色并清理注释式小字和装饰英文。保留收藏、标签原生链接、任务状态机、阅读进度/会话及删除预览确认；无新依赖、API 或数据库变更。构建与分批 49 项浏览器回归通过，详细记录见 Verification Record。
 
 - 互动封面首页（2026-09-08）：按用户选择组合“封面墙漫游”和“立体翻阅台”，使用最多36部真实作品及现有512px缩略图。默认展开为错落封面墙，拖动带惯性，滚轮/方向按钮/键盘也可移动；点选作品通过同一组元素的空间过渡进入立体翻阅，支持左右滑动/方向键、返回漫游与复位。移除首页统计、书架及旧状态钩子，不添加欢迎词或重复导航。7项互动首页/我的库回归通过，桌面1440/2560与手机390、空集/单本/三本子集、减少动态效果与控制台验证通过。无新增依赖或API/数据库变更。另验证844×390横屏封面、标题及控制条不重叠；首页关闭被遮挡的背景光动画，漫游使用平面合成和实体书边阴影。无头Chromium大屏压力测试仍有掉帧，不能据此宣称全程60fps；后续性能排查应保留真实设备对照。
 
@@ -195,12 +201,21 @@ Current real slice:
 - Decision: governance queue and completeness use real local state only. Missing values are shown as missing/unknown; no fake diffs, fake conflicts, or fake recommended actions.
 - Decision: 全站页面内显示的 tag 一律走词典转换名(`display`,即 `zh_name → name → slug`),英文 `name`/`slug` 仅作无词典项时兜底;英文原文只用于后端 NH API 请求等操作,不直接显示给用户。
 - Decision: 全站正式 tag 交互一律保留原生链接语义并由 `tagSearchHref()` 生成搜索地址；普通左键可由当前模块接管为原地筛选，但鼠标中键或修饰键必须能在新标签页打开对应发现搜索。
-- Decision: 作品详情 hero 的封面按**固定高度**约束(放进恒定尺寸卡槽),绝不按长宽比框死,也不裁剪;空余由同图模糊底填充。标签等数量不定的内容**不得**与封面同列并排,须移到独立整宽区域,避免两列高度互相参差、翻书布局抖动。
+- Decision: 库悬浮详情封面按图片自然长宽比显示，取消固定卡槽及模糊留白底，参考发现详情的完整封面边框、阴影与角标；发现详情保留原组件与样式。完整标签放在下方独立整宽区域，避免与封面和按钮互相挤压。
 - Risk: tag enrichment calls `/api/v2/tags/ids`; if remote rate limits, cards may show cached/empty tags rather than invented labels.
 - Risk: search query syntax should be manually checked against live remote API behavior.
 
 ## Verification Record
 
+- 2026-10-08 最终修订验收及发布：生产构建、完整 `106 passed (3.9m)` 浏览器回归、最终镜像内 `236 passed, 2 warnings in 4.07s` 和 `git diff --check` 通过。52稳定桌面/手机状态无横向溢出/页面错误；另补320/横屏、多标签、长详情和最终整理/导出新图。独立D01–D17全关闭，整理真实输入完整高于固定栏桌面13px/手机25.6px。真实隔离UI设置保存恢复、词典预览保存、元数据采用保存、复制CBZ ComicInfo写回、临时文件删除、60页单CBZ与含两部CBZ的任务ZIP下载均通过，CRC/原源成员保真与生产源SHA256检查通过。单项批量导出请求ID回归通过。最终同机生产首页→设置2请求、0中间页面，133帧、P95 33.3ms/最大50ms、无长任务；非全设备60fps承诺。
+- 最终 `ui-20261008-refined` / `latest`（`bce20c33aa80`，入口 `index-D99C43UL.js`）已运行于原4349服务，healthy；83静态资源逐字节匹配、22张正式表与发布前SQLite备份一致，110作品/107任务完整保留，桌面/手机密码入口无溢出/错误。备份与核对 `/tmp/nh-ui-deploy-20261008-refined/`，回滚 `rollback-20261008-048ee8d656e8`；原挂载保留。`/opt/nhentai`源码未同步，后续重建从本工作树或合并后的源码进行。以下是此前阶段的历史验证，不代表当前发布版本。
+
+- 2026-10-08 全站验收及发布：生产构建、完整 90 项浏览器回归、15 次阅读器/封面隐私重复检查通过；新镜像在独立只读无网络容器通过 235 项 API 测试（2 条既有提示）。48 个页面状态及附加弹窗、空/未读首页完成五种尺寸复核，无横向溢出或页面错误。实际导出 60 页 CBZ 并通过 ZIP/ComicInfo 校验，实际删除本次创建的临时文件，隔离库作品数保持 110。本机首页到设置的开发模式请求 150→4，中间页挂载 7→0；最终生产采样仅 2 个请求、133 帧、最长 49.9ms、无主线程长任务。导出列表实际封面传输减少约 93.5%。完整设计评估、覆盖清单及限制见 `docs/UI_AUDIT.md`。
+- 验收镜像 `ui-20261008-audited` / `latest`（`048ee8d656e8`）运行于现有 4349 服务，状态 healthy；83 个静态资源逐字节一致，21 张业务表及 `sqlite_sequence` 共 22 张表与发布前备份一致，保留 110 部作品及 107 项任务。正式访问入口完成桌面/手机检查；回滚镜像 `rollback-fd51d63e8624`，发布证据在 `/tmp/nh-ui-deploy-20261008-audited/`，隐私截图和采样在 `/tmp/nh-ui-redesign/audit/`。生产源码目录尚未同步，后续重建使用本工作树或合并后的源码。
+- 2026-10-08 上轮反馈修订（中间页遍历和三封面构图已由本轮替代）：构建、`git diff --check` 和分批 44 项浏览器回归通过。覆盖原发现详情、横向封面、标签对齐、嵌套删除预览、库搜索五标签后的固定列宽、详情两层按钮及焦点、阅读器覆盖与图像尺寸不变、模式/跳页/懒加载批量重试、真实收藏/统计/书架与场景定位。顶部 1→3 的实际中间帧及自动用例均确认经过 2；设置和队列同样经过中间项，快速导航到正在经过的演示页会取消原目标。原鼠标测试需清除 Escape 返回按钮后的键盘焦点；布局测试需等缩放/退场动画结束，重试需滚动激活真实懒加载图片，发现封面改检图片框而非有意外伸的装饰角标。1440×1000、390×844、2560×1440 和 320×740、844×390 的首页/详情/阅读器/队列/设置实景检查通过；首页零本、单本、两本真实子集已单独重载验证。九个正式页及演示入口补查无横向溢出；开发模式减少动态效果检查仅有 Motion 自带提示，无应用错误。未新增依赖、假作品、素材、API 或 schema。
+- 修订镜像 `ui-20261008-revised` / `latest`（`fd51d63e8624`）在隔离、只读、无网络临时容器通过 235 项 API 测试，2 个 warning 同前轮。现有 `nh-archive-app-1` 在 4349 端口 healthy，原数据挂载保留；全部 83 个静态文件与验证构建逐字节相同，部署前后 21 张表及 110 部作品保持一致；发布后的桌面/手机密码入口无横向溢出或浏览器错误。原运行镜像保留为 `rollback-dcf033678fb2`，备份和发布检查在 `/tmp/nh-ui-deploy-20261008-revised/`，隐私模糊视觉截图在 `/tmp/nh-ui-redesign/revised/`。生产源码目录仍未同步，后续重建须用当前工作树或合并后的源码。
+- 2026-10-08 首轮 Docker 发布：从本工作树构建 `ghcr.io/dormiveglia0/nhentai-archive:ui-20261008`（镜像 `dcf033678fb2`，同时标记 `latest`），通过现有 `/opt/nhentai/compose.yaml` 更新 `nh-archive-app-1`，端口保持 `4349:8000`，挂载保持 `/opt/nhentai/.local-data:/data`。新镜像在无外网、无生产挂载的临时容器中通过 235 项 API 测试；2 个 warning 为依赖弃用提示及重复 ZIP member 保真用例。正式容器为 healthy，HTTP 入口、3 个入口资源及 `/demo` 与此前验证的构建完全一致，密码入口无横向溢出或浏览器错误。部署前后 21 张数据表逐行一致，110 部作品、配置和会话保留。旧镜像保留为 `rollback-852e1592a125`，SQLite 备份与浏览器日志在 `/tmp/nh-ui-deploy-20261008/`。生产源码目录未同步本轮前端改动，后续重建须使用本工作树或合并后的源码。
+- 2026-10-08 全站重构：`cd apps/web && npm run build` 与 `git diff --check` 通过。Playwright Chromium 使用隔离的真实数据库副本与测试会话，分批通过 49 项浏览器回归，覆盖首页、浮动详情、发现详情、横竖封面、阅读器、收藏统计、书架、场景动画和登录。新增 `e2e/redesign.spec.ts` 的 9 项用例验证桌面/手机弹窗焦点与关闭恢复、长语言标签省略、手机阅读控件、快速切页与减少动态效果、任务标题搜索与日志、进入阅读器时取消旧切页回调及默认模式响应竞态。首次布局回归暴露手机离屏图片尚未加载，修正测试为滚动到实际卡片后验收，受影响用例复跑通过。正式九页在 1440×1000、390×844、2560×1440 共 27 个状态，以及详情/阅读器的 844×390 横屏均无横向溢出或控制台错误；连续阅读三种适配模式跳转末页保持稳定。隐私模糊截图保存在 `/tmp/nh-ui-redesign/final-*.png`；阅读进度、收藏和会话只写入隔离副本，原始库和 CBZ 未修改。未新增依赖、API 或 schema。
 - 2026-07-15 成熟度审计：`PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q` 为 `212 passed, 1 warning in 5.53s`；warning 仍是重复 ZIP member 保真用例。`cd apps/web && npm run build` 通过且无大包 warning，入口为 `281.90 kB / gzip 91.79 kB`；`git diff --check` 通过。该记录只证明代码、类型、构建与后端行为，外观变化仍须用同视口真实截图单独验收。
 - Final closure baseline: `PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q` passed all 196 tests in 30.21s. The single warning is intentionally produced by `test_reseal_cbz_preserves_duplicate_member_bytes`, which constructs a duplicate `001.png` ZIP member to verify byte preservation; it is not a runtime regression. Frontend production build and `git diff --check` also pass.
 - Reader/detail/tag/shelf follow-up: Playwright Chromium used real local work/gallery/file/governance data with neutral intercepted images to verify grouped reader metadata, native middle-click search from reader/gallery/discover/library/files/governance tag surfaces, 34-page index overflow, ratio-constrained lightbox geometry, one-row five-item related layout, content-vs-metadata tag scopes, and press-drag library/workbench shelves at 1440×1000 plus gallery/reader checks at 390×844. Lightbox stage/image widths were 595.63/570.63px, all five desktop related-card tops matched, and the run reported zero console warnings/errors. Production build completed without warnings.

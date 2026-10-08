@@ -1,7 +1,8 @@
-import { AlertTriangle, Clock3, Info, Library } from "lucide-react";
+import { AlertTriangle, Clock3, Grid2X2, Info, Library, List } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
+import { useCallback } from "react";
 
-import { duration, ease, Stagger, StaggerItem } from "../../lib/motion";
+import { duration, ease, SlidingIndicator, Stagger, StaggerItem } from "../../lib/motion";
 import { pageHref } from "../../lib/navigation";
 import { balanceGridRows, completeGridRows, useGridColumns } from "../../lib/useGridColumns";
 import { IconPager } from "../folio/ui/IconPager";
@@ -18,6 +19,7 @@ import "./LibraryPage.css";
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
   const [gridRef, gridColumns] = useGridColumns();
   const library = useLibraryState(completeGridRows(24, gridColumns));
+  const closeInspector = useCallback(() => library.setSelected(null), [library.setSelected]);
   const gridRows = balanceGridRows(library.works.length, gridColumns);
 
   return (
@@ -39,8 +41,6 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         onTags={library.setTags}
         favoriteOnly={library.favoriteOnly}
         onFavoriteOnly={library.setFavoriteOnly}
-        view={library.view}
-        onView={library.setView}
         summary={library.summary}
         canReset={library.filtersActive}
         onReset={library.resetFilters}
@@ -82,6 +82,14 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
               />
               <div className="folio-library-result-controls">
                 <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>
+                <div className="folio-view-switch folio-library-view-switch" role="group" aria-label="作品视图方式">
+                  <button type="button" aria-label="封面墙视图" aria-pressed={library.view === "grid"} className={library.view === "grid" ? "is-active" : ""} onClick={() => library.setView("grid")}>
+                    {library.view === "grid" ? <SlidingIndicator className="folio-control-active" layoutId="folio-library-view" /> : null}<Grid2X2 size={16} />
+                  </button>
+                  <button type="button" aria-label="列表视图" aria-pressed={library.view === "list"} className={library.view === "list" ? "is-active" : ""} onClick={() => library.setView("list")}>
+                    {library.view === "list" ? <SlidingIndicator className="folio-control-active" layoutId="folio-library-view" /> : null}<List size={17} />
+                  </button>
+                </div>
                 <a className="folio-library-history-link" href={pageHref({ name: "history" })}>
                   <Clock3 size={14} />
                   <span>阅读历史</span>
@@ -168,16 +176,18 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             />
           </section>
 
-          <WorkInspector
+        </div>
+      ) : null}
+      <AnimatePresence>
+        {library.selected ? <WorkInspector
             work={library.selected}
             blurCovers={blurCovers}
-            onClose={() => library.setSelected(null)}
+            onClose={closeInspector}
             onPickTag={library.pickTag}
             onToggleFavorite={(work) => void library.toggleFavorite(work)}
             onDeleted={library.afterBulkAction}
-          />
-        </div>
-      ) : null}
+          /> : null}
+      </AnimatePresence>
     </section>
   );
 }

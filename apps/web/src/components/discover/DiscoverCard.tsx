@@ -17,7 +17,7 @@ type Props = {
 
 export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickTag }: Props) {
   const tags = item.tags ?? [];
-  const author = tagName(tags, "artist") || tagName(tags, "group") || "作者未缓存";
+  const author = tagName(tags, "artist") || tagName(tags, "group") || "未知作者";
   const language = languageLabel(tags);
   const category = tagName(tags, "category") || "远端作品";
   const contentTags = tags.filter((tag) => tag.type === "tag" || tag.type === "character");
@@ -41,7 +41,7 @@ export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickT
             loading="lazy"
           />
         ) : (
-          <span className="folio-cover-fallback">NO COVER</span>
+          <span className="folio-cover-fallback">暂无封面</span>
         )}
         <span className={item.imported ? "folio-discover-status is-imported" : "folio-discover-status"}>
           {item.imported ? "已入库" : "未入库"}
@@ -49,7 +49,7 @@ export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickT
       </a>
 
       <div className="folio-discover-card-body">
-        <div className="folio-discover-card-meta"><span>{category}</span><em>{language}</em></div>
+        <div className="folio-discover-card-meta"><span title={category}>{category}</span><em title={language}>{language}</em></div>
         <a href={href} className="folio-discover-card-title" onClick={openCurrent}>{title}</a>
         <p title={author}>{author}</p>
         <small>{item.page_count} 页 · Gallery {item.gallery_id}</small>
@@ -85,7 +85,7 @@ function tagName(tags: RemoteTag[], type: string) {
 
 function languageLabel(tags: RemoteTag[]) {
   const language = tags.find((tag) => tag.type === "language" && !isTranslatedTag(tag));
-  return language ? defaultDisplayTag(language) : "语言未缓存";
+  return language ? defaultDisplayTag(language) : "未知语言";
 }
 
 function isTranslatedTag(tag: RemoteTag) {

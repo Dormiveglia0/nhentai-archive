@@ -131,7 +131,7 @@
   font-size: 12px;
 }
 
-.folio-library-toolbar {
+.folio-toolbar.folio-library-toolbar {
   grid-template-columns: minmax(240px, 1.4fr) repeat(3, minmax(120px, 0.58fr)) auto;
 }
 

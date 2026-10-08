@@ -34,7 +34,7 @@ test.describe("界面与封面回归", () => {
     const workPagePromise = context.waitForEvent("page");
     await workLink.click({ button: "middle" });
     const workPage = await workPagePromise;
-    await expect.poll(() => new URL(workPage.url()).hash).toMatch(/^#gallery\/\d+/);
+    await workPage.waitForURL(/#gallery\/\d+/);
     expect(page.url()).toBe(currentUrl);
     await workPage.close();
 
@@ -49,7 +49,7 @@ test.describe("界面与封面回归", () => {
     const tagPagePromise = context.waitForEvent("page");
     await tagLink.click({ button: "middle" });
     const tagPage = await tagPagePromise;
-    await expect.poll(() => new URL(tagPage.url()).hash).toContain("#discover?");
+    await tagPage.waitForURL(/#discover\?/);
     await expect(tagPage.getByRole("button", { name: "语言：全部语言" })).toBeVisible();
     await expect(tagPage.getByRole("button", { name: "排序：最新发布" })).toBeVisible();
     expect(page.url()).toBe(filteredUrl);
@@ -203,7 +203,7 @@ test.describe("界面与封面回归", () => {
     expect(scopeBox?.width).toBe(optionsBox?.width);
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const [mobilePanelBox, mobileFilterBox] = await Promise.all([panel.boundingBox(), page.locator(".folio-library-tag-filter").boundingBox()]);
+    const [mobilePanelBox, mobileFilterBox] = await Promise.all([panel.boundingBox(), query.boundingBox()]);
     expect(mobilePanelBox?.width).toBeLessThanOrEqual(mobileFilterBox?.width ?? 0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
@@ -229,8 +229,7 @@ test.describe("界面与封面回归", () => {
   });
 
   test("横向发现封面保留完整画面并用同图氛围层填满固定卡框", async ({ page, request }) => {
-    const libraryResponse = await request.get("/api/library/search?page=1&per_page=100");
-    const work = (await libraryResponse.json()).result.find((item: { id: number }) => item.id === Number(LANDSCAPE_WORK_ID));
+    const work = await (await request.get(`/api/works/${LANDSCAPE_WORK_ID}`)).json();
     expect(work?.remote_gallery_id).toBeTruthy();
     const galleryResponse = await request.get(`/api/discover/galleries/${work.remote_gallery_id}`);
     expect(galleryResponse.ok()).toBeTruthy();
@@ -299,7 +298,7 @@ test.describe("界面与封面回归", () => {
     await cover.screenshot({ path: "/tmp/nh-archive-landscape-discover-card-desktop.png" });
   });
 
-  test("移动端五个热门作品同屏，馆藏只展示内容 Tag", async ({ page }) => {
+  test("移动端热门作品保留名称与原生横向滚动，库卡只展示内容 Tag", async ({ page }) => {
     await page.goto("/#discover");
     await expect(page.locator(".folio-discover-random")).toHaveCSS("border-left-width", "1px");
     const popular = page.locator(".folio-discover-popular-card");
@@ -316,14 +315,18 @@ test.describe("界面与封面回归", () => {
       }),
       viewportWidth: window.innerWidth,
     }));
-    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
-    expect(geometry.cards.every((card) => card.left >= -1 && card.right <= geometry.viewportWidth + 1)).toBeTruthy();
-    expect(geometry.cards.every((card) => card.centerVisible)).toBeTruthy();
-    expect(Math.min(...geometry.cards.map((card) => card.right - card.left))).toBeGreaterThanOrEqual(85);
+    expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+    expect(geometry.cards[0].centerVisible).toBe(true);
+    expect(Math.min(...geometry.cards.map((card) => card.right - card.left))).toBeGreaterThanOrEqual(140);
+    await expect(popular.first().locator(".folio-discover-popular-copy")).toBeVisible();
+    await expect(popular.first().locator("strong")).not.toHaveText("");
+    await page.locator(".folio-discover-popular-track").evaluate(node => { node.scrollLeft = node.scrollWidth; });
+    await expect(popular.last()).toBeInViewport();
     await expect(page.locator(".folio-discover-popular-media")).toHaveCount(5);
     await expectConfiguredPopularRatios(page.locator(".folio-discover-popular-media"));
-    await expect(popular.first()).not.toHaveCSS("animation-name", "none");
     await page.locator(".folio-discover-popular").screenshot({ path: "/tmp/nh-archive-popular-mobile.png" });
+    await popular.last().locator("a").press("Enter");
+    await expect(page).toHaveURL(/#gallery\/\d+/);
 
     await page.goto("/#library");
     const libraryTags = page.locator(".folio-library-card-tags:has(a)").first();
@@ -432,12 +435,12 @@ test.describe("界面与封面回归", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const routes = [
       ["library", "我的库"],
-      ["discover", "发现 / 导入"],
-      ["governance", "治理工作台"],
-      ["dictionary", "词典治理"],
-      ["tasks", "任务中心"],
-      ["export", "导出中心"],
-      ["files", "文件管理"],
+      ["discover", "发现"],
+      ["governance", "作品整理"],
+      ["dictionary", "词典"],
+      ["tasks", "队列"],
+      ["export", "导出"],
+      ["files", "文件"],
       ["settings", "设置"],
     ] as const;
     const heights: number[] = [];
@@ -544,9 +547,9 @@ test.describe("界面与封面回归", () => {
 
     await page.goto("/#library");
     await page.locator(".folio-library-cover").first().click();
-    const inspector = page.locator(".folio-library-inspector.is-open");
+    const inspector = page.locator(".folio-work-dialog");
     await expect(inspector).toBeVisible();
-    await inspector.getByRole("button", { name: "删除本地作品" }).click();
+    await inspector.getByRole("button", { name: "删除", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "确认删除本地作品" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "取消" }).click();
@@ -557,7 +560,7 @@ test.describe("界面与封面回归", () => {
     const work = (await libraryResponse.json()).result.find((item: { remote_gallery_id?: number }) => item.remote_gallery_id);
     expect(work?.remote_gallery_id).toBeTruthy();
     await page.goto(`/#gallery/${work.remote_gallery_id}`);
-    const detailDelete = page.getByRole("button", { name: "删除本地作品" });
+    const detailDelete = page.getByRole("button", { name: "删除", exact: true });
     await expect(detailDelete).toBeVisible({ timeout: 15_000 });
     await detailDelete.click();
     await expect(dialog).toBeVisible();
@@ -609,17 +612,21 @@ test.describe("界面与封面回归", () => {
     })).toBeTruthy();
   });
 
-  test("横向作品详情封面按原比例贴边显示", async ({ page, request }) => {
-    const response = await request.get("/api/library/search?page=1&per_page=100");
-    const work = (await response.json()).result.find((item: { id: number }) => item.id === Number(LANDSCAPE_WORK_ID));
+  test("横向作品详情封面完整显示并保持原比例", async ({ page, request }) => {
+    const work = await (await request.get(`/api/works/${LANDSCAPE_WORK_ID}`)).json();
     expect(work?.remote_gallery_id).toBeTruthy();
     await page.goto(`/#gallery/${work.remote_gallery_id}`);
 
-    const cover = page.locator(".folio-gallery-cover-slot");
+    const cover = page.locator(".folio-gallery-cover-stage");
     const image = cover.locator(".folio-ambient-cover-artwork");
     await expect(image).toBeVisible();
     await expect(image).toHaveCSS("object-fit", "contain");
-    await expectExactCoverRatios(cover);
+    await expect.poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth > 0)).toBe(true);
+    const frame = (await cover.boundingBox())!;
+    const artwork = (await image.boundingBox())!;
+    expect(artwork.width).toBeLessThanOrEqual(frame.width + 1);
+    expect(artwork.height).toBeLessThanOrEqual(frame.height + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await cover.screenshot({ path: "/tmp/nh-archive-landscape-cover.png" });
   });
 
@@ -636,7 +643,9 @@ test.describe("界面与封面回归", () => {
     await expect(tag).toHaveCSS("justify-content", "center");
     await expect(tag).toHaveCSS("text-align", "center");
     const centerOffset = await tag.evaluate((link) => {
-      const text = link.querySelector("span")!.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(link);
+      const text = range.getBoundingClientRect();
       const box = link.getBoundingClientRect();
       return ((text.left + text.right) / 2) - ((box.left + box.right) / 2);
     });
@@ -649,21 +658,6 @@ async function expectCenteredTag(tag: Locator) {
   await expect(tag).toBeVisible();
   await expect(tag).toHaveCSS("align-items", "center");
   await expect(tag).toHaveCSS("justify-content", "center");
-}
-
-async function expectExactCoverRatios(frames: Locator) {
-  const metrics = await frames.evaluateAll((nodes) => nodes.map((node) => {
-    const image = node.querySelector<HTMLImageElement>(".folio-ambient-cover-artwork")!;
-    const style = getComputedStyle(image);
-    return {
-      frame: node.clientWidth / node.clientHeight,
-      image: image.naturalWidth / image.naturalHeight,
-      padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
-    };
-  }));
-  expect(metrics.length).toBeGreaterThan(0);
-  expect(metrics.every((item) => Math.abs(item.frame - item.image) <= 0.015)).toBeTruthy();
-  expect(metrics.every((item) => item.padding.every((value) => Number.parseFloat(value) === 0))).toBeTruthy();
 }
 
 async function expectConfiguredPopularRatios(frames: Locator) {

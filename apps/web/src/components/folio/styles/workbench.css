@@ -48,7 +48,8 @@
   align-items: start;
   gap: 10px;
   border: 1px solid var(--folio-line);
-  background: rgba(250, 247, 239, 0.52);
+  border-radius: 8px;
+  background: rgba(250, 247, 239, 0.65);
   position: relative;
   overflow: hidden;
 }
@@ -65,7 +66,7 @@
 
 .folio-metric-card.is-active { --folio-metric-tone: var(--folio-red); }
 .folio-metric-card.is-good { --folio-metric-tone: var(--folio-green); }
-.folio-metric-card.is-warning { --folio-metric-tone: #9a671f; }
+.folio-metric-card.is-warning { --folio-metric-tone: var(--folio-red); }
 .folio-metric-card.is-danger { --folio-metric-tone: var(--folio-red); }
 .folio-metric-card.is-muted { --folio-metric-tone: var(--folio-faint); }
 

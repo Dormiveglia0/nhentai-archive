@@ -1,6 +1,6 @@
 import { AlertTriangle, PenLine } from "lucide-react";
 
-import { FadeIn } from "../../lib/motion";
+import { FadeIn, usePrefersReducedMotion } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { GovernanceActionBar } from "./GovernanceActionBar";
 import { GovernanceBulkBar } from "./GovernanceBulkBar";
@@ -21,6 +21,13 @@ type Props = {
 
 export function GovernancePage({ initialWorkId, blurCovers }: Props) {
   const gov = useGovernanceState(initialWorkId);
+  const reduced = usePrefersReducedMotion();
+  function selectWork(id: number) {
+    gov.selectWork(id);
+    if (!gov.bulkMode && window.matchMedia("(max-width: 860px)").matches) {
+      window.requestAnimationFrame(() => document.querySelector(".folio-governance-editor")?.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" }));
+    }
+  }
 
   return (
     <section className="folio-page-body folio-governance-page">
@@ -37,14 +44,14 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
         </FadeIn>
       ) : null}
 
-      {gov.loading ? <div className="folio-governance-loading" role="status">正在读取治理队列…</div> : null}
+      {gov.loading ? <div className="folio-governance-loading" role="status">正在读取整理队列…</div> : null}
 
       {!gov.loading && gov.queue && gov.queue.result.length === 0 ? (
         <section className="folio-ruled-panel folio-governance-empty">
           <FolioEmptyState
             icon={PenLine}
             title="暂无待编辑作品"
-            copy="当前本地库没有需要治理的作品；导入或重新索引 CBZ 后，队列会按实际缺失项自动生成。"
+            copy="导入作品后，可在这里编辑信息。"
           />
         </section>
       ) : null}
@@ -54,17 +61,16 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
           <GovernanceQueueRail
             queue={gov.queue}
             selectedId={gov.selectedId}
-            onSelect={gov.selectWork}
+            onSelect={selectWork}
             bulkMode={gov.bulkMode}
             selectedIds={gov.selectedIds}
             onToggleSelected={gov.toggleSelected}
           />
 
-          <section className="folio-governance-editor" aria-label={gov.bulkMode ? "批量治理编辑区" : "单部治理编辑区"}>
+          <section className="folio-governance-editor" aria-label={gov.bulkMode ? "批量编辑区" : "单部编辑区"}>
             <header className="folio-governance-modebar">
               <div>
-                <span>{gov.bulkMode ? "Batch workflow" : "Review workflow"}</span>
-                <strong>{gov.bulkMode ? "批量治理" : "单部审核"}</strong>
+                <strong>{gov.bulkMode ? "批量编辑" : "单部编辑"}</strong>
               </div>
               <button
                 className={gov.bulkMode ? "folio-filter-toggle is-active" : "folio-filter-toggle"}
@@ -97,14 +103,6 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <FadeIn key={gov.aggregate.work.id} className="folio-governance-document" y={10}>
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
-                    <GovernanceReviewPanel
-                      aggregate={gov.aggregate}
-                      changedCount={gov.changedFields.length}
-                      busy={gov.reviewing}
-                      note={gov.reviewNote}
-                      onNoteChange={gov.setReviewNote}
-                      onReview={gov.reviewWork}
-                    />
                     <MetadataEditor
                       aggregate={gov.aggregate}
                       edits={gov.edits}
@@ -123,6 +121,14 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onApplyDictionaryTag={gov.applyDictionaryTag}
                       onReviewDictionaryTag={gov.reviewDictionaryTag}
                       applyingTagId={gov.dictionaryApplyingId}
+                    />
+                    <GovernanceReviewPanel
+                      aggregate={gov.aggregate}
+                      changedCount={gov.changedFields.length}
+                      busy={gov.reviewing}
+                      note={gov.reviewNote}
+                      onNoteChange={gov.setReviewNote}
+                      onReview={gov.reviewWork}
                     />
                   </FadeIn>
                 ) : null}
@@ -144,7 +150,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
             )}
           </section>
 
-          <GovernanceSourceRail aggregate={gov.bulkMode ? null : gov.aggregate} bulkMode={gov.bulkMode} />
+          <GovernanceSourceRail aggregate={gov.bulkMode ? null : gov.aggregate} />
         </div>
       ) : null}
     </section>

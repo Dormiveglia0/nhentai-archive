@@ -11,7 +11,7 @@
 ## Design Rules
 
 - The maintained visual source is `apps/web/src/components/folio/`, `/demo`, and each formal route's feature-local CSS; use `docs/AGENT_MAP.md` to find the owner.
-- Keep the Doujin Archive Gallery system: warm paper background, black editorial headings, terracotta primary actions, top global bar, secondary nav, right inspectors, and bottom task dock.
+- Keep the current Folio system: warm paper, ink and vermilion, concise Chinese headings, black/red SVG lines, animated top navigation, feature-owned panels and a bottom task dock. Library work details use a floating native modal; do not restore its permanent right inspector. Remove decorative kickers and implementation commentary from product copy.
 - If a module is visually unfinished, prefer a clear boundary screen over a decorative fake dashboard.
 - Do not add adult sample assets to the repository. Non-explicit line art or empty-state graphics are allowed.
 

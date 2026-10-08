@@ -12,7 +12,7 @@ type Props = {
   emptyLabel?: string;
 };
 
-export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, hrefForTag = tagSearchHref, className, emptyLabel = "标签未缓存" }: Props) {
+export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, hrefForTag = tagSearchHref, className, emptyLabel = "暂无标签" }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const startScroll = useRef(0);

@@ -2,8 +2,8 @@ import { Check } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useState } from "react";
 
-import { duration, ease } from "../../lib/motion";
-import { type FolioPageId, type SettingsSection } from "../folio/config";
+import { duration, ease, transitionTabs } from "../../lib/motion";
+import { FOLIO_PAGES, type FolioPageId, type SettingsSection } from "../folio/config";
 import { FolioChrome } from "../folio/shell/FolioChrome";
 import { DemoPage } from "./modules/DemoPage";
 import { DemoCommandBar } from "./ui/DemoCommandBar";
@@ -34,13 +34,17 @@ export function FrontendDemo({ onLogout }: { onLogout: () => Promise<void> }) {
     setNotice("已恢复演示页初始状态，未读取任何本地配置。");
   }
 
+  function navigate(next: FolioPageId) {
+    transitionTabs(FOLIO_PAGES.map(item => item.id), page, next, setPage);
+  }
+
   return (
     <FolioChrome
       page={page}
-      onNavigate={setPage}
-      scrollKey={settingsSection}
+      onNavigate={navigate}
+      scrollKey={page}
       onLogout={onLogout}
-      footer={<DemoCommandBar page={page} onNavigate={setPage} onResetSettings={resetSettings} announce={setNotice} />}
+      footer={<DemoCommandBar page={page} onNavigate={navigate} onResetSettings={resetSettings} announce={setNotice} />}
       overlay={
         <AnimatePresence>
           {notice ? (
@@ -57,7 +61,7 @@ export function FrontendDemo({ onLogout }: { onLogout: () => Promise<void> }) {
         settingsSection={settingsSection}
         onSettingsSection={setSettingsSection}
         settingsRevision={settingsRevision}
-        onNavigate={setPage}
+        onNavigate={navigate}
         announce={setNotice}
       />
     </FolioChrome>

@@ -167,7 +167,7 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
         <div className="folio-library-delete-confirm">
           <p>
             将永久删除 {deletePreview.works_to_remove} 部作品（共 {deletePreview.files_to_delete} 个文件，
-            释放 {formatBytes(deletePreview.reclaim_bytes)}）。源 CBZ、封面与所有阅读进度/治理记录将被级联移除，且不可恢复。
+            释放 {formatBytes(deletePreview.reclaim_bytes)}）。源 CBZ、封面与所有阅读进度/整理记录将被同时移除，且不可恢复。
           </p>
           <div className="folio-library-batch-actions">
             <button type="button" className="is-danger" onClick={confirmDelete} disabled={busy}>

@@ -19,5 +19,5 @@ test("独立首页预览保留真实封面比例、阅读链接和正常首页",
   }
   await page.goto('/#workbench');
   await expect(page.locator('.home-proof')).toHaveCount(0);
-  await expect(page.locator('.folio-home-studio')).toBeVisible();
+  await expect(page.locator('.folio-home')).toBeVisible();
 });

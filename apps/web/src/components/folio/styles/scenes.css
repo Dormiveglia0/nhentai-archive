@@ -252,7 +252,7 @@
 }
 
 .folio-scene-export-seal circle {
-  fill: rgba(68, 95, 82, 0.09);
+  fill: rgba(23, 24, 21, 0.09);
 }
 
 .folio-scene-files-source-stack {
@@ -297,7 +297,7 @@
 }
 
 .folio-scene-files-document-status circle {
-  fill: rgba(68, 95, 82, 0.1);
+  fill: rgba(23, 24, 21, 0.1);
 }
 
 .folio-scene-files-scan-beam {

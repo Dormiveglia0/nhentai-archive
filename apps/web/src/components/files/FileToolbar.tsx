@@ -1,5 +1,5 @@
+import { SlidingIndicator } from "../../lib/motion";
 import { SearchCheck, X } from "lucide-react";
-import { m } from "motion/react";
 
 import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
 
@@ -68,7 +68,7 @@ export function FileToolbar({
             className={category === item.value ? "is-active" : ""}
             onClick={() => onCategory(item.value)}
           >
-            {category === item.value ? <m.span layoutId="folio-files-category" className="folio-files-tab-active" /> : null}
+            {category === item.value ? <SlidingIndicator className="folio-files-tab-active" layoutId="folio-files-category" /> : null}
             <span>{item.label}</span>
           </button>
         ))}
@@ -86,7 +86,7 @@ export function FileToolbar({
       <div className={"folio-files-batch" + (selectedCount ? " is-active" : "")}>
         <p>
           <strong>{selectedCount || total}</strong>
-          <span>{selectedCount ? "项已选择" : "项匹配当前条件 · 可直接勾选"}</span>
+          <span>{selectedCount ? "项已选择" : "项文件"}</span>
         </p>
         <div>
           <button type="button" onClick={onPreviewSelected} disabled={busy || selectedCount === 0}>

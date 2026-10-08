@@ -109,7 +109,7 @@ export function GalleryHero({
               <>
                 <a href={pageHref({ name: "governance", workId: detail.work_id })}>
                   <PenTool size={16} />
-                  <span>治理元数据</span>
+                  <span>编辑信息</span>
                 </a>
                 <WorkDeleteAction workId={detail.work_id} title={title} onDeleted={onDeleted} />
               </>
