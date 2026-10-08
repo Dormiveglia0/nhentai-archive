@@ -18,9 +18,13 @@ async def lifespan(_app: FastAPI):
     services.archive.cache.recover_interrupted()
     services.archive.cache.start()
     services.export_jobs.sweep_exports()
+    services.library_scan_jobs.start()
+    services.library_monitor.start()
     try:
         yield
     finally:
+        services.library_monitor.close()
+        services.library_scan_jobs.close()
         services.archive.cache.close()
 
 

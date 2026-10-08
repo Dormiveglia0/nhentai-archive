@@ -11,6 +11,7 @@ Use this file as the first frontend navigation index. Read only the row for the 
 - Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
 - Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login is an independent paper surface with no pre-auth page silhouettes or content. Preserve focus feedback and the measured field-edge → responsive topbar scan, followed by app reveal; no welcome slogans.
 - Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
+- Active media update: directory/cache APIs and native monitoring/compensation are implemented; settings/dialog integration, local tag scope, scraping, artist/group subscriptions and SMTP still need frontend work. Read `docs/MEDIA_LIBRARY_UPDATE.md` before extending these entries. The production baseline remains unchanged until the complete update is verified.
 
 ## Demo Dependency Map
 

@@ -179,3 +179,31 @@ def test_interrupted_scan_retry_preserves_work_identity(tmp_path):
     assert _wait_for_job(jobs, job["id"])["status"] == "completed"
     assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1
     assert db.fetchone("SELECT favorite FROM works WHERE id = ?", (work_id,))["favorite"] == 1
+
+
+def test_shutdown_preserves_paused_scan_and_restart_can_resume(tmp_path, monkeypatch):
+    settings, db, archive, jobs, _, index = _setup(tmp_path)
+    source = settings.library_dir / 'book.cbz'
+    _make_cbz(source)
+    original = source.read_bytes()
+    entered, release = threading.Event(), threading.Event()
+    from app.services.archive_manifest import inspect_archive
+    def blocked_probe(path):
+        entered.set()
+        assert release.wait(5)
+        return inspect_archive(path)
+    monkeypatch.setattr('app.services.library_index_service.inspect_archive', blocked_probe)
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
+    job = service.enqueue_scan()
+    assert entered.wait(5)
+    jobs.pause(job['id'])
+    release.set()
+    service.close()
+    assert jobs.get(job['id'])['status'] == 'paused'
+    assert not service._workers and source.read_bytes() == original
+    monkeypatch.setattr('app.services.library_index_service.inspect_archive', inspect_archive)
+    service.start()
+    service.resume_job(job['id'])
+    assert _wait_for_job(jobs, job['id'])['status'] == 'completed'
+    assert source.read_bytes() == original
+    service.close()

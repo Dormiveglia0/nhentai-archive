@@ -17,6 +17,7 @@ class LibraryScanJobService:
         self.settings, self.jobs, self.index, self.libraries = settings, jobs, index, libraries
         self._worker_lock = threading.Lock()
         self._workers: dict[int, threading.Thread] = {}
+        self._closing = threading.Event()
 
     def enqueue_scan(self, paths: list[str] | None = None, library_id: int | None = None) -> dict[str, Any]:
         if library_id is None:
@@ -112,7 +113,13 @@ class LibraryScanJobService:
         reported_at = 0.0
 
         def checkpoint():
-            self.jobs.checkpoint(job_id)
+            while True:
+                job = self.jobs.get(job_id)
+                if self._closing.is_set() or job["status"] in {"cancelled", "cancelling"}:
+                    raise JobCancelled()
+                if job["status"] != "paused":
+                    return
+                self._closing.wait(.2)
 
         def progress(counts):
             nonlocal reported_at
@@ -149,6 +156,16 @@ class LibraryScanJobService:
                     self.jobs._log_with_conn(conn, job_id, "warning", f"{error['path']}: {error['reason']}")
             self.jobs.complete(job_id, {**result, "library_id": library_id, "ingested": result["counts"]["indexed"], "skipped": result["errors"]})
         except JobCancelled:
-            self.jobs.mark_cancelled(job_id)
+            if not self._closing.is_set():
+                self.jobs.mark_cancelled(job_id)
         except Exception as exc:
             self.jobs.fail(job_id, str(exc)[:1000])
+
+    def start(self) -> None:
+        self._closing.clear()
+
+    def close(self) -> None:
+        self._closing.set()
+        deadline = time.monotonic() + 2
+        for thread in list(self._workers.values()):
+            thread.join(max(0, deadline - time.monotonic()))

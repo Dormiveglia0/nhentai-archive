@@ -575,9 +575,11 @@ class GovernanceService:
             return False, ["源 CBZ 不存在或不是有效 ZIP"]
         if row["read_only"] or row["library_kind"] == "mounted":
             return False, ["该目录库只读，不能修改源文件"]
+        library_id = row["library_id"] or self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
+        if self.db.fetchone("SELECT 1 FROM library_scan_runs WHERE library_id = ? AND status = 'running' LIMIT 1", (library_id,)):
+            return False, ["源文件正在扫描，请结束扫描后再回写"]
         if not self.libraries.file_available(row):
             return False, ["源 CBZ 不存在或不是有效 ZIP"]
-        library_id = row["library_id"] or self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
         if self.db.fetchone("""SELECT 1 FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
             AND CASE WHEN json_valid(target_json) THEN json_extract(target_json, '$.library_id') END = ?
             UNION ALL SELECT 1 FROM archive_cache WHERE work_id = ? AND status IN ('queued', 'downloading', 'blocked') LIMIT 1""", (library_id, work_id)):

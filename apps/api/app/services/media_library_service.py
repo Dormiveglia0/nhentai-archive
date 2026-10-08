@@ -109,6 +109,10 @@ class MediaLibraryService:
             raise ValueError("访问方式必须是本地目录或挂载目录")
         config = self._config({**current["config"], **(payload.get("config") or {})})
         read_only = kind == "mounted" or bool(payload.get("read_only", current["read_only"]))
+        rescan = str(root) != current["root_path"] or kind != current["kind"] or (
+            bool(payload.get("enabled", current["enabled"])) and not current["enabled"]
+        ) or any(config[key] != current["config"][key] for key in (
+            "recursive", "watch", "scan_interval_seconds", "stable_seconds", "include_hidden", "follow_symlinks", "exclude_patterns"))
         with self.db.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             if str(root) != current["root_path"] or kind != current["kind"]:
@@ -116,9 +120,11 @@ class MediaLibraryService:
             self._check_overlap(root, library_id)
             conn.execute(
                 """UPDATE media_libraries SET name = ?, root_path = ?, kind = ?, enabled = ?, read_only = ?,
-                config_json = ?, health = 'unknown', last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
+                config_json = ?, health = 'unknown', last_error = NULL,
+                next_scan_at = CASE WHEN ? THEN 0 ELSE next_scan_at END,
+                scan_failures = CASE WHEN ? THEN 0 ELSE scan_failures END, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
                 (name, str(root), kind, int(bool(payload.get("enabled", current["enabled"]))),
-                 int(read_only), json.dumps(config, ensure_ascii=False), library_id),
+                 int(read_only), json.dumps(config, ensure_ascii=False), rescan, rescan, library_id),
             )
             if str(root) != current["root_path"]:
                 conn.execute(
@@ -146,6 +152,8 @@ class MediaLibraryService:
         return {"removed": library_id, "source_files_deleted": False, "metadata_preserved": True}
 
     def _require_idle(self, library_id: int) -> None:
+        if self.db.fetchone("SELECT 1 FROM library_scan_runs WHERE library_id = ? AND status = 'running' LIMIT 1", (library_id,)):
+            raise ValueError("目录库正在扫描，请先暂停自动检查或取消扫描任务")
         if self.db.fetchone("""SELECT id FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
                             AND json_extract(target_json, '$.library_id') = ? LIMIT 1""", (library_id,)):
             raise ValueError("请先取消该库正在进行的扫描")

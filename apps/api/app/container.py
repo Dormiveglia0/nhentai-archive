@@ -15,6 +15,7 @@ from app.services.job_service import JobService
 from app.services.library_scan_job_service import LibraryScanJobService
 from app.services.library_scan_service import LibraryScanService
 from app.services.library_index_service import LibraryIndexService
+from app.services.library_monitor_service import LibraryMonitorService
 from app.services.library_service import LibraryService
 from app.services.metadata_refresh_service import MetadataRefreshService
 from app.services.nhentai_client import NhentaiClient
@@ -75,6 +76,7 @@ def build_services() -> SimpleNamespace:
         library_scan_jobs=library_scan_jobs,
         media_libraries=media_libraries,
         library_index=library_index,
+        library_monitor=LibraryMonitorService(library_index, media_libraries),
         settings_service=SettingsService(db, settings, client, translation),
         workbench=WorkbenchService(library, governance, jobs, files, exports),
     )

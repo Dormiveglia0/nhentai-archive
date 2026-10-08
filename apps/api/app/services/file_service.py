@@ -301,6 +301,8 @@ class FileMaintenanceService:
         rows = self.libraries.files(work_id)
         managed_id = self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
         library_ids = {row["library_id"] or managed_id for row in rows if row["kind"] == "source_cbz"}
+        if library_ids and self.db.fetchone(f"SELECT 1 FROM library_scan_runs WHERE status = 'running' AND library_id IN ({','.join('?' for _ in library_ids)}) LIMIT 1", tuple(library_ids)):
+            raise PermissionError("目录库正在扫描，请结束扫描后再删除")
         if library_ids and self.db.fetchone(f"""SELECT 1 FROM jobs WHERE type = 'library_scan'
             AND status IN ('queued', 'running', 'paused', 'cancelling') AND
             CASE WHEN json_valid(target_json) THEN json_extract(target_json, '$.library_id') END IN ({','.join('?' for _ in library_ids)}) LIMIT 1""", tuple(library_ids)):

@@ -226,6 +226,9 @@ CREATE TABLE IF NOT EXISTS media_libraries (
   root_inode INTEGER,
   resolved_root_path TEXT,
   last_scan_at TEXT,
+  next_scan_at REAL NOT NULL DEFAULT 0,
+  scan_failures INTEGER NOT NULL DEFAULT 0,
+  watch_error TEXT,
   removed_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -240,6 +243,13 @@ CREATE TABLE IF NOT EXISTS library_scan_runs (
   errors_json TEXT NOT NULL DEFAULT '[]',
   started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS library_changes (
+  library_id INTEGER NOT NULL REFERENCES media_libraries(id) ON DELETE CASCADE,
+  relative_path TEXT NOT NULL,
+  due_at REAL NOT NULL,
+  PRIMARY KEY(library_id, relative_path)
 );
 
 CREATE TABLE IF NOT EXISTS library_items (
@@ -404,6 +414,9 @@ class Database:
             conn.execute("UPDATE reading_sessions SET page_count = COALESCE((SELECT page_count FROM works WHERE id = work_id), 0)")
         _add_column_if_missing(conn, "media_libraries", _table_columns(conn, "media_libraries"),
                                "resolved_root_path", "TEXT")
+        for name, declaration in (("next_scan_at", "REAL NOT NULL DEFAULT 0"),
+                                  ("scan_failures", "INTEGER NOT NULL DEFAULT 0"), ("watch_error", "TEXT")):
+            _add_column_if_missing(conn, "media_libraries", _table_columns(conn, "media_libraries"), name, declaration)
         item_columns = _table_columns(conn, "library_items")
         if "archive_info_json" not in item_columns:
             _add_column_if_missing(conn, "library_items", item_columns, "archive_info_json", "TEXT")
