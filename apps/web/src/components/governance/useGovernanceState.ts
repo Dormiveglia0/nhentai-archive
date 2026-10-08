@@ -101,6 +101,9 @@ export function useGovernanceState(initialWorkId?: number) {
         return edit && (normalize(edit.value) !== normalize(field.working_value) || edit.source !== field.working_source);
       })
     : [];
+  const sourceFile = aggregate?.files.find((file) => file.kind === "source_cbz");
+  const writeBackBlocker = sourceFile?.read_only ? "源目录只读" : !sourceFile?.exists ? "源文件不可用" : null;
+  const canWriteBack = writeBack && !writeBackBlocker;
 
   const changeField = (field: string, edit: FieldEdit) =>
     setEdits((current) => ({ ...current, [field]: edit }));
@@ -124,11 +127,11 @@ export function useGovernanceState(initialWorkId?: number) {
   };
 
   const saveMetadata = async () => {
-    if (!aggregate || (!changedFields.length && !writeBack)) {
+    if (!aggregate || (!changedFields.length && !canWriteBack)) {
       setNotice("没有需要保存的修改。");
       return;
     }
-    if (writeBack && !window.confirm("将就地改写源 CBZ 的 ComicInfo，此操作不可撤销。是否继续？")) {
+    if (canWriteBack && !window.confirm("将就地改写源 CBZ 的 ComicInfo，此操作不可撤销。是否继续？")) {
       return;
     }
     setSaving(true);
@@ -142,7 +145,7 @@ export function useGovernanceState(initialWorkId?: number) {
       }));
       const result = await api.applyWorkGovernance(aggregate.work.id, {
         metadata: changed,
-        write_back: writeBack,
+        write_back: canWriteBack,
       });
       setAggregate(result.governance);
       setQueue(await api.governanceQueue());
@@ -396,7 +399,8 @@ export function useGovernanceState(initialWorkId?: number) {
     onlyDiff,
     setOnlyDiff,
     saving,
-    writeBack,
+    writeBack: canWriteBack,
+    writeBackBlocker,
     setWriteBack,
     changedFields,
     changeField,

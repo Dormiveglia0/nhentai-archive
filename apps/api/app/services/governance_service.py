@@ -4,14 +4,19 @@ import hashlib
 import json
 import os
 import zipfile
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any
 from xml.etree import ElementTree
 
 from app.database import Database
+from app.config import Settings
 from app.services import comicinfo
 from app.services.dictionary_service import DEFAULT_IGNORED_REMOTE_TYPES, DEFAULT_IGNORED_REMOTE_TYPE_SQL
+from app.services.media_library_service import MediaLibraryService
+from app.services.archive_manifest import open_archive
 
 
 METADATA_FIELDS = {
@@ -72,10 +77,12 @@ CHECK_DEFINITIONS = {
 class GovernanceService:
     """Local-only metadata/tag governance aggregate backed by SQLite and stored CBZ files."""
 
-    def __init__(self, db: Database, dictionary_service: Any | None = None, settings: Any | None = None):
+    def __init__(self, db: Database, dictionary_service: Any | None = None, settings: Any | None = None, cache: Any | None = None):
         self.db = db
         self.dictionary_service = dictionary_service
         self.settings = settings
+        self.libraries = MediaLibraryService(settings or Settings(data_dir=db.path.parent), db)
+        self.cache = cache
 
     def queue(self) -> dict[str, Any]:
         rows = self.db.fetchall(
@@ -83,8 +90,6 @@ class GovernanceService:
             SELECT
               w.*,
               rg.payload_json AS remote_payload_json,
-              COALESCE(f.size_bytes, 0) AS size_bytes,
-              f.path AS source_path,
               (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata,
               (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'language') AS language_metadata,
               (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata_count,
@@ -112,12 +117,6 @@ class GovernanceService:
               (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id) AS metadata_count
             FROM works w
             LEFT JOIN remote_galleries rg ON rg.gallery_id = w.remote_gallery_id
-            LEFT JOIN (
-              SELECT work_id, path, SUM(size_bytes) AS size_bytes
-              FROM work_files
-              WHERE kind = 'source_cbz'
-              GROUP BY work_id
-            ) f ON f.work_id = w.id
             ORDER BY w.updated_at DESC, w.id DESC
             """
         )
@@ -140,6 +139,10 @@ class GovernanceService:
         }
         for row in rows:
             work_id = int(row["id"])
+            files = review_context["files"].get(work_id, [])
+            source = next((file for file in files if file["kind"] == "source_cbz"), None)
+            row.update(_source_file=source, source_path=source["path"] if source else None,
+                       size_bytes=sum(file["size_bytes"] for file in files if file["kind"] == "source_cbz"))
             reasons = self._queue_reasons(row)
             fingerprint = self._review_fingerprint(
                 row,
@@ -171,9 +174,9 @@ class GovernanceService:
         work = self._work_row(work_id)
         if not work:
             raise ValueError(f"Work {work_id} not found")
-        files = self.db.fetchall("SELECT * FROM work_files WHERE work_id = ? ORDER BY created_at DESC, id DESC", (work_id,))
-        source_path = next((row["path"] for row in files if row["kind"] == "source_cbz"), None)
-        archive_sources = self._archive_metadata(source_path)
+        files = self.libraries.files(work_id, metadata=True)
+        source = next((row for row in files if row["kind"] == "source_cbz"), None)
+        archive_sources = self._archive_metadata(source)
         remote_payload = self._remote_payload(work)
         saved = {
             row["field"]: row
@@ -214,7 +217,7 @@ class GovernanceService:
 
         snapshot_hash = None
         if action == "approve":
-            files = self.db.fetchall("SELECT * FROM work_files WHERE work_id = ? ORDER BY id", (work_id,))
+            files = self.libraries.files(work_id, metadata=True)
             metadata = self.db.fetchall("SELECT * FROM work_metadata WHERE work_id = ? ORDER BY field", (work_id,))
             tags = self._tag_rows(work_id)
             saved = {str(row["field"]): row for row in metadata}
@@ -482,18 +485,13 @@ class GovernanceService:
                     skipped.append(skip_entry)
                     entry["backfill_web"] = {"skipped": "no_gallery_id"}
                 else:
-                    row = self.db.fetchone(
-                        "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
-                        "ORDER BY created_at DESC, id DESC LIMIT 1",
-                        (work_id,),
-                    )
+                    row = next((file for file in self.libraries.files(work_id, metadata=True) if file["kind"] == "source_cbz"), None)
                     if not row or not row["path"]:
                         skip_entry = {"work_id": work_id, "reason": "no_source_cbz"}
                         skipped.append(skip_entry)
                         entry["backfill_web"] = {"skipped": "no_source_cbz"}
                     else:
-                        source_path = row["path"] if row else None
-                        comicinfo_fields = self._archive_metadata(source_path)["comicinfo"]
+                        comicinfo_fields = self._archive_metadata(row)["comicinfo"]
                         if comicinfo_fields.get("Web"):
                             skip_entry = {"work_id": work_id, "reason": "already_has_web"}
                             skipped.append(skip_entry)
@@ -568,68 +566,96 @@ class GovernanceService:
 
     def _write_back_readiness(self, work_id: int) -> tuple[bool, list[str]]:
         """复用 write_back_comicinfo 的前置防护判定，但不动盘。"""
-        blockers: list[str] = []
         if self.settings is None:
             return False, ["未配置 library 目录"]
-        row = self.db.fetchone(
-            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
-            "ORDER BY created_at DESC, id DESC LIMIT 1",
-            (work_id,),
-        )
-        source_path = Path(row["path"]).resolve() if row and row["path"] else None
-        if source_path is None or not source_path.exists() or not zipfile.is_zipfile(source_path):
+        row = next((file for file in self.libraries.files(work_id) if file["kind"] == "source_cbz"), None)
+        if not row:
             return False, ["源 CBZ 不存在或不是有效 ZIP"]
-        library_root = self.settings.library_dir.resolve()
-        if not (source_path == library_root or library_root in source_path.parents):
-            return False, ["源文件不在受管 library 目录内"]
-        return True, blockers
+        if row["read_only"] or row["library_kind"] == "mounted":
+            return False, ["该目录库只读，不能修改源文件"]
+        if not self.libraries.file_available(row):
+            return False, ["源 CBZ 不存在或不是有效 ZIP"]
+        library_id = row["library_id"] or self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
+        if self.db.fetchone("""SELECT 1 FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
+            AND CASE WHEN json_valid(target_json) THEN json_extract(target_json, '$.library_id') END = ?
+            UNION ALL SELECT 1 FROM archive_cache WHERE work_id = ? AND status IN ('queued', 'downloading', 'blocked') LIMIT 1""", (library_id, work_id)):
+            return False, ["源文件正在扫描或缓存，请结束任务后再回写"]
+        if self.db.fetchone("SELECT 1 FROM work_files WHERE work_id <> ? AND path IN (?, ?) LIMIT 1", (work_id, row["path"], self.db.managed_path(row["path"]))):
+            return False, ["源文件被其他作品引用，不能回写"]
+        if not row["library_item_id"]:
+            try:
+                self.libraries.resolve_file(row, for_write=True)
+            except (OSError, ValueError) as exc:
+                return False, [str(exc)]
+        return True, []
 
     def write_back_comicinfo(self, work_id: int) -> dict[str, Any]:
+        # ponytail: shared lifecycle lock serializes local writes; per-work locks if throughput requires it.
+        with self.cache._lock if self.cache else nullcontext():
+            return self._write_back_comicinfo(work_id)
+
+    def _write_back_comicinfo(self, work_id: int) -> dict[str, Any]:
+        from app.services.archive_manifest import inspect_archive
+        from app.services.archive_service import clear_direct_thumbnails
         if self.settings is None:
             raise ValueError("write-back requires settings (library directory)")
-        aggregate = self.work_governance(work_id)
-        row = self.db.fetchone(
-            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
-            "ORDER BY created_at DESC, id DESC LIMIT 1",
-            (work_id,),
-        )
-        source_path = Path(row["path"]).resolve() if row and row["path"] else None
-        if source_path is None or not source_path.exists() or not zipfile.is_zipfile(source_path):
+        allowed, blockers = self._write_back_readiness(work_id)
+        if not allowed:
+            raise ValueError("；".join(blockers))
+        row = next((file for file in self.libraries.files(work_id) if file["kind"] == "source_cbz"), None)
+        if not row:
             raise ValueError("源 CBZ 文件不存在或不是有效 ZIP，无法回写。")
-        library_root = self.settings.library_dir.resolve()
-        if not (source_path == library_root or library_root in source_path.parents):
-            raise ValueError("源文件不在受管 library 目录内，拒绝回写。")
-
+        try:
+            source_path = self.libraries.resolve_file(row, for_write=True)
+            before = source_path.stat()
+        except (OSError, ValueError) as exc:
+            raise ValueError(str(exc)) from exc
+        if row["library_item_id"] and (row["size_bytes"], row["mtime_ns"], row["device"], row["inode"]) != (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino):
+            raise ValueError("源文件已变化，请重新扫描后重试")
+        aggregate = self.work_governance(work_id)
         fields = comicinfo.build_fields(aggregate)
         xml = comicinfo.to_xml(fields)
-        data = comicinfo.reseal_cbz(source_path, xml, keep_json=True, compress=True)
-
-        tmp_path = source_path.with_suffix(source_path.suffix + ".tmp")
+        with NamedTemporaryFile(dir=source_path.parent, prefix=".writeback-", suffix=".tmp", delete=False) as handle:
+            tmp_path = Path(handle.name)
         try:
-            with open(tmp_path, "wb") as handle:
-                handle.write(data)
-                handle.flush()
+            comicinfo.reseal_cbz_to(source_path, tmp_path, xml, keep_json=True, compress=True)
+            data = inspect_archive(tmp_path)
+            with tmp_path.open("rb") as handle:
+                new_sha256 = hashlib.file_digest(handle, "sha256").hexdigest()
+            with tmp_path.open("rb") as handle:
+                os.fchmod(handle.fileno(), before.st_mode & 0o777)
+                info = os.fstat(handle.fileno())
                 os.fsync(handle.fileno())
-            os.replace(tmp_path, source_path)
+            with self.db.connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                allowed, blockers = self._write_back_readiness(work_id)
+                if not allowed:
+                    raise ValueError("；".join(blockers))
+                current = connection.execute("SELECT path FROM work_files WHERE id = ?", (row["id"],)).fetchone()
+                if not current or current["path"] not in {row["path"], self.db.managed_path(row["path"])}:
+                    raise ValueError("源文件关联已变化，请重新预览")
+                if self.libraries.resolve_file(row, for_write=True) != source_path:
+                    raise ValueError("源文件路径已变化")
+                after = source_path.stat()
+                if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
+                    raise ValueError("源文件已变化，请重新扫描后重试")
+                os.replace(tmp_path, source_path)
+                connection.execute("UPDATE work_files SET sha256 = ?, size_bytes = ? WHERE id = ?", (new_sha256, info.st_size, row["id"]))
+                if row["library_item_id"]:
+                    connection.execute("""UPDATE library_items SET size_bytes = ?, mtime_ns = ?, device = ?, inode = ?,
+                        fingerprint = ?, manifest = ?, metadata_json = ?, archive_info_json = ?, status = 'ready',
+                        last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
+                        (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino, data["fingerprint"], data["manifest"],
+                         json.dumps(data["metadata"], ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False), row["library_item_id"]))
+                connection.execute("UPDATE works SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (work_id,))
+            clear_direct_thumbnails(self.settings, work_id)
         finally:
-            if tmp_path.exists():
-                tmp_path.unlink()
-
-        new_sha256 = hashlib.sha256(data).hexdigest()
-        new_size = len(data)
-        self.db.execute(
-            "UPDATE work_files SET sha256 = ?, size_bytes = ? "
-            "WHERE work_id = ? AND kind = 'source_cbz'",
-            (new_sha256, new_size, work_id),
-        )
-        self.db.execute(
-            "UPDATE works SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (work_id,)
-        )
+            tmp_path.unlink(missing_ok=True)
         return {
             "written": True,
             "fields": fields,
             "new_sha256": new_sha256,
-            "new_size_bytes": new_size,
+            "new_size_bytes": info.st_size,
         }
 
     def _queue_review_context(self) -> dict[str, dict[int, Any]]:
@@ -639,7 +665,7 @@ class GovernanceService:
             "tags": {},
             "reviews": {},
         }
-        for row in self.db.fetchall("SELECT * FROM work_files ORDER BY work_id, id"):
+        for row in self.libraries.files(metadata=True):
             context["files"].setdefault(int(row["work_id"]), []).append(row)
         for row in self.db.fetchall("SELECT * FROM work_metadata ORDER BY work_id, field"):
             context["metadata"].setdefault(int(row["work_id"]), []).append(row)
@@ -678,12 +704,15 @@ class GovernanceService:
     ) -> str:
         file_rows = []
         for row in files:
-            path = Path(str(row.get("path") or ""))
-            try:
-                stat = path.stat()
-                actual = {"exists": True, "size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
-            except OSError:
-                actual = {"exists": False, "size": None, "mtime_ns": None}
+            if row.get("library_item_id"):
+                actual = {"exists": self.libraries.file_available(row), "size": row["size_bytes"], "mtime_ns": row.get("mtime_ns")}
+            else:
+                path = Path(str(row.get("path") or ""))
+                try:
+                    stat = path.stat()
+                    actual = {"exists": True, "size": stat.st_size, "mtime_ns": stat.st_mtime_ns}
+                except OSError:
+                    actual = {"exists": False, "size": None, "mtime_ns": None}
             file_rows.append(
                 {
                     "id": row.get("id"),
@@ -823,10 +852,12 @@ class GovernanceService:
             reasons.append({"code": "dictionary_review", "label": "词典待复核", "detail": "已有译名尚未人工确认。", "severity": "warning"})
         if int(row.get("conflict_count") or 0) > 0:
             reasons.append({"code": "dictionary_conflict", "label": "词典冲突", "detail": "同一词条存在互斥映射。", "severity": "danger"})
+        source = row.get("_source_file")
         source_path = row.get("source_path")
-        if not source_path or not Path(str(source_path)).exists():
+        source_exists = self.libraries.file_available(source) if source else bool(source_path and Path(str(source_path)).exists())
+        if not source_exists:
             reasons.append({"code": "missing_source", "label": "源 CBZ 不可用", "detail": "源文件不存在或未建立关联。", "severity": "danger"})
-        elif not self._archive_has_comicinfo(str(source_path)):
+        elif not self._archive_has_comicinfo(source or str(source_path)):
             reasons.append({"code": "missing_comicinfo", "label": "缺 ComicInfo", "detail": "源 CBZ 内没有 ComicInfo.xml。", "severity": "warning"})
         cover_path = row.get("cover_path")
         if not cover_path or not Path(str(cover_path)).exists():
@@ -859,38 +890,57 @@ class GovernanceService:
             return row.get(saved_key)
         return row.get(field)
 
-    def _archive_has_comicinfo(self, source_path: str | None) -> bool:
+    def _archive_has_comicinfo(self, source_path: str | dict[str, Any] | None) -> bool:
+        if isinstance(source_path, dict):
+            if source_path.get("library_item_id"):
+                info = self.libraries.archive_info(source_path)
+                return bool(info.get("comicinfo_present", info["comicinfo"]))
+            source_path = source_path.get("path")
         if not source_path or not Path(source_path).exists() or not zipfile.is_zipfile(source_path):
             return False
         try:
-            with zipfile.ZipFile(source_path) as archive:
+            with open_archive(Path(source_path)) as archive:
                 return any(
                     Path(info.filename).name.lower() == "comicinfo.xml"
                     for info in archive.infolist()
                     if not info.is_dir()
                 )
-        except (OSError, zipfile.BadZipFile):
+        except (OSError, ValueError, zipfile.BadZipFile):
             return False
 
-    def _archive_metadata(self, source_path: str | None) -> dict[str, dict[str, str]]:
+    def _archive_metadata(self, source_path: str | dict[str, Any] | None) -> dict[str, dict[str, str]]:
         result: dict[str, dict[str, str]] = {"comicinfo": {}, "json": {}}
+        if isinstance(source_path, dict):
+            if source_path.get("library_item_id"):
+                info = self.libraries.archive_info(source_path)
+                return {"comicinfo": info["comicinfo"], "json": self._parse_json_metadata(json.dumps(info.get("json", {})).encode())}
+            source_path = source_path.get("path")
         if not source_path or not Path(source_path).exists() or not zipfile.is_zipfile(source_path):
             return result
         try:
-            with zipfile.ZipFile(source_path) as archive:
+            with open_archive(Path(source_path)) as archive:
+                metadata_reads = {"comicinfo.xml": 0, "json": 0}
                 for info in archive.infolist():
                     if info.is_dir():
                         continue
                     name = Path(info.filename).name.lower()
+                    if info.file_size > comicinfo.MAX_XML_BYTES or info.flag_bits & 1:
+                        continue
                     if name == "comicinfo.xml":
+                        if metadata_reads[name] >= 3:
+                            continue
+                        metadata_reads[name] += 1
                         result["comicinfo"] = self._parse_comicinfo(archive.read(info.filename))
-                    elif name.endswith(".json") and not result["json"]:
+                    elif name.endswith(".json") and not result["json"] and metadata_reads["json"] < 3:
+                        metadata_reads["json"] += 1
                         result["json"] = self._parse_json_metadata(archive.read(info.filename))
-        except (OSError, RuntimeError, zipfile.BadZipFile):
+        except (OSError, ValueError, RuntimeError, zipfile.BadZipFile):
             return {"comicinfo": {}, "json": {}}
         return result
 
     def _parse_comicinfo(self, body: bytes) -> dict[str, str]:
+        if len(body) > comicinfo.MAX_XML_BYTES or b"<!DOCTYPE" in body.upper() or b"<!ENTITY" in body.upper():
+            return {}
         try:
             root = ElementTree.fromstring(body)
         except ElementTree.ParseError:
@@ -1118,6 +1168,7 @@ class GovernanceService:
         saved = saved or {}
         return {
             **work,
+            "_source_file": source_file,
             "source_path": source_file["path"] if source_file else None,
             "title_metadata": saved.get("title", {}).get("value"),
             "language_metadata": saved.get("language", {}).get("value"),
@@ -1160,7 +1211,9 @@ class GovernanceService:
             "size_bytes": int(row.get("size_bytes") or 0),
             "sha256": row.get("sha256"),
             "created_at": row.get("created_at"),
-            "exists": Path(str(row["path"])).exists(),
+            "exists": self.libraries.file_available(row),
+            "read_only": bool(row.get("read_only")),
+            "library_name": row.get("library_name"),
         }
 
     def _recommended_actions(self, reasons: list[dict[str, Any]]) -> list[dict[str, str]]:

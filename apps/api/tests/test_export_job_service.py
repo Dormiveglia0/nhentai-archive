@@ -169,7 +169,7 @@ def test_failure_during_packaging_deletes_zip_and_fails(tmp_path, monkeypatch):
     def _boom(*_a, **_k):
         raise RuntimeError("disk on fire")
 
-    monkeypatch.setattr(exports, "build_cbz", _boom)
+    monkeypatch.setattr(exports, "write_cbz", _boom)
     export_jobs.run_bulk_export(job["id"])
 
     done = jobs.get(job["id"])

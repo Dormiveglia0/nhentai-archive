@@ -76,6 +76,27 @@ def test_reseal_cbz_preserves_duplicate_member_bytes(tmp_path):
         assert [resealed.read(info) for info in entries] == [b"first", b"second"]
 
 
+def test_streamed_reseal_never_reads_a_whole_member(tmp_path, monkeypatch):
+    source = tmp_path / "source.cbz"
+    destination = tmp_path / "export.cbz"
+    _make_cbz(source)
+    read = zipfile.ZipExtFile.read
+    calls = []
+
+    def bounded_read(handle, size=-1):
+        assert 0 <= size <= 1024 * 1024
+        calls.append(size)
+        return read(handle, size)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(zipfile.ZipExtFile, "read", bounded_read)
+        comicinfo.reseal_cbz_to(source, destination, "<ComicInfo><Title>New</Title></ComicInfo>")
+    assert calls
+    with zipfile.ZipFile(destination) as handle:
+        assert handle.read("001.png") == _png()
+        assert "New" in handle.read("ComicInfo.xml").decode()
+
+
 def _aggregate(remote_gallery_id):
     return {
         "work": {"page_count": 3, "remote_gallery_id": remote_gallery_id},

@@ -313,7 +313,7 @@ class LibraryIndexService:
                 """INSERT INTO library_items(library_id, relative_path, size_bytes, mtime_ns, device, inode, stable_since, last_seen_run_id)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(library_id, relative_path) DO UPDATE SET
                 size_bytes = excluded.size_bytes, mtime_ns = excluded.mtime_ns, device = excluded.device, inode = excluded.inode,
-                stable_since = excluded.stable_since, last_seen_run_id = excluded.last_seen_run_id,
+                stable_since = excluded.stable_since, last_seen_run_id = excluded.last_seen_run_id, status = 'pending',
                 missing_since = NULL, updated_at = CURRENT_TIMESTAMP RETURNING id""",
                 (library["id"], relative, info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino, stable_since, run_id),
             ).fetchone()
@@ -323,7 +323,6 @@ class LibraryIndexService:
                             ("暂不支持该归档格式", item_id))
             return "unsupported"
         if now - stable_since < library["config"]["stable_seconds"]:
-            self.db.execute("UPDATE library_items SET status = 'pending' WHERE id = ?", (item_id,))
             return "pending"
         checkpoint()
         expected = (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino)
@@ -383,6 +382,10 @@ class LibraryIndexService:
                 temporary.write(data["cover"])
                 cover_tmp = Path(temporary.name)
             with self.db.connect() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                current = conn.execute("SELECT size_bytes, mtime_ns, device, inode FROM library_items WHERE id = ?", (item_id,)).fetchone()
+                if not current or tuple(current) != (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino):
+                    raise ValueError("源文件版本在索引写入前变化，将稍后重试")
                 if not work_id:
                     work_id = int(conn.execute(
                         """INSERT INTO works(title, title_japanese, pretty_title, source, remote, remote_gallery_id, language, page_count)
@@ -393,9 +396,9 @@ class LibraryIndexService:
                 destination = self.settings.covers_dir / f"{work_id}-indexed.jpg"
                 cover_tmp.replace(destination)
                 conn.execute(
-                    """UPDATE library_items SET work_id = ?, status = 'ready', fingerprint = ?, manifest = ?, metadata_json = ?,
+                    """UPDATE library_items SET work_id = ?, status = 'ready', fingerprint = ?, manifest = ?, metadata_json = ?, archive_info_json = ?,
                     retry_count = 0, retry_at = NULL, last_error = ?, indexed_at = CURRENT_TIMESTAMP WHERE id = ?""",
-                    (work_id, data["fingerprint"], data["manifest"], json.dumps(metadata, ensure_ascii=False),
+                    (work_id, data["fingerprint"], data["manifest"], json.dumps(metadata, ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False),
                      "; ".join(data.get("warnings", []))[:500] or None, item_id),
                 )
                 if legacy and legacy.get("library_item_id") is None:

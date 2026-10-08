@@ -28,6 +28,11 @@ class FakeExports:
         name = (options or {}).get("output_name") or f"work-{work_id}.cbz"
         return name, b"FAKECBZBYTES"
 
+    def write_cbz(self, work_id, destination, options=None):
+        name, data = self.build_cbz(work_id, options)
+        destination.write_bytes(data)
+        return name
+
     def build_bundle(self, items, options=None):
         if not items:
             raise ValueError("没有可导出的作品（所选项均存在阻塞）。")
@@ -36,6 +41,11 @@ class FakeExports:
             for item in items:
                 bundle.writestr(f"work-{item['work_id']}.cbz", b"FAKE")
         return f"导出合集 ({len(items)}).zip", buffer.getvalue()
+
+    def write_bundle(self, items, destination, options=None):
+        name, data = self.build_bundle(items, options)
+        destination.write_bytes(data)
+        return name
 
 
 def test_export_routes_return_service_payloads(monkeypatch):
@@ -61,6 +71,7 @@ def test_export_download_streams_cbz_as_attachment(monkeypatch):
     assert response.headers["content-type"] == "application/vnd.comicbook+zip"
     assert "attachment" in response.headers["content-disposition"]
     assert "work-7.cbz" in response.headers["content-disposition"]
+    assert not list(main.services.settings.export_jobs_dir.glob("download-*.zip"))
 
 
 def test_export_download_bundle_streams_zip(monkeypatch):
@@ -84,4 +95,5 @@ def test_export_routes_map_service_errors(monkeypatch):
     response = client.get("/api/works/422/export/download")
     assert response.status_code == 422
     assert response.json()["detail"] == "blocked export"
+    assert not list(main.services.settings.export_jobs_dir.glob("download-*.zip"))
     assert client.post("/api/exports/download", json={"items": []}).status_code == 422

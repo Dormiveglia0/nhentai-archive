@@ -201,10 +201,10 @@ class MediaLibraryService:
             l.kind = 'local' DESC, f.id DESC LIMIT 1""", (work_id, item_id) if item_id is not None else (work_id,),
         )
 
-    def files(self, work_id: int | None = None) -> list[dict[str, Any]]:
+    def files(self, work_id: int | None = None, metadata: bool = False) -> list[dict[str, Any]]:
         """File inventory without loading page manifests or touching source mounts."""
         return self.db.fetchall(
-            """SELECT f.*, i.status AS source_status, i.mtime_ns, i.fingerprint,
+            "SELECT f.*," + (" i.metadata_json, i.archive_info_json," if metadata else "") + """ i.status AS source_status, i.mtime_ns, i.device, i.inode, i.fingerprint,
             l.id AS library_id, l.name AS library_name, l.kind AS library_kind,
             l.root_path, COALESCE(l.read_only,
               (SELECT read_only FROM media_libraries WHERE kind = 'managed'), 1) AS read_only,
@@ -225,6 +225,17 @@ class MediaLibraryService:
             return Path(row["path"]).is_file()
         except OSError:
             return False
+
+    @staticmethod
+    def archive_info(row: dict[str, Any]) -> dict[str, Any]:
+        values = []
+        for key in ("metadata_json", "archive_info_json"):
+            try:
+                value = json.loads(row.get(key) or "{}")
+            except (ValueError, TypeError):
+                value = {}
+            values.append(value if isinstance(value, dict) else {})
+        return {**values[1], "comicinfo": values[0]}
 
     def root_boundaries(self, library_id: int) -> list[dict[str, Any]]:
         # Stored resolved roots avoid probing other mounts during validation.
@@ -261,6 +272,12 @@ class MediaLibraryService:
             if self.settings.library_dir.resolve() not in path.parents:
                 raise PermissionError("源文件不在受管 library 目录内")
         return path
+
+    def managed_write_root(self) -> Path:
+        row = self.db.fetchone("SELECT id, read_only FROM media_libraries WHERE kind = 'managed'")
+        if row["read_only"]:
+            raise PermissionError("本地导入库只读，不能导入作品")
+        return self.validate_root(self.settings.library_dir, self.root_boundaries(row["id"]))
 
     @staticmethod
     def source_path(root: Path, relative: str, follow_symlinks: bool = False) -> Path:

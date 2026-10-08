@@ -155,6 +155,8 @@ class ArchiveCacheService:
                 if row["job_id"]:
                     self.jobs.fail(row["job_id"], "本地缓存已丢失，可重试阅读准备")
                 row = self.db.fetchone("SELECT * FROM archive_cache WHERE id = ?", (row["id"],))
+            if source.get("source_status") != "ready":
+                raise FileNotFoundError("源文件索引尚未就绪，请重新扫描")
             if row and (row["job_id"] or row["status"] in {"queued", "downloading", "blocked"}):
                 return self._public(row)
             if row:

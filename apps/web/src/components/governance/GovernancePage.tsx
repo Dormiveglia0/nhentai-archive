@@ -138,6 +138,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                     changedCount={gov.changedFields.length}
                     saving={gov.saving}
                     writeBack={gov.writeBack}
+                    writeBackBlocker={gov.writeBackBlocker}
                     onWriteBackChange={gov.setWriteBack}
                     onSave={gov.saveMetadata}
                     onReload={gov.reload}

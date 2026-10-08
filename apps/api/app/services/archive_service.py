@@ -34,6 +34,13 @@ class ArchiveService:
         self.cache = ArchiveCacheService(db, settings, self.libraries)
 
     def ingest_cbz(
+        self, cbz_path: Path, source: str, title: str, remote_gallery_id: int | None, metadata: dict[str, Any],
+    ) -> int:
+        # ponytail: lifecycle lock serializes local publication; per-work locks if throughput requires it.
+        with self.cache._lock:
+            return self._ingest_cbz(cbz_path, source, title, remote_gallery_id, metadata)
+
+    def _ingest_cbz(
         self,
         cbz_path: Path,
         source: str,
@@ -41,6 +48,7 @@ class ArchiveService:
         remote_gallery_id: int | None,
         metadata: dict[str, Any],
     ) -> int:
+        self.libraries.managed_write_root()
         cbz_path = Path(cbz_path)
         if not zipfile.is_zipfile(cbz_path):
             raise ValueError(f"{cbz_path} is not a valid CBZ/ZIP archive")
@@ -279,6 +287,7 @@ class ArchiveService:
                 tmp_path = Path(tmp.name)
             try:
                 shutil.copy2(cbz_path, tmp_path)
+                self.libraries.managed_write_root()
                 tmp_path.replace(destination)
             finally:
                 tmp_path.unlink(missing_ok=True)

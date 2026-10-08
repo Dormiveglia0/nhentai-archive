@@ -258,6 +258,7 @@ CREATE TABLE IF NOT EXISTS library_items (
   fingerprint TEXT,
   manifest BLOB,
   metadata_json TEXT NOT NULL DEFAULT '{}',
+  archive_info_json TEXT,
   last_seen_run_id INTEGER REFERENCES library_scan_runs(id) ON DELETE SET NULL,
   missing_since REAL,
   indexed_at TEXT,
@@ -398,6 +399,10 @@ class Database:
                                "cache_lease", "TEXT")
         _add_column_if_missing(conn, "media_libraries", _table_columns(conn, "media_libraries"),
                                "resolved_root_path", "TEXT")
+        item_columns = _table_columns(conn, "library_items")
+        if "archive_info_json" not in item_columns:
+            _add_column_if_missing(conn, "library_items", item_columns, "archive_info_json", "TEXT")
+            conn.execute("UPDATE library_items SET status = 'pending', stable_since = 0 WHERE status = 'ready'")
 
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:

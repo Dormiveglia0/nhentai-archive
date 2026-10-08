@@ -282,6 +282,11 @@ class FileMaintenanceService:
 
     # --- preview_delete cascade analysis (read-only) ----------------------
     def _work_files(self, work_id: int) -> list[tuple[Path, dict[str, Any] | None]]:
+        if self.db.fetchone("""SELECT 1 FROM jobs WHERE type = 'remote_import'
+            AND status IN ('queued', 'running', 'paused', 'cancelling')
+            AND CASE WHEN json_valid(target_json) THEN json_extract(target_json, '$.gallery_id') END =
+            (SELECT remote_gallery_id FROM works WHERE id = ?) LIMIT 1""", (work_id,)):
+            raise PermissionError("作品正在导入，请结束任务后再删除")
         if self.db.fetchone("""SELECT 1 FROM archive_cache c WHERE c.work_id = ? AND
             (c.status IN ('queued', 'downloading', 'blocked') OR EXISTS
             (SELECT 1 FROM archive_cache_leases l WHERE l.cache_id = c.id AND l.expires_at > ?)) LIMIT 1""", (work_id, time.time())):

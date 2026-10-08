@@ -49,6 +49,26 @@ def cached_library(tmp_path):
     return settings, db, libraries, index, root, library, archive, work_id
 
 
+def test_changed_source_pending_scan_cannot_cache_old_manifest_but_existing_lease_still_reads(tmp_path):
+    _, db, _, _, root, _, archive, work_id = cached_library(tmp_path)
+    cache = archive.cache
+    prepared = cache.prepare(work_id)
+    assert wait_for_cache(cache, prepared)["status"] == "completed"
+    ready = cache.prepare(work_id)
+    old_page = archive.read_page(work_id, 1, ready["lease"])[0]
+    source = root / "one.cbz"
+    with source.open("ab") as handle:
+        handle.write(b"new source version")
+    info = source.stat()
+    db.execute("UPDATE library_items SET status = 'pending', size_bytes = ?, mtime_ns = ? WHERE work_id = ?", (info.st_size, info.st_mtime_ns, work_id))
+    with pytest.raises(FileNotFoundError, match="索引尚未就绪"):
+        cache.prepare(work_id)
+    assert db.fetchone("SELECT COUNT(*) AS n FROM archive_cache")["n"] == 1
+    assert archive.read_page(work_id, 1, ready["lease"])[0] == old_page
+    cache.release(work_id, ready["lease"])
+    cache.close()
+
+
 def test_concurrent_prepare_copies_once_and_reads_offline(tmp_path, monkeypatch):
     settings, db, libraries, _, root, library, archive, work_id = cached_library(tmp_path)
     source = root / "one.cbz"

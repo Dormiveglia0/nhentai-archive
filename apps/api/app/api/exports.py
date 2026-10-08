@@ -1,6 +1,8 @@
 from urllib.parse import quote
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
@@ -38,13 +40,24 @@ def preview_with_options(work_id: int, payload: ExportItemRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-def _download_response(filename: str, data: bytes, media_type: str) -> Response:
+def _download_response(build, media_type: str) -> FileResponse:
+    directory = services.settings.export_jobs_dir
+    directory.mkdir(parents=True, exist_ok=True)
+    with NamedTemporaryFile(dir=directory, prefix="download-", suffix=".zip", delete=False) as temporary:
+        path = Path(temporary.name)
+    try:
+        filename = build(path)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
     ascii_name = filename.encode("ascii", "ignore").decode("ascii") or "download"
     disposition = f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
-    return Response(
-        content=data,
+    return FileResponse(
+        path,
+        filename=filename,
         media_type=media_type,
         headers={"Content-Disposition": disposition},
+        background=BackgroundTask(path.unlink, missing_ok=True),
     )
 
 
@@ -63,10 +76,9 @@ def download(
         "compress": compress,
     }
     try:
-        filename, data = services.exports.build_cbz(work_id, options)
+        return _download_response(lambda path: services.exports.write_cbz(work_id, path, options), "application/vnd.comicbook+zip")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _download_response(filename, data, "application/vnd.comicbook+zip")
 
 
 @router.post("/exports/download")
@@ -78,10 +90,9 @@ def download_bundle(payload: ExportBatchRequest):
         "compress": payload.compress,
     }
     try:
-        filename, data = services.exports.build_bundle(items, options)
+        return _download_response(lambda path: services.exports.write_bundle(items, path, options), "application/zip")
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _download_response(filename, data, "application/zip")
 
 
 @router.post("/exports/bulk-jobs")

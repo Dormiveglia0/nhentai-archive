@@ -4,8 +4,8 @@ import io
 import re
 import zipfile
 from urllib.parse import urlsplit
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PurePosixPath
+from typing import Any, BinaryIO, Callable
 from xml.etree import ElementTree
 
 
@@ -120,20 +120,40 @@ def gallery_id_from_cbz(path: Path) -> int | None:
 def reseal_cbz(
     source_path: Path, comic_info_xml: str | None, keep_json: bool = True, compress: bool = True
 ) -> bytes:
-    compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
     buffer = io.BytesIO()
-    with zipfile.ZipFile(source_path) as source, zipfile.ZipFile(
-        buffer, "w", compression=compression
+    reseal_cbz_to(source_path, buffer, comic_info_xml, keep_json, compress)
+    return buffer.getvalue()
+
+
+def reseal_cbz_to(
+    source_path: Path, destination: Path | BinaryIO, comic_info_xml: str | None,
+    keep_json: bool = True, compress: bool = True, checkpoint: Callable[[], None] | None = None,
+) -> None:
+    from app.services.archive_manifest import MAX_COVER_BYTES, open_archive
+    compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
+    with open_archive(source_path) as source, zipfile.ZipFile(
+        destination, "w", compression=compression
     ) as target:
         for info in source.infolist():
             if info.is_dir():
                 continue
+            member = PurePosixPath(info.filename.replace("\\", "/"))
+            if member.is_absolute() or ".." in member.parts or "\x00" in info.filename:
+                raise ValueError("归档包含不安全的成员路径")
             name = Path(info.filename).name.lower()
             if name == "comicinfo.xml":
                 continue
             if not keep_json and name.endswith(".json"):
                 continue
-            target.writestr(info.filename, source.read(info))
+            if info.file_size > MAX_COVER_BYTES or info.flag_bits & 1:
+                raise ValueError("归档成员超过64MB或已加密，无法打包")
+            with source.open(info) as reader, target.open(info.filename, "w", force_zip64=True) as writer:
+                while True:
+                    if checkpoint:
+                        checkpoint()
+                    chunk = reader.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    writer.write(chunk)
         if comic_info_xml is not None:
             target.writestr("ComicInfo.xml", comic_info_xml)
-    return buffer.getvalue()

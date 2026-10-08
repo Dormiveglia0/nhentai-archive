@@ -3,33 +3,36 @@ from __future__ import annotations
 import io
 import json
 import re
+import shutil
+import time
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from tempfile import TemporaryFile
+from typing import Any, BinaryIO, Callable
 
 from app.config import Settings
 from app.database import Database
 from app.services import comicinfo
 from app.services.dictionary_service import DEFAULT_IGNORED_REMOTE_TYPE_SQL
 from app.services.governance_service import METADATA_FIELDS, GovernanceService
+from app.services.archive_cache_service import ArchiveCacheService
+from app.services.archive_manifest import open_archive
 
 _ILLEGAL_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 _MAX_NAME_LENGTH = 120
 
 
 class ExportService:
-    """Local-only CBZ export: preview + on-the-fly packaging for browser download.
+    """Persisted previews and streamed, temporary downloads; originals stay intact."""
 
-    Source CBZs live at the configured library path; export never writes a second
-    copy to the server. ``build_cbz`` / ``build_bundle`` return packaged bytes that
-    the API streams to the user as a download. Original archives are never modified.
-    """
-
-    def __init__(self, db: Database, settings: Settings):
+    def __init__(self, db: Database, settings: Settings, cache: ArchiveCacheService | None = None):
         self.db = db
         self.settings = settings
         self.settings.ensure_directories()
-        self.governance = GovernanceService(db)
+        self.governance = GovernanceService(db, settings=settings)
+        self.libraries = self.governance.libraries
+        self.cache = cache or ArchiveCacheService(db, settings, self.libraries)
 
     def summary(self) -> dict[str, Any]:
         return self._queue_summary(self._queue_states())
@@ -50,8 +53,7 @@ class ExportService:
         rows = self.db.fetchall(
             f"""
             SELECT
-              w.*, f.path AS source_path, f.size_bytes AS source_size_bytes,
-              f.sha256 AS source_sha256,
+              w.*,
               rg.payload_json AS remote_payload_json,
               metadata.saved_title, metadata.saved_artist, metadata.saved_language,
               COALESCE(tags.has_artist, 0) AS has_artist,
@@ -60,13 +62,6 @@ class ExportService:
               COALESCE(tags.has_dictionary_conflict, 0) AS has_dictionary_conflict
             FROM works w
             LEFT JOIN remote_galleries rg ON rg.gallery_id = w.remote_gallery_id
-            LEFT JOIN work_files f ON f.id = (
-              SELECT latest.id
-              FROM work_files latest
-              WHERE latest.work_id = w.id AND latest.kind = 'source_cbz'
-              ORDER BY latest.created_at DESC, latest.id DESC
-              LIMIT 1
-            )
             LEFT JOIN (
               SELECT
                 work_id,
@@ -100,7 +95,11 @@ class ExportService:
             ORDER BY w.updated_at DESC, w.id DESC
             """
         )
-        return [self._queue_state(row) for row in rows]
+        sources = {}
+        for source in self.libraries.files(metadata=True):
+            if source["kind"] == "source_cbz":
+                sources.setdefault(source["work_id"], source)
+        return [self._queue_state({**row, "_source_file": sources.get(row["id"])}) for row in rows]
 
     def _queue_state(self, row: dict[str, Any]) -> dict[str, Any]:
         remote_payload = self._cached_payload(row.get("remote_payload_json"))
@@ -112,7 +111,7 @@ class ExportService:
             or self._has_text(row.get("language")),
         }
         if not all(present.values()):
-            sources = self.governance._archive_metadata(row.get("source_path"))
+            sources = self.governance._archive_metadata(row.get("_source_file"))
             for field, has_value in present.items():
                 if not has_value:
                     value, _source = self.governance._source_value(
@@ -120,12 +119,7 @@ class ExportService:
                     )
                     present[field] = self._has_text(value)
 
-        source_file = {
-            "path": row.get("source_path"),
-            "size_bytes": int(row.get("source_size_bytes") or 0),
-            "sha256": row.get("source_sha256"),
-            "exists": self._valid_source(row.get("source_path")),
-        }
+        source_file = self._source_summary(row.get("_source_file"))
         warnings = []
         for field, key, label in (
             ("title", "Title", "标题"),
@@ -173,7 +167,8 @@ class ExportService:
         source_file = self._source_file(work_id)
         output_name = self._requested_output_name(work, opts)
         comic_info = comicinfo.build_fields(aggregate)
-        json_members = self._kept_members(source_file["path"]) if source_file["exists"] else []
+        source = next((file for file in self.libraries.files(work_id, metadata=True) if file["kind"] == "source_cbz"), None)
+        json_members = self._kept_members(source) if source_file["exists"] else []
         will_keep = json_members if opts["keep_json"] else []
         blockers = self._blockers(source_file)
         warnings = self._warnings(comic_info, aggregate) if opts["write_comicinfo"] else []
@@ -196,40 +191,97 @@ class ExportService:
         }
 
     def build_cbz(self, work_id: int, options: dict[str, Any] | None = None) -> tuple[str, bytes]:
-        """Package a single work into CBZ bytes honoring the export options."""
+        buffer = io.BytesIO()
+        name = self.write_cbz(work_id, buffer, options)
+        return name, buffer.getvalue()
+
+    def write_cbz(self, work_id: int, destination: Path | BinaryIO, options: dict[str, Any] | None = None,
+                  checkpoint: Callable[[], None] | None = None) -> str:
         opts = self._resolve_options(options)
         preview = self.preview(work_id, options)
         if preview["blockers"]:
             raise ValueError("; ".join(blocker["message"] for blocker in preview["blockers"]))
 
-        source_path = Path(preview["source_file"]["path"])
         comic_info_xml = comicinfo.to_xml(preview["comic_info"]) if opts["write_comicinfo"] else None
-        data = comicinfo.reseal_cbz(source_path, comic_info_xml, opts["keep_json"], opts["compress"])
-        return preview["output_name"], data
+        with self._export_source(work_id, checkpoint) as source_path:
+            comicinfo.reseal_cbz_to(source_path, destination, comic_info_xml, opts["keep_json"], opts["compress"], checkpoint)
+        return preview["output_name"]
+
+    @contextmanager
+    def _export_source(self, work_id: int, checkpoint):
+        origin = self.libraries.source_file(work_id) or self.libraries.source_file(work_id, available=False)
+        if not origin:
+            raise ValueError("源 CBZ 不可用")
+        if self.cache.required(origin):
+            prepared = self.cache.prepare(work_id)
+            while prepared["status"] not in {"ready", "failed", "cancelled", "paused", "direct"}:
+                if checkpoint:
+                    checkpoint()
+                time.sleep(.1)
+                prepared = self.cache.prepare(work_id)
+            if prepared["status"] != "ready":
+                raise ValueError(prepared.get("error") or "请完成或重试作品缓存准备")
+            try:
+                with self.cache.source(work_id, prepared["lease"]) as (path, _pages, _cache_id):
+                    yield path
+            finally:
+                self.cache.release(work_id, prepared["lease"])
+        else:
+            # ponytail: share the lifecycle lock during local export; per-work locks if throughput requires it.
+            with self.cache._lock:
+                try:
+                    path = self.libraries.resolve_file(origin)
+                    before = path.stat()
+                    yield path
+                    after = path.stat()
+                    if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
+                        raise ValueError("源文件在导出时发生变化，请重新扫描后重试")
+                except (OSError, zipfile.BadZipFile) as exc:
+                    raise ValueError(str(exc)) from exc
 
     def build_bundle(
         self, items: list[dict[str, Any]], options: dict[str, Any] | None = None
     ) -> tuple[str, bytes]:
-        """Package multiple works into one .zip of CBZs for a single download."""
-        shared = self._resolve_options(options)
         buffer = io.BytesIO()
+        name = self.write_bundle(items, buffer, options)
+        return name, buffer.getvalue()
+
+    def write_bundle(self, items: list[dict[str, Any]], destination: Path | BinaryIO,
+                     options: dict[str, Any] | None = None) -> str:
+        shared = self._resolve_options(options)
         used_names: set[str] = set()
         packaged = 0
-        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED) as bundle:
+        with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_STORED) as bundle:
             for item in items:
                 work_id = int(item.get("work_id") or 0)
                 if not work_id:
                     continue
                 item_opts = {**shared, "output_name": item.get("output_name")}
                 try:
-                    name, data = self.build_cbz(work_id, item_opts)
+                    self.add_to_bundle(bundle, work_id, item_opts, used_names)
                 except ValueError:
                     continue
-                bundle.writestr(self._unique_member_name(name, used_names), data)
                 packaged += 1
         if packaged == 0:
             raise ValueError("没有可导出的作品（所选项均存在阻塞）。")
-        return f"导出合集 ({packaged}).zip", buffer.getvalue()
+        return f"导出合集 ({packaged}).zip"
+
+    def add_to_bundle(self, bundle: zipfile.ZipFile, work_id: int, options: dict[str, Any],
+                      used_names: set[str], checkpoint: Callable[[], None] | None = None) -> None:
+        # One unnamed temporary CBZ prevents a failed work leaving a broken bundle member.
+        with TemporaryFile(dir=self.settings.tmp_dir) as temporary:
+            name = self.write_cbz(work_id, temporary, options, checkpoint)
+            temporary.seek(0)
+            with bundle.open(self._unique_member_name(name, used_names), "w", force_zip64=True) as member:
+                if checkpoint is None:
+                    shutil.copyfileobj(temporary, member, 1024 * 1024)
+                else:
+                    while True:
+                        checkpoint()
+                        chunk = temporary.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        member.write(chunk)
 
     def _unique_member_name(self, name: str, used: set[str]) -> str:
         candidate = name
@@ -245,12 +297,12 @@ class ExportService:
         return candidate
 
     def _source_file(self, work_id: int) -> dict[str, Any]:
-        row = self.db.fetchone(
-            "SELECT * FROM work_files WHERE work_id = ? AND kind = 'source_cbz' ORDER BY created_at DESC, id DESC LIMIT 1",
-            (work_id,),
-        )
+        row = next((file for file in self.libraries.files(work_id) if file["kind"] == "source_cbz"), None)
+        return self._source_summary(row)
+
+    def _source_summary(self, row: dict[str, Any] | None) -> dict[str, Any]:
         path = row["path"] if row else None
-        exists = self._valid_source(path)
+        exists = self.libraries.file_available(row) if row and row["library_item_id"] else self._valid_source(path)
         return {
             "path": path,
             "size_bytes": int(row.get("size_bytes") or 0) if row else 0,
@@ -279,12 +331,16 @@ class ExportService:
             warnings.append({"code": "dictionary_conflict", "message": "存在词典冲突标签，导出会使用当前显示名。"})
         return warnings
 
-    def _kept_members(self, source_path: str | None) -> list[str]:
+    def _kept_members(self, source_path: str | dict[str, Any] | None) -> list[str]:
+        if isinstance(source_path, dict):
+            if source_path["library_item_id"]:
+                return sorted(self.libraries.archive_info(source_path).get("json_members", []))
+            source_path = source_path.get("path")
         if not source_path:
             return []
         kept = []
         try:
-            with zipfile.ZipFile(source_path) as archive:
+            with open_archive(Path(source_path)) as archive:
                 for info in archive.infolist():
                     if info.is_dir():
                         continue
@@ -293,7 +349,7 @@ class ExportService:
                         continue
                     if name.lower().endswith(".json"):
                         kept.append(info.filename)
-        except (OSError, zipfile.BadZipFile):
+        except (OSError, ValueError, zipfile.BadZipFile):
             return []
         return sorted(kept)
 

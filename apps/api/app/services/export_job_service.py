@@ -171,12 +171,10 @@ class ExportJobService:
                     self.jobs.checkpoint(job_id)
                     try:
                         item_options = {**options, "output_name": item.get("output_name")}
-                        name, data = self.exports.build_cbz(work_id, item_options)
+                        self.exports.add_to_bundle(bundle, work_id, item_options, used_names, lambda: self.jobs.checkpoint(job_id))
                     except ValueError as exc:
                         skipped.append({"work_id": work_id, "reason": str(exc)})
                         continue
-                    member = self.exports._unique_member_name(name, used_names)
-                    bundle.writestr(member, data)
                     packaged += 1
                     self.jobs.update_progress(job_id, "running", "packaging", packaged, total)
 
@@ -230,6 +228,9 @@ class ExportJobService:
                 if job["type"] == "bulk_export":
                     by_job[job["id"]] = job
             now = _now()
+            for entry in directory.glob("download-*.zip"):
+                if entry.stat().st_mtime < now.timestamp() - _TTL.total_seconds():
+                    entry.unlink(missing_ok=True)
             for entry in directory.glob("job-*.zip"):
                 try:
                     job_id = int(entry.stem.split("job-", 1)[1])

@@ -7,6 +7,7 @@ export function GovernanceActionBar({
   changedCount,
   saving,
   writeBack,
+  writeBackBlocker,
   onWriteBackChange,
   onSave,
   onReload,
@@ -15,6 +16,7 @@ export function GovernanceActionBar({
   changedCount: number;
   saving: boolean;
   writeBack: boolean;
+  writeBackBlocker: string | null;
   onWriteBackChange: (value: boolean) => void;
   onSave: () => Promise<void>;
   onReload: () => Promise<void>;
@@ -26,10 +28,11 @@ export function GovernanceActionBar({
         <input
           type="checkbox"
           checked={writeBack}
+          disabled={saving || Boolean(writeBackBlocker)}
           onChange={(event) => onWriteBackChange(event.target.checked)}
         />
         <i aria-hidden="true"><span /></i>
-        <span><strong>同时回写 ComicInfo</strong><small>就地改写源 CBZ，不可撤销</small></span>
+        <span><strong>同时回写 ComicInfo</strong><small>{writeBackBlocker ?? "就地改写源 CBZ，不可撤销"}</small></span>
       </label>
       </section>
     <div className="folio-governance-actions">

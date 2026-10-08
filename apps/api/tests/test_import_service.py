@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 
 from app.config import Settings
 from app.database import Database
@@ -78,3 +79,22 @@ def test_failed_download_removes_partial_temp_file(tmp_path):
     assert jobs.get(job["id"])["status"] == "failed"
     assert jobs.get(job["id"])["progress"] == {"current": 5, "total": 10, "percent": 53}
     assert not (settings.tmp_dir / "nhentai-42.cbz").exists()
+
+
+def test_readonly_import_is_rejected_before_network_and_active_import_protects_existing_work(tmp_path):
+    from app.services.file_service import FileMaintenanceService
+    from test_library_index import create_archive
+    settings, db, jobs, imports = _service(tmp_path)
+    source = tmp_path / "source.cbz"
+    create_archive(source)
+    work_id = imports.archive.ingest_cbz(source, "remote", "Book", 42, {})
+    job = jobs.create("remote_import", {"gallery_id": 42})
+    preview = FileMaintenanceService(db, settings, imports.archive.cache).preview_delete([{"kind": "work", "work_id": work_id}])
+    assert preview["works_to_remove"] == 0 and "正在导入" in preview["items"][0]["warnings"][0]
+    db.execute("UPDATE media_libraries SET read_only = 1 WHERE kind = 'managed'")
+    imports.run_remote_import(job["id"], 42)
+    assert jobs.get(job["id"])["status"] == "failed"
+    assert "只读" in jobs.get(job["id"])["error"]
+    with pytest.raises(PermissionError, match="只读"):
+        imports.archive.ingest_cbz(tmp_path / "not-opened.cbz", "local", "Book", None, {})
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1

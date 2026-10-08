@@ -125,6 +125,7 @@ class ImportService:
         tmp_path: Path | None = None
         try:
             self.jobs.checkpoint(job_id)
+            self.archive.libraries.managed_write_root()
             self.jobs.mark_running(job_id, "fetching_gallery", 1, 5, 5)
             gallery = self.client.gallery(gallery_id, include="related")
             self.discover.cache_gallery(gallery)

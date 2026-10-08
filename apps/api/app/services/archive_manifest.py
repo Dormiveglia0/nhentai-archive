@@ -153,6 +153,8 @@ def inspect_archive(path: Path) -> dict[str, Any]:
     with open_archive(path) as archive:
         entries = archive.infolist()
         images, metadata, warnings = [], {}, []
+        archive_info = {"comicinfo_present": False, "json": {}, "json_members": []}
+        metadata_reads = {"xml": 0, "json": 0}
         for position, info in enumerate(entries):
             if info.is_dir():
                 continue
@@ -162,9 +164,14 @@ def inspect_archive(path: Path) -> dict[str, Any]:
             if info.flag_bits & 1:
                 raise ValueError("暂不支持加密归档")
             if name.name.lower() == "comicinfo.xml":
+                archive_info["comicinfo_present"] = True
+                # ponytail: inspect at most three XML and three JSON candidates; manual scraping handles other metadata.
+                if metadata_reads["xml"] >= 3:
+                    continue
                 if info.file_size > MAX_XML_BYTES:
                     warnings.append("ComicInfo超过1MB，已跳过元数据")
                     continue
+                metadata_reads["xml"] += 1
                 xml = archive.read(info).decode("utf-8-sig", "replace")
                 if "<!DOCTYPE" in xml.upper() or "<!ENTITY" in xml.upper():
                     warnings.append("ComicInfo包含不支持的XML声明，已跳过元数据")
@@ -175,6 +182,16 @@ def inspect_archive(path: Path) -> dict[str, Any]:
                     metadata["gallery_id"] = gallery_id_from_xml(xml)
                 except ElementTree.ParseError:
                     warnings.append("ComicInfo格式错误，已使用文件名")
+            elif name.suffix.lower() == ".json":
+                archive_info["json_members"].append(info.filename)
+                if not archive_info["json"] and info.file_size <= MAX_XML_BYTES and metadata_reads["json"] < 3:
+                    metadata_reads["json"] += 1
+                    try:
+                        payload = json.loads(archive.read(info).decode("utf-8-sig"))
+                        if isinstance(payload, dict):
+                            archive_info["json"] = payload
+                    except (UnicodeDecodeError, ValueError, RecursionError, zipfile.BadZipFile):
+                        warnings.append("JSON元数据无效，已跳过")
             if name.suffix.lower() in IMAGE_EXTENSIONS:
                 images.append((position, info))
         if not images:
@@ -215,4 +232,4 @@ def inspect_archive(path: Path) -> dict[str, Any]:
         identity = [(info.filename, info.file_size, info.CRC) for _, info in images]
         fingerprint = hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
         return {"manifest": zlib.compress(encoded), "page_count": len(pages),
-                "metadata": metadata, "cover": output.getvalue(), "fingerprint": fingerprint, "warnings": warnings}
+                "metadata": metadata, "archive_info": archive_info, "cover": output.getvalue(), "fingerprint": fingerprint, "warnings": warnings}

@@ -146,7 +146,7 @@ def test_write_back_keeps_source_intact_when_reseal_fails(tmp_path, monkeypatch)
     before = source.read_bytes()
 
     from app.services import comicinfo
-    monkeypatch.setattr(comicinfo, "reseal_cbz", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+    monkeypatch.setattr(comicinfo, "reseal_cbz_to", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
 
     with pytest.raises(RuntimeError):
         governance.write_back_comicinfo(work_id)

@@ -387,6 +387,8 @@ export type GovernanceFile = {
   sha256?: string | null;
   created_at?: string | null;
   exists: boolean;
+  read_only?: boolean;
+  library_name?: string | null;
 };
 
 export type GovernanceTag = {
