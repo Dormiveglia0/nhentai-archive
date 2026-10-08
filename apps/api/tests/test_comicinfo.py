@@ -103,3 +103,10 @@ def test_web_round_trips_through_xml():
 def test_gallery_id_from_xml_returns_none_without_web():
     xml = comicinfo.to_xml({"Title": "T"})
     assert comicinfo.gallery_id_from_xml(xml) is None
+
+
+def test_gallery_link_rejects_spoofed_hosts_and_malformed_urls():
+    for url in ("https://evilnhentai.net/g/123/", "https://nhentai.net.evil.test/g/123/", "https://[bad/g/123/", "file://nhentai.net/g/123/", "https://nhentai.net/g/0/", "https://nhentai.net/g/9223372036854775808/", "https://nhentai.net/g/" + "1" * 5000):
+        assert comicinfo.gallery_id_from_xml(comicinfo.to_xml({"Web": url})) is None
+    assert comicinfo.gallery_id_from_xml(comicinfo.to_xml({"Web": "https://www.nhentai.net/g/123/?x=1"})) == 123
+    assert comicinfo.gallery_id_from_xml('<ComicInfo xmlns="test"><Web>https://nhentai.net/g/123/</Web></ComicInfo>') == 123

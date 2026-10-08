@@ -2,6 +2,8 @@
 
 ## Current Slice
 
+In-progress 2026-10-09 update: see `docs/MEDIA_LIBRARY_UPDATE.md` for the complete media-library/cache/scraping/subscription/SMTP scope and stage gates. Directory registration and immutable incremental scan APIs are implemented on the working branch; the deployed UI baseline below remains live. The update is incomplete and must not be deployed yet.
+
 Current frontend baseline (2026-10-08, final review): the homepage uses small functional headings, one natural-aspect real cover, its reading action/progress and three ordered recent entries; no giant text or decorative carousel. Library details keep the native sharp modal, gallery-style cover without a background mat, reading/favorite and equal edit/export/delete rows. Search stays right of add-tag; selected tags scroll in their own track inside the query row, with full counts and icon-only clear. Phone filters use native details, and view controls belong to results. Discover keeps its restored independent gallery layout and readable native horizontal popular cards on phones. Reader controls cover an unchanged full viewport; mode is in settings, and jump pages use the paper style. Hidden archive decorations pause during reading.
 
 `transitionTabs()` commits the final target once. Shared `SlidingIndicator` uses control-group coordinates and native 450ms transforms, preserving interruption and reduced motion without animating parent-page scroll changes. The queue's 52px tabs do not grow when long/empty lists swap. Phone task/file inspectors are native modal dialogs with Escape, sticky close headers and focus restoration; file checkboxes only select. Phone single-item export/dictionary/governance selection reaches the corresponding editor while batch selection stays in place. Governance fields precede tags/review, optional translation is folded, duplicate subtitles are removed and checks are compact. Export summaries distinguish current work from bulk selection; even one remaining bulk item downloads the selected work rather than the current preview. Keep the original NH logo, independent black/red favicon, sharp controls and allowed small metric corners. No dependency or schema changes; history adds the optional backward-compatible local timezone offset described below.
@@ -152,11 +154,16 @@ Root: `apps/api/app/`
 - `services/import_service.py`
   - Remote import jobs call `JobService.checkpoint()` between safe stages so pause/cancel is real and cooperative. Cancelling after a temporary CBZ download removes the tmp file before returning.
 - `services/library_scan_service.py` / `services/library_scan_job_service.py`
-  - Local library scan preview and background ingestion for already-present CBZ files under the managed library directory, routed through the task center as `library_scan` jobs.
+  - Compatibility preview only for the managed import directory, without full-CBZ hashes. Directory scans use existing `library_scan` task pause/resume/cancel/retry; targets contain library ID and optional bounded file selection, not the whole tree. Original archives stay in place.
+- `services/media_library_service.py`
+  - Managed/local/mounted directory registration, configuration, overlap/read-only/source-path boundaries, soft removal preserving originals and metadata, paginated items and scan records. `api/library.py` exposes `/library/directories` and extends `/library/scan` with `library_id`.
+- `services/library_index_service.py` / `services/archive_manifest.py`
+  - Streamed traversal, cheap file versions, batched unchanged markers, stability/retry/error isolation, conservative missing detection and interrupt recovery. Mounted IO uses bounded, terminable processes with a reusable archive probe. Changed archives persist local JPEG covers, ComicInfo/tag provenance and compressed page manifests; no source copies or per-page rows for new indexed sources. Local renames and unambiguous duplicate sources preserve work identity.
+  - Schema adds `media_libraries`, `library_items`, `library_scan_runs`, `work_files.library_item_id`, `work_tags.source`; a page-count trigger rebases reader progress without changing read timestamps. `ArchiveService` chooses available sources and serves manifest pages; reader and gallery previews key them by work ID/page index. Cache, exports, watcher, scraping and creator notifications remain the next stages.
 - `services/workbench_service.py`
   - Read-only aggregator composing library/governance/jobs/files/exports summaries; never calls the NH API; one method `overview()` returning `{library, governance, files, exports, jobs, continue_reading, recent_added}` from real existing module services.
 - `main.py`
-  - Small FastAPI application factory: lifespan (interrupted-job recovery and export-artifact sweep), CORS, static Web mounting, and authentication enforcement for `/api` except health/auth bootstrap endpoints.
+  - Small FastAPI application factory: lifespan (interrupted-job/scan recovery and export-artifact sweep), CORS, static Web mounting, and authentication enforcement for `/api` except health/auth bootstrap endpoints.
 
 ## API Status
 

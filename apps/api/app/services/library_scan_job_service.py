@@ -1,39 +1,54 @@
 from __future__ import annotations
 
+import os
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
 from app.config import Settings
-from app.services.archive_service import ArchiveService
 from app.services.job_service import JobCancelled, JobService
-from app.services.library_scan_service import LibraryScanService
+from app.services.library_index_service import LibraryIndexService
+from app.services.media_library_service import MediaLibraryService
 
 
 class LibraryScanJobService:
-    """后台逐文件入库（library_scan 任务）。仿 ExportJobService 线程模型。"""
-
-    def __init__(self, settings: Settings, jobs: JobService, archive: ArchiveService, scan: LibraryScanService):
-        self.settings = settings
-        self.jobs = jobs
-        self.archive = archive
-        self.scan = scan
+    def __init__(self, settings: Settings, jobs: JobService, index: LibraryIndexService, libraries: MediaLibraryService):
+        self.settings, self.jobs, self.index, self.libraries = settings, jobs, index, libraries
         self._worker_lock = threading.Lock()
         self._workers: dict[int, threading.Thread] = {}
 
-    @staticmethod
-    def _contained(path: Path, root: Path) -> bool:
-        return path == root or root in path.parents
-
-    def enqueue_scan(self, paths: list[str]) -> dict[str, Any]:
-        root = self.settings.library_dir.resolve()
-        clean = [
-            str(Path(p).resolve())
-            for p in paths
-            if p and self._contained(Path(p).resolve(), root)
-        ]
-        target = {"paths": clean, "total": len(clean), "ingested": 0, "skipped": []}
-        job = self.jobs.create("library_scan", target)
+    def enqueue_scan(self, paths: list[str] | None = None, library_id: int | None = None) -> dict[str, Any]:
+        if library_id is None:
+            library_id = self.jobs.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
+        library = self.libraries.get(library_id)
+        if not library["enabled"]:
+            raise ValueError("请先启用该目录库")
+        target = {"library_id": library_id, "title": library["name"], "ingested": 0, "skipped": []}
+        if paths is not None:
+            if len(paths) > 5000:
+                raise ValueError("单次选取不能超过5000个文件，请使用完整库扫描")
+            root = Path(library["root_path"])
+            clean = []
+            for value in paths:
+                if not value or "\x00" in value:
+                    continue
+                path = Path(os.path.abspath(root / value))
+                try:
+                    relative = path.relative_to(root).as_posix()
+                except ValueError:
+                    continue
+                if relative != ".":
+                    clean.append(relative)
+            target["paths"] = list(dict.fromkeys(clean))
+        with self._worker_lock:
+            active = self.jobs.db.fetchone(
+                """SELECT id FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
+                AND json_extract(target_json, '$.library_id') = ? ORDER BY id DESC LIMIT 1""", (library_id,),
+            )
+            if active:
+                return self.jobs.get(active["id"])
+            job = self.jobs.create("library_scan", target)
         self._start_worker(job["id"])
         return job
 
@@ -41,6 +56,9 @@ class LibraryScanJobService:
         existing = self.jobs.get(job_id)
         if existing["status"] != "failed" or existing["type"] != "library_scan":
             raise ValueError("Only failed library scan jobs can be retried")
+        library_id = existing["target"].get("library_id")
+        if library_id is not None:
+            self.libraries.get(library_id)
         job = self.jobs.retry(job_id)
         self._start_worker(job_id)
         return job
@@ -71,6 +89,8 @@ class LibraryScanJobService:
     def _start_worker(self, job_id: int) -> None:
         thread = threading.Thread(target=self._run_worker, args=(job_id,), daemon=True)
         with self._worker_lock:
+            if job_id in self._workers:
+                return
             self._workers[job_id] = thread
         thread.start()
 
@@ -84,42 +104,51 @@ class LibraryScanJobService:
 
     def run_scan(self, job_id: int) -> None:
         job = self.jobs.get(job_id)
-        paths = [Path(p) for p in job["target"].get("paths", [])]
-        total = len(paths)
-        skipped: list[dict[str, Any]] = []
-        ingested = 0
+        target = job["target"]
+        library_id = target.get("library_id")
+        # Interrupted tasks from the previous release still contain absolute managed paths.
+        if library_id is None:
+            library_id = self.jobs.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
+        reported_at = 0.0
+
+        def checkpoint():
+            self.jobs.checkpoint(job_id)
+
+        def progress(counts):
+            nonlocal reported_at
+            if time.monotonic() - reported_at >= 0.5:
+                self.jobs.update_progress(job_id, "running", "scanning", counts["files"], 0)
+                reported_at = time.monotonic()
+
         try:
-            self.jobs.mark_running(job_id, "ingesting", 0, total)
-            root = self.settings.library_dir.resolve()
-            for path in paths:
-                self.jobs.checkpoint(job_id)
-                try:
-                    gallery_id = self.scan._read_gallery_id(path)
-                    if gallery_id is not None:
-                        work_id = self.archive.ingest_cbz(
-                            path, source="remote", title=path.stem,
-                            remote_gallery_id=gallery_id, metadata={"remote": "nhentai"},
-                        )
-                    else:
-                        work_id = self.archive.ingest_cbz(
-                            path, source="local", title=path.stem,
-                            remote_gallery_id=None, metadata={},
-                        )
-                    ingested += 1
-                    # Delete the loose original when ingest produced a canonical copy elsewhere.
-                    row = self.archive.db.fetchone(
-                        "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'"
-                        " ORDER BY created_at DESC, id DESC LIMIT 1",
-                        (work_id,),
-                    )
-                    if row:
-                        stored = Path(row["path"]).resolve()
-                        loose = path.resolve()
-                        if stored != loose and self._contained(loose, root):
-                            loose.unlink(missing_ok=True)
-                except Exception as exc:  # noqa: BLE001 - 单文件失败不中断整批
-                    skipped.append({"path": str(path), "reason": str(exc)})
-                self.jobs.update_progress(job_id, "running", "ingesting", ingested + len(skipped), total)
-            self.jobs.complete(job_id, {"ingested": ingested, "skipped": skipped})
+            self.jobs.mark_running(job_id, "scanning")
+            library = self.libraries.get(library_id)
+            paths = target.get("paths")
+            if paths is not None:
+                root = Path(library["root_path"])
+                paths = [Path(path).relative_to(root).as_posix() if Path(path).is_absolute() else path for path in paths]
+            result = self.index.scan(library_id, checkpoint, progress, job_id, paths)
+            if result["counts"]["pending"]:
+                deadline = time.monotonic() + library["config"]["stable_seconds"]
+                while time.monotonic() < deadline:
+                    checkpoint()
+                    time.sleep(0.1)
+                rows = self.jobs.db.fetchall(
+                    "SELECT relative_path FROM library_items WHERE library_id = ? AND status = 'pending' AND last_seen_run_id = ? LIMIT 5001",
+                    (library_id, result["run_id"]),
+                )
+                pending = [row["relative_path"] for row in rows]
+                second = self.index.scan(library_id, checkpoint, progress, job_id, pending if len(pending) <= 5000 else None)
+                result["counts"]["pending"] = second["counts"]["pending"]
+                for key in ("indexed", "errors"):
+                    result["counts"][key] += second["counts"][key]
+                result["errors"] = (result["errors"] + second["errors"])[:30]
+                result["stability_run_id"] = second["run_id"]
+            with self.jobs.db.connect() as conn:
+                for error in result["errors"]:
+                    self.jobs._log_with_conn(conn, job_id, "warning", f"{error['path']}: {error['reason']}")
+            self.jobs.complete(job_id, {**result, "library_id": library_id, "ingested": result["counts"]["indexed"], "skipped": result["errors"]})
         except JobCancelled:
             self.jobs.mark_cancelled(job_id)
+        except Exception as exc:
+            self.jobs.fail(job_id, str(exc)[:1000])

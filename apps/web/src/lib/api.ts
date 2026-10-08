@@ -709,7 +709,7 @@ export type ExportBatchItem = {
 };
 
 export type PageInfo = {
-  id: number;
+  id?: number;
   work_id: number;
   page_index: number;
   archive_member: string;

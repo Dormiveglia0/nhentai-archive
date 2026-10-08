@@ -43,6 +43,10 @@ class Settings:
         return self.data_dir / "tmp"
 
     @property
+    def archive_cache_dir(self) -> Path:
+        return self.data_dir / "cache" / "archives"
+
+    @property
     def export_dir(self) -> Path:
         return self.data_dir / "exports"
 
@@ -58,6 +62,7 @@ class Settings:
             self.page_cache_dir,
             self.thumbs_dir,
             self.tmp_dir,
+            self.archive_cache_dir,
             self.export_dir,
             self.export_jobs_dir,
         ):

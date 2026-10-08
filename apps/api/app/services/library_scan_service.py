@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -8,6 +7,8 @@ from typing import Any
 from app.config import Settings
 from app.database import Database
 from app.services import comicinfo
+from app.services.library_index_service import LibraryIndexService, ARCHIVES
+from app.services.media_library_service import LIBRARY_DEFAULTS
 
 
 class LibraryScanService:
@@ -17,39 +18,32 @@ class LibraryScanService:
         self.settings = settings
         self.db = db
 
-    def _indexed(self) -> tuple[set[str], set[str]]:
-        rows = self.db.fetchall("SELECT path, sha256 FROM work_files WHERE kind = 'source_cbz'")
-        paths = {str(Path(r["path"]).resolve()) for r in rows if r["path"]}
-        digests = {r["sha256"] for r in rows if r["sha256"]}
-        return paths, digests
+    def _indexed(self) -> set[str]:
+        rows = self.db.fetchall("""SELECT f.path FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
+                                LEFT JOIN media_libraries l ON l.id = i.library_id
+                                WHERE f.kind = 'source_cbz' AND (i.id IS NULL OR l.kind = 'managed')""")
+        return {str(Path(row["path"])) for row in rows if row["path"]}
 
     def _read_gallery_id(self, cbz_path: Path) -> int | None:
         return comicinfo.gallery_id_from_cbz(cbz_path)
 
-    @staticmethod
-    def _sha256(path: Path) -> str:
-        digest = hashlib.sha256()
-        with open(path, "rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        return digest.hexdigest()
-
     def preview(self) -> dict[str, Any]:
-        indexed_paths, indexed_digests = self._indexed()
+        indexed_paths = self._indexed()
         new_linked: list[dict[str, Any]] = []
         new_local: list[dict[str, Any]] = []
         already_known: list[dict[str, Any]] = []
         unreadable: list[dict[str, Any]] = []
 
-        for entry in sorted(self.settings.library_dir.glob("*.cbz")):
-            resolved = str(entry.resolve())
+        # Only the app-owned import directory uses this compatibility preview.
+        # Mounted libraries use persisted, paginated scan items; no request scans a mount.
+        for entry, _, error in LibraryIndexService._walk(self.settings.library_dir, LIBRARY_DEFAULTS):
+            if error or entry.suffix.lower() not in ARCHIVES:
+                continue
+            resolved = str(entry)
             if resolved in indexed_paths:
                 continue
             if not zipfile.is_zipfile(entry):
                 unreadable.append({"path": resolved, "gallery_id": None})
-                continue
-            if self._sha256(entry) in indexed_digests:
-                already_known.append({"path": resolved, "gallery_id": None})
                 continue
             gallery_id = self._read_gallery_id(entry)
             if gallery_id is not None:

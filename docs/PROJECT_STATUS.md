@@ -1,5 +1,9 @@
 # NH Archive Project Status
 
+## Active Update — 2026-10-09
+
+媒体目录库、挂载阅读缓存、刮削、作者/社团订阅和SMTP通知是当前长期目标，完整范围与阶段证据见`docs/MEDIA_LIBRARY_UPDATE.md`。更新前状态已推送为`7d2d426`及回滚标签`archive/ui-refined-20261009`。目录注册/状态API、原地增量索引、持久缩略封面/压缩页面清单和安全任务控制已落地；旧库迁移副本保留110作品/107任务，真实110归档未变化扫描0.009秒。263项后端、5项真实阅读器回归和前端构建通过。阅读缓存、监控、刮削、订阅/邮件与完整界面尚未完成，不能提前发布或宣布长期目标完成。
+
 ## Current Version
 
 Feature-complete local loop after Phase 7 task center and final governance/export closure. Latest UI revision (2026-10-08): `ui-20261008-refined` / `latest` (`bce20c33aa80`) is deployed on port 4349; 106 browser checks and 236 backend tests pass.

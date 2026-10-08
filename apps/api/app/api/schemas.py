@@ -137,4 +137,23 @@ class FileDeleteRequest(BaseModel):
 
 
 class LibraryScanRequest(BaseModel):
-    paths: list[str] | None = None
+    paths: list[str] | None = Field(default=None, max_length=5000)
+    library_id: int | None = Field(default=None, gt=0)
+
+
+class MediaLibraryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    root_path: str = Field(min_length=1, max_length=4096)
+    kind: str = "local"
+    enabled: bool = True
+    read_only: bool = True
+    config: dict = Field(default_factory=dict)
+
+
+class MediaLibraryPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    root_path: str | None = Field(default=None, min_length=1, max_length=4096)
+    kind: str | None = None
+    enabled: bool | None = None
+    read_only: bool | None = None
+    config: dict | None = None

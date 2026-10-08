@@ -119,7 +119,7 @@ export function useReaderData(source: ReaderSource) {
   const pages = useMemo<ReaderPageItem[]>(() => {
     if (stableSource.kind === "local") {
       return localPages.map((page) => ({
-        key: `local-${page.id}`,
+        key: `local-${stableSource.workId}-${page.page_index}`,
         pageIndex: page.page_index,
         src: `/api/works/${stableSource.workId}/pages/${page.page_index}`,
         thumbSrc: `/api/works/${stableSource.workId}/pages/${page.page_index}/thumb`,

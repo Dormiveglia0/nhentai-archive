@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 import zipfile
+from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
@@ -20,6 +21,7 @@ COMICINFO_KEYS = {
     "published_at": "Year",
     "pages": "PageCount",
 }
+MAX_XML_BYTES = 1024 * 1024
 
 
 def _stringify(value: Any) -> str | None:
@@ -84,25 +86,34 @@ def to_xml(fields: dict[str, str]) -> str:
 
 
 def gallery_id_from_xml(xml_text: str) -> int | None:
+    if len(xml_text.encode("utf-8")) > MAX_XML_BYTES or "<!DOCTYPE" in xml_text.upper() or "<!ENTITY" in xml_text.upper():
+        return None
     try:
         root = ElementTree.fromstring(xml_text)
     except ElementTree.ParseError:
         return None
-    web = root.findtext("Web")
+    web = next((child.text for child in root if child.tag.split("}")[-1] == "Web"), None)
     if not web:
         return None
-    match = re.search(r"nhentai\.net/g/(\d+)", web)
-    return int(match.group(1)) if match else None
+    try:
+        parsed = urlsplit(web.strip())
+    except ValueError:
+        return None
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"nhentai.net", "www.nhentai.net"}:
+        return None
+    match = re.fullmatch(r"/g/([0-9]{1,19})/?", parsed.path)
+    value = int(match.group(1)) if match else None
+    return value if value and 0 < value <= 9223372036854775807 else None
 
 
 def gallery_id_from_cbz(path: Path) -> int | None:
     try:
         with zipfile.ZipFile(path) as archive:
-            member = next((name for name in archive.namelist() if Path(name).name.lower() == "comicinfo.xml"), None)
-            if member is None:
+            member = next((info for info in archive.infolist() if Path(info.filename).name.lower() == "comicinfo.xml"), None)
+            if member is None or member.file_size > MAX_XML_BYTES or member.flag_bits & 1:
                 return None
             return gallery_id_from_xml(archive.read(member).decode("utf-8", errors="replace"))
-    except (OSError, zipfile.BadZipFile):
+    except (OSError, RuntimeError, zipfile.BadZipFile):
         return None
 
 

@@ -1,6 +1,24 @@
 from app.database import Database
 
 
+def test_legacy_work_tag_migration_retains_tags_and_adds_provenance(tmp_path):
+    db = Database(tmp_path / "legacy.db")
+    db.init_schema()
+    with db.connect() as conn:
+        conn.execute("INSERT INTO works(id, title, source) VALUES (1, 'Book', 'local')")
+        conn.execute("INSERT INTO remote_tags(remote_id, type, name, payload_json) VALUES (9, 'artist', 'Writer', '{}')")
+        conn.execute("DROP TABLE work_tags")
+        conn.execute("""CREATE TABLE work_tags(id INTEGER PRIMARY KEY, work_id INTEGER, remote_tag_id INTEGER,
+                     type TEXT, source_text TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
+        conn.execute("INSERT INTO work_tags(work_id, remote_tag_id, type, source_text) VALUES (1, 9, 'artist', 'Writer')")
+    db.init_schema()
+    db.init_schema()
+    tag = db.fetchone("SELECT * FROM work_tags WHERE work_id = 1")
+    assert tag["remote_tag_id"] == 9 and tag["remote_name"] == "Writer" and tag["source"] == "legacy"
+    with db.connect() as conn:
+        assert not conn.execute("PRAGMA foreign_key_check").fetchall()
+
+
 def test_database_enables_concurrency_pragmas_and_query_indexes(tmp_path):
     db = Database(tmp_path / "archive.db")
     db.init_schema()

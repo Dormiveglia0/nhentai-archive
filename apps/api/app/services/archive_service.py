@@ -14,6 +14,7 @@ from PIL import Image
 
 from app.config import Settings
 from app.database import Database
+from app.services.media_library_service import MediaLibraryService
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -28,6 +29,7 @@ class ArchiveService:
         self.db = db
         self.settings = settings
         self.settings.ensure_directories()
+        self.libraries = MediaLibraryService(settings, db)
 
     def ingest_cbz(
         self,
@@ -76,7 +78,7 @@ class ArchiveService:
             work_id = int(row["id"])
 
         previous = self.db.fetchone(
-            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' "
+            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz' AND library_item_id IS NULL "
             "ORDER BY created_at DESC, id DESC LIMIT 1",
             (work_id,),
         )
@@ -90,7 +92,7 @@ class ArchiveService:
             digest = self._sha256(stored_path)
 
             with self.db.connect() as conn:
-                conn.execute("DELETE FROM work_files WHERE work_id = ? AND kind = 'source_cbz'", (work_id,))
+                conn.execute("DELETE FROM work_files WHERE work_id = ? AND kind = 'source_cbz' AND library_item_id IS NULL", (work_id,))
                 conn.execute("DELETE FROM work_pages WHERE work_id = ?", (work_id,))
                 conn.execute(
                     """
@@ -158,26 +160,59 @@ class ArchiveService:
         return self.db.fetchone("SELECT * FROM works WHERE id = ?", (work_id,))
 
     def list_pages(self, work_id: int) -> list[dict[str, Any]]:
-        return self.db.fetchall(
+        file = self.source_file(work_id) or self.source_file(work_id, available=False)
+        if file and file["library_item_id"] and file.get("manifest"):
+            from app.services.archive_manifest import unpack_manifest
+            return [{**page, "work_id": work_id} for page in unpack_manifest(file["manifest"])]
+        pages = self.db.fetchall(
             "SELECT * FROM work_pages WHERE work_id = ? ORDER BY page_index ASC",
             (work_id,),
         )
+        if pages:
+            return pages
+        from app.services.archive_manifest import unpack_manifest
+        item = self.db.fetchone(
+            """SELECT i.manifest FROM library_items i JOIN media_libraries l ON l.id = i.library_id
+            WHERE i.work_id = ? AND i.manifest IS NOT NULL AND l.removed_at IS NULL
+            ORDER BY i.status = 'ready' DESC, i.indexed_at DESC LIMIT 1""", (work_id,),
+        )
+        return [{**page, "work_id": work_id} for page in unpack_manifest(item["manifest"])] if item else []
+
+    def source_file(self, work_id: int, available: bool = True) -> dict[str, Any] | None:
+        ready = " AND (f.library_item_id IS NULL OR i.status = 'ready')" if available else ""
+        return self.db.fetchone(
+            f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
+            i.mtime_ns, i.relative_path, l.kind AS library_kind, l.root_path, l.read_only, l.config_json
+            FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
+            LEFT JOIN media_libraries l ON l.id = i.library_id
+            WHERE f.work_id = ? AND f.kind = 'source_cbz'
+            AND (f.library_item_id IS NULL OR l.removed_at IS NULL){ready}
+            ORDER BY f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
+            l.kind = 'local' DESC, f.id DESC LIMIT 1""", (work_id,),
+        )
 
     def read_page(self, work_id: int, page_index: int) -> tuple[bytes, str]:
-        page = self.db.fetchone(
-            "SELECT * FROM work_pages WHERE work_id = ? AND page_index = ?",
-            (work_id, page_index),
-        )
+        page = next((row for row in self.list_pages(work_id) if row["page_index"] == page_index), None)
         if not page:
             raise FileNotFoundError(f"Page {page_index} not found for work {work_id}")
-        archive_file = self.db.fetchone(
-            "SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'",
-            (work_id,),
-        )
+        archive_file = self.source_file(work_id)
         if not archive_file:
             raise FileNotFoundError(f"Archive not found for work {work_id}")
-        with zipfile.ZipFile(archive_file["path"]) as archive:
-            return archive.read(page["archive_member"]), page["media_type"]
+        if archive_file["library_item_id"]:
+            path, _item = self.libraries.resolve_item(archive_file["library_item_id"])
+        else:
+            path = archive_file["path"]
+        with zipfile.ZipFile(path) as archive:
+            if "archive_position" in page:
+                entries = archive.infolist()
+                if page["archive_position"] >= len(entries):
+                    raise FileNotFoundError("源归档已改变，请重新扫描")
+                member = entries[page["archive_position"]]
+                if (member.filename, member.file_size, member.CRC) != (page["archive_member"], page["size_bytes"], page["crc"]):
+                    raise FileNotFoundError("源归档已改变，请重新扫描")
+            else:
+                member = page["archive_member"]
+            return archive.read(member), page["media_type"]
 
     def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320) -> tuple[bytes, str]:
         """Return a downscaled JPEG for a page, generating and caching it on first use."""
@@ -193,6 +228,8 @@ class ArchiveService:
         if not path.is_file():
             raise FileNotFoundError("Cover file missing")
         width = max(64, min(width, 1024))
+        if width >= 512 and path.name == f"{work_id}-indexed.jpg":
+            return path.read_bytes(), "image/jpeg"
         cache_path = self.settings.thumbs_dir / f"{work_id}-cover-{width}.jpg"
         return self._read_thumbnail(cache_path, width, path.read_bytes)
 
@@ -308,23 +345,23 @@ def _safe_filename(name: str | None, max_length: int = _MAX_NAME_LENGTH) -> str:
     return cleaned
 
 
-def _natural_key(value: str) -> list[int | str]:
-    parts: list[int | str] = []
+def _natural_key(value: str) -> list[tuple[int, int | str]]:
+    parts: list[tuple[int, int | str]] = []
     number = ""
     text = ""
     for char in value:
         if char.isdigit():
             if text:
-                parts.append(text.lower())
+                parts.append((1, text.lower()))
                 text = ""
             number += char
         else:
             if number:
-                parts.append(int(number))
+                parts.append((0, int(number)))
                 number = ""
             text += char
     if number:
-        parts.append(int(number))
+        parts.append((0, int(number)))
     if text:
-        parts.append(text.lower())
+        parts.append((1, text.lower()))
     return parts

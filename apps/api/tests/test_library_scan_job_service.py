@@ -1,4 +1,5 @@
 import time
+import threading
 import zipfile
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from app.services.archive_service import ArchiveService
 from app.services.job_service import JobService
 from app.services.library_scan_service import LibraryScanService
 from app.services.library_scan_job_service import LibraryScanJobService
+from app.services.library_index_service import LibraryIndexService
 
 
 def _wait_for_job(jobs, job_id, timeout=10.0):
@@ -43,16 +45,19 @@ def _setup(tmp_path):
     db = Database(settings.database_path)
     db.init_schema()
     archive = ArchiveService(db, settings)
+    managed = archive.libraries.list()["result"][0]
+    archive.libraries.update(managed["id"], {"config": {"stable_seconds": 0}})
     jobs = JobService(db)
     scan = LibraryScanService(settings, db)
-    return settings, db, archive, jobs, scan
+    index = LibraryIndexService(settings, db, archive.libraries)
+    return settings, db, archive, jobs, scan, index
 
 
 def test_run_scan_ingests_linked_and_local(tmp_path):
-    settings, db, archive, jobs, scan = _setup(tmp_path)
+    settings, db, archive, jobs, scan, index = _setup(tmp_path)
     _make_cbz(settings.library_dir / "linked.cbz", web_gallery_id=177013)
     _make_cbz(settings.library_dir / "local.cbz")
-    service = LibraryScanJobService(settings, jobs, archive, scan)
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
 
     preview = scan.preview()
     paths = [p["path"] for p in preview["new_linked"] + preview["new_local"]]
@@ -68,10 +73,10 @@ def test_run_scan_ingests_linked_and_local(tmp_path):
 
 
 def test_run_scan_skips_unreadable(tmp_path):
-    settings, db, archive, jobs, scan = _setup(tmp_path)
+    settings, db, archive, jobs, scan, index = _setup(tmp_path)
     bad = settings.library_dir / "broken.cbz"
     bad.write_bytes(b"not a zip")
-    service = LibraryScanJobService(settings, jobs, archive, scan)
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
 
     job = service.enqueue_scan([str(bad.resolve())])
     done = _wait_for_job(jobs, job["id"])
@@ -83,7 +88,7 @@ def test_run_scan_skips_unreadable(tmp_path):
 
 def test_enqueue_scan_rejects_out_of_library_paths(tmp_path):
     """Fix 1: paths outside library_dir must be silently dropped (containment guard)."""
-    settings, db, archive, jobs, scan = _setup(tmp_path)
+    settings, db, archive, jobs, scan, index = _setup(tmp_path)
 
     # One valid in-library CBZ, one out-of-tree CBZ written directly under tmp_path.
     in_lib = settings.library_dir / "inside.cbz"
@@ -91,7 +96,7 @@ def test_enqueue_scan_rejects_out_of_library_paths(tmp_path):
     out_of_tree = tmp_path / "outside.cbz"
     _make_cbz(out_of_tree)
 
-    service = LibraryScanJobService(settings, jobs, archive, scan)
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
     job = service.enqueue_scan([str(in_lib), str(out_of_tree)])
     done = _wait_for_job(jobs, job["id"])
 
@@ -103,32 +108,74 @@ def test_enqueue_scan_rejects_out_of_library_paths(tmp_path):
     assert work_count == 1
 
 
-def test_run_scan_deletes_loose_original_after_ingest(tmp_path):
-    """Fix 2: loose original inside library_dir must be unlinked after canonical copy is stored."""
-    settings, db, archive, jobs, scan = _setup(tmp_path)
+def test_run_scan_preserves_original_without_creating_canonical_copy(tmp_path):
+    settings, db, archive, jobs, scan, index = _setup(tmp_path)
 
     loose = settings.library_dir / "loose_copy.cbz"
     _make_cbz(loose)
 
-    service = LibraryScanJobService(settings, jobs, archive, scan)
+    original = loose.read_bytes()
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
     job = service.enqueue_scan([str(loose)])
     done = _wait_for_job(jobs, job["id"])
 
     assert done["status"] == "completed"
     assert done["target"]["ingested"] == 1
 
-    # The loose original must have been removed.
-    assert not loose.exists(), "loose original must be deleted after ingest"
+    assert loose.read_bytes() == original
 
-    # Exactly one CBZ must exist in library_dir (the canonical copy).
     cbzs = list(settings.library_dir.glob("*.cbz"))
-    assert len(cbzs) == 1, f"expected 1 canonical cbz, found: {cbzs}"
+    assert cbzs == [loose]
 
-    # The work is indexed and its stored path is the canonical copy, not the loose original.
     row = db.fetchone(
         "SELECT path FROM work_files WHERE kind = 'source_cbz' ORDER BY id DESC LIMIT 1"
     )
     assert row is not None
     stored = Path(row["path"])
     assert stored.exists()
-    assert stored != loose
+    assert stored == loose
+
+
+def test_active_scan_is_reused_and_pause_resume_cancel_preserve_sources(tmp_path, monkeypatch):
+    settings, db, archive, jobs, scan, index = _setup(tmp_path)
+    source = settings.library_dir / "book.cbz"
+    _make_cbz(source)
+    original = source.read_bytes()
+    entered, release = threading.Event(), threading.Event()
+    from app.services.archive_manifest import inspect_archive
+    def blocked_probe(path):
+        entered.set()
+        assert release.wait(5)
+        return inspect_archive(path)
+    monkeypatch.setattr("app.services.library_index_service.inspect_archive", blocked_probe)
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
+    job = service.enqueue_scan()
+    try:
+        assert entered.wait(5)
+        assert service.enqueue_scan()["id"] == job["id"]
+        assert jobs.pause(job["id"])["status"] == "paused"
+        assert service.resume_job(job["id"])["status"] == "running"
+        assert service.cancel_job(job["id"])["status"] == "cancelling"
+    finally:
+        release.set()
+    assert _wait_for_job(jobs, job["id"])["status"] == "cancelled"
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 0
+    assert source.read_bytes() == original
+
+
+def test_interrupted_scan_retry_preserves_work_identity(tmp_path):
+    settings, db, archive, jobs, scan, index = _setup(tmp_path)
+    _make_cbz(settings.library_dir / "book.cbz")
+    library_id = archive.libraries.list()["result"][0]["id"]
+    job = jobs.create("library_scan", {"library_id": library_id})
+    result = index.scan(library_id, job_id=job["id"])
+    work_id = db.fetchone("SELECT id FROM works")["id"]
+    db.execute("UPDATE works SET favorite = 1 WHERE id = ?", (work_id,))
+    db.execute("UPDATE library_scan_runs SET status = 'running' WHERE id = ?", (result["run_id"],))
+    assert jobs.recover_interrupted() == 1
+    assert index.recover_interrupted() == 1
+    service = LibraryScanJobService(settings, jobs, index, archive.libraries)
+    service.retry_job(job["id"])
+    assert _wait_for_job(jobs, job["id"])["status"] == "completed"
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1
+    assert db.fetchone("SELECT favorite FROM works WHERE id = ?", (work_id,))["favorite"] == 1

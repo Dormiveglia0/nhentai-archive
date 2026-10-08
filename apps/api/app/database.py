@@ -210,6 +210,72 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS media_libraries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  root_path TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK(kind IN ('managed', 'local', 'mounted')),
+  enabled INTEGER NOT NULL DEFAULT 1,
+  read_only INTEGER NOT NULL DEFAULT 1,
+  config_json TEXT NOT NULL DEFAULT '{}',
+  health TEXT NOT NULL DEFAULT 'unknown',
+  last_error TEXT,
+  root_device INTEGER,
+  root_inode INTEGER,
+  last_scan_at TEXT,
+  removed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS library_scan_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  library_id INTEGER NOT NULL REFERENCES media_libraries(id) ON DELETE CASCADE,
+  job_id INTEGER REFERENCES jobs(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'running',
+  counts_json TEXT NOT NULL DEFAULT '{}',
+  errors_json TEXT NOT NULL DEFAULT '[]',
+  started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS library_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  library_id INTEGER NOT NULL REFERENCES media_libraries(id) ON DELETE CASCADE,
+  relative_path TEXT NOT NULL,
+  work_id INTEGER REFERENCES works(id) ON DELETE SET NULL,
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  mtime_ns INTEGER NOT NULL DEFAULT 0,
+  device INTEGER,
+  inode INTEGER,
+  stable_since REAL NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
+  last_error TEXT,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  retry_at REAL,
+  fingerprint TEXT,
+  manifest BLOB,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  last_seen_run_id INTEGER REFERENCES library_scan_runs(id) ON DELETE SET NULL,
+  missing_since REAL,
+  indexed_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(library_id, relative_path)
+);
+
+CREATE TRIGGER IF NOT EXISTS rebase_reader_progress_on_page_change
+AFTER UPDATE OF page_count ON works
+WHEN NEW.page_count <> OLD.page_count
+BEGIN
+  UPDATE reader_progress SET
+    page_count = NEW.page_count,
+    page_index = CASE WHEN NEW.page_count > 0 AND page_index > 0 THEN MIN(page_index, NEW.page_count) ELSE 0 END,
+    progress_percent = CASE WHEN NEW.page_count > 0 AND page_index > 0
+      THEN ROUND(MIN(page_index, NEW.page_count) * 100.0 / NEW.page_count) ELSE 0 END,
+    completed = CASE WHEN NEW.page_count > 0 AND page_index >= NEW.page_count THEN 1 ELSE 0 END
+  WHERE work_id = NEW.id;
+END;
 """
 
 INDEXES = """
@@ -243,6 +309,14 @@ CREATE INDEX IF NOT EXISTS idx_jobs_updated
   ON jobs(updated_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_job_logs_job_id
   ON job_logs(job_id, id);
+CREATE INDEX IF NOT EXISTS idx_library_items_work ON library_items(work_id);
+CREATE INDEX IF NOT EXISTS idx_library_items_scan ON library_items(library_id, last_seen_run_id);
+CREATE INDEX IF NOT EXISTS idx_library_items_retry ON library_items(library_id, status, retry_at);
+CREATE INDEX IF NOT EXISTS idx_library_items_identity ON library_items(library_id, device, inode);
+CREATE INDEX IF NOT EXISTS idx_library_items_fingerprint ON library_items(fingerprint) WHERE fingerprint IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_scan_runs_library ON library_scan_runs(library_id, id DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_work_files_library_item
+  ON work_files(library_item_id) WHERE library_item_id IS NOT NULL;
 """
 
 
@@ -273,7 +347,8 @@ class Database:
         self._managed_root = root
         with self.connect() as conn:
             for table, column in (("work_files", "path"), ("works", "cover_path")):
-                for row in conn.execute(f"SELECT id, {column} AS value FROM {table} WHERE {column} IS NOT NULL"):
+                owned = " AND library_item_id IS NULL" if table == "work_files" else ""
+                for row in conn.execute(f"SELECT id, {column} AS value FROM {table} WHERE {column} IS NOT NULL{owned}"):
                     portable = _portable_managed_path(row["value"], root)
                     if portable and portable != row["value"]:
                         conn.execute(f"UPDATE {table} SET {column} = ? WHERE id = ?", (portable, row["id"]))
@@ -288,6 +363,10 @@ class Database:
     def _migrate_legacy_schema(self, conn: sqlite3.Connection) -> None:
         works_columns = _table_columns(conn, "works")
         _add_column_if_missing(conn, "works", works_columns, "favorite", "INTEGER NOT NULL DEFAULT 0")
+        _add_column_if_missing(
+            conn, "work_files", _table_columns(conn, "work_files"),
+            "library_item_id", "INTEGER REFERENCES library_items(id) ON DELETE SET NULL",
+        )
 
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:
@@ -397,6 +476,8 @@ class Database:
                 """
             )
 
+        _add_column_if_missing(conn, "work_tags", _table_columns(conn, "work_tags"), "source", "TEXT NOT NULL DEFAULT 'legacy'")
+
     def execute(self, sql: str, params: Iterable[Any] = ()) -> sqlite3.Cursor:
         with self.connect() as conn:
             cursor = conn.execute(sql, tuple(params))
@@ -416,6 +497,8 @@ class Database:
         for key in ("path", "cover_path", "source_path"):
             value = row.get(key)
             if value:
+                if Path(str(value)).is_absolute():
+                    continue
                 relative = _managed_relative_path(str(value), self._managed_root)
                 if relative:
                     row[key] = str(self._managed_root / relative)

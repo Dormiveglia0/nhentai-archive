@@ -14,6 +14,7 @@ from app.container import services
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     services.jobs.recover_interrupted()
+    services.library_index.recover_interrupted()
     services.export_jobs.sweep_exports()
     yield
 

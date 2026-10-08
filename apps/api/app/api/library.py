@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from app.api.schemas import LibraryScanRequest
+from app.api.schemas import LibraryScanRequest, MediaLibraryCreate, MediaLibraryPatch
 from app.container import services
 
 
@@ -67,8 +67,52 @@ def scan_preview():
 
 @router.post("/scan")
 def scan(payload: LibraryScanRequest):
-    paths = payload.paths
-    if paths is None:
-        preview = services.library_scan.preview()
-        paths = [p["path"] for p in preview["new_linked"] + preview["new_local"]]
-    return services.library_scan_jobs.enqueue_scan(paths)
+    try:
+        return services.library_scan_jobs.enqueue_scan(payload.paths, payload.library_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/directories")
+def directories():
+    return services.media_libraries.list()
+
+
+@router.post("/directories", status_code=201)
+def add_directory(payload: MediaLibraryCreate):
+    try:
+        return services.media_libraries.create(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.patch("/directories/{library_id}")
+def update_directory(library_id: int, payload: MediaLibraryPatch):
+    try:
+        return services.media_libraries.update(library_id, payload.model_dump(exclude_unset=True))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.delete("/directories/{library_id}")
+def remove_directory(library_id: int):
+    try:
+        return services.media_libraries.remove(library_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/directories/{library_id}/items")
+def directory_items(library_id: int, status: str = "all", page: int = 1, per_page: int = 50):
+    try:
+        return services.media_libraries.items(library_id, status, page, per_page)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.get("/directories/{library_id}/runs")
+def directory_runs(library_id: int, limit: int = 20):
+    try:
+        return services.media_libraries.runs(library_id, limit)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc

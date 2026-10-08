@@ -46,7 +46,7 @@ export function GalleryPagePreview({ detail, blurCovers }: { detail: GalleryDeta
   const pages = useMemo<PreviewPageItem[]>(() => {
     if (isLocal && detail.work_id) {
       return localPages.map((page) => ({
-        key: `local-${page.id}`,
+        key: `local-${page.work_id}-${page.page_index}`,
         pageIndex: page.page_index,
         src: `/api/works/${detail.work_id}/pages/${page.page_index}`,
         source: "local",
