@@ -86,7 +86,8 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
         { label: "文件大小", value: formatBytes(focus.size_bytes) },
         { label: "页数", value: String(focus.page_count ?? 0) },
         { label: "修改时间", value: shortTime(focus.updated_at) },
-        { label: "来源", value: focus.source ?? "—" },
+        { label: "来源", value: focus.library_name ?? focus.source ?? "—" },
+        { label: "文件权限", value: focus.read_only ? "只读" : "可写" },
         { label: "关联 ID", value: focus.remote_gallery_id ? String(focus.remote_gallery_id) : "—" },
       ]
     : [

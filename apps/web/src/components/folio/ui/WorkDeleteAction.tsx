@@ -100,11 +100,12 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
           </header>
           <strong className="folio-work-delete-title">{title}</strong>
           <p id={summaryId}>
-            将永久删除 {preview.files_to_delete} 个受管文件并移除作品记录，预计释放 {formatBytes(preview.reclaim_bytes)}。
-            标签关联、阅读进度和整理记录也会一并清除，此操作不可恢复。
+            {canDelete ? <>将永久删除 {preview.files_to_delete} 个文件并移除作品记录，预计释放 {formatBytes(preview.reclaim_bytes)}。
+            标签关联、阅读进度和整理记录也会一并清除，此操作不可恢复。</> : "作品暂时无法删除。"}
           </p>
-          {item?.has_progress || item?.has_governance ? (
+          {item?.has_progress || item?.has_governance || item?.status === "forbidden" ? (
             <ul className="folio-work-delete-warnings">
+              {item?.status === "forbidden" ? item.warnings.map((warning) => <li key={warning}><AlertTriangle size={14} />{warning}</li>) : null}
               {item.has_progress ? <li><AlertTriangle size={14} />含阅读进度</li> : null}
               {item.has_governance ? <li><AlertTriangle size={14} />含整理记录</li> : null}
             </ul>

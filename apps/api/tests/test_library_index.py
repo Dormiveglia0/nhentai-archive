@@ -328,3 +328,50 @@ def test_stuck_kernel_worker_prevents_unbounded_process_creation(tmp_path):
         index.scan(library["id"])
     assert index._walk_process is stuck
     assert db.fetchone("SELECT status FROM library_items WHERE library_id = ?", (library["id"],))["status"] == "ready"
+
+
+@pytest.mark.parametrize("kind", ["local", "mounted"])
+def test_root_aliases_cannot_index_another_library_or_application_cache(tmp_path, kind):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    create_archive(root / "book.cbz")
+    index.scan(library["id"])
+    for name, target in (("existing", root), ("cache", settings.archive_cache_dir)):
+        alias = tmp_path / name
+        alias.symlink_to(target, target_is_directory=True)
+        registered = libraries.create({"name": name, "root_path": str(alias), "kind": kind})
+        with pytest.raises((ValueError, OSError), match="重叠"):
+            index.scan(registered["id"])
+        assert db.fetchone("SELECT COUNT(*) AS n FROM library_items WHERE library_id = ?", (registered["id"],))["n"] == 0
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1
+    assert (root / "book.cbz").exists()
+
+
+def test_root_replaced_with_cache_alias_cannot_be_read_or_cached(tmp_path):
+    from test_archive_cache import cached_library, wait_for_cache
+    settings, db, libraries, index, root, library, archive, work_id = cached_library(tmp_path)
+    item_id = db.fetchone("SELECT id FROM library_items")["id"]
+    original_root = tmp_path / "original-media"
+    root.rename(original_root)
+    root.symlink_to(settings.archive_cache_dir, target_is_directory=True)
+    with pytest.raises(ValueError, match="重叠"):
+        libraries.resolve_item(item_id)
+    with pytest.raises(ValueError, match="重叠"):
+        index.scan(library["id"])
+    prepared = archive.cache.prepare(work_id)
+    failed = wait_for_cache(archive.cache, prepared)
+    assert failed["status"] == "failed" and "重叠" in failed["error"]
+    assert not list(settings.archive_cache_dir.glob("*.cbz"))
+    assert db.fetchone("SELECT id FROM works WHERE id = ?", (work_id,))
+    assert (original_root / "one.cbz").exists()
+    archive.cache.close()
+
+
+def test_recorded_directory_identity_rejects_bind_alias_without_probing_other_mount(tmp_path):
+    root = tmp_path / "media"
+    root.mkdir()
+    info = root.stat()
+    boundary = {"path": str(tmp_path / "unavailable-bind-mount"), "device": info.st_dev, "inode": info.st_ino}
+    with pytest.raises(ValueError, match="重叠"):
+        MediaLibraryService.validate_root(root, [boundary])
+    boundary["inode"] += 1
+    assert MediaLibraryService.validate_root(root, [boundary]) == root

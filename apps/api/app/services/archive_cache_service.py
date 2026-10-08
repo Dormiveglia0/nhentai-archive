@@ -37,6 +37,7 @@ def _copy_source(connection, source: dict[str, Any], destination: str) -> None:
         except ImportError:
             pass
         config = json.loads(source["config_json"])
+        MediaLibraryService.validate_root(Path(source["root_path"]), source["root_boundaries"])
         path = MediaLibraryService.source_path(Path(source["root_path"]), source["relative_path"], config.get("follow_symlinks", False))
         expected = (source["size_bytes"], source["mtime_ns"], source["device"], source["inode"])
         # O_NONBLOCK makes a replaced FIFO/device fail instead of hanging on open.
@@ -128,6 +129,10 @@ class ArchiveCacheService:
         return {"config": self.config(), **row, "active_count": active["n"], "path": str(self.settings.archive_cache_dir)}
 
     def prepare(self, work_id: int) -> dict[str, Any]:
+        with self._lock:
+            return self._prepare(work_id)
+
+    def _prepare(self, work_id: int) -> dict[str, Any]:
         source = self.libraries.source_file(work_id) or self.libraries.source_file(work_id, available=False)
         if not source:
             raise FileNotFoundError("作品源文件不可用或源库已移除")
@@ -215,6 +220,7 @@ class ArchiveCacheService:
             source = self.libraries.source_file(row["work_id"], available=False, item_id=row["library_item_id"])
             if not source or source["library_item_id"] != row["library_item_id"] or _version(source) != row["version"]:
                 raise ValueError("作品源版本已变化，请重新打开作品")
+            source["root_boundaries"] = self.libraries.root_boundaries(source["library_id"])
             self._checkpoint(job_id)
             self.db.execute("UPDATE archive_cache SET status = 'downloading', last_error = NULL WHERE id = ?", (cache_id,))
             self.jobs.mark_running(job_id, "caching_archive", 0, row["size_bytes"])

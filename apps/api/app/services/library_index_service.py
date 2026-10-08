@@ -18,6 +18,7 @@ from app.config import Settings
 from app.database import Database
 from app.services.archive_manifest import inspect_archive, MountedArchiveProbe, MountUnavailable
 from app.services.media_library_service import MediaLibraryService
+from app.services.archive_service import clear_direct_thumbnails
 from app.services.dictionary_service import normalize_key
 
 
@@ -29,7 +30,8 @@ LANGUAGES = {"zh": "chinese", "zh-cn": "chinese", "zh-tw": "chinese", "ja": "jap
 def _mount_walk(connection, root: str, config: dict[str, Any], paths: list[str] | None) -> None:
     try:
         path = Path(root)
-        connection.send(("root", path.stat()))
+        canonical = MediaLibraryService.validate_root(path, config.get("_root_boundaries", []))
+        connection.send(("root", (path.stat(), str(canonical))))
         for entry, info, error in LibraryIndexService._walk(path, config, paths):
             connection.send(("file", (str(entry), info, error)))
         connection.send(("done", None))
@@ -71,6 +73,7 @@ class LibraryIndexService:
               job_id: int | None, paths: list[str] | None) -> dict[str, Any]:
         library = self.libraries.get(library_id)
         root, config = Path(library["root_path"]), library["config"]
+        config["_root_boundaries"] = self.libraries.root_boundaries(library_id)
         counts = dict.fromkeys(("files", "indexed", "unchanged", "pending", "errors", "unsupported", "ignored", "missing"), 0)
         errors: list[dict[str, str]] = []
         run_id = self.db.execute("INSERT INTO library_scan_runs(library_id, job_id) VALUES (?, ?)", (library_id, job_id)).lastrowid
@@ -88,8 +91,9 @@ class LibraryIndexService:
                 probe = MountedArchiveProbe(root, config["follow_symlinks"], config["io_timeout_seconds"])
                 self._mount_probe = probe
                 walker = self._walk_mounted(root, config, checkpoint, paths)
-                root_stat = next(walker)
+                root_stat, canonical_root = next(walker)
             else:
+                canonical_root = str(self.libraries.validate_root(root, config["_root_boundaries"]))
                 root_stat = root.stat()
             if not stat.S_ISDIR(root_stat.st_mode):
                 raise OSError("库根路径不是目录")
@@ -152,9 +156,9 @@ class LibraryIndexService:
                 counts["missing"] = cursor.rowcount
             health = "online" if completed_walk else ("offline" if not counts["files"] else "partial")
             self.db.execute(
-                """UPDATE media_libraries SET health = ?, last_error = ?, root_device = ?, root_inode = ?,
+                """UPDATE media_libraries SET health = ?, last_error = ?, root_device = ?, root_inode = ?, resolved_root_path = ?,
                 last_scan_at = CURRENT_TIMESTAMP WHERE id = ?""",
-                (health, errors[0]["reason"] if errors else None, root_stat.st_dev, root_stat.st_ino, library_id),
+                (health, errors[0]["reason"] if errors else None, root_stat.st_dev, root_stat.st_ino, canonical_root, library_id),
             )
             status = "completed" if completed_walk else "partial"
         except Exception as exc:
@@ -439,8 +443,7 @@ class LibraryIndexService:
                             VALUES (?, ?, ?, ?, ?, ?, 'comicinfo')""",
                             (work_id, mapped["remote_tag_id"] if mapped else None, mapped["id"] if mapped else None, tag_type, name, normalize_key(name)),
                         )
-            for thumb in self.settings.thumbs_dir.glob(f"{work_id}-*.jpg"):
-                thumb.unlink(missing_ok=True)
+            clear_direct_thumbnails(self.settings, work_id)
             return work_id
         finally:
             if cover_tmp:

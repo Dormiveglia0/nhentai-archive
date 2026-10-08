@@ -629,6 +629,10 @@ export type FileEntry = {
   updated_at?: string | null;
   tags?: string[];
   tag_items?: LibraryTag[];
+  source_status?: string | null;
+  library_id?: number | null;
+  library_name?: string | null;
+  read_only?: boolean;
   // loose entries
   path?: string;
   name?: string;

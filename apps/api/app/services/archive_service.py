@@ -286,8 +286,7 @@ class ArchiveService:
         return destination
 
     def _clear_cached_media(self, work_id: int, cover_path: Path | None) -> None:
-        for cached in self.settings.thumbs_dir.glob(f"{work_id}-*.jpg"):
-            cached.unlink(missing_ok=True)
+        clear_direct_thumbnails(self.settings, work_id)
         keep = cover_path.resolve() if cover_path else None
         for cached in self.settings.covers_dir.glob(f"{work_id}.*"):
             if keep is None or cached.resolve() != keep:
@@ -327,6 +326,13 @@ class ArchiveService:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
                 digest.update(chunk)
         return digest.hexdigest()
+
+
+def clear_direct_thumbnails(settings: Settings, work_id: int) -> None:
+    for cached in settings.thumbs_dir.glob(f"{work_id}-*.jpg"):
+        # Immutable version thumbnails belong to cache leases/TTL, not source reindexing.
+        if not re.fullmatch(r"c[0-9]+", cached.name.split("-", 2)[1]):
+            cached.unlink(missing_ok=True)
 
 
 def _make_thumbnail(body: bytes, width: int) -> bytes:

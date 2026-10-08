@@ -223,6 +223,7 @@ CREATE TABLE IF NOT EXISTS media_libraries (
   last_error TEXT,
   root_device INTEGER,
   root_inode INTEGER,
+  resolved_root_path TEXT,
   last_scan_at TEXT,
   removed_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -303,6 +304,8 @@ INDEXES = """
 CREATE INDEX IF NOT EXISTS idx_archive_cache_access ON archive_cache(status, accessed_at);
 CREATE INDEX IF NOT EXISTS idx_archive_cache_work ON archive_cache(work_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_archive_cache_leases ON archive_cache_leases(cache_id, expires_at);
+CREATE INDEX IF NOT EXISTS idx_work_files_path ON work_files(path);
+CREATE INDEX IF NOT EXISTS idx_works_cover_path ON works(cover_path) WHERE cover_path IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_work_files_work_kind_created
   ON work_files(work_id, kind, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_works_favorite_updated
@@ -393,6 +396,8 @@ class Database:
         )
         _add_column_if_missing(conn, "reading_sessions", _table_columns(conn, "reading_sessions"),
                                "cache_lease", "TEXT")
+        _add_column_if_missing(conn, "media_libraries", _table_columns(conn, "media_libraries"),
+                               "resolved_root_path", "TEXT")
 
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:

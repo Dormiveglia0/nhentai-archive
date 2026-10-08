@@ -1,11 +1,16 @@
 import json
+import concurrent.futures
+import threading
 import zipfile
 from pathlib import Path
+import pytest
 
 from app.config import Settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
 from app.services.file_service import FileMaintenanceService
+from test_archive_cache import cached_library, wait_for_cache
+from test_library_index import create_archive, setup_index
 
 
 def _png() -> bytes:
@@ -27,7 +32,7 @@ def _setup(tmp_path):
     db = Database(settings.database_path)
     db.init_schema()
     archive = ArchiveService(db, settings)
-    files = FileMaintenanceService(db, settings)
+    files = FileMaintenanceService(db, settings, archive.cache)
     return settings, db, archive, files
 
 
@@ -38,6 +43,156 @@ def _import_work(db, archive, tmp_path, title="Rain", gallery_id=1234) -> int:
         cbz, "remote", title, gallery_id,
         {"remote": "nhentai", "media_id": f"media-{gallery_id}", "title_japanese": "雨"},
     )
+
+
+def test_mounted_inventory_and_read_only_delete_never_probe_source(tmp_path, monkeypatch):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    libraries.update(library["id"], {"kind": "mounted"})
+    source = root / "book.cbz"
+    create_archive(source, tags="one")
+    index.scan(library["id"])
+    work_id = db.fetchone("SELECT id FROM works")["id"]
+    cover = Path(db.fetchone("SELECT cover_path FROM works")["cover_path"])
+    original = source.read_bytes()
+    files = FileMaintenanceService(db, settings)
+    original_stat = Path.stat
+
+    def no_mount_stat(path, *args, **kwargs):
+        if path == root or root in path.parents:
+            raise AssertionError("inventory and read-only refusal must not probe mount")
+        return original_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", no_mount_stat)
+    entry = files.inventory(category="work")["result"][0]
+    assert entry["status"] == "ok" and entry["read_only"] is True
+    assert entry["source_bytes"] == len(original) and entry["library_id"] == library["id"]
+    assert files.overview()["missing_source"] == 0
+    preview = files.preview_delete([{"kind": "work", "work_id": work_id}])
+    assert preview["items"][0]["status"] == "forbidden"
+    assert preview["files_to_delete"] == preview["works_to_remove"] == 0
+    assert files.delete([{"kind": "work", "work_id": work_id}])["removed_works"] == 0
+    assert source.read_bytes() == original and cover.exists()
+    assert db.fetchone("SELECT 1 FROM works WHERE id = ?", (work_id,))
+
+
+def test_local_permissions_and_symlink_are_rechecked_after_delete_preview(tmp_path):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    libraries.update(library["id"], {"read_only": False})
+    source = root / "book.cbz"
+    create_archive(source)
+    index.scan(library["id"])
+    work_id = db.fetchone("SELECT id FROM works")["id"]
+    cover = Path(db.fetchone("SELECT cover_path FROM works")["cover_path"])
+    files = FileMaintenanceService(db, settings)
+    target = [{"kind": "work", "work_id": work_id}]
+    assert files.preview_delete(target)["works_to_remove"] == 1
+    libraries.update(library["id"], {"read_only": True})
+    assert files.delete(target)["deleted_files"] == 0
+    assert source.exists() and cover.exists()
+    libraries.update(library["id"], {"read_only": False})
+    outside = tmp_path / "outside.cbz"
+    create_archive(outside)
+    original = outside.read_bytes()
+    source.unlink()
+    source.symlink_to(outside)
+    assert files.delete(target)["deleted_files"] == 0
+    assert cover.exists() and outside.read_bytes() == original
+
+
+def test_reading_lease_prevents_delete_then_writable_source_and_caches_are_removed(tmp_path):
+    settings, db, libraries, _, root, library, archive, work_id = cached_library(tmp_path)
+    libraries.update(library["id"], {"read_only": False})
+    prepared = archive.cache.prepare(work_id)
+    assert wait_for_cache(archive.cache, prepared)["status"] == "completed"
+    ready = archive.cache.prepare(work_id)
+    cached = archive.cache._path(ready["cache_id"])
+    archive.read_page_thumbnail(work_id, 1, 240, ready["lease"])
+    files = FileMaintenanceService(db, settings)
+    target = [{"kind": "work", "work_id": work_id}]
+    assert files.preview_delete(target)["works_to_remove"] == 0
+    assert files.delete(target)["deleted_files"] == 0
+    assert cached.exists() and (root / "one.cbz").exists()
+    archive.cache.release(work_id, ready["lease"])
+    empty = settings.page_cache_dir / f"{work_id}-empty"
+    empty.touch()
+    result = files.delete(target)
+    assert result["removed_works"] == 1 and result["deleted_files"] >= 5
+    assert result["errors"] == [] and not cached.exists() and not empty.exists()
+    assert not (root / "one.cbz").exists()
+    assert not list(settings.thumbs_dir.glob(f"{work_id}-*"))
+    assert archive.cache.summary()["ready_count"] == 0
+    archive.cache.close()
+
+
+def test_shared_and_referenced_files_cannot_be_deleted_as_orphans(tmp_path):
+    settings, db, archive, files = _setup(tmp_path)
+    first = _import_work(db, archive, tmp_path, gallery_id=1)
+    second = _import_work(db, archive, tmp_path, gallery_id=2)
+    source = Path(db.fetchone("SELECT path FROM work_files WHERE work_id = ? AND kind = 'source_cbz'", (first,))["path"])
+    cover = Path(db.fetchone("SELECT cover_path FROM works WHERE id = ?", (first,))["cover_path"])
+    db.execute("UPDATE works SET cover_path = ? WHERE id = ?", (db.managed_path(cover), second))
+    target = [{"kind": "work", "work_id": first}]
+    assert files.preview_delete(target)["works_to_remove"] == 0
+    assert files.delete(target)["deleted_files"] == 0
+    for path in (source, cover):
+        loose = [{"kind": "orphan", "path": str(path)}]
+        assert files.preview_delete(loose)["files_to_delete"] == 0
+        assert files.delete(loose)["deleted_files"] == 0
+        assert path.exists()
+    active = settings.tmp_dir / "nhentai-99.cbz"
+    active.touch()
+    archive.cache.jobs.create("remote_import", {"gallery_id": 99})
+    assert files.delete([{"kind": "stale", "path": str(active)}])["deleted_files"] == 0
+    assert active.exists()
+
+
+def test_delete_and_cache_preparation_do_not_leave_a_job_for_a_removed_work(tmp_path, monkeypatch):
+    settings, db, libraries, _, root, library, archive, work_id = cached_library(tmp_path)
+    libraries.update(library["id"], {"read_only": False})
+    files = FileMaintenanceService(db, settings, archive.cache)
+    removing, resume = threading.Event(), threading.Event()
+    plan_files = files._work_files
+
+    def hold_removal(work):
+        plan = plan_files(work)
+        removing.set()
+        assert resume.wait(3)
+        return plan
+
+    monkeypatch.setattr(files, "_work_files", hold_removal)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        deletion = pool.submit(files.delete, [{"kind": "work", "work_id": work_id}])
+        assert removing.wait(2)
+        reading = pool.submit(archive.cache.prepare, work_id)
+        try:
+            assert not reading.done()
+        finally:
+            resume.set()
+        assert deletion.result()["removed_works"] == 1
+        with pytest.raises(FileNotFoundError):
+            reading.result()
+    assert db.fetchone("SELECT COUNT(*) AS n FROM archive_cache")["n"] == 0
+    assert db.fetchone("SELECT COUNT(*) AS n FROM jobs WHERE type = 'archive_cache'")["n"] == 0
+    archive.cache.close()
+
+
+def test_active_scan_protects_work_and_unreferenced_scan_outputs(tmp_path):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    libraries.update(library["id"], {"read_only": False})
+    create_archive(root / "book.cbz")
+    index.scan(library["id"])
+    work_id = db.fetchone("SELECT id FROM works")["id"]
+    archive = ArchiveService(db, settings)
+    files = FileMaintenanceService(db, settings, archive.cache)
+    job = archive.cache.jobs.create("library_scan", {"library_id": library["id"]})
+    temporary_cover = settings.covers_dir / ".index-working.jpg"
+    temporary_cover.touch()
+    for target in ({"kind": "work", "work_id": work_id}, {"kind": "orphan", "path": str(temporary_cover)}):
+        assert files.preview_delete([target])["files_to_delete"] == 0
+        assert files.delete([target])["deleted_files"] == 0
+    assert (root / "book.cbz").exists() and temporary_cover.exists()
+    archive.cache.jobs.complete(job["id"])
+    assert files.delete([{"kind": "work", "work_id": work_id}])["removed_works"] == 1
 
 
 def test_healthy_work_is_ok_and_overview_counts_real_state(tmp_path):
@@ -358,9 +513,9 @@ def test_delete_work_retains_metadata_when_file_removal_fails(tmp_path, monkeypa
         )["path"]
     )
 
-    def reject_unlink(path, target, errors):
+    def reject_unlink(path, target, errors, source=None):
         errors.append({"target": target, "code": "unlink_failed", "message": f"blocked: {path.name}"})
-        return 0
+        return None
 
     monkeypatch.setattr(files, "_unlink", reject_unlink)
 

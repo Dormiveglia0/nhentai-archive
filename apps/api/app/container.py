@@ -47,7 +47,7 @@ def build_services() -> SimpleNamespace:
     metadata_refresh = MetadataRefreshService(db, client, discover, dictionary)
     governance = GovernanceService(db, dictionary, settings)
     exports = ExportService(db, settings)
-    files = FileMaintenanceService(db, settings)
+    files = FileMaintenanceService(db, settings, archive.cache)
     imports = ImportService(settings, client, jobs, archive, discover, dictionary)
     export_jobs = ExportJobService(settings, jobs, exports)
     library_scan = LibraryScanService(settings, db)

@@ -69,7 +69,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
       initial={{ opacity: 0, y: reduced ? 0 : 24, scale: reduced ? 1 : .97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: reduced ? 0 : 12, scale: reduced ? 1 : .98 }}
       transition={{ duration: reduced ? 0 : .25, ease: [.22, 1, .36, 1] }}
-      onCancel={event => { event.preventDefault(); onClose(); }}
+      onCancel={event => { if (event.target !== event.currentTarget) return; event.preventDefault(); onClose(); }}
       onClick={event => {
         if (event.target !== event.currentTarget) return;
         const rect = event.currentTarget.getBoundingClientRect();

@@ -38,7 +38,7 @@ class MediaLibraryService:
         if managed:
             if managed["root_path"] != root:
                 with self.db.connect() as conn:
-                    conn.execute("UPDATE media_libraries SET root_path = ? WHERE id = ?", (root, managed["id"]))
+                    conn.execute("UPDATE media_libraries SET root_path = ?, resolved_root_path = NULL WHERE id = ?", (root, managed["id"]))
                     conn.execute("""UPDATE work_files SET path = 'library/' ||
                                  (SELECT relative_path FROM library_items WHERE id = work_files.library_item_id)
                                  WHERE library_item_id IN (SELECT id FROM library_items WHERE library_id = ?)""", (managed["id"],))
@@ -127,7 +127,7 @@ class MediaLibraryService:
                     WHERE library_item_id IN (SELECT id FROM library_items WHERE library_id = ?)""",
                     (str(root), library_id),
                 )
-                conn.execute("UPDATE media_libraries SET root_device = NULL, root_inode = NULL WHERE id = ?", (library_id,))
+                conn.execute("UPDATE media_libraries SET root_device = NULL, root_inode = NULL, resolved_root_path = NULL WHERE id = ?", (library_id,))
                 conn.execute("UPDATE library_items SET status = 'pending', stable_since = 0 WHERE library_id = ?", (library_id,))
         return self.get(library_id)
 
@@ -173,13 +173,16 @@ class MediaLibraryService:
 
     def resolve_item(self, item_id: int, for_write: bool = False) -> tuple[Path, dict[str, Any]]:
         row = self.db.fetchone(
-            """SELECT i.*, l.root_path, l.kind, l.read_only, l.removed_at, l.config_json
+            """SELECT i.*, l.root_path, l.resolved_root_path, l.kind, l.read_only, l.removed_at, l.config_json
             FROM library_items i JOIN media_libraries l ON l.id = i.library_id WHERE i.id = ?""", (item_id,),
         )
         if not row or row["removed_at"]:
             raise FileNotFoundError("作品源库已移除")
         if for_write and (row["read_only"] or row["kind"] == "mounted"):
             raise PermissionError("该目录库只读，不能修改源文件")
+        root = self.validate_root(Path(row["root_path"]), self.root_boundaries(row["library_id"]))
+        if row["resolved_root_path"] and str(root) != row["resolved_root_path"]:
+            raise ValueError("库根目录已变化，请重新扫描")
         config = self._config(json.loads(row["config_json"]))
         return self.source_path(Path(row["root_path"]), row["relative_path"], config["follow_symlinks"]), row
 
@@ -197,6 +200,55 @@ class MediaLibraryService:
             ORDER BY f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
             l.kind = 'local' DESC, f.id DESC LIMIT 1""", (work_id, item_id) if item_id is not None else (work_id,),
         )
+
+    def files(self, work_id: int | None = None) -> list[dict[str, Any]]:
+        """File inventory without loading page manifests or touching source mounts."""
+        return self.db.fetchall(
+            """SELECT f.*, i.status AS source_status, i.mtime_ns, i.fingerprint,
+            l.id AS library_id, l.name AS library_name, l.kind AS library_kind,
+            l.root_path, COALESCE(l.read_only,
+              (SELECT read_only FROM media_libraries WHERE kind = 'managed'), 1) AS read_only,
+            l.removed_at
+            FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
+            LEFT JOIN media_libraries l ON l.id = i.library_id"""
+            + (" WHERE f.work_id = ?" if work_id is not None else "")
+            + """ ORDER BY f.work_id, (f.library_item_id IS NULL OR (i.status = 'ready' AND l.removed_at IS NULL)) DESC,
+            f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
+            l.kind = 'local' DESC, f.id DESC""", (work_id,) if work_id is not None else (),
+        )
+
+    @staticmethod
+    def file_available(row: dict[str, Any]) -> bool:
+        if row.get("library_item_id"):
+            return row.get("source_status") == "ready" and not row.get("removed_at")
+        try:
+            return Path(row["path"]).is_file()
+        except OSError:
+            return False
+
+    def root_boundaries(self, library_id: int) -> list[dict[str, Any]]:
+        # Stored resolved roots avoid probing other mounts during validation.
+        rows = self.db.fetchall("SELECT root_path, resolved_root_path, root_device, root_inode FROM media_libraries WHERE id <> ? AND removed_at IS NULL", (library_id,))
+        roots = [{"path": value, "device": row["root_device"], "inode": row["root_inode"]}
+                 for row in rows for value in (row["root_path"], row["resolved_root_path"]) if value]
+        for path in (self.settings.covers_dir, self.settings.thumbs_dir, self.settings.page_cache_dir,
+                     self.settings.tmp_dir, self.settings.data_dir / "cache", self.settings.export_dir):
+            info = path.stat()
+            roots.append({"path": str(path.resolve()), "device": info.st_dev, "inode": info.st_ino})
+        return roots
+
+    @staticmethod
+    def validate_root(root: Path, boundaries: list[dict[str, Any]]) -> Path:
+        canonical = root.resolve(strict=True)
+        info = canonical.stat()
+        for value in boundaries:
+            boundary = Path(value["path"])
+            same_directory = info.st_ino and (info.st_dev, info.st_ino) == (value["device"], value["inode"])
+            if same_directory or canonical == boundary or canonical in boundary.parents or boundary in canonical.parents:
+                raise ValueError("库目录别名与已有媒体库或应用缓存重叠")
+        if any(canonical == Path(value) or Path(value) in canonical.parents for value in ("/proc", "/sys", "/dev")):
+            raise ValueError("不能扫描系统目录")
+        return canonical
 
     def resolve_file(self, row: dict[str, Any], for_write: bool = False) -> Path:
         if row["library_item_id"]:

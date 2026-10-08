@@ -82,15 +82,20 @@ def test_reader_snapshot_stays_on_original_revision_and_protects_new_progress(tm
     assert wait_for_cache(cache, cache.prepare(work_id))["status"] == "completed"
     old = cache.prepare(work_id)
     old_page = archive.read_page(work_id, 1, old["lease"])
+    archive.read_page_thumbnail(work_id, 1, 240, old["lease"])
+    old_thumbnail = next(settings.thumbs_dir.glob(f"{work_id}-c{old['cache_id']}-*.jpg"))
+    thumbnail_bytes = old_thumbnail.read_bytes()
     reader = ReaderService(db, cache)
     session = reader.start_session(work_id, "snapshot-reader", 1, old["lease"])
     source = root / "one.cbz"
     create_archive(source, title="Metadata changed")
     index.scan(library["id"])
+    assert old_thumbnail.read_bytes() == thumbnail_bytes
     assert reader.update_state(work_id, 2, True, old["lease"])["completed"]
     with zipfile.ZipFile(source, "a") as book:
         book.writestr("nested/000.jpg", old_page[0])
     assert index.scan(library["id"])["counts"]["indexed"] == 1
+    assert old_thumbnail.read_bytes() == thumbnail_bytes
     assert wait_for_cache(cache, cache.prepare(work_id))["status"] == "completed"
     new = cache.prepare(work_id)
     assert new["cache_id"] != old["cache_id"] and len(new["pages"]) == 3

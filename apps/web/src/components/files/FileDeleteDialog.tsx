@@ -44,9 +44,9 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
   }, [preview, returnFocus]);
 
   if (!preview) return null;
-  const hasHealthyWork = preview.items.some((item) => item.kind === "work" && item.exists);
+  const hasHealthyWork = preview.items.some((item) => item.kind === "work" && item.status === "ready");
   const warnings = preview.items.flatMap((item) =>
-    item.warnings.map((warning) => ({ warning, title: item.kind === "work" ? item.title : undefined })),
+    item.warnings.map((warning) => ({ warning, title: preview.items.length > 1 && item.kind === "work" ? item.title : undefined })),
   );
   const canDelete = preview.files_to_delete > 0 || preview.works_to_remove > 0;
 
@@ -67,9 +67,9 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
       </header>
       {label ? <strong className="folio-files-delete-label">{label}</strong> : null}
       <p id="folio-files-delete-summary">
-        将删除 <strong>{preview.files_to_delete}</strong> 个文件
+        {canDelete ? <>将删除 <strong>{preview.files_to_delete}</strong> 个文件
         {preview.works_to_remove > 0 ? <>，并移除 <strong>{preview.works_to_remove}</strong> 个作品</> : null}
-        ，预计回收 <strong>{formatBytes(preview.reclaim_bytes)}</strong>。此操作不可恢复。
+        ，预计回收 <strong>{formatBytes(preview.reclaim_bytes)}</strong>。此操作不可恢复。</> : "所选文件暂时无法删除。"}
       </p>
       {warnings.length > 0 ? (
         <ul className="folio-files-warning-list">

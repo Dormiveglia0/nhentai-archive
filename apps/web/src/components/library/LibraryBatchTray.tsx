@@ -36,6 +36,8 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
   const selectionKey = selectedIds.join(",");
 
   useEffect(() => {
+    setDeletePreview(null);
+    setDeleteTargets([]);
     setRefreshPreview(null);
     setGalleryIds({});
     setRefreshDirty(false);
@@ -126,7 +128,8 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
       const targets = selectedIds.map((work_id) => ({ kind: "work" as const, work_id }));
       const preview = await api.previewFileDelete(targets);
       setDeletePreview(preview);
-      setDeleteTargets(targets);
+      setDeleteTargets(preview.items.filter((item) => item.kind === "work" && item.status === "ready")
+        .map((item) => ({ kind: "work", work_id: item.work_id })));
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -166,11 +169,14 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
       {deletePreview ? (
         <div className="folio-library-delete-confirm">
           <p>
-            将永久删除 {deletePreview.works_to_remove} 部作品（共 {deletePreview.files_to_delete} 个文件，
-            释放 {formatBytes(deletePreview.reclaim_bytes)}）。源 CBZ、封面与所有阅读进度/整理记录将被同时移除，且不可恢复。
+            {deletePreview.works_to_remove > 0 ? <>将永久删除 {deletePreview.works_to_remove} 部作品（共 {deletePreview.files_to_delete} 个文件，
+            释放 {formatBytes(deletePreview.reclaim_bytes)}）。源 CBZ、封面与所有阅读进度/整理记录将被同时移除，且不可恢复。</> : "所选作品暂时无法删除。"}
           </p>
+          {deletePreview.items.filter((item) => item.status === "forbidden").map((item) => (
+            <p key={item.work_id}>{item.title}：{item.warnings.join("；")}</p>
+          ))}
           <div className="folio-library-batch-actions">
-            <button type="button" className="is-danger" onClick={confirmDelete} disabled={busy}>
+            <button type="button" className="is-danger" onClick={confirmDelete} disabled={busy || deletePreview.works_to_remove === 0}>
               确认删除
             </button>
             <button type="button" onClick={() => setDeletePreview(null)} disabled={busy}>
