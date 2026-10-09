@@ -1,6 +1,6 @@
 # NH Archive Agent Map
 
-当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。正在发布4349；正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
+当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。已部署4349，镜像 `reader-media-20261010-published` / `latest`（`ef8a7d1e4ed5`），健康检查通过；114部作品与原有进度、会话、标签和源文件保留，89个静态资源逐字节匹配。正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
 
 Use this file as the first frontend navigation index. Read only the row for the module being changed; do not load the former monolithic demo files into context.
 

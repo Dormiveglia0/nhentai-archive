@@ -1,6 +1,6 @@
 # NH Archive Project Status
 
-当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。正在发布4349；正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
+当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。已部署4349，镜像 `reader-media-20261010-published` / `latest`（`ef8a7d1e4ed5`），健康检查通过；114部作品与原有进度、会话、标签和源文件保留，89个静态资源逐字节匹配。正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
 
 2026-10-09 历史版本已部署到4349：多目录媒体库、增量监控、版本化阅读缓存、语言/置信度刮削、本地标签范围、作者/社团订阅与SMTP均已接通。完整后端323项、最终镜像323项通过；125项浏览器检查分批通过，问题作品另16项阅读/导出复验在测试入口修订后通过。真实rclone1.74.4/WebDAV/FUSE/Docker只读映射完成缓存、直接阅读、掉线保留、恢复和自动新增验证；10秒补偿配置下实际新增6.334秒被发现，新增扫描未产生自动任务或整包缓存。最终镜像media-20261009-published/latest（4046b0fd69ea），入口index-DMjx0tAq.js。生产113作品、110任务、27进度、736历史、95本地会话、422远端会话和认证记录已核对保留，完整性/外键通过。功能源码16c3db2已推送；证据与测量范围见MEDIA_LIBRARY_UPDATE.md。
 
