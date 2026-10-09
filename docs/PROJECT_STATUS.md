@@ -1,8 +1,8 @@
 # NH Archive Project Status
 
-当前阶段：页面布局、订阅与交互完善，分支 `codex/site-layout-refinement`。实现与完整功能、视觉、动画、性能回归已完成，正在正式发布；逐项证据见 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md)。
+当前阶段已完成并部署：页面布局、订阅与交互完善，分支 `codex/site-layout-refinement`，实现提交 `95bf15602d843b73066c18bd9dd7d3204526e7a4`。逐项功能、视觉、动画、性能及发布证据见 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md)。
 
-此前正式版本：4349 上 `reader-media-20261010-published` / `latest`（`ef8a7d1e4ed5`），源码 `7c8df45`。数据绑定 `/opt/nhentai/.local-data:/data`。上一版337项API/镜像、141个不同浏览器案例与发布证据见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)；媒体库架构详细记录见 [MEDIA_LIBRARY_UPDATE.md](MEDIA_LIBRARY_UPDATE.md)。
+当前正式版本：4349 上 `site-layout-20261010-published` / `latest`（`c6df27a5c93e`），容器健康，数据绑定 `/opt/nhentai/.local-data:/data`。旧版本 `ef8a7d1e4ed5` 保留为 `rollback-site-layout-20261010`。上一版阅读发布记录见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)；媒体库架构见 [MEDIA_LIBRARY_UPDATE.md](MEDIA_LIBRARY_UPDATE.md)。
 
 ## 当前功能
 
@@ -19,7 +19,9 @@
 
 构建与差异检查通过。完整API测试339项通过，最终生产镜像内同样339项通过；22个文件的138个不同浏览器案例经分组运行与问题修复后的复验全部通过，覆盖真实阅读、发现、订阅、导入、文件、迁移、治理、词典、队列、设置、认证和只读限制。
 
-最终编译产物检查20个路由的桌面/手机共40个状态：最大CLS 0.019947，最大LCP 976ms，没有超过50ms的主线程任务、水平溢出或运行错误。已修复首页、迁移、图片首次显示与整理页的加载跳动。测量为本机Chromium、未限速及预热API，不能替代用户设备和外部挂载的性能。正式备份、部署与数据核验结果将在发布完成后填写。
+最终编译产物检查20个路由的桌面/手机共40个状态：最大CLS 0.019947，最大LCP 976ms，没有超过50ms的主线程任务、水平溢出或运行错误。已修复首页、迁移、图片首次显示与整理页的加载跳动。测量为本机Chromium、未限速及预热API，不能替代用户设备和外部挂载的性能。
+
+正式发布前停止旧服务并备份33张表、113部作品；发布后18张核心表完全相同，113个受管源文件SHA全部相同，数据库完整性及外键检查通过。仅订阅表增加近期预览列、首次排队和正常轮询时间，原基线和通知配置保留；已读、邮件、认证及设置保留。78个静态资源与验收构建逐字节一致；健康、匿名访问保护、桌面/手机登录页验证通过。源码已推送功能分支，镜像标签在本机发布，未上传远端镜像仓库。
 
 已退役旧 PageHeading、9个页头场景、对应CSS/无限动画及五种首页预览入口；当前文档重新整理，历史界面审计合并到Git记录。保留此前媒体库与阅读发布记录、兼容入口和有实际用途的回归测试。
 

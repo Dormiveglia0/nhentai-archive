@@ -1,6 +1,6 @@
 # NH Archive Agent Map
 
-当前工作：`codex/site-layout-refinement`，页面布局、订阅与交互完善。实施与验收记录见 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md)。上一版已部署的阅读与媒体库更新见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)。状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。
+当前正式版本：`codex/site-layout-refinement`，页面布局、订阅与交互完善，已部署4349。实施与验收记录见 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md)。上一版阅读与媒体库更新见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)。状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。
 
 前端修改先读本文件，再读对应组件；不要把历史原型当成当前设计。
 

@@ -49,6 +49,15 @@
 
 完整原始日志、私有数据库备份、哈希核对与截图位于本机私有 `/tmp/nh-site-layout-refinement-20261010/`，不进入仓库；长期复验依据为源码中的真实行为测试。
 
-## 发布状态
+## 正式发布
 
-最终候选镜像已构建及验收：`sha256:c6df27a5c93e6fe9a207c017d8698fe855414e508c1422982c9cb280a3fd9b64`，入口 `index-ss7UyZcT.js`、共享样式 `index-aXCIbdPO.css`。正式服务替换、备份和数据核对正在进行；完成后填写源码提交、正式标签与验证结果。
+- 2026-10-10已部署4349，容器 `nh-archive-app-1` 运行且健康。实现源码 `95bf15602d843b73066c18bd9dd7d3204526e7a4` 已推送 `origin/codex/site-layout-refinement`；发布文档随分支后续提交记录。
+- 实际正式镜像：`sha256:c6df27a5c93e6fe9a207c017d8698fe855414e508c1422982c9cb280a3fd9b64`，本机标签 `site-layout-20261010-published` / `latest`。未上传远端镜像仓库。
+- 保持 `/opt/nhentai/.local-data:/data`、原compose权限与只读容器配置；从当前工作树构建候选镜像，以 `--no-build --pull never` 替换服务，避免从旧 `/opt/nhentai` 源码重新构建。
+- 停止旧服务后制作一致性SQLite备份：私有 `/tmp/nh-site-layout-refinement-20261010/deploy/release/before-deploy.db`（0600；所在目录0700），33张表、113部作品，完整性与外键检查通过。
+- 部署后18张核心数据表逐行摘要一致，包括作品/来源/页数/元数据、收藏/标签/字典、进度/历史/会话/双来源、治理、导出和设置；全部113个受管源CBZ大小与SHA一致。无新增表，完整性与外键检查通过。
+- 非核心表仅 `creator_subscriptions` 变化：增加recent_json、启用订阅首次排队及正常推进轮询时间。实际1条订阅的基线、启用状态与通知配置保留；subscription_seen、subscription_updates、mail_outbox等其余表未变。
+- 健康API为200；匿名访问迁移和双来源API为401，原密码配置保留。正式78个静态资源逐字节匹配最终构建，入口 `index-ss7UyZcT.js`、共享样式 `index-aXCIbdPO.css`；1440px/390px登录页无溢出、无运行错误。
+- 回滚镜像本机标签 `rollback-site-layout-20261010` 指向原 `sha256:ef8a7d1e4ed53ef2013498c0610078146548f6ae88b1fda57eb689d797448bdf`。保留备份与旧镜像，不删除正式源文件。
+
+本阶段14项完成条件及发布验收均已完成。后续修改继续按实际数据、可重复行为测试和真实渲染复验。
