@@ -85,7 +85,7 @@ test("均衡网格保留密集行的填充，并限制稀疏行放大", () => {
 });
 
 
-test("发现侧栏收窄空间后作品保持正常列宽，每行按自身封面高度排版", async ({ page }) => {
+test("发现全宽布局保持正常列宽，每行按自身封面高度排版", async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1440 });
   await page.route('**/api/discover/feed?*', async route => {
     const response = await route.fetch();
@@ -103,7 +103,7 @@ test("发现侧栏收窄空间后作品保持正常列宽，每行按自身封�
   }));
   const rows = [...new Set(cards.map(n => n.y))];
   const sizes = rows.map(y => cards.filter(n => n.y === y).length);
-  expect(sizes).toEqual([8, 8, 8, 1]);
+  expect(sizes).toEqual([9, 8, 8]);
   expect(Math.max(...cards.map(n => n.width))).toBeLessThan(300);
   expect(Math.max(...cards.map(n => n.gap))).toBeLessThan(12);
 });

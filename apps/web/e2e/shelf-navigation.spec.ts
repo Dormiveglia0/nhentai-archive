@@ -57,7 +57,7 @@ test("数字逐渐递增到实际值，动效切换与离屏暂停正常", async
   await expect(page.locator(".folio-scroll")).toHaveCSS("transform", "none");
   await page.locator(".folio-scroll").evaluate((node) => { node.scrollTop = node.scrollHeight; });
   await expect(page.locator(".folio-page-head, .folio-scene")).toHaveCount(0);
-  expect(await page.locator(".folio-atmosphere svg").evaluate(node => node.getAnimations({ subtree: true }).every(animation => animation.playState !== "running"))).toBe(true);
+  await expect(page.locator(".folio-brand-mark .folio-monogram")).toHaveText("NH");
 });
 
 for (const [route, titles] of [

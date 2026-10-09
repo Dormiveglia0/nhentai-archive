@@ -82,8 +82,9 @@ export function serializeDiscoverHash(state: PersistedDiscoverState): string {
 
 export function canReplaceDiscoverHash(hash: string): boolean {
   const normalized = hash.replace(/^#/, "");
-  const [route] = normalized.split("?");
-  return !route || route === "discover";
+  const [route, query] = normalized.split("?");
+  const view = new URLSearchParams(query).get("view");
+  return (!route || route === "discover") && view !== "updates" && view !== "subscriptions";
 }
 
 export function discoverFilterKey(input: DiscoverFilterKeyInput): string {

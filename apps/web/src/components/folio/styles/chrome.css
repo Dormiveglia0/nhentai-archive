@@ -336,20 +336,6 @@
   min-height: 100%;
 }
 
-@media (min-width: 901px) {
-  .folio-page-library .folio-page-body,
-  :is(
-    .folio-page-governance,
-    .folio-page-dictionary,
-    .folio-page-tasks,
-    .folio-page-export,
-    .folio-page-files
-  ) .folio-page-body {
-    padding-top: 34px;
-  }
-
-}
-
 .folio-nav-icon-accent { stroke: var(--folio-red); }
 .folio-nav a.is-active .folio-nav-icon-accent { stroke-dasharray: 1; animation: folio-nav-draw .45s ease both; }
 :root { view-transition-name: none; }
@@ -360,13 +346,13 @@
 :root[data-folio-slide="tasks"] .folio-tasks-main { view-transition-name: folio-tasks-content; }
 :root[data-folio-slide="discover"] .folio-discover-stage { view-transition-name: folio-discover-content; }
 :root[data-folio-slide="files"] .folio-files-stage { view-transition-name: folio-files-content; }
-::view-transition-group(*) { animation-duration: .46s; }
+::view-transition-group(*) { animation: none; }
 ::view-transition-image-pair(*) { overflow: clip; }
-::view-transition-old(*), ::view-transition-new(*) { mix-blend-mode: normal; animation-duration: .46s; animation-timing-function: cubic-bezier(.22, .8, .25, 1); animation-fill-mode: both; }
+::view-transition-old(*), ::view-transition-new(*) { mix-blend-mode: normal; object-fit: none; object-position: top left; animation-duration: .22s; animation-timing-function: cubic-bezier(.22, .8, .25, 1); animation-fill-mode: both; }
 ::view-transition-old(*) { animation-name: folio-page-depart; }
 ::view-transition-new(*) { animation-name: folio-page-arrive; }
-@keyframes folio-page-depart { to { transform: translateX(calc(var(--folio-page-direction, 1) * -100%)); } }
-@keyframes folio-page-arrive { from { transform: translateX(calc(var(--folio-page-direction, 1) * 100%)); } to { transform: translateX(0); } }
+@keyframes folio-page-depart { to { opacity: 0; transform: translateX(calc(var(--folio-page-direction, 1) * -12px)); } }
+@keyframes folio-page-arrive { from { opacity: 0; transform: translateX(calc(var(--folio-page-direction, 1) * 12px)); } to { opacity: 1; transform: translateX(0); } }
 @keyframes folio-nav-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(*), ::view-transition-new(*), .folio-nav a.is-active .folio-nav-icon-accent { animation: none; } }
 
@@ -375,25 +361,17 @@
 .folio-slide-choice { position: relative; isolation: isolate; }
 .folio-slide-choice > .folio-slide-indicator { background: var(--folio-ink, #171815); }
 
-.folio-updates-indicator { min-width: 94px; height: 100%; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border-right: 1px solid var(--folio-line); color: var(--folio-muted); font-size: 13px; text-decoration: none; transition: color .18s, background .18s; }
-.folio-updates-indicator svg { flex-shrink: 0; }
-.folio-updates-indicator b { min-width: 18px; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; text-align: center; }
-.folio-updates-indicator.has-unread, .folio-updates-indicator:hover { color: var(--folio-red); background: var(--folio-red-soft); }
-@media (max-width: 600px) { .folio-updates-indicator { min-width: 64px; padding-inline: 9px; gap: 5px; } .folio-updates-indicator > span { display: none; } }
-
-:root[data-folio-slide="detail"] .folio-scroll { view-transition-name: folio-detail-content; }
-:root[data-folio-slide="detail"] .folio-work-dialog { view-transition-name: folio-local-detail; }
-::view-transition-group(folio-detail-content), ::view-transition-group(folio-local-detail) { animation-duration: .3s; }
-::view-transition-old(folio-detail-content), ::view-transition-old(folio-local-detail) { animation: folio-detail-depart .3s cubic-bezier(.22, 1, .36, 1) both; }
-::view-transition-new(folio-detail-content) { animation: folio-detail-arrive .3s cubic-bezier(.22, 1, .36, 1) both; }
-@keyframes folio-detail-depart { to { opacity: 0; transform: translateY(calc(var(--folio-page-direction, 1) * -12px)); } }
-@keyframes folio-detail-arrive { from { opacity: 0; transform: translateY(calc(var(--folio-page-direction, 1) * 12px)); } to { opacity: 1; transform: translateY(0); } }
-.folio-route-loading { position: fixed; top: 76px; left: 0; height: 2px; width: 100%; background: var(--folio-red); z-index: 90; transform-origin: left; animation: folio-route-progress 1.2s ease-in-out infinite; pointer-events: none; }
+:root[data-folio-slide="detail"] { view-transition-name: folio-detail-content; }
+::view-transition-old(folio-detail-content) { animation: folio-detail-depart .08s ease-out both; }
+::view-transition-new(folio-detail-content) { animation: folio-detail-arrive .16s ease-out .08s both; }
+@keyframes folio-detail-depart { to { opacity: 0; } }
+@keyframes folio-detail-arrive { from { opacity: 0; } to { opacity: 1; } }
+.folio-detail-pending { position: fixed; top: 76px; left: 0; height: 2px; width: 100%; background: var(--folio-red); z-index: 90; transform-origin: left; animation: folio-route-progress 1.2s ease-in-out infinite; pointer-events: none; }
 @keyframes folio-route-progress { from { transform: scaleX(.06); opacity: .5; } to { transform: scaleX(1); opacity: 1; } }
 :root[data-folio-loading] .folio-work-dialog a[href^="#gallery"] { color: var(--folio-red); }
 :root[data-folio-loading] .folio-work-dialog a[href^="#gallery"] svg { animation: folio-route-pulse .8s ease-in-out infinite alternate; }
-@media (max-width: 900px) { .folio-route-loading { top: 66px; } }
-@media (max-width: 680px) { .folio-route-loading { top: 62px; } }
-@media (prefers-reduced-motion: reduce) { .folio-route-loading, :root[data-folio-loading] .folio-work-dialog a[href^="#gallery"] svg, ::view-transition-old(folio-detail-content), ::view-transition-old(folio-local-detail), ::view-transition-new(folio-detail-content) { animation: none; } }
+@media (max-width: 900px) { .folio-detail-pending { top: 66px; } }
+@media (max-width: 680px) { .folio-detail-pending { top: 62px; } }
+@media (prefers-reduced-motion: reduce) { .folio-detail-pending, :root[data-folio-loading] .folio-work-dialog a[href^="#gallery"] svg, ::view-transition-old(folio-detail-content), ::view-transition-new(folio-detail-content) { animation: none; } }
 
 @keyframes folio-route-pulse { from { opacity: .3; } to { opacity: 1; } }

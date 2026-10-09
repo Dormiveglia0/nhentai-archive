@@ -58,7 +58,7 @@ export function GalleryHero({
         <m.div
           className="folio-gallery-cover-stage"
           style={{ "--gallery-cover-ratio": coverRatio } as CSSProperties}
-          initial={{ opacity: 0, x: reduceMotion ? 0 : -26, rotate: reduceMotion ? 0 : -1.4 }}
+          initial={reduceMotion || document.documentElement.dataset.folioSlide ? false : { opacity: 0, x: -26, rotate: -1.4 }}
           animate={{ opacity: 1, x: 0, rotate: 0 }}
           transition={{ duration: duration.slow, ease: ease.standard }}
         >
@@ -81,7 +81,7 @@ export function GalleryHero({
 
         <m.div
           className="folio-gallery-hero-copy"
-          initial={{ opacity: 0, x: reduceMotion ? 0 : 28 }}
+          initial={reduceMotion || document.documentElement.dataset.folioSlide ? false : { opacity: 0, x: 28 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: duration.slow, ease: ease.standard, delay: reduceMotion ? 0 : 0.08 }}
         >

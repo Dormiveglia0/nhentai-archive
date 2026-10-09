@@ -13,7 +13,7 @@ for (const width of [1440, 390]) test.describe(width + ' 页面完善', () => {
     const book = page.locator('.folio-home-book');
     await expect(book).toHaveCount(1);
     const first = await book.getAttribute('data-work-id');
-    const reading = page.locator('.folio-home-read');
+    const reading = page.locator('.folio-home-cover');
     await expect(reading).toHaveAttribute('href','#reader/'+first);
     const controls = page.locator('.folio-home-carousel-controls');
     await expect(controls).toContainText('1 /');
@@ -24,7 +24,7 @@ for (const width of [1440, 390]) test.describe(width + ' 页面完善', () => {
     expect(Math.abs((await page.locator('.folio-home-carousel').boundingBox())!.height-height)).toBeLessThan(1);
     await controls.getByRole('button',{name:'上一部作品'}).click();
     await expect(book).toHaveAttribute('data-work-id',first!);
-    const latest = await (await request.get('/api/discover/latest?page=1&per_page=6')).json();
+    const latest = await (await request.get('/api/discover/latest?page=1&per_page=4')).json();
     await expect(page.locator('.folio-home-latest-work')).toHaveCount(latest.result.length);
     for (const item of latest.result) await expect(page.locator('.folio-home-latest-work[data-gallery-id="'+item.gallery_id+'"]')).toHaveAttribute('href',new RegExp('^#gallery/'+item.gallery_id));
     await page.emulateMedia({reducedMotion:'no-preference'});
@@ -39,8 +39,15 @@ for (const width of [1440, 390]) test.describe(width + ' 页面完善', () => {
     await page.goto('/#files?view=migration');
     const row = page.locator('.folio-migration-row[data-work-id="'+item.id+'"]');
     const checkbox = row.getByRole('checkbox');
-    await expect(checkbox).toHaveCSS('appearance','auto');
-    await checkbox.check();
+    await checkbox.focus();
+    await page.keyboard.press('Space');
+    await expect(checkbox).toBeChecked();
+    await expect(row.locator('.folio-files-check svg')).toBeVisible();
+    await expect(row.locator('.folio-files-check')).toHaveCSS('border-radius','0px');
+    await checkbox.click();
+    await expect(checkbox).not.toBeChecked();
+    await row.click();
+    await expect(checkbox).toBeChecked();
     await expect(page.locator('.folio-migration-chosen')).toContainText('已选 1');
     await page.getByRole('radio',{name:'移动 校验成功后移除导入源文件'}).check();
     await page.getByRole('button',{name:'预览迁移',exact:true}).click();
@@ -99,6 +106,19 @@ for (const width of [1440, 390]) test.describe(width + ' 页面完善', () => {
     } finally { release(); }
   });
   test('弹窗保持到远端详情开始过渡，进入与返回不横甩页面', async ({page,request}) => {
+    await page.addInitScript(() => {
+      const start = document.startViewTransition.bind(document);
+      let captured = false;
+      document.startViewTransition = update => {
+        const transition = start(update);
+        if(document.documentElement.dataset.folioSlide === 'detail' && !captured) void transition.ready.then(() => {
+          captured = true;
+          document.getAnimations().filter(animation => (animation as CSSAnimation).animationName?.startsWith('folio-detail-')).forEach(animation => { animation.pause(); animation.currentTime = 120; });
+          Object.assign(window,{detailReady:true});
+        });
+        return transition;
+      };
+    });
     const work = await (await request.get('/api/works/'+workId)).json();
     const id = work.remote_gallery_id || work.metadata_gallery_id;
     test.skip(!id,'作品无实际远端参考');
@@ -113,16 +133,29 @@ for (const width of [1440, 390]) test.describe(width + ' 页面完善', () => {
     await page.waitForTimeout(120);
     await expect(dialog).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.dataset.folioLoading)).toBe('gallery');
+    await expect(page.locator('.folio-detail-pending')).toHaveCSS('height','2px');
+    await expect(page.locator('.folio-detail-pending')).toHaveCSS('min-height','0px');
     release();
+    await expect.poll(()=>page.evaluate(()=>(window as unknown as {detailReady:boolean}).detailReady)).toBe(true);
     await expect(page.locator('.folio-gallery-detail')).toBeVisible();
+    await expect(page.locator('.folio-gallery-hero-copy')).toHaveCSS('opacity','1');
+    await expect(page.locator('.folio-gallery-cover-stage')).toHaveCSS('opacity','1');
+    const snapshots = await page.evaluate(()=>document.getAnimations().filter(animation=>(animation as CSSAnimation).animationName?.startsWith('folio-detail-')).map(animation=>({
+      name:(animation as CSSAnimation).animationName, progress:animation.effect!.getComputedTiming().progress,
+    })));
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots.find(snapshot=>snapshot.name==='folio-detail-depart')!.progress).toBe(1);
+    expect(snapshots.find(snapshot=>snapshot.name==='folio-detail-arrive')!.progress).toBeGreaterThan(0);
+    expect(snapshots.find(snapshot=>snapshot.name==='folio-detail-arrive')!.progress).toBeLessThan(1);
     await expect(dialog).toHaveCount(0);
+    await page.evaluate(()=>document.getAnimations().forEach(animation=>animation.play()));
     await expect.poll(()=>page.evaluate(()=>document.documentElement.dataset.folioSlide)).toBeUndefined();
     await page.goBack();
     await expect(page.locator('.folio-library-page')).toBeVisible();
     await expect(page.locator('.folio-scroll')).toHaveCSS('transform','none');
     await expect.poll(()=>page.evaluate(()=>document.documentElement.dataset.folioSlide)).toBeUndefined();
   });
-  test('实际订阅展示作品，邮件按钮居中，未读提示跨页常驻', async ({page,request}) => {
+  test('实际订阅展示作品，邮件按钮居中，发现页更新选项始终可用', async ({page,request}) => {
     test.setTimeout(75_000);
     test.skip(owned!=='/tmp/nh-reader-media-update-20261009/owned','需要可安全重放基线的实际自有副本');
     const work = await (await request.get('/api/works/'+workId)).json();
@@ -150,17 +183,21 @@ for (const width of [1440, 390]) test.describe(width + ' 页面完善', () => {
       expect((await request.post('/api/subscriptions/'+subscription.id+'/check')).ok()).toBe(true);
       await expect.poll(async()=> (await (await request.get('/api/subscriptions/updates')).json()).result.some(u=>u.gallery_id===newest&&!u.read_at),{timeout:20_000}).toBe(true);
       await page.goto('/#files');
-      await expect(page.locator('.folio-updates-indicator')).toHaveClass(/has-unread/);
+      await expect(page.locator('.folio-topnav > a')).toHaveCount(8);
       await page.goto('/#discover');
-      const rail = page.locator('.folio-discover-updates');
-      await expect(rail.locator('.folio-subscription-update-link[href^="#gallery/'+newest+'"]').first()).toBeVisible();
+      const updates = page.getByRole('navigation',{name:'发现内容'}).getByRole('button',{name:/^更新/});
+      await expect(updates.locator('b')).toBeVisible();
+      await expect(page.locator('.folio-discover-updates')).toHaveCount(0);
+      await updates.click();
+      await expect(page.locator('.folio-subscription-update-link[href^="#gallery/'+newest+'"]').first()).toBeVisible();
       expect((await request.post('/api/subscriptions/updates/read',{data:{}})).ok()).toBe(true);
-      await expect(page.locator('.folio-updates-indicator')).not.toHaveClass(/has-unread/,{timeout:10_000});
+      await expect(updates.locator('b')).toHaveCount(0,{timeout:10_000});
+      await expect(updates).toBeVisible();
     } finally { await request.delete('/api/subscriptions/'+subscription.id); }
   });
 });
 
-test('首页长距离拖动只切换一部，控件焦点暂停自动轮播且阅读链接可用', async ({page}) => {
+test('首页单步拖动和焦点暂停可用，阅读返回保留作品并更新进度', async ({page,request}) => {
   await page.setViewportSize({width:1440,height:1000});
   await page.goto('/#workbench');
   const controls = page.locator('.folio-home-carousel-controls');
@@ -176,9 +213,19 @@ test('首页长距离拖动只切换一部，控件焦点暂停自动轮播且�
   await page.mouse.move(1400,5);
   await page.waitForTimeout(8500);
   await expect(controls).toContainText('2 /');
-  const read = page.locator('.folio-home-read');
+  const read = page.locator('.folio-home-cover');
   const href = await read.getAttribute('href');
   await read.click();
   await expect(page).toHaveURL(new RegExp(href!.replace('#','/#')+'$'));
   await expect(page.locator('.reader-counter')).toHaveText(/\d+\s*\/\s*[1-9]\d*/);
+  const current=Number((await page.locator('.reader-counter').innerText()).split('/')[0]);
+  const target=current===2?1:2, id=Number(href!.split('/').at(-1));
+  await page.keyboard.press('g');
+  await page.getByRole('textbox',{name:'目标页码'}).fill(String(target));
+  await page.getByRole('button',{name:'跳转',exact:true}).click();
+  await expect.poll(async()=>(await (await request.get('/api/works/'+id+'/reader-state')).json()).page_index).toBe(target);
+  await page.goBack();
+  await expect(page.locator('.folio-home-book')).toHaveAttribute('data-work-id',String(id));
+  await expect(page.locator('.folio-home-reading-progress > span').first()).toHaveText('第 '+target+' 页');
+  await expect(page.locator('.folio-home-cover')).toBeFocused();
 });

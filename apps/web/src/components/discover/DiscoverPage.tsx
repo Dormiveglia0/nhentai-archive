@@ -1,9 +1,10 @@
 import type { RemoteTag } from "../../lib/api";
 import { useEffect, useState } from "react";
-import { Compass, Users } from "lucide-react";
+import { Bell, Compass, Users } from "lucide-react";
 import { SlidingIndicator, transitionTabs } from "../../lib/motion";
 import { SubscriptionsPanel } from "../subscriptions/SubscriptionsPanel";
 import { SubscriptionUpdates } from "../subscriptions/SubscriptionUpdates";
+import { useSubscriptionUpdates } from "../subscriptions/useSubscriptionUpdates";
 import { balanceGridRows, useGridColumns } from "../../lib/useGridColumns";
 import { DiscoverFeed } from "./DiscoverFeed";
 import { DiscoverToolbar } from "./DiscoverToolbar";
@@ -17,6 +18,7 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
     return value === "subscriptions" || value === "updates" ? value : "works";
   };
   const [view, setView] = useState(readView);
+  const { updates } = useSubscriptionUpdates();
   useEffect(() => {
     const change = () => setView(readView());
     window.addEventListener("hashchange", change);
@@ -24,17 +26,14 @@ export function DiscoverPage({ blurCovers, initialTag }: { blurCovers: boolean; 
   }, []);
   return <section className="folio-page-body folio-discover-page">
     <nav className="folio-discover-tabs" aria-label="发现内容">
-      {([{ id: "works", label: "作品", icon: Compass }, { id: "subscriptions", label: "订阅", icon: Users }] as const).map(tab => <button key={tab.id} type="button" aria-current={view === tab.id ? "page" : undefined}
+      {([{ id: "works", label: "作品", icon: Compass }, { id: "updates", label: "更新", icon: Bell }, { id: "subscriptions", label: "订阅", icon: Users }] as const).map(tab => <button key={tab.id} type="button" aria-current={view === tab.id ? "page" : undefined}
         onClick={() => transitionTabs(["works", "updates", "subscriptions"] as const, view, tab.id, value => {
           setView(value); window.history.replaceState(null, "", value === "works" ? "#discover" : "#discover?view=" + value);
         }, "discover")}>
-        {view === tab.id ? <SlidingIndicator className="folio-control-active" layoutId="discover-views" /> : null}<tab.icon size={16} /><span>{tab.label}</span>
+        {view === tab.id ? <SlidingIndicator className="folio-control-active" layoutId="discover-views" /> : null}<tab.icon size={16} /><span>{tab.label}</span>{tab.id === "updates" && !!updates?.unread_count ? <b>{updates.unread_count}</b> : null}
       </button>)}
     </nav>
-    <div className={view === "updates" ? "folio-discover-layout has-full-updates" : "folio-discover-layout"}>
-      <div className="folio-discover-stage">{view === "works" ? <DiscoverWorks blurCovers={blurCovers} initialTag={initialTag} /> : view === "subscriptions" ? <SubscriptionsPanel blurCovers={blurCovers} /> : <SubscriptionUpdates blurCovers={blurCovers} />}</div>
-      {view !== "updates" ? <aside className="folio-discover-updates"><SubscriptionUpdates compact blurCovers={blurCovers} /></aside> : null}
-    </div>
+    <div className="folio-discover-stage">{view === "works" ? <DiscoverWorks blurCovers={blurCovers} initialTag={initialTag} /> : view === "subscriptions" ? <SubscriptionsPanel blurCovers={blurCovers} /> : <SubscriptionUpdates blurCovers={blurCovers} />}</div>
   </section>;
 }
 

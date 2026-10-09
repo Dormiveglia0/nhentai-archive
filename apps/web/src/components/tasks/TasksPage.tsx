@@ -46,8 +46,6 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
 
   return (
     <section className="folio-page-body folio-tasks-page">
-      <TaskSummaryStrip summary={tasks.summary} />
-
       {tasks.error ? <FadeIn key={tasks.error} className="folio-tasks-message is-error" role="alert" y={6}><AlertCircle size={15} /><p>{tasks.error}</p></FadeIn> : null}
       {tasks.notice ? <FadeIn key={tasks.notice} className="folio-tasks-message" role="status" y={6}><span aria-hidden="true" /><p>{tasks.notice}</p></FadeIn> : null}
 
@@ -66,6 +64,7 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
           <button className="is-danger" type="button" onClick={clearFinished} disabled={!tasks.finishedCount}><Trash2 size={15} />清空已结束{tasks.finishedCount ? ` (${tasks.finishedCount})` : ""}</button>
         </div>
       </section>
+      <TaskSummaryStrip summary={tasks.summary} />
 
       <FadeIn className="folio-tasks-layout" y={8}>
         <section className="folio-tasks-main" aria-label="任务列表">

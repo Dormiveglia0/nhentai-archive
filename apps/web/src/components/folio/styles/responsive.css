@@ -100,10 +100,6 @@
     overflow-x: auto;
   }
 
-  .folio-atmosphere {
-    top: 68px;
-  }
-
   .folio-menu-button {
     width: 52px;
     min-height: 0;
@@ -249,10 +245,6 @@
     box-shadow: 2px 0 6px rgba(173, 56, 46, 0.14);
   }
 
-  .folio-atmosphere {
-    display: none;
-  }
-
   .folio-topbar {
     padding: 0 0 0 18px;
   }
@@ -302,7 +294,7 @@
   }
 
   .folio-settings-body {
-    padding-top: 0;
+    padding-top: 22px;
   }
 
   .folio-status-band,

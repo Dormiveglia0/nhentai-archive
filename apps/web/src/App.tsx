@@ -26,7 +26,11 @@ const HistoryPage = lazy(() =>
 const DiscoverPage = lazy(() =>
   import("./components/discover/DiscoverPage").then((module) => ({ default: module.DiscoverPage })),
 );
-const loadGalleryPage = () => import("./components/discover/GalleryDetailPage").then(module => ({ default: module.GalleryDetailPage }));
+let loadedGalleryPage: typeof import("./components/discover/GalleryDetailPage").GalleryDetailPage | undefined;
+const loadGalleryPage = () => import("./components/discover/GalleryDetailPage").then(module => {
+  loadedGalleryPage = module.GalleryDetailPage;
+  return { default: module.GalleryDetailPage };
+});
 const GalleryDetailPage = lazy(loadGalleryPage);
 const GovernancePage = lazy(() =>
   import("./components/governance/GovernancePage").then((module) => ({ default: module.GovernancePage })),
@@ -67,6 +71,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => Promise<void> }) {
 }
 
 function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
+  const GalleryPage = loadedGalleryPage ?? GalleryDetailPage;
   const reduceMotion = usePrefersReducedMotion();
   const [page, setPage] = useState<Page>(() => pageFromLocation());
   const routeRef = useRef(page);
@@ -184,11 +189,11 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
             onLogout={onLogout}
             suspended={Boolean(readerSource)}
           >
-            {navigating ? <div className="folio-route-loading" role="status" aria-label="正在打开作品详情" /> : null}
+            {navigating ? <div className="folio-detail-pending" role="status" aria-label="正在打开作品详情" /> : null}
             <Suspense fallback={<FolioRouteFallback />}>
               {archivePage.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={archivePage.tag} /> : null}
-              {archivePage.name === "gallery" ? <GalleryDetailPage initialDetail={preparedGallery?.gallery_id === archivePage.galleryId ? preparedGallery : undefined} galleryId={archivePage.galleryId} returnTo={archivePage.returnTo} blurCovers={blurCovers} /> : null}
+              {archivePage.name === "gallery" ? <GalleryPage initialDetail={preparedGallery?.gallery_id === archivePage.galleryId ? preparedGallery : undefined} galleryId={archivePage.galleryId} returnTo={archivePage.returnTo} blurCovers={blurCovers} /> : null}
               {archivePage.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "governance" ? <GovernancePage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}

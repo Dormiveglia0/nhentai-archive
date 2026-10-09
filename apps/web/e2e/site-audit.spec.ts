@@ -36,10 +36,10 @@ async function slide(page: Page, group: string, index: number) {
 test("全站同类控件的指示条连续滑动，跨项不加载中间页面", async ({ page }) => {
   test.setTimeout(90_000);
   const requests: string[] = [];
-  page.on('request', request => requests.push(new URL(request.url()).pathname));
+  page.on('request', request => { if(request.resourceType() !== 'image') requests.push(new URL(request.url()).pathname); });
   await page.goto('/#workbench');
   await expect(page.locator('.folio-home')).toBeVisible();
-  await expect(page.locator('.folio-home-library-state .folio-home-state-row')).toBeVisible();
+  await expect(page.getByRole('link',{name:'媒体库状态',exact:true})).toBeVisible();
   requests.length = 0;
   await slide(page, '.folio-topnav', 7);
   await expect(page.locator('.folio-settings-nav')).toBeVisible();
@@ -57,6 +57,9 @@ test("全站同类控件的指示条连续滑动，跨项不加载中间页面",
   await expect(page.locator('.folio-smtp')).toBeVisible();
   await page.goto('/#discover?view=subscriptions');
   await expect(page.getByRole('region',{name:'订阅管理',exact:true})).toBeVisible();
+  await slide(page, '.folio-discover-tabs', 0);
+  await page.goto('/#discover?view=updates');
+  await slide(page, '.folio-subscription-filters', 1);
   await page.goto('/#files?view=files');
   await slide(page, '.folio-files-primary-tabs', 2);
   await slide(page, '.folio-files-primary-tabs', 1);

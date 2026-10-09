@@ -1,11 +1,11 @@
 /* Shared page body primitives and workbench layout. */
 .folio-page-body {
   min-width: 0;
-  padding: clamp(28px, 3.4vw, 52px) clamp(26px, 4vw, 70px) 54px;
+  padding: 32px clamp(26px, 4vw, 70px) 48px;
 }
 
 .folio-settings-body {
-  padding-top: 0;
+  padding-top: 32px;
 }
 
 .folio-panel-heading {
@@ -344,3 +344,10 @@
 .folio-toolbar-wide {
   grid-template-columns: minmax(420px, 1.8fr) repeat(3, minmax(118px, 0.5fr)) 124px 124px;
 }
+
+/* Keep operational summaries subordinate to the search and workspace. */
+:is(.folio-library-summary, .folio-tasks-summary, .folio-dictionary-summary, .folio-files-summary, .folio-history-summary) .folio-metric-grid { gap: 0; border-bottom: 1px solid var(--folio-line); padding-bottom: 16px; }
+:is(.folio-library-summary, .folio-tasks-summary, .folio-dictionary-summary, .folio-files-summary, .folio-history-summary) .folio-metric-card { min-height: 74px; padding: 8px 16px; border: 0; border-right: 1px solid var(--folio-line); border-radius: 0; background: transparent; }
+:is(.folio-library-summary, .folio-tasks-summary, .folio-dictionary-summary, .folio-files-summary, .folio-history-summary) .folio-metric-card:last-child { border-right: 0; }
+:is(.folio-library-summary, .folio-tasks-summary, .folio-dictionary-summary, .folio-files-summary, .folio-history-summary) .folio-metric-card::before { display: none; }
+:is(.folio-library-summary, .folio-tasks-summary, .folio-dictionary-summary, .folio-files-summary, .folio-history-summary) .folio-metric-card-copy > strong { font-size: clamp(22px, 2vw, 28px); }

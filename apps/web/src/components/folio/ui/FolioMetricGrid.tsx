@@ -1,8 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Stagger, StaggerItem } from "../../../lib/motion";
-
 export type FolioMetricTone = "neutral" | "active" | "good" | "warning" | "danger" | "muted";
 
 export type FolioMetricItem = {
@@ -26,11 +24,11 @@ export function FolioMetricGrid({
 }) {
   return (
     <section className={["folio-metric-cluster", className].filter(Boolean).join(" ")} aria-label={ariaLabel}>
-      <Stagger className="folio-metric-grid">
+      <div className="folio-metric-grid">
         {items.map((item) => {
           const Icon = item.icon;
           return (
-            <StaggerItem
+            <article
               key={item.label}
               className={`folio-metric-card is-${item.tone ?? "neutral"}${item.valueKind === "text" ? " has-text-value" : ""}`}
             >
@@ -42,10 +40,10 @@ export function FolioMetricGrid({
                 <strong>{item.value}</strong>
                 {item.detail ? <small>{item.detail}</small> : null}
               </div>
-            </StaggerItem>
+            </article>
           );
         })}
-      </Stagger>
+      </div>
     </section>
   );
 }

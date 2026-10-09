@@ -28,8 +28,6 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
 
   return (
     <section className="folio-page-body folio-library-page">
-      <LibrarySummaryStrip summary={library.summary} />
-
       <LibraryToolbar
         q={library.q}
         onQ={library.setQ}
@@ -50,6 +48,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         canReset={library.filtersActive}
         onReset={library.resetFilters}
       />
+      <LibrarySummaryStrip summary={library.summary} />
 
       {library.error ? (
         <div className="folio-library-error" role="alert">

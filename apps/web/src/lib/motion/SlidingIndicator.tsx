@@ -20,10 +20,19 @@ export function SlidingIndicator({ layoutId, className = "" }: { layoutId: strin
       ? node.animate([
         { transform: `translate(${previous.x - target.x}px, ${previous.y - target.y}px) scale(${previous.width / target.width}, ${previous.height / target.height})` },
         { transform: "none" },
-      ], { duration: 450, easing: "cubic-bezier(.22, 1, .36, 1)" }) : undefined;
+      ], { duration: 380, easing: "cubic-bezier(.22, .8, .25, 1)" }) : undefined;
     positions.set(group, target);
     return () => {
-      positions.set(group, measure());
+      // React can detach the old span before cleanup; its zero rect is not a control position.
+      if (node.isConnected) positions.set(group, measure());
+      else if (animation && previous) {
+        const progress = animation.effect?.getComputedTiming().progress ?? 1;
+        positions.set(group, { id: layoutId,
+          x: previous.x + (target.x - previous.x) * progress,
+          y: previous.y + (target.y - previous.y) * progress,
+          width: previous.width + (target.width - previous.width) * progress,
+          height: previous.height + (target.height - previous.height) * progress });
+      }
       animation?.cancel();
     };
   }, [layoutId, reduced]);

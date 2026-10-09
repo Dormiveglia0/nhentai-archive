@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
 import { pageHref } from "../../../lib/navigation";
 import { FOLIO_PAGES, type FolioPageId } from "../config";
-import { ModuleBackdrop } from "./ModuleBackdrop";
 import { PageNavigation } from "./PageNavigation";
 import "../Folio.css";
 
@@ -15,7 +14,6 @@ export function FolioChrome({
   children,
   footer,
   overlay,
-  status,
   scrollKey,
   onLogout,
 }: {
@@ -24,7 +22,6 @@ export function FolioChrome({
   children: ReactNode;
   footer?: ReactNode;
   overlay?: ReactNode;
-  status?: ReactNode;
   scrollKey?: string | number;
   onLogout?: () => void | Promise<void>;
 }) {
@@ -116,7 +113,6 @@ export function FolioChrome({
 
   return (
     <div ref={rootRef} className={`folio folio-app folio-page-${page}${footer ? "" : " folio-no-command"}`}>
-      {page === "workbench" ? null : <ModuleBackdrop page={page} reduceMotion={reduceMotion} />}
       <div ref={bindingRef} className="folio-binding" aria-hidden="true"><span className="folio-binding-progress" /></div>
 
       <header className="folio-topbar">
@@ -135,7 +131,6 @@ export function FolioChrome({
         </a>
         <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
         <div className="folio-top-actions">
-          {status}
           {onLogout ? (
             <button className="folio-session-button" type="button" aria-label="登出并锁定本地作品" title="登出" onClick={() => void onLogout()}>
               <LogOut size={17} />

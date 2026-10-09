@@ -4,7 +4,6 @@ import { FOLIO_PAGES, type FolioPageId } from "../folio/config";
 import { FolioChrome } from "../folio/shell/FolioChrome";
 import { navigate, type Page } from "../../lib/navigation";
 import { TaskDock } from "./TaskDock";
-import { UpdatesIndicator } from "../subscriptions/UpdatesIndicator";
 
 type ShelledPageName = Exclude<Page["name"], "reader" | "readerRemote">;
 
@@ -37,7 +36,6 @@ export function ArchiveShell({
     <>
       <FolioChrome
         page={route}
-        status={<UpdatesIndicator />}
         onNavigate={(name: FolioPageId) => navigate({ name } as Parameters<typeof navigate>[0])}
         scrollKey={scrollKey}
         onLogout={onLogout}

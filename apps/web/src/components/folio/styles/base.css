@@ -28,10 +28,6 @@
   grid-template-rows: 78px minmax(0, 1fr);
 }
 
-.folio-no-command .folio-atmosphere {
-  bottom: 0;
-}
-
 .folio::before {
   content: "";
   position: absolute;
@@ -56,10 +52,7 @@
   animation: folio-paper-light 18s ease-in-out infinite alternate;
 }
 
-.folio.is-scrolling::after,
-.folio.is-scrolling .folio-atmosphere *,
-.folio.is-scrolling .folio-atmosphere *::before,
-.folio.is-scrolling .folio-atmosphere *::after {
+.folio.is-scrolling::after {
   animation-play-state: paused;
 }
 
@@ -117,11 +110,6 @@
   box-shadow: 4px 0 11px rgba(173, 56, 46, 0.12);
 
 }
-
-.folio-atmosphere { position: absolute; z-index: -1; inset: 78px 0 68px; overflow: hidden; pointer-events: none; }
-.folio-atmosphere svg { width: 156px; height: 156px; position: absolute; right: 28px; bottom: 28px; stroke: var(--folio-ink); stroke-width: 1; opacity: .12; }
-.folio-backdrop-guides { opacity: .5; }
-.folio-backdrop-accent { stroke: var(--folio-red); stroke-width: 2; }
 
 .folio *,
 .folio *::before,

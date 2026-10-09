@@ -1522,7 +1522,7 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ page_index: pageIndex, completed, cache_lease: cacheLease, source_revision: sourceRevision }),
       keepalive,
-    }),
+    }).then(value => { window.dispatchEvent(new Event("nh-reader-state-changed")); return value; }),
   jobs: jobsWithCacheCoherence,
   jobLogs: (id: number) => request<{ result: JobLog[] }>(`/api/jobs/${id}/logs`),
   pauseJob: (id: number) => request<Job>(`/api/jobs/${id}/pause`, { method: "POST", headers: JSON_HEADERS }),

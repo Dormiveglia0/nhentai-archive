@@ -15,8 +15,9 @@
 .folio-subscriptions-list button[aria-pressed="true"] { color: var(--folio-red); border-color: var(--folio-red); }
 .folio-subscription-filters { display: inline-flex; border-bottom: 1px solid var(--folio-line); margin-top: 18px; }
 .folio-subscription-filters button { position: relative; isolation: isolate; min-height: 40px; min-width: 72px; padding: 0 18px; border: 0; background: transparent; color: var(--folio-muted); font-size: 13px; }
-.folio-subscription-filters button span { position: relative; z-index: 1; }
+.folio-subscription-filters button span:not(.folio-slide-indicator) { position: relative; z-index: 1; }
 .folio-subscription-filters button.is-active { color: var(--folio-red); }
+.folio-subscription-filters .folio-slide-indicator { background: var(--folio-red-soft); border-bottom: 2px solid var(--folio-red); }
 .folio-subscription-updates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 10px; }
 .folio-subscription-updates article { min-width: 0; border-bottom: 1px solid var(--folio-line); }
 .folio-subscription-update-link { display: flex; gap: 15px; align-items: center; min-width: 0; padding: 18px 0; color: var(--folio-ink); text-decoration: none; }
@@ -61,18 +62,13 @@
 
 .folio-notifications { min-width: 0; }
 .folio-unread-count { padding-left: 4px; color: var(--folio-red); font-size: 13px; font-variant-numeric: tabular-nums; }
-.folio-subscription-all, .folio-updates-empty a { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; color: var(--folio-ink); text-decoration: none; font-size: 13px; }
+.folio-updates-empty a { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; color: var(--folio-ink); text-decoration: none; font-size: 13px; }
 .folio-updates-empty { min-height: 144px; padding-block: 20px; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: var(--folio-muted); font-size: 13px; }
 .folio-updates-empty > svg { color: var(--folio-red); }
 .folio-updates-empty p { margin: 0; }
 .folio-updates-empty a { flex-basis: 100%; }
 .folio-updates-loading { display: grid; gap: 18px; padding-block: 20px; min-height: 144px; color: var(--folio-muted); font-size: 13px; }
 .folio-updates-loading i { height: 26px; background: var(--folio-line); opacity: .25; }
-.folio-updates-rail .folio-subscription-updates { grid-template-columns: minmax(0, 1fr); margin: 0; }
-.folio-updates-rail .folio-settings-subhead { border-top: 1px solid var(--folio-line-strong); }
-.folio-updates-rail .folio-subscription-update-link { gap: 12px; }
-.folio-updates-rail .folio-subscription-update-cover { width: 52px; height: 72px; }
-.folio-updates-rail .folio-subscription-update-link strong { font-size: 13px; }
 .folio-subscription-preview { min-width: 0; grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .folio-subscription-preview > a { min-width: 0; display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; align-items: center; color: var(--folio-ink); text-decoration: none; padding: 8px 0; border-top: 1px solid var(--folio-line); }
 .folio-subscription-preview > a > div { width: 54px; height: 76px; display: grid; place-items: center; }

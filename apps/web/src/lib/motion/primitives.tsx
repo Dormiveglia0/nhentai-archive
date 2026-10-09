@@ -24,7 +24,7 @@ export function FadeIn({
   return (
     <m.div
       className={className}
-      initial={{ opacity: 0, x: reduce ? 0 : x, y: reduce ? 0 : y }}
+      initial={reduce || document.documentElement.dataset.folioSlide ? false : { opacity: 0, x, y }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       transition={{ duration: duration.base, ease: ease.standard, delay }}
       {...rest}
@@ -57,7 +57,7 @@ export function FadeInOut({
   return (
     <m.div
       className={className}
-      initial={{ opacity: 0, ...offset }}
+      initial={reduce || document.documentElement.dataset.folioSlide ? false : { opacity: 0, ...offset }}
       animate={{ opacity: 1, x: 0, y: 0 }}
       exit={{ opacity: 0, ...offset }}
       transition={{ duration: duration.base, ease: ease.standard, delay }}
@@ -77,7 +77,7 @@ export const Stagger = forwardRef<HTMLDivElement, StaggerProps>(function Stagger
       {...rest}
       className={className}
       variants={{ hidden: {}, show: { transition: { staggerChildren: Math.min(stagger.base, stagger.maxDelay / Math.max(1, Children.count(children) - 1)) } } }}
-      initial={reduce ? false : "hidden"}
+      initial={reduce || document.documentElement.dataset.folioSlide ? false : "hidden"}
       animate="show"
     >
       {children}
@@ -113,7 +113,7 @@ export function Reveal({
   return (
     <m.div
       className={className}
-      initial={{ opacity: 0, y: reduce ? 0 : y }}
+      initial={reduce || document.documentElement.dataset.folioSlide ? false : { opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-10% 0px" }}
       transition={{ duration: duration.base, ease: ease.standard }}

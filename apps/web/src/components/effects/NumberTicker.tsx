@@ -1,7 +1,7 @@
 // 效果来源:magicui "Number Ticker"(https://magicui.design/docs/components/number-ticker)
 // 思路并参考 react-bits "Count Up"。已按 effects/README.md 改造:丢弃原模板布局/配色,
 // 仅保留「真实数值用弹簧从 0 计数到目标值」的动效;计数始终收敛到传入的真实值,
-// 不伪造任何数字。reduced-motion 下直接显示真实值,不做动画。
+// 不伪造任何数字。reduced-motion 或页面过渡截图时直接显示真实值。
 import { useEffect, useRef } from "react";
 import { useInView, useMotionValue, useSpring } from "motion/react";
 
@@ -22,7 +22,8 @@ export function NumberTicker({ value, format }: Props) {
   const render = (n: number): string =>
     formatRef.current ? formatRef.current(n) : Math.round(n).toLocaleString("zh-CN");
 
-  const motionValue = useMotionValue(reduce ? value : 0);
+  const initial = useRef(reduce || document.documentElement.dataset.folioSlide ? value : 0);
+  const motionValue = useMotionValue(initial.current);
   const spring = useSpring(motionValue, { damping: 30, stiffness: 140 });
   const inView = useInView(ref, { once: true });
 
@@ -53,7 +54,7 @@ export function NumberTicker({ value, format }: Props) {
 
   return (
     <span ref={ref} className="fx-scope">
-      {render(reduce ? value : 0)}
+      {render(reduce ? value : initial.current)}
     </span>
   );
 }

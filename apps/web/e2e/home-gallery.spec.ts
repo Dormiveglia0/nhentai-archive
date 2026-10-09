@@ -39,6 +39,39 @@ for (const [width, height] of [[320, 740], [844, 390]]) test(`${width}×${height
   await page.setViewportSize({ width, height });
   await page.goto("/#workbench");
   await expect(page.locator(".folio-home-featured")).toBeVisible();
-  await expect(page.locator(".folio-home-read")).toBeInViewport({ ratio: 1 });
+  await expect(page.locator(".folio-home-cover")).toBeInViewport({ ratio: 1 });
   expect(await page.locator(".folio-scroll").evaluate(node => node.scrollWidth > node.clientWidth + 1)).toBe(false);
+});
+
+test("桌面首页最新作品位于右下方且一屏显示，封面保持实际比例", async ({ page }) => {
+  await page.emulateMedia({reducedMotion:'reduce'});
+  for(const [width,height] of [[1440,1000],[1365,768]]) {
+    await page.setViewportSize({width,height});
+    await page.goto('/#workbench');
+    await expect(page.locator('.folio-home-book')).toHaveCount(1);
+    await expect(page.locator('.folio-home-latest-work')).toHaveCount(4);
+    await page.locator('.folio-home-latest img').evaluateAll(nodes=>Promise.all(nodes.map(node=>(node as HTMLImageElement).decode())));
+    const hero = (await page.locator('.folio-home-hero').boundingBox())!;
+    const latest = (await page.locator('.folio-home-latest').boundingBox())!;
+    expect(latest.x).toBeGreaterThan(hero.x+hero.width);
+    expect(latest.y+latest.height).toBeLessThanOrEqual(height);
+    expect(await page.locator('.folio-scroll').evaluate(node=>node.scrollHeight-node.clientHeight)).toBeLessThan(2);
+    const ratios = await page.locator('.folio-home-cover img, .folio-home-latest img').evaluateAll(nodes=>nodes.map(node=>{
+      const image=node as HTMLImageElement, rect=image.getBoundingClientRect();
+      return Math.abs(rect.width/rect.height-image.naturalWidth/image.naturalHeight);
+    }));
+    expect(ratios.every(difference=>difference<.01)).toBe(true);
+  }
+});
+
+test("首页自动轮播在四秒后只前进一部", async ({page}) => {
+  await page.setViewportSize({width:1440,height:1000});
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.goto('/#workbench');
+  const controls=page.locator('.folio-home-carousel-controls');
+  await expect(controls).toContainText('1 /');
+  await page.mouse.move(0,0);
+  await expect(controls).toContainText('2 /',{timeout:5000});
+  await controls.getByRole('button',{name:'暂停轮播'}).click();
+  await expect(controls).toContainText('2 /');
 });
