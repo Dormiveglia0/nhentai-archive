@@ -92,10 +92,10 @@ class NhentaiClient:
     def latest(self, page: int = 1, per_page: int = 25) -> dict[str, Any]:
         return self._get("/api/v2/galleries", {"page": page, "per_page": per_page})
 
-    def tagged(self, tag_id: int, page: int = 1, per_page: int = 25, sort: str = "date") -> dict[str, Any]:
+    def tagged(self, tag_id: int, page: int = 1, per_page: int = 25, sort: str = "date", fresh: bool = False) -> dict[str, Any]:
         return self._get(
             "/api/v2/galleries/tagged",
-            {"tag_id": tag_id, "page": page, "per_page": per_page, "sort": sort},
+            {"tag_id": tag_id, "page": page, "per_page": per_page, "sort": sort}, fresh=fresh,
         )
 
     def popular(self) -> list[dict[str, Any]]:
@@ -104,8 +104,9 @@ class NhentaiClient:
     def random(self) -> dict[str, Any]:
         return self._get("/api/v2/galleries/random")
 
-    def search(self, query: str, page: int = 1, per_page: int = 25, sort: str = "date") -> dict[str, Any]:
-        return self._get("/api/v2/search", {"query": query, "page": page, "per_page": per_page, "sort": sort})
+    def search(self, query: str, page: int = 1, per_page: int = 25, sort: str = "date", fresh: bool = False) -> dict[str, Any]:
+        # V2 search has a fixed page size; per_page remains for existing callers.
+        return self._get("/api/v2/search", {"query": query, "page": page, "sort": sort}, fresh=fresh)
 
     def gallery(self, gallery_id: int, include: str | None = None, fresh: bool = False) -> dict[str, Any]:
         params = {"include": include} if include else None
@@ -114,11 +115,11 @@ class NhentaiClient:
     def tag_search(self, query: str, limit: int = 20) -> dict[str, Any]:
         return self._post("/api/v2/tags/search", {"q": query, "limit": limit})
 
-    def tags_by_ids(self, ids: list[int]) -> list[dict[str, Any]]:
+    def tags_by_ids(self, ids: list[int], fresh: bool = False) -> list[dict[str, Any]]:
         if not ids:
             return []
         unique_ids = list(dict.fromkeys(ids))[:100]
-        return self._get("/api/v2/tags/ids", {"ids": ",".join(str(value) for value in unique_ids)})
+        return self._get("/api/v2/tags/ids", {"ids": ",".join(str(value) for value in unique_ids)}, fresh=fresh)
 
     def user(self) -> dict[str, Any]:
         return self._get("/api/v2/user")
@@ -225,7 +226,7 @@ class NhentaiClient:
         if ttl and cached and cached[0] > now:
             return deepcopy(cached[1])
         if self._rate_limited_until > now:
-            if ttl and cached:
+            if not fresh and ttl and cached:
                 return deepcopy(cached[1])
             retry_after = max(1, int(self._rate_limited_until - now))
             raise NhentaiApiError(
@@ -261,7 +262,7 @@ class NhentaiClient:
             if error.status_code == 429:
                 cooldown = error.retry_after or 60
                 self._rate_limited_until = max(self._rate_limited_until, time.monotonic() + cooldown)
-                if ttl and cached:
+                if not fresh and ttl and cached:
                     return deepcopy(cached[1])
             raise error from exc
         except urllib.error.URLError as exc:

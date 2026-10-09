@@ -108,7 +108,9 @@ export function FolioSelect<T extends string>({
       className={"folio-select" + (open ? " is-open" : "")}
       ref={rootRef}
       onKeyDown={(event) => {
-        if (event.key !== "Escape") return;
+        if (event.key !== "Escape" || !open) return;
+        event.preventDefault();
+        event.stopPropagation();
         setOpen(false);
         rootRef.current?.querySelector<HTMLButtonElement>(":scope > button")?.focus();
       }}
@@ -132,7 +134,6 @@ export function FolioSelect<T extends string>({
             event.preventDefault();
             move(-1);
           }
-          if (event.key === "Escape") setOpen(false);
         }}
       >
         <AnimatePresence mode="wait" initial={false}>

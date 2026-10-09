@@ -117,19 +117,25 @@ export function libraryTagHref(tag: {
   name?: string | null;
   slug?: string | null;
   display?: string | null;
+  key?: string;
 }) {
   const params = new URLSearchParams();
   const id = Number(tag.id);
+  if (tag.key) params.set("tag_key", tag.key);
   if (Number.isFinite(id) && id > 0) params.set("tag_id", String(id));
   if (tag.type) params.set("tag_type", tag.type);
   if (tag.name) params.set("tag_name", tag.name);
   if (tag.slug) params.set("tag_slug", tag.slug);
   if (tag.display) params.set("tag_display", tag.display);
-  if (!params.has("tag_id")) {
+  if (!params.has("tag_id") && !params.has("tag_key")) {
     const query = tag.name || tag.slug || tag.display;
     return librarySearchHref(query || "");
   }
   return `#library?${params.toString()}`;
+}
+
+export function libraryTagKey(tag: { id?: number | null; key?: string; type?: string; name?: string; slug?: string }) {
+  return tag.key || (tag.id ? "remote:" + tag.id : "local:" + (tag.type || "tag") + ":" + (tag.slug || tag.name?.trim().toLowerCase() || ""));
 }
 
 function tagQuery(tag: RemoteTag & { excluded?: boolean }) {

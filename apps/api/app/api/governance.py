@@ -77,7 +77,7 @@ def bulk_apply(payload: GovernanceBulkRequest):
 @router.post("/governance/metadata-refresh/preview")
 def metadata_refresh_preview(payload: MetadataRefreshPreviewRequest):
     try:
-        return services.metadata_refresh.preview(payload.work_ids, payload.gallery_ids)
+        return services.metadata_refresh.preview(payload.work_ids, payload.gallery_ids, payload.queries)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

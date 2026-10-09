@@ -3,16 +3,17 @@ import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent
 import type { RemoteTag } from "../../../lib/api";
 import { tagSearchHref } from "../../../lib/navigation";
 
-type Props = {
-  tags: RemoteTag[];
-  onPickTag?: (tag: RemoteTag) => void;
-  displayTag?: (tag: RemoteTag) => string;
-  hrefForTag?: (tag: RemoteTag) => string;
+type ScrollTag = Omit<RemoteTag, "id"> & { id: number | null; key?: string };
+type Props<T extends ScrollTag> = {
+  tags: T[];
+  onPickTag?: (tag: T) => void;
+  displayTag?: (tag: T) => string;
+  hrefForTag?: (tag: T) => string;
   className: string;
   emptyLabel?: string;
 };
 
-export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, hrefForTag = tagSearchHref, className, emptyLabel = "暂无标签" }: Props) {
+export function TagScroller<T extends ScrollTag>({ tags, onPickTag, displayTag = defaultDisplayTag, hrefForTag = tagSearchHref, className, emptyLabel = "暂无标签" }: Props<T>) {
   const ref = useRef<HTMLDivElement | null>(null);
   const startX = useRef(0);
   const startScroll = useRef(0);
@@ -50,7 +51,7 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, h
     setIsDragging(false);
   }
 
-  function pick(event: ReactMouseEvent, tag: RemoteTag) {
+  function pick(event: ReactMouseEvent, tag: T) {
     event.stopPropagation();
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     if (dragged.current && event.detail !== 0) {
@@ -79,7 +80,7 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, h
         <span>{emptyLabel}</span>
       ) : (
         tags.map((tag) => (
-          <a key={tag.id} data-tag-type={tag.type || "tag"} href={hrefForTag(tag)} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
+          <a key={tag.key || [tag.type, tag.id, tag.name].join(":")} data-tag-type={tag.type || "tag"} href={hrefForTag(tag)} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={(event) => pick(event, tag)} onAuxClick={(event) => event.stopPropagation()}>
             {displayTag(tag)}
           </a>
         ))
@@ -88,6 +89,6 @@ export function TagScroller({ tags, onPickTag, displayTag = defaultDisplayTag, h
   );
 }
 
-export function defaultDisplayTag(tag: RemoteTag) {
+export function defaultDisplayTag(tag: ScrollTag) {
   return tag.display || tag.name || tag.slug || String(tag.id);
 }

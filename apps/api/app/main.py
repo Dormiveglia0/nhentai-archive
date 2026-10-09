@@ -20,9 +20,13 @@ async def lifespan(_app: FastAPI):
     services.export_jobs.sweep_exports()
     services.library_scan_jobs.start()
     services.library_monitor.start()
+    services.metadata_refresh.start()
+    services.subscriptions.start()
     try:
         yield
     finally:
+        services.subscriptions.close()
+        services.metadata_refresh.close()
         services.library_monitor.close()
         services.library_scan_jobs.close()
         services.archive.cache.close()
@@ -46,11 +50,12 @@ def create_app(enforce_auth: bool | None = None) -> FastAPI:
         web_root = Path(web_dist)
         if not (web_root / "index.html").is_file():
             raise RuntimeError(f"Web build not found: {web_root}")
-        app.add_api_route(
-            "/demo",
-            lambda: FileResponse(web_root / "index.html"),
-            include_in_schema=False,
-        )
+        for path in ("/demo", "/auth-concept"):
+            app.add_api_route(
+                path,
+                lambda: FileResponse(web_root / "index.html"),
+                include_in_schema=False,
+            )
         app.mount("/", StaticFiles(directory=web_root, html=True), name="web")
     return app
 

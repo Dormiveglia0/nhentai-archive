@@ -84,7 +84,7 @@ test('方案3拖动与键盘改变记录曲线，导出有效 PNG，重置恢复
 test('方案2隐藏没有结果的关联分类，失败后允许重试', async ({ page }) => {
   let fail = true;
   await page.route('**/api/library/search?**', async route => {
-    if (!new URL(route.request().url()).searchParams.has('tag_ids')) return route.continue();
+    if (!new URL(route.request().url()).searchParams.has('tag_keys')) return route.continue();
     if (fail) return route.fulfill({ status: 503, body: '{}' });
     const response = await route.fetch();
     const data = await response.json();

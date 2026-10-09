@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { LibraryWork } from "../../../lib/api";
-import { workTitle } from "../../../lib/format";
+import { workTitle, workCoverHref } from "../../../lib/format";
 import { EncounterPreview } from "./EncounterPreview";
 import { EchoPreview } from "./EchoPreview";
 import { ImprintPreview } from "./ImprintPreview";
@@ -18,6 +18,6 @@ export function HomeConcepts({ kind, blurCovers }: { kind: string; blurCovers: b
 export function ConceptCover({ work, hidden }: { work: LibraryWork; hidden: boolean }) {
   const [failed, setFailed] = useState(false);
   return <div className={`concept-cover${hidden ? " is-private" : ""}`}>
-    {failed ? <span>封面加载失败</span> : <img src={`/api/works/${work.id}/cover?w=512`} alt={workTitle(work)} decoding="async" draggable={false} onError={() => setFailed(true)} />}
+    {failed ? <span>封面加载失败</span> : <img src={workCoverHref(work)} alt={workTitle(work)} decoding="async" draggable={false} onError={() => setFailed(true)} />}
   </div>;
 }

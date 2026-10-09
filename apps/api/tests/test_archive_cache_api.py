@@ -1,6 +1,8 @@
 import time
+from pathlib import Path
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app import main
 from app.services.library_service import LibraryService
@@ -16,7 +18,17 @@ def test_reading_cache_http_preparation_snapshot_progress_and_safe_clear(tmp_pat
         monkeypatch.setattr(main.services, name, service)
     client = TestClient(main.create_app(enforce_auth=False))
     # Browsing the persisted cover/pages never queues a complete CBZ copy.
-    assert client.get(f"/api/works/{work_id}/cover?w=512").status_code == 200
+    covers = {}
+    for query in ("", "?w=512"):
+        response = client.get(f"/api/works/{work_id}/cover{query}")
+        assert response.status_code == 200 and response.headers["Cache-Control"] == "private, no-cache"
+        covers[query] = response
+        cached = client.get(f"/api/works/{work_id}/cover{query}", headers={"If-None-Match": '"other", W/' + response.headers["ETag"]})
+        assert cached.status_code == 304 and cached.content == b""
+    Image.new("RGB", (20, 10), "blue").save(Path(archive.get_work(work_id)["cover_path"]), format="JPEG")
+    for query, before in covers.items():
+        changed = client.get(f"/api/works/{work_id}/cover{query}", headers={"If-None-Match": before.headers["ETag"]})
+        assert changed.status_code == 200 and changed.headers["ETag"] != before.headers["ETag"]
     assert len(client.get(f"/api/works/{work_id}/pages").json()["result"]) == 2
     assert client.get(f"/api/works/{work_id}/pages/1").status_code == 404
     assert not db.fetchone("SELECT id FROM archive_cache")

@@ -1,6 +1,6 @@
 import { LibraryTag, LibraryWork } from "../../lib/api";
 
-export { formatBytes, workTitle } from "../../lib/format";
+export { formatBytes, workTitle, workCoverHref } from "../../lib/format";
 
 export function tagOfType(tags: LibraryTag[] | undefined, type: string): LibraryTag | undefined {
   return tags?.find((tag) => tag.type === type);
@@ -10,15 +10,15 @@ export function authorLine(work: LibraryWork): string {
   const tags = work.tags ?? [];
   const artist = tagOfType(tags, "artist");
   const group = tagOfType(tags, "group");
-  const parts = [artist?.display, group?.display].filter(Boolean) as string[];
+  const parts = [artist?.display, group?.display ? "社团 " + group.display : null].filter(Boolean) as string[];
   if (parts.length) return parts.join(" / ");
   return work.source === "remote" ? "未知作者" : "本地导入";
 }
 
 export function languageLabel(work: LibraryWork): string {
   const language = work.tags?.find((tag) => tag.type === "language" && !isTranslationMarker(tag));
-  if (language?.display) return language.display;
-  if (work.language && !work.language.toLowerCase().includes("translat")) return work.language;
+  const label = language?.display || work.language;
+  if (label && !label.toLowerCase().includes("translat")) return ({ chinese: "中文", zh: "中文", "zh-cn": "中文", "zh-tw": "中文", cn: "中文", chi: "中文", japanese: "日文", ja: "日文", jp: "日文", jpn: "日文", english: "英文", en: "英文", eng: "英文" } as Record<string, string>)[label.toLowerCase()] || label;
   return "语言未标注";
 }
 

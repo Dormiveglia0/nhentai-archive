@@ -26,7 +26,8 @@ export function GovernanceDemo() {
           <div className="folio-field-matrix">
             <DemoField label="标题" placeholder="选择作品后显示" readOnly />
             <DemoField label="日文标题" placeholder="选择作品后显示" readOnly />
-            <DemoField label="作者 / 社团" placeholder="选择作品后显示" readOnly />
+            <DemoField label="作者" placeholder="选择作品后显示" readOnly />
+            <DemoField label="社团" placeholder="选择作品后显示" readOnly />
             <DemoField label="语言" placeholder="选择作品后显示" readOnly />
           </div>
           <div className="folio-tag-board">

@@ -24,5 +24,10 @@ export function formatCompactBytes(bytes: number): string {
 }
 
 export function workTitle(work: LibraryWork): string {
+  if (work.display_title) return work.display_title;
   return work.title_japanese || work.pretty_title || work.title || `Work ${work.id}`;
+}
+
+export function workCoverHref(work: Pick<LibraryWork, "id" | "updated_at">, width = 512): string {
+  return `/api/works/${work.id}/cover?w=${width}${work.updated_at ? `&v=${encodeURIComponent(work.updated_at)}` : ""}`;
 }

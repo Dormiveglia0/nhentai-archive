@@ -58,9 +58,9 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           <FolioEmptyState
             icon={Library}
             title="库里还没有作品"
-            copy="从发现页导入漫画，或在文件页扫描本地 CBZ。"
-            action="前往发现页"
-            actionHref={pageHref({ name: "discover" })}
+            copy="添加媒体库，或从发现页导入漫画。"
+            action="添加媒体库"
+            actionHref="#settings?section=storage"
           />
         </section>
       ) : null}
@@ -186,6 +186,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             onPickTag={library.pickTag}
             onToggleFavorite={(work) => void library.toggleFavorite(work)}
             onDeleted={library.afterBulkAction}
+            onUpdated={library.reload}
           /> : null}
       </AnimatePresence>
     </section>

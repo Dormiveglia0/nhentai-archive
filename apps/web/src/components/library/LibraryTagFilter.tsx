@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { api, type LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
 import { duration, ease, SlidingIndicator } from "../../lib/motion";
-import { libraryTagHref } from "../../lib/navigation";
+import { libraryTagHref, libraryTagKey } from "../../lib/navigation";
 
 type Props = {
   selected: LibraryTagFilterItem[];
@@ -67,8 +67,8 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
   }, [open, query]);
 
   function toggle(tag: LibraryTagFilterItem) {
-    if (selected.some((item) => item.id === tag.id)) {
-      onChange(selected.filter((item) => item.id !== tag.id));
+    if (selected.some((item) => libraryTagKey(item) === libraryTagKey(tag))) {
+      onChange(selected.filter((item) => libraryTagKey(item) !== libraryTagKey(tag)));
     } else {
       onChange([...selected, tag]);
     }
@@ -82,7 +82,7 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
         <div className="folio-library-tag-selection" aria-label="已选本地标签">
           <div className="folio-library-tag-chips">
             {selected.map((tag) => (
-              <span key={tag.id} className={(tag.type || "tag") === "tag" ? undefined : "is-meta"}>
+              <span key={libraryTagKey(tag)} className={(tag.type || "tag") === "tag" ? undefined : "is-meta"}>
                 <b>{tagTypeLabel(tag.type)}</b>
                 <a href={libraryTagHref(tag)} title={tag.display}>{tag.display}</a>
                 <button type="button" aria-label={`移除标签 ${tag.display}`} onClick={() => toggle(tag)}><X size={12} /></button>
@@ -139,10 +139,10 @@ export function LibraryTagFilter({ selected, onChange }: Props) {
             <div className="folio-library-tag-options">
               {error ? <p role="alert">{error}</p> : null}
               {!error && visibleOptions.map((tag) => {
-                const active = selected.some((item) => item.id === tag.id);
+                const active = selected.some((item) => libraryTagKey(item) === libraryTagKey(tag));
                 return (
                   <a
-                    key={tag.id}
+                    key={libraryTagKey(tag)}
                     href={libraryTagHref(tag)}
                     className={active ? "is-active" : ""}
                     aria-current={active ? "true" : undefined}

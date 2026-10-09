@@ -143,6 +143,7 @@ export function SettingsDemo({
               <EmptyCanvas icon={HardDrive} title="存储状态保持空白" copy="连接服务后查看磁盘占用与文件状态。" />
             </>
           ) : null}
+          {section === "notifications" ? <EmptyCanvas icon={HardDrive} title="订阅与通知" copy="从作品的作者或社团标签开启订阅。" action="打开设置" actionHref="#settings?section=notifications" /> : null}
       </section>
     </div>
   );

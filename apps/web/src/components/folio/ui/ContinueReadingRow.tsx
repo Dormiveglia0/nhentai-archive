@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import type { LibraryWork } from "../../../lib/api";
-import { workTitle } from "../../../lib/format";
+import { workTitle, workCoverHref } from "../../../lib/format";
 import { Stagger, StaggerItem, usePrefersReducedMotion } from "../../../lib/motion";
 import { pageHref } from "../../../lib/navigation";
 import { AmbientCover } from "./AmbientCover";
@@ -110,7 +110,7 @@ export function ContinueReadingRow({ title, works, blurCovers }: Props) {
             >
               <div className="folio-shelf-cover">
                 {work.cover_path ? (
-                  <AmbientCover className="is-fill-portrait" src={`/api/works/${work.id}/cover?w=512`} alt="" privateBlur={blurCovers} loading="lazy" draggable={false} />
+                  <AmbientCover className="is-fill-portrait" src={workCoverHref(work)} alt="" privateBlur={blurCovers} loading="lazy" draggable={false} />
                 ) : (
                   <span className="folio-cover-fallback">暂无封面</span>
                 )}

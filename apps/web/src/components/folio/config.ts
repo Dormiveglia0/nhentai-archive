@@ -8,6 +8,7 @@ import {
   House,
   KeyRound,
   Library,
+  Mail,
   PenLine,
   Search,
   Settings,
@@ -25,7 +26,7 @@ export type FolioPageId =
   | "files"
   | "settings";
 
-export type SettingsSection = "connection" | "translation" | "privacy" | "export" | "data" | "storage";
+export type SettingsSection = "connection" | "translation" | "privacy" | "export" | "data" | "storage" | "notifications";
 
 export type PageDefinition = {
   id: FolioPageId;
@@ -53,5 +54,6 @@ export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; descriptio
   { id: "privacy", label: "访问与阅读", description: "密码、封面与阅读方式", icon: KeyRound },
   { id: "export", label: "导出", description: "CBZ 打包默认值", icon: Download },
   { id: "data", label: "统计", description: "阅读记录与作品统计", icon: BarChart3 },
-  { id: "storage", label: "存储", description: "目录、源文件与空间", icon: Folder },
+  { id: "storage", label: "媒体库", description: "扫描、刮削与阅读缓存", icon: Folder },
+  { id: "notifications", label: "订阅与通知", description: "作者、社团与邮件通知", icon: Mail },
 ];

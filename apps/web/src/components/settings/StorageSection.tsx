@@ -7,6 +7,9 @@ import { FolioField } from "../folio/ui/FolioPrimitives";
 import { FolioMetricGrid, type FolioMetricItem } from "../folio/ui/FolioMetricGrid";
 import { formatBytes } from "../../lib/format";
 import type { SettingsVM } from "./useSettingsState";
+import { MediaLibrariesSection } from "./MediaLibrariesSection";
+import { ReadingCacheSection } from "./ReadingCacheSection";
+import "./StorageSection.css";
 
 const PATH_LABELS: Record<string, string> = {
   data_dir: "数据目录",
@@ -52,7 +55,9 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
   ];
 
   return (
-    <section className="folio-settings-section" aria-label="存储与路径" aria-busy={loading}>
+    <section className="folio-settings-section" aria-label="媒体库与存储" aria-busy={loading}>
+      <MediaLibrariesSection />
+      <ReadingCacheSection />
       {error ? (
         <div className="folio-settings-fetch-error" role="alert">
           <AlertTriangle size={18} />

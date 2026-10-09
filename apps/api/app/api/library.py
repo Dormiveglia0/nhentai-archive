@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.schemas import LibraryScanRequest, MediaLibraryCreate, MediaLibraryPatch
 from app.container import services
@@ -30,6 +30,11 @@ def summary():
     return services.library.summary()
 
 
+@router.get("/revision")
+def revision():
+    return {"revision": services.library.revision()}
+
+
 @router.get("/search")
 def search(
     q: str = "",
@@ -41,11 +46,13 @@ def search(
     language: str = "all",
     tag_ids: str = "",
     favorite_only: bool = False,
+    tag_keys: list[str] = Query(default=[]),
 ):
     ids = [int(value) for value in tag_ids.split(",") if value.strip().isdigit()]
-    return services.library.search(
-        q, page, per_page, sort, read_status, source, language, ids, favorite_only
-    )
+    try:
+        return services.library.search(q, page, per_page, sort, read_status, source, language, ids, favorite_only, tag_keys)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @router.get("/recent-added")

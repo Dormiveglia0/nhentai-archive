@@ -8,17 +8,20 @@ import {
   type LibraryWork,
 } from "../../lib/api";
 import type { LibraryView } from "./LibraryToolbar";
+import { libraryTagKey } from "../../lib/navigation";
 
 function initialLocationFilters() {
   const [route, rawQuery = ""] = window.location.hash.replace(/^#/, "").split("?");
   if (route !== "library") return { q: "", tags: [] as LibraryTagFilter[] };
   const query = new URLSearchParams(rawQuery);
   const id = Number(query.get("tag_id"));
-  if (!Number.isFinite(id) || id <= 0) return { q: query.get("q") || "", tags: [] as LibraryTagFilter[] };
+  const key = query.get("tag_key") || undefined;
+  if (!key && (!Number.isFinite(id) || id <= 0)) return { q: query.get("q") || "", tags: [] as LibraryTagFilter[] };
   return {
     q: query.get("q") || "",
     tags: [{
-      id,
+      id: id > 0 ? id : null,
+      key,
       type: query.get("tag_type") || undefined,
       name: query.get("tag_name") || undefined,
       slug: query.get("tag_slug") || undefined,
@@ -56,6 +59,9 @@ export function useLibraryState(perPage: number) {
   const [error, setError] = useState<string | null>(null);
   const requestToken = useRef(0);
   const overviewToken = useRef(0);
+  const lastQuery = useRef("");
+  const libraryRevision = useRef<number | null>(null);
+  const searching = useRef(false);
 
   const filtersActive =
     Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || sort !== "recent_updated" || tags.length > 0 || favoriteOnly;
@@ -87,9 +93,15 @@ export function useLibraryState(perPage: number) {
 
   useEffect(() => {
     if (perPage < 1) return;
+    const query = JSON.stringify([q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly]);
+    const background = lastQuery.current === query;
+    lastQuery.current = query;
     const current = ++requestToken.current;
-    setLoading(true);
-    setError(null);
+    searching.current = true;
+    if (!background) {
+      setLoading(true);
+      setError(null);
+    }
 
     void api.librarySearch({
       q,
@@ -99,35 +111,69 @@ export function useLibraryState(perPage: number) {
       read_status: readStatus,
       source,
       language,
-      tag_ids: tags.map((tag) => tag.id),
+      tag_keys: tags.map(libraryTagKey),
       favorite_only: favoriteOnly,
     })
       .then((payload) => {
         if (requestToken.current !== current) return;
+        libraryRevision.current = payload.revision;
+        setError(null);
         setWorks(payload.result);
         setTotal(payload.total);
         setNumPages(payload.num_pages);
         setSelected((previous) => {
           if (!previous) return null;
-          return payload.result.find((work) => work.id === previous.id) ?? null;
+          return payload.result.find((work) => work.id === previous.id) ?? (background ? previous : null);
         });
+        if (page > payload.num_pages) setPage(payload.num_pages);
       })
       .catch((exception) => {
         if (requestToken.current !== current) return;
         setError(exception instanceof Error ? exception.message : String(exception));
+        if (background) return;
         setWorks([]);
         setTotal(0);
         setNumPages(1);
         setSelected(null);
       })
       .finally(() => {
-        if (requestToken.current === current) setLoading(false);
+        if (requestToken.current === current) {
+          searching.current = false;
+          setLoading(false);
+        }
       });
 
     return () => {
       if (requestToken.current === current) requestToken.current += 1;
     };
   }, [q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly, reloadKey]);
+
+  useEffect(() => {
+    let stopped = false;
+    let pending = false;
+    async function checkChanges() {
+      if (stopped || pending || document.hidden || document.querySelector<HTMLElement>(".app-route-archive")?.inert || searching.current || libraryRevision.current === null) return;
+      pending = true;
+      try {
+        const payload = await api.libraryRevision();
+        if (!stopped && !searching.current && payload.revision !== libraryRevision.current) {
+          setReloadKey(value => value + 1);
+          void loadOverview();
+        }
+      } catch { /* Keep the current wall during a temporary connection failure. */ }
+      finally { pending = false; }
+    }
+    const timer = window.setInterval(() => void checkChanges(), 5000);
+    const onVisibility = () => { if (!document.hidden) void checkChanges(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("hashchange", onVisibility);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("hashchange", onVisibility);
+    };
+  }, [loadOverview]);
 
   const reload = useCallback(() => {
     setReloadKey((value) => value + 1);
@@ -154,6 +200,7 @@ export function useLibraryState(perPage: number) {
     resetFilters();
     setTags([{
       id: tag.id,
+      key: libraryTagKey(tag),
       type: tag.type,
       name: tag.name,
       slug: tag.slug,
@@ -234,6 +281,7 @@ export function useLibraryState(perPage: number) {
     selectAllOnPage,
     clearSelectedIds: () => setSelectedIds(new Set()),
     afterBulkAction,
+    reload,
     toggleFavorite,
     filtersActive,
     resetFilters,

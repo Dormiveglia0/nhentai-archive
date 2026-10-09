@@ -19,8 +19,10 @@ from app.services.library_monitor_service import LibraryMonitorService
 from app.services.library_service import LibraryService
 from app.services.metadata_refresh_service import MetadataRefreshService
 from app.services.nhentai_client import NhentaiClient
+from app.services.notification_service import NotificationService
 from app.services.reader_service import ReaderService
 from app.services.settings_service import SettingsService
+from app.services.subscription_service import SubscriptionService
 from app.services.translation_service import TranslationService
 from app.services.workbench_service import WorkbenchService
 
@@ -41,11 +43,13 @@ def build_services() -> SimpleNamespace:
     media_libraries = archive.libraries
     library_index = LibraryIndexService(settings, db, media_libraries)
     discover = DiscoverService(db, client)
+    notifications = NotificationService(db)
+    subscriptions = SubscriptionService(db, client, discover, notifications)
     reader = ReaderService(db, archive.cache)
     library = LibraryService(db)
     translation = TranslationService(db)
     dictionary = DictionaryService(db, client, translation)
-    metadata_refresh = MetadataRefreshService(db, client, discover, dictionary)
+    metadata_refresh = MetadataRefreshService(db, client, discover, dictionary, media_libraries)
     governance = GovernanceService(db, dictionary, settings, archive.cache)
     exports = ExportService(db, settings, archive.cache)
     files = FileMaintenanceService(db, settings, archive.cache)
@@ -62,6 +66,8 @@ def build_services() -> SimpleNamespace:
         jobs=jobs,
         archive=archive,
         discover=discover,
+        notifications=notifications,
+        subscriptions=subscriptions,
         reader=reader,
         library=library,
         translation=translation,

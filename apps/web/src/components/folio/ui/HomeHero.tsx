@@ -3,7 +3,7 @@ import { m } from "motion/react";
 import { useState, type CSSProperties } from "react";
 import type { LibraryWork } from "../../../lib/api";
 import { usePrefersReducedMotion } from "../../../lib/motion";
-import { workTitle } from "../../../lib/format";
+import { workTitle, workCoverHref } from "../../../lib/format";
 import { pageHref } from "../../../lib/navigation";
 import { AmbientCover } from "./AmbientCover";
 import "./HomeHero.css";
@@ -20,7 +20,7 @@ export function HomeHero({ works = [], blurCovers = true, loading = false }: {
   const readHref = (work: LibraryWork) => pageHref({ name: "reader", workId: work.id });
   function cover(work: LibraryWork, primary = false) {
     return work.cover_path && !failedCovers.includes(work.id)
-      ? <AmbientCover src={`/api/works/${work.id}/cover?w=${primary ? 768 : 384}`} alt="作品封面" privateBlur={blurCovers} loading={primary ? "eager" : "lazy"} draggable={false}
+      ? <AmbientCover src={workCoverHref(work, primary ? 768 : 384)} alt="作品封面" privateBlur={blurCovers} loading={primary ? "eager" : "lazy"} draggable={false}
         onLoad={event => {
           const image = event.currentTarget;
           setRatios(value => ({ ...value, [work.id]: image.naturalWidth / image.naturalHeight }));

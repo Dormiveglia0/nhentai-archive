@@ -71,6 +71,7 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
   const reduceMotion = usePrefersReducedMotion();
   const [page, setPage] = useState<Page>(() => pageFromLocation());
   const routeRef = useRef(page);
+  const readerEntry = useRef(0);
   routeRef.current = page;
   const [blurCovers, setBlurCovers] = useState(true);
 
@@ -78,7 +79,10 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
     const sync = () => {
       const next = pageFromLocation();
       const previous = routeRef.current;
-      if ([previous.name, next.name].some(name => name === "reader" || name === "readerRemote")) {
+      const wasReader = previous.name === "reader" || previous.name === "readerRemote";
+      const isReader = next.name === "reader" || next.name === "readerRemote";
+      if (isReader && !wasReader) readerEntry.current += 1;
+      if (wasReader || isReader) {
         cancelPageTransition();
         // Commit before a finishing reader exit can restore stale children.
         flushSync(() => setPage(next));
@@ -181,7 +185,7 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
         </div>
       ) : null}
 
-      <AnimatePresence initial={false} mode="sync">
+      <AnimatePresence key={readerEntry.current} initial={readerEntry.current > 0} mode="sync">
         {readerSource ? (
           <m.div
             className="app-route-reader"

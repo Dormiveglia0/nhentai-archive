@@ -1,14 +1,19 @@
 import zipfile
+import json
+import time
 
 from app.config import Settings
 from app.database import Database
 from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.metadata_refresh_service import MetadataRefreshService
+from app.services.library_service import LibraryService
+from app.services.nhentai_client import NhentaiApiError
 
 
 class FakeClient:
     def __init__(self, galleries, search_results=None):
+        self.api_key = "test"
         self.galleries = galleries
         self.search_results = search_results or []
         self.calls = []
@@ -17,7 +22,7 @@ class FakeClient:
         self.calls.append(("gallery", gallery_id, fresh))
         return self.galleries[gallery_id]
 
-    def search(self, query, page, per_page, sort):
+    def search(self, query, page, per_page, sort, fresh=False):
         self.calls.append(("search", query))
         return {"result": self.search_results}
 
@@ -148,3 +153,117 @@ def test_apply_accepts_unique_fuzzy_candidate_after_server_recheck(tmp_path):
 
     assert result["summary"]["updated"] == 1
     assert db.fetchone("SELECT remote_gallery_id FROM works WHERE id = ?", (work_id,))["remote_gallery_id"] == 503
+
+
+def _indexed_service(tmp_path, **config):
+    from test_library_index import create_archive, setup_index
+    settings, db, libraries, index, root, library = setup_index(tmp_path, **config)
+    create_archive(root / "book.cbz", title="Crystal Night", tags="winter")
+    index.scan(library["id"])
+    item = db.fetchone("SELECT * FROM library_items WHERE library_id = ?", (library["id"],))
+    tags = [{"id": 11, "type": "language", "name": "chinese", "slug": "chinese"},
+            {"id": 12, "type": "artist", "name": "Writer", "slug": "writer"},
+            {"id": 13, "type": "group", "name": "Circle", "slug": "circle"}]
+    gallery = _gallery(600, "Crystal Night", 2, tags)
+    client = FakeClient({600: gallery}, [gallery])
+    service = MetadataRefreshService(db, client, DiscoverService(db, client), DictionaryService(db, client), libraries)
+    return db, libraries, index, root, library, item, gallery, service
+
+
+def test_indexed_preview_uses_snapshots_and_metadata_only_preserves_manual_fields(tmp_path, monkeypatch):
+    db, _, _, _, _, item, _, service = _indexed_service(tmp_path, auto_bind=False)
+    work_id = item["work_id"]
+    db.execute("INSERT INTO work_metadata(work_id, field, value, source) VALUES (?, 'pretty_title', '人工标题', 'manual')", (work_id,))
+    db.execute("UPDATE works SET favorite = 1 WHERE id = ?", (work_id,))
+    original = db.fetchone("SELECT page_count, cover_path, source FROM works WHERE id = ?", (work_id,))
+    monkeypatch.setattr("app.services.comicinfo.gallery_id_from_cbz", lambda *_: (_ for _ in ()).throw(AssertionError("source IO")))
+    preview = service.preview([work_id], queries={work_id: "Crystal Night"})["result"][0]
+    assert preview["match"]["eligible"] and preview["candidates"][0]["diffs"]
+    assert any(row["protected"] for row in preview["match"]["diffs"])
+    result = service.apply([{**preview["match"], "work_id": work_id, "version": preview["version"]}])
+    assert result["summary"]["updated"] == 1
+    work = db.fetchone("SELECT * FROM works WHERE id = ?", (work_id,))
+    assert work["remote_gallery_id"] is None and work["metadata_gallery_id"] == 600 and work["favorite"] == 1
+    assert all(work[key] == original[key] for key in original)
+    assert LibraryService(db).work(work_id)["display_title"] == "人工标题"
+    assert [tag["id"] for tag in LibraryService(db).work(work_id)["tags"] if tag["type"] == "artist"] == [12]
+    assert db.fetchone("SELECT COUNT(*) AS n FROM work_tags WHERE work_id = ? AND source = 'comicinfo'", (work_id,))["n"] == 3
+    assert db.fetchone("SELECT scrape_status FROM library_items WHERE id = ?", (item["id"],))["scrape_status"] == "completed"
+    assert service.apply([{**preview["match"], "work_id": work_id, "version": preview["version"]}])["summary"]["skipped"] == 1
+
+
+def test_strict_language_blocks_explicit_id_and_preferred_language_breaks_translation_tie(tmp_path):
+    db, libraries, _, _, library, item, gallery, service = _indexed_service(tmp_path, language_mode="strict")
+    japanese = {**gallery, "id": 601, "tags": [{"id": 14, "type": "language", "name": "japanese", "slug": "japanese"}]}
+    service.client.galleries[601] = japanese
+    preview = service.preview([item["work_id"]], gallery_ids={item["work_id"]: 601})["result"][0]
+    assert not preview["match"]["eligible"] and "语言" in preview["reason"]
+    assert service.apply([{"work_id": item["work_id"], "gallery_id": 601, "source": "manual_id"}])["summary"]["skipped"] == 1
+    libraries.update(library["id"], {"config": {"language_mode": "prefer"}})
+    service.client.search_results = [japanese, gallery]
+    ranked = service.preview([item["work_id"]])["result"][0]["candidates"]
+    assert ranked[0]["gallery_id"] == 600 and ranked[0]["eligible"]
+    assert ranked[1]["gallery_id"] == 601 and not ranked[1]["automatic_eligible"]
+    assert db.fetchone("SELECT remote_gallery_id FROM works WHERE id = ?", (item["work_id"],))["remote_gallery_id"] is None
+
+
+def test_automatic_scrape_persists_review_requeues_setting_changes_and_applies_once(tmp_path):
+    db, libraries, _, _, library, item, gallery, service = _indexed_service(tmp_path, auto_scrape=True, auto_bind=False)
+    service.client.search_results = [gallery, {**gallery, "id": 602}]
+    service.tick()
+    assert db.fetchone("SELECT scrape_status FROM library_items WHERE id = ?", (item["id"],))["scrape_status"] == "review"
+    calls = len(service.client.calls)
+    service.tick()
+    assert len(service.client.calls) == calls
+    libraries.update(library["id"], {"config": {"auto_bind": True}})
+    service.client.search_results = [gallery]
+    service.tick()
+    assert db.fetchone("SELECT remote_gallery_id FROM works WHERE id = ?", (item["work_id"],))["remote_gallery_id"] == 600
+    assert db.fetchone("SELECT scrape_status FROM library_items WHERE id = ?", (item["id"],))["scrape_status"] == "completed"
+    service.tick()
+    assert db.fetchone("SELECT COUNT(*) AS n FROM jobs")["n"] == 0
+
+
+def test_automatic_remote_failure_backoff_survives_service_restart(tmp_path, monkeypatch):
+    db, _, _, _, _, item, _, service = _indexed_service(tmp_path, auto_scrape=True)
+    def failed(*args, **kwargs):
+        raise NhentaiApiError(429, "rate_limited", "wait", retry_after=120)
+    monkeypatch.setattr(service.client, "search", failed)
+    service.tick()
+    row = db.fetchone("SELECT * FROM library_items WHERE id = ?", (item["id"],))
+    assert row["scrape_status"] == "error" and row["scrape_retry_at"] >= time.time() + 119
+    restarted = MetadataRefreshService(db, service.client, service.discover, service.dictionary, service.libraries)
+    restarted.tick()
+    assert db.fetchone("SELECT scrape_attempts FROM library_items WHERE id = ?", (item["id"],))["scrape_attempts"] == 1
+    monkeypatch.undo()
+    db.execute("UPDATE library_items SET scrape_retry_at = 0 WHERE id = ?", (item["id"],))
+    restarted.tick()
+    assert db.fetchone("SELECT scrape_status FROM library_items WHERE id = ?", (item["id"],))["scrape_status"] == "completed"
+
+
+def test_metadata_apply_rejects_concurrent_manual_change_and_keeps_tags_atomic(tmp_path, monkeypatch):
+    db, _, _, _, _, item, _, service = _indexed_service(tmp_path)
+    original = service.client.gallery
+    def changed(*args, **kwargs):
+        result = original(*args, **kwargs)
+        db.execute("INSERT OR REPLACE INTO work_metadata(work_id, field, value, source) VALUES (?, 'title', 'changed', 'manual')", (item["work_id"],))
+        return result
+    monkeypatch.setattr(service.client, "gallery", changed)
+    result = service.apply([{"work_id": item["work_id"], "gallery_id": 600, "source": "manual_id"}])
+    assert result["summary"]["skipped"] == 1
+    assert db.fetchone("SELECT metadata_gallery_id FROM works WHERE id = ?", (item["work_id"],))["metadata_gallery_id"] is None
+    assert not db.fetchone("SELECT 1 FROM work_tags WHERE source = 'remote'")
+
+
+def test_source_change_during_auto_review_keeps_new_attempt_pending(tmp_path, monkeypatch):
+    from test_library_index import create_archive
+    db, _, index, root, library, item, _, service = _indexed_service(tmp_path, auto_scrape=True)
+    def search(*args, **kwargs):
+        create_archive(root / "book.cbz", title="Changed Title")
+        index.scan(library["id"])
+        return {"result": []}
+    monkeypatch.setattr(service.client, "search", search)
+    service.tick()
+    row = db.fetchone("SELECT * FROM library_items WHERE id = ?", (item["id"],))
+    assert row["scrape_status"] == "pending" and row["scrape_result_json"] is None
+    assert json.loads(row["metadata_json"])["Title"] == "Changed Title"

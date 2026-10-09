@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type GalleryDetail, type Job, type LibraryWork, type PageInfo } from "../../lib/api";
+import { workCoverHref } from "../../lib/format";
 import { clamp, PERSIST_DEBOUNCE_MS, type ReaderPageItem } from "./readerHelpers";
 
 export type ReaderSource =
   | { kind: "local"; workId: number }
   | { kind: "remote"; galleryId: number };
 
-export type ReaderTag = { id: number; type: string; name?: string; slug?: string; display: string };
+export type ReaderTag = { id: number | null; key?: string; type: string; name?: string; slug?: string; display: string };
 
 export function useReaderData(source: ReaderSource) {
   const localWorkId = source.kind === "local" ? source.workId : null;
@@ -180,12 +181,13 @@ export function useReaderData(source: ReaderSource) {
   const pageCount = pages.length;
   const title = isRemote
     ? gallery?.title.japanese || gallery?.title.pretty || gallery?.title.english || `Gallery ${remoteGalleryId}`
-    : work?.title || "NH Archive";
-  const coverSrc = isRemote ? gallery?.thumbnail?.url || gallery?.cover?.url || null : work ? `/api/works/${work.id}/cover` : null;
+    : work?.display_title || work?.title || "NH Archive";
+  const coverSrc = isRemote ? gallery?.thumbnail?.url || gallery?.cover?.url || null : work ? workCoverHref(work) : null;
   const tags = useMemo<ReaderTag[]>(() => {
     const sourceTags = isRemote ? gallery?.tags : work?.tags;
     return (sourceTags ?? []).map((tag) => ({
       id: tag.id,
+      key: "key" in tag ? tag.key : undefined,
       type: tag.type || "tag",
       name: tag.name,
       slug: tag.slug,

@@ -1,10 +1,41 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import SettingsPatch
 from app.container import services
 
 
 router = APIRouter(prefix="/settings")
+
+
+@router.get("/smtp")
+def smtp_settings():
+    return services.notifications.public_config()
+
+
+@router.patch("/smtp")
+def configure_smtp(payload: dict):
+    try:
+        return services.notifications.configure(payload)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/smtp/test")
+def test_smtp():
+    return services.notifications.test()
+
+
+@router.get("/smtp/outbox")
+def mail_outbox():
+    return services.notifications.outbox()
+
+
+@router.post("/smtp/outbox/{mail_id}/retry")
+def retry_mail(mail_id: int):
+    try:
+        return services.notifications.retry(mail_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("")

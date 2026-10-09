@@ -350,7 +350,8 @@ class LibraryIndexService:
         title = metadata.get("Title") or source.stem
         language = LANGUAGES.get(str(metadata.get("LanguageISO", "")).lower())
         gallery_id = metadata.get("gallery_id") if library["config"]["auto_bind"] else None
-        if library["config"]["language_mode"] == "strict" and language != library["config"]["language"]:
+        # Strict binding needs verified remote language, not just the CBZ language.
+        if library["config"]["language_mode"] == "strict":
             gallery_id = None
         owned = f"library/{source.relative_to(library['root_path']).as_posix()}" if library["kind"] == "managed" else str(source)
         legacy = self.db.fetchone("SELECT * FROM work_files WHERE kind = 'source_cbz' AND path IN (?, ?) LIMIT 1", (str(source), owned))
@@ -397,7 +398,8 @@ class LibraryIndexService:
                 cover_tmp.replace(destination)
                 conn.execute(
                     """UPDATE library_items SET work_id = ?, status = 'ready', fingerprint = ?, manifest = ?, metadata_json = ?, archive_info_json = ?,
-                    retry_count = 0, retry_at = NULL, last_error = ?, indexed_at = CURRENT_TIMESTAMP WHERE id = ?""",
+                    retry_count = 0, retry_at = NULL, last_error = ?, indexed_at = CURRENT_TIMESTAMP,
+                    scrape_status = 'pending', scrape_retry_at = 0, scrape_attempts = 0, scrape_result_json = NULL WHERE id = ?""",
                     (work_id, data["fingerprint"], data["manifest"], json.dumps(metadata, ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False),
                      "; ".join(data.get("warnings", []))[:500] or None, item_id),
                 )

@@ -5,7 +5,7 @@ import { libraryTagHref, navigate, pageHref } from "../../lib/navigation";
 import { TagScroller } from "../folio/ui/TagScroller";
 import { AmbientCover } from "../folio/ui/AmbientCover";
 import type { LibraryView } from "./LibraryToolbar";
-import { authorLine, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
+import { authorLine, languageLabel, readStatusLabel, workTitle, workCoverHref } from "./libraryHelpers";
 
 type Props = {
   work: LibraryWork;
@@ -67,7 +67,7 @@ export function WorkCard({
           </span>
         ) : null}
         {work.cover_path ? (
-          <AmbientCover className="is-fill-portrait" src={`/api/works/${work.id}/cover?w=512`} alt="" privateBlur={blurCovers} loading="lazy" />
+          <AmbientCover className="is-fill-portrait" src={workCoverHref(work)} alt="" privateBlur={blurCovers} loading="lazy" />
         ) : (
           <span className="folio-cover-fallback">暂无封面</span>
         )}

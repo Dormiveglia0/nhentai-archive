@@ -85,6 +85,8 @@
 .folio-work-detail-progress > i { display: block; height: 100%; background: var(--folio-red); transform-origin: left; transition: transform .35s ease; }
 .folio-work-detail-actions { display: grid; gap: 12px; margin-top: 24px; }
 .folio-work-detail-main-actions { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 10px; }
+.folio-work-detail-source-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.folio-work-detail-source-actions > :only-child { grid-column: 1 / -1; }
 .folio-work-detail-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 12px; border-top: 1px solid var(--folio-line); }
 :is(.folio-work-detail-main-actions, .folio-work-detail-tools) > :is(button, a) {
   min-height: 44px;

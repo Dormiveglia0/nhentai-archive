@@ -2,15 +2,16 @@ import { ArrowUpRight, Check, Download, Heart, LoaderCircle, Star, X } from "luc
 import { useEffect, useRef } from "react";
 
 import { FadeInOut, Presence } from "../../lib/motion";
-import { pageHref, tagSearchHref } from "../../lib/navigation";
+import { libraryTagHref, pageHref, tagSearchHref } from "../../lib/navigation";
 import { AmbientCover } from "../folio/ui/AmbientCover";
+import { CreatorSubscribeButton, isCreatorTag, useCreatorSubscriptions } from "../subscriptions/CreatorSubscribeButton";
 import "./ReaderPanels.css";
 
 type ReaderInfoPanelProps = {
   open: boolean;
   title: string;
   coverSrc: string | null;
-  tags: { id: number; type: string; name?: string; slug?: string; display: string }[];
+  tags: { id: number | null; key?: string; type: string; name?: string; slug?: string; display: string }[];
   progressPercent: number;
   isRemote: boolean;
   importing: boolean;
@@ -48,6 +49,7 @@ export function ReaderInfoPanel({
   onHoverChange,
 }: ReaderInfoPanelProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
+  const subscriptions = useCreatorSubscriptions(open && tags.some(isCreatorTag));
   const tagGroups = READER_TAG_GROUPS.map((group) => ({
     ...group,
     tags: tags.filter((tag) => group.types.includes(tag.type)),
@@ -97,8 +99,9 @@ export function ReaderInfoPanel({
                     <small>{group.label}</small>
                     <ul>
                       {group.tags.map((tag) => (
-                        <li key={`${tag.type}-${tag.id}-${tag.display}`} data-type={tag.type}>
-                          <a href={tagSearchHref(tag)}>{tag.display}</a>
+                        <li className="creator-tag" key={`${tag.type}-${tag.id}-${tag.display}`} data-type={tag.type}>
+                          <a href={isRemote ? tagSearchHref(tag) : libraryTagHref(tag)}>{tag.display}</a>
+                          <CreatorSubscribeButton tag={tag} vm={subscriptions} />
                         </li>
                       ))}
                     </ul>
@@ -106,6 +109,7 @@ export function ReaderInfoPanel({
                 ))}
               </div>
             ) : null}
+            {subscriptions.error ? <p className="creator-feedback" role="alert">{subscriptions.error}</p> : null}
           </div>
 
           <div className="reader-info-actions">
@@ -140,7 +144,8 @@ export function ReaderInfoPanel({
 }
 
 const READER_TAG_GROUPS = [
-  { label: "作者 / 社团", types: ["artist", "group"] },
+  { label: "作者", types: ["artist"] },
+  { label: "社团", types: ["group"] },
   { label: "原作 / 角色", types: ["parody", "character"] },
   { label: "内容标签", types: ["tag"] },
   { label: "分类 / 语言", types: ["category", "language"] },

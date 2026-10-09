@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type LibrarySummary, type LibraryWork, type ReadingStatistics } from "../../lib/api";
-import { workTitle } from "../../lib/format";
+import { workTitle, workCoverHref } from "../../lib/format";
 import { pageHref } from "../../lib/navigation";
 import "./HomeLayoutPreview.css";
 
@@ -10,7 +10,7 @@ function PreviewWork({ work, hidden, primary = false }: { work: LibraryWork; hid
   const progress = Math.max(0, Math.min(100, work.completed ? 100 : work.progress_percent ?? 0));
   return <a className={`home-proof-work${primary ? " is-primary" : ""}`} href={pageHref({ name: "reader", workId: work.id })}>
     <div className="home-proof-cover">
-      {failed ? <span className="home-proof-cover-error">封面加载失败</span> : <img className={hidden ? "is-private" : ""} src={`/api/works/${work.id}/cover?w=${primary ? 768 : 384}`} alt="" decoding="async" onError={() => setFailed(true)} />}
+      {failed ? <span className="home-proof-cover-error">封面加载失败</span> : <img className={hidden ? "is-private" : ""} src={workCoverHref(work, primary ? 768 : 384)} alt="" decoding="async" onError={() => setFailed(true)} />}
     </div>
     <div className="home-proof-caption"><h3>{workTitle(work)}</h3><div className="home-proof-work-meta"><span>{work.page_count} 页</span><span>{progress ? `已读 ${Math.round(progress)}%` : "未读"}</span></div><div className="home-proof-progress"><i style={{ width: `${progress}%` }} /></div></div>
   </a>;

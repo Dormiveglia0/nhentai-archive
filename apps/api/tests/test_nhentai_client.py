@@ -1,5 +1,6 @@
 import pytest
 import urllib.error
+import time
 from email.message import Message
 from io import BytesIO
 
@@ -107,6 +108,27 @@ def test_client_fresh_gallery_bypasses_cached_payload(monkeypatch):
     assert client.gallery(7)["title"]["english"] == "First"
     assert client.gallery(7, fresh=True)["title"]["english"] == "Fresh"
     assert len(calls) == 2
+
+
+def test_fresh_search_and_tagged_use_current_contract_and_reject_stale_cooldown(monkeypatch):
+    calls = []
+    def response(request, timeout):
+        calls.append(request.full_url)
+        return FakeHttpResponse(b'{"result":[],"num_pages":1}')
+    monkeypatch.setattr("urllib.request.urlopen", response)
+    client = NhentaiClient("https://api.example", "tests")
+    client.search("winter", per_page=10)
+    client.search("winter", per_page=10)
+    client.search("winter", per_page=10, fresh=True)
+    client.tagged(20, fresh=True)
+    assert calls == ["https://api.example/api/v2/search?query=winter&page=1&sort=date",
+                     "https://api.example/api/v2/search?query=winter&page=1&sort=date",
+                     "https://api.example/api/v2/galleries/tagged?tag_id=20&page=1&per_page=25&sort=date"]
+    client._rate_limited_until = time.monotonic() + 120
+    with pytest.raises(NhentaiApiError) as exc:
+        client.search("winter", fresh=True)
+    assert exc.value.status_code == 429 and exc.value.retry_after >= 119
+    assert len(calls) == 3
 
 
 def test_client_enters_rate_limit_cooldown_without_repeating_remote_call(monkeypatch):

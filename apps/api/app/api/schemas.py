@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class ReaderStatePatch(BaseModel):
@@ -33,6 +34,17 @@ class SettingsPatch(BaseModel):
     privacy: dict | None = None
     reader: dict | None = None
     machine_translation: dict | None = None
+
+
+class SubscriptionCreate(BaseModel):
+    remote_tag_id: int = Field(gt=0, strict=True)
+    tag_type: Literal["artist", "group"]
+    interval_seconds: int = Field(default=21600, ge=300, le=86400, strict=True)
+    email_enabled: bool = True
+
+
+class SubscriptionUpdateRead(BaseModel):
+    update_id: int | None = Field(default=None, gt=0, strict=True)
 
 
 class DictionaryApplyRequest(BaseModel):
@@ -86,18 +98,22 @@ class GovernanceBulkRequest(BaseModel):
 
 
 class MetadataRefreshPreviewRequest(BaseModel):
-    work_ids: list[int] = Field(default_factory=list)
-    gallery_ids: dict[int, int] = Field(default_factory=dict)
+    work_ids: list[int] = Field(default_factory=list, max_length=50)
+    gallery_ids: dict[int, int] = Field(default_factory=dict, max_length=50)
+    queries: dict[int, str] = Field(default_factory=dict, max_length=50)
 
 
 class MetadataRefreshMatchRequest(BaseModel):
-    work_id: int
-    gallery_id: int
+    work_id: int = Field(gt=0)
+    gallery_id: int = Field(gt=0)
     source: str
+    version: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    query: str | None = Field(default=None, max_length=240)
+    bind: bool | None = None
 
 
 class MetadataRefreshApplyRequest(BaseModel):
-    matches: list[MetadataRefreshMatchRequest] = Field(default_factory=list)
+    matches: list[MetadataRefreshMatchRequest] = Field(default_factory=list, max_length=50)
 
 
 class GovernanceTranslateRequest(BaseModel):

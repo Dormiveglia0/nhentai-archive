@@ -43,8 +43,8 @@ TRANSLATABLE_METADATA_FIELDS = ("title", "title_japanese", "summary")
 SOURCE_TO_METADATA = {"comicinfo": "comicinfo", "remote": "remote", "json": "remote"}
 
 TAG_GROUP_LABELS = {
-    "artist": "作者与社团",
-    "group": "作者与社团",
+    "artist": "作者",
+    "group": "社团",
     "parody": "原作与角色",
     "character": "原作与角色",
     "tag": "内容标签",
@@ -116,7 +116,7 @@ class GovernanceService:
                   AND COALESCE(wt.tag_type, 'tag') NOT IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})) AS unmapped_count,
               (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id) AS metadata_count
             FROM works w
-            LEFT JOIN remote_galleries rg ON rg.gallery_id = w.remote_gallery_id
+            LEFT JOIN remote_galleries rg ON rg.gallery_id = COALESCE(w.metadata_gallery_id, w.remote_gallery_id)
             ORDER BY w.updated_at DESC, w.id DESC
             """
         )
@@ -742,10 +742,10 @@ class GovernanceService:
             cover = {"path": str(cover_path), "exists": False, "size": None, "mtime_ns": None}
 
         remote_payload_json = work.get("remote_payload_json")
-        if "remote_payload_json" not in work and work.get("remote_gallery_id"):
+        if "remote_payload_json" not in work and (work.get("metadata_gallery_id") or work.get("remote_gallery_id")):
             remote_row = self.db.fetchone(
                 "SELECT payload_json FROM remote_galleries WHERE gallery_id = ?",
-                (work["remote_gallery_id"],),
+                (work.get("metadata_gallery_id") or work["remote_gallery_id"],),
             )
             remote_payload_json = remote_row.get("payload_json") if remote_row else None
 

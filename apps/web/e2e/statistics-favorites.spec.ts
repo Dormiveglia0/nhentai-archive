@@ -22,7 +22,12 @@ test("收藏可从作品卡、详情弹窗和阅读器统一操作并快速筛�
   await card.screenshot({ path: "/tmp/nh-archive-favorite-card-desktop.png" });
 
   const favoriteFilter = page.locator(".folio-library-favorite-filter");
+  const filtered = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname === "/api/library/search" && url.searchParams.get("favorite_only") === "true";
+  });
   await favoriteFilter.click();
+  await filtered;
   await expect(favoriteFilter).toHaveAttribute("aria-pressed", "true");
   await expect(card).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });

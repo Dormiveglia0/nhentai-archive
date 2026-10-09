@@ -61,7 +61,12 @@ test.describe("界面与封面回归", () => {
     await page.getByRole("button", { name: "语言：全部语言" }).click();
     await page.getByRole("group", { name: "语言选项" }).getByRole("button", { name: "中文" }).click();
     await page.getByRole("button", { name: "排序：最新发布" }).click();
+    const sorted = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/discover/feed" && url.searchParams.get("sort") === "popular";
+    });
     await page.getByRole("group", { name: "排序选项" }).getByRole("button", { name: "总热度" }).click();
+    await sorted;
     const tag = page.locator(".folio-discover-card-tags a").first();
     await expect(tag).toBeVisible({ timeout: 15_000 });
     const box = await tag.boundingBox();

@@ -5,10 +5,12 @@ import type { GalleryDetail } from "../../../lib/api";
 import { Stagger, StaggerItem } from "../../../lib/motion";
 import { tagSearchHref } from "../../../lib/navigation";
 import { defaultDisplayTag } from "../../folio/ui/TagScroller";
+import { CreatorSubscribeButton, isCreatorTag, useCreatorSubscriptions } from "../../subscriptions/CreatorSubscribeButton";
 import { TAG_GROUPS } from "./galleryDetailModel";
 import "./GalleryTags.css";
 
 export function GalleryTags({ detail }: { detail: GalleryDetail }) {
+  const subscriptions = useCreatorSubscriptions(detail.tags.some(isCreatorTag));
   const groups = TAG_GROUPS.map((group) => ({
     ...group,
     tags: detail.tags.filter((tag) => group.types.includes(tag.type)),
@@ -28,6 +30,7 @@ export function GalleryTags({ detail }: { detail: GalleryDetail }) {
             <h3>{group.label}</h3>
             <div>
               {group.tags.map((tag) => (
+                <span className="creator-tag" key={tag.id}>
                 <m.a
                   layout
                   key={tag.id}
@@ -37,11 +40,14 @@ export function GalleryTags({ detail }: { detail: GalleryDetail }) {
                   <span>{defaultDisplayTag(tag)}</span>
                   <ArrowUpRight size={12} />
                 </m.a>
+                <CreatorSubscribeButton tag={{ ...tag, display: defaultDisplayTag(tag) }} vm={subscriptions} />
+                </span>
               ))}
             </div>
           </StaggerItem>
         ))}
       </Stagger>
+      {subscriptions.error ? <p className="creator-feedback" role="alert">{subscriptions.error}</p> : null}
     </section>
   );
 }

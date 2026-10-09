@@ -391,17 +391,17 @@
 }
 
 .folio-governance-work {
-  min-height: 200px;
+  min-height: 168px;
   padding: 16px 0;
   display: grid;
-  grid-template-columns: 126px minmax(0, 1fr);
+  grid-template-columns: 104px minmax(0, 1fr);
   gap: 24px;
   border-bottom: 1px solid var(--folio-line-strong);
 }
 
 .folio-governance-cover-frame {
-  width: 126px;
-  height: 168px;
+  width: 104px;
+  height: 140px;
   padding: 1px;
   background: var(--folio-line-strong);
   box-shadow: 6px 8px 0 rgba(23, 24, 21, 0.055);
@@ -446,7 +446,7 @@
   display: -webkit-box;
   overflow: hidden;
   font-family: "Noto Serif SC", "Songti SC", serif;
-  font-size: clamp(22px, 2.1vw, 30px);
+  font-size: clamp(20px, 1.8vw, 26px);
   line-height: 1.25;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

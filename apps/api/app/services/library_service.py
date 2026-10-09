@@ -22,9 +22,16 @@ SOURCES = {"all", "remote", "local"}
 # Card metadata only needs a handful of tag types; the rest stay available through the
 # governance/dictionary modules. Order also drives card display priority.
 CARD_TAG_TYPES = ("artist", "group", "parody", "character", "language", "tag", "category")
+LANGUAGE_ALIASES = {"zh": "chinese", "zh-cn": "chinese", "zh-tw": "chinese", "cn": "chinese", "chi": "chinese",
+                    "ja": "japanese", "jp": "japanese", "jpn": "japanese", "en": "english", "eng": "english"}
+
+
+def _language_sql(column):
+    value = f"lower(trim({column}))"
+    return f"CASE {value} " + " ".join(f"WHEN '{alias}' THEN '{name}'" for alias, name in LANGUAGE_ALIASES.items()) + f" ELSE {value} END"
 
 WORK_COLUMNS = """
-  w.id, w.remote, w.remote_gallery_id, w.media_id, w.title, w.title_japanese,
+  w.id, w.remote, w.remote_gallery_id, w.metadata_gallery_id, w.media_id, w.title, w.title_japanese,
   w.pretty_title, w.source, w.language, w.page_count, w.cover_path,
   COALESCE(w.favorite, 0) AS favorite,
   w.created_at, w.updated_at,
@@ -34,6 +41,9 @@ WORK_COLUMNS = """
   rp.last_read_at AS last_read_at,
   COALESCE(f.size_bytes, 0) AS size_bytes,
   (SELECT COUNT(*) FROM work_tags wt2 WHERE wt2.work_id = w.id) AS tag_count
+  ,(SELECT NULLIF(wm.value, '') FROM work_metadata wm WHERE wm.work_id = w.id
+    AND wm.source IN ('manual', 'current') AND wm.field IN ('title', 'title_japanese', 'pretty_title')
+    ORDER BY CASE wm.field WHEN 'title' THEN 0 WHEN 'pretty_title' THEN 1 ELSE 2 END LIMIT 1) AS display_title
 """
 
 WORK_JOINS = """
@@ -92,18 +102,21 @@ class LibraryService:
             sources[str(row["source"])] = int(row["value"])
 
         languages = self.db.fetchall(
-            """
-            SELECT
-              COALESCE(wt.remote_slug, wt.remote_name) AS value,
-              MAX(COALESCE(d.zh_name, wt.remote_name, wt.remote_slug)) AS label,
-              COUNT(DISTINCT wt.work_id) AS count
+            f"""WITH labels AS (SELECT {_language_sql('COALESCE(wt.remote_slug, wt.remote_name)')} AS value,
+              COALESCE(d.zh_name, wt.remote_name, wt.remote_slug) AS label, wt.work_id
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
             WHERE wt.tag_type = 'language'
               AND COALESCE(wt.remote_slug, wt.remote_name) IS NOT NULL
               AND lower(COALESCE(wt.remote_slug, wt.remote_name, '')) NOT LIKE 'translat%'
-            GROUP BY value
-            ORDER BY count DESC
+            UNION ALL
+            SELECT {_language_sql('w.language')} AS value, w.language AS label, w.id AS work_id FROM works w
+            WHERE COALESCE(trim(w.language), '') <> '' AND NOT EXISTS (
+              SELECT 1 FROM work_tags wl WHERE wl.work_id = w.id AND wl.tag_type = 'language'
+                AND COALESCE(wl.remote_slug, wl.remote_name, '') <> ''
+                AND lower(COALESCE(wl.remote_slug, wl.remote_name, '')) NOT LIKE 'translat%'))
+            SELECT value, MAX(label) AS label, COUNT(DISTINCT work_id) AS count FROM labels
+            WHERE value NOT LIKE 'translat%' GROUP BY value ORDER BY count DESC
             """
         )
 
@@ -118,10 +131,15 @@ class LibraryService:
             "total_size_bytes": total_size_bytes,
             "sources": sources,
             "languages": [
-                {"value": str(row["value"]), "label": str(row["label"] or row["value"]), "count": int(row["count"])}
-                for row in languages
+                {"value": str(row["value"]), "label": {"chinese": "中文", "japanese": "日文", "english": "英文"}.get(
+                    LANGUAGE_ALIASES.get(label.lower(), label.lower()), label), "count": int(row["count"])}
+                for row in languages if (label := str(row["label"] or row["value"]))
             ],
         }
+
+    def revision(self) -> int:
+        row = self.db.fetchone("SELECT value FROM settings WHERE key = 'library.revision'")
+        return int(row["value"]) if row else 0
 
     def search(
         self,
@@ -134,7 +152,9 @@ class LibraryService:
         language: str = "all",
         tag_ids: list[int] | None = None,
         favorite_only: bool = False,
+        tag_keys: list[str] | None = None,
     ) -> dict[str, Any]:
+        revision = self.revision()
         page = max(1, int(page))
         per_page = max(1, min(int(per_page), 100))
         order_by = SORT_ORDERS.get(sort, SORT_ORDERS["recent_updated"])
@@ -143,6 +163,19 @@ class LibraryService:
         tag_ids = [int(tid) for tid in (tag_ids or []) if tid is not None]
 
         where, params = self._build_filters(q, read_status, source, language, tag_ids, favorite_only)
+        keys = list(dict.fromkeys(tag_keys or []))
+        if len(keys) > 40 or any(not isinstance(key, str) or len(key) > 320 or not key.startswith(("local:", "remote:")) for key in keys):
+            raise ValueError("标签筛选无效或超过40项")
+        for key in keys:
+            if key.startswith("remote:"):
+                remote_id = key.removeprefix("remote:")
+                if not remote_id.isdecimal() or int(remote_id) <= 0:
+                    raise ValueError("远端标签ID无效")
+                where.append("EXISTS (SELECT 1 FROM work_tags wk WHERE wk.work_id = w.id AND wk.remote_tag_id = ?)")
+                params.append(int(remote_id))
+            else:
+                where.append("EXISTS (SELECT 1 FROM work_tags wk WHERE wk.work_id = w.id AND wk.tag_key = ?)")
+                params.append(key)
         where_sql = " AND ".join(where) if where else "1 = 1"
 
         total = int(
@@ -168,6 +201,7 @@ class LibraryService:
             "page": page,
             "per_page": per_page,
             "num_pages": num_pages,
+            "revision": revision,
         }
 
     def work(self, work_id: int) -> dict[str, Any] | None:
@@ -207,7 +241,7 @@ class LibraryService:
 
     def tag_filters(self, q: str = "", limit: int = 40) -> dict[str, Any]:
         limit = max(1, min(int(limit), 200))
-        where = ["wt.remote_tag_id IS NOT NULL", "(wt.tag_type IS NULL OR wt.tag_type != 'language')"]
+        where = ["COALESCE(wt.remote_name, wt.remote_slug, '') <> ''", "(wt.tag_type IS NULL OR wt.tag_type != 'language')"]
         params: list[Any] = []
         cleaned = q.strip().lower()
         if cleaned:
@@ -221,7 +255,8 @@ class LibraryService:
         rows = self.db.fetchall(
             f"""
             SELECT
-              wt.remote_tag_id AS id,
+              MAX(wt.remote_tag_id) AS id,
+              wt.tag_key AS key,
               MAX(wt.tag_type) AS type,
               MAX(wt.remote_name) AS name,
               MAX(wt.remote_slug) AS slug,
@@ -231,7 +266,7 @@ class LibraryService:
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
             WHERE {' AND '.join(where)}
-            GROUP BY wt.remote_tag_id
+            GROUP BY wt.tag_key
             ORDER BY count DESC, type ASC
             LIMIT ?
             """,
@@ -240,7 +275,8 @@ class LibraryService:
         return {
             "result": [
                 {
-                    "id": int(row["id"]),
+                    "id": row["id"],
+                    "key": row["key"],
                     "type": row["type"],
                     "name": row["name"],
                     "slug": row["slug"],
@@ -545,12 +581,16 @@ class LibraryService:
             where.append("rp.completed = 1")
 
         if language and language != "all":
+            language = LANGUAGE_ALIASES.get(language.lower(), language.lower())
             where.append(
-                "EXISTS ("
+                "(EXISTS ("
                 " SELECT 1 FROM work_tags wl"
                 " WHERE wl.work_id = w.id AND wl.tag_type = 'language'"
-                " AND (wl.remote_slug = ? OR wl.remote_name = ?)"
-                ")"
+                f" AND {_language_sql('COALESCE(wl.remote_slug, wl.remote_name)')} = ?)"
+                " OR (NOT EXISTS (SELECT 1 FROM work_tags wl WHERE wl.work_id = w.id AND wl.tag_type = 'language'"
+                " AND COALESCE(wl.remote_slug, wl.remote_name, '') <> ''"
+                " AND lower(COALESCE(wl.remote_slug, wl.remote_name, '')) NOT LIKE 'translat%')"
+                f" AND {_language_sql('w.language')} = ?))"
             )
             params.extend([language, language])
 
@@ -708,6 +748,7 @@ class LibraryService:
             f"""
             SELECT
               wt.work_id, wt.remote_tag_id, wt.tag_type, wt.remote_name, wt.remote_slug,
+              wt.tag_key,
               d.zh_name AS display_zh
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
@@ -717,11 +758,17 @@ class LibraryService:
             work_ids,
         )
         grouped: dict[int, list[dict[str, Any]]] = {work_id: [] for work_id in work_ids}
-        for tag in tag_rows:
+        seen = set()
+        for tag in sorted(tag_rows, key=lambda tag: tag["remote_tag_id"] is None):
+            identity = (tag["work_id"], tag["tag_key"])
+            if identity in seen:
+                continue
+            seen.add(identity)
             work_id = int(tag["work_id"])
             grouped.setdefault(work_id, []).append(
                 {
                     "id": tag["remote_tag_id"],
+                    "key": tag["tag_key"],
                     "type": tag["tag_type"],
                     "name": tag["remote_name"],
                     "slug": tag["remote_slug"],

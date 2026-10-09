@@ -1,0 +1,9 @@
+.creator-tag { display: inline-flex; align-items: stretch; max-width: 100%; min-width: 0; }
+.creator-tag > a { min-width: 0; overflow-wrap: anywhere; }
+.creator-tag:has(> button) > a { border-right: 0; }
+.creator-subscribe { flex-shrink: 0; width: 34px; min-height: 34px; padding: 0; display: grid; place-items: center; border: 1px solid var(--folio-line, rgba(242, 240, 233, .22)); border-radius: 0; background: transparent; color: inherit; }
+.creator-subscribe[aria-pressed="true"] { color: var(--folio-red, #d36756); }
+.creator-subscribe:hover:not(:disabled) { border-color: currentColor; background: var(--folio-red-soft, rgba(211, 103, 86, .12)); }
+.creator-subscribe:focus-visible { outline: 2px solid var(--folio-red, #d36756); outline-offset: 3px; }
+.creator-subscribe:disabled { opacity: .45; }
+.creator-feedback { margin: 12px 0 0; color: var(--folio-red, #d36756); font-size: 13px; line-height: 1.7; }

@@ -50,6 +50,10 @@ test("全站同类控件的指示条连续滑动，跨项不加载中间页面",
   await slide(page, '.folio-settings-nav', 4);
   await slide(page, '.folio-reading-period', 3);
   await slide(page, '.folio-reading-work-ranking > header > div', 1);
+  await page.goto('/#settings?section=storage');
+  await expect(page.locator('.folio-media-libraries')).toBeVisible();
+  await page.goto('/#settings?section=notifications');
+  await expect(page.locator('.folio-notifications')).toBeVisible();
   await page.goto('/#files');
   await slide(page, '.folio-files-tabs', 2);
   await page.goto('/#export');

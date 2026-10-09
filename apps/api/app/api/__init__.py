@@ -10,6 +10,7 @@ from app.api import (
     jobs,
     library,
     settings,
+    subscriptions,
     system,
     works,
 )
@@ -30,5 +31,6 @@ for module in (
     works,
     jobs,
     settings,
+    subscriptions,
 ):
     router.include_router(module.router)

@@ -3,7 +3,7 @@ import { AnimatePresence, m } from "motion/react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { api, type LibraryTagFilter, type LibraryWork } from "../../../lib/api";
 import { workTitle } from "../../../lib/format";
-import { pageHref } from "../../../lib/navigation";
+import { libraryTagKey, pageHref } from "../../../lib/navigation";
 import { usePrefersReducedMotion } from "../../../lib/motion";
 import { EchoConnections } from "./EchoConnections";
 import { ConceptCover } from "./HomeConcepts";
@@ -59,16 +59,16 @@ export function EchoPreview({ hidden }: { hidden: boolean }) {
         const [work, counts] = await Promise.all([api.work(id), frequencies.current]);
         if (!active) return;
         const tags = work.tags ?? [];
-        const count = new Map(counts.map(tag => [tag.id, tag.count]));
+        const count = new Map(counts.map(tag => [libraryTagKey(tag), tag.count]));
         // Prefer specific, shared tags over the most common labels; unknown counts are verified by search.
-        const themes = tags.filter(tag => tag.type === "tag" && count.get(tag.id) !== 1)
-          .sort((a, b) => (count.get(a.id) ?? 2) - (count.get(b.id) ?? 2)).slice(0, 2);
+        const themes = tags.filter(tag => tag.type === "tag" && count.get(libraryTagKey(tag)) !== 1)
+          .sort((a, b) => (count.get(libraryTagKey(a)) ?? 2) - (count.get(libraryTagKey(b)) ?? 2)).slice(0, 2);
         const candidates = [
           ...["artist", "parody", "character"].flatMap(type => {
             const tag = tags.find(item => item.type === type && !(type === "parody" && (item.name ?? item.slug)?.toLowerCase() === "original")); return tag ? [tag] : [];
           }), ...themes,
         ];
-        const results = await Promise.allSettled(candidates.map(tag => api.librarySearch({ tag_ids: [tag.id], per_page: 7 })));
+        const results = await Promise.allSettled(candidates.map(tag => api.librarySearch({ tag_keys: [libraryTagKey(tag)], per_page: 7 })));
         if (!active) return;
         const seen = new Set([id]);
         const next: Relation[] = [];

@@ -212,6 +212,66 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS creator_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tag_type TEXT NOT NULL CHECK(tag_type IN ('artist', 'group')),
+  remote_tag_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  email_enabled INTEGER NOT NULL DEFAULT 1,
+  interval_seconds INTEGER NOT NULL DEFAULT 21600,
+  baseline_complete INTEGER NOT NULL DEFAULT 0,
+  scan_page INTEGER NOT NULL DEFAULT 1,
+  scan_token TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'queued',
+  next_check_at REAL NOT NULL DEFAULT 0,
+  check_lease_until REAL NOT NULL DEFAULT 0,
+  claim_token TEXT,
+  failures INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  last_checked_at TEXT,
+  removed_at TEXT,
+  revision INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(tag_type, remote_tag_id)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_seen (
+  subscription_id INTEGER NOT NULL REFERENCES creator_subscriptions(id) ON DELETE CASCADE,
+  gallery_id INTEGER NOT NULL,
+  scan_token TEXT NOT NULL,
+  PRIMARY KEY(subscription_id, gallery_id)
+);
+
+CREATE TABLE IF NOT EXISTS subscription_updates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subscription_id INTEGER NOT NULL REFERENCES creator_subscriptions(id) ON DELETE CASCADE,
+  gallery_id INTEGER NOT NULL,
+  payload_json TEXT NOT NULL,
+  scan_token TEXT NOT NULL,
+  read_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(subscription_id, gallery_id)
+);
+
+CREATE TABLE IF NOT EXISTS mail_outbox (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subscription_id INTEGER REFERENCES creator_subscriptions(id) ON DELETE SET NULL,
+  dedup_key TEXT NOT NULL UNIQUE,
+  message_id TEXT NOT NULL UNIQUE,
+  payload_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'sending', 'sent', 'failed', 'cancelled')),
+  attempts INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at REAL NOT NULL DEFAULT 0,
+  lease_until REAL NOT NULL DEFAULT 0,
+  claim_token TEXT,
+  last_error TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  sent_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS media_libraries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
@@ -313,6 +373,11 @@ END;
 """
 
 INDEXES = """
+CREATE INDEX IF NOT EXISTS idx_subscriptions_due ON creator_subscriptions(enabled, removed_at, next_check_at);
+CREATE INDEX IF NOT EXISTS idx_subscription_updates_created ON subscription_updates(id DESC);
+CREATE INDEX IF NOT EXISTS idx_subscription_updates_unread ON subscription_updates(read_at, id DESC);
+CREATE INDEX IF NOT EXISTS idx_subscription_updates_round ON subscription_updates(subscription_id, scan_token);
+CREATE INDEX IF NOT EXISTS idx_mail_outbox_due ON mail_outbox(status, next_attempt_at);
 CREATE INDEX IF NOT EXISTS idx_archive_cache_access ON archive_cache(status, accessed_at);
 CREATE INDEX IF NOT EXISTS idx_archive_cache_work ON archive_cache(work_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_archive_cache_leases ON archive_cache_leases(cache_id, expires_at);
@@ -380,6 +445,12 @@ class Database:
             conn.executescript(SCHEMA)
             self._migrate_legacy_schema(conn)
             conn.executescript(INDEXES)
+            conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES ('library.revision', '0')")
+            for table in ("works", "work_files", "work_metadata", "work_tags", "reader_progress", "local_tag_dictionary"):
+                for event in ("INSERT", "UPDATE", "DELETE"):
+                    conn.execute(f"""CREATE TRIGGER IF NOT EXISTS library_revision_{table}_{event.lower()}
+                        AFTER {event} ON {table} BEGIN
+                        UPDATE settings SET value = CAST(value AS INTEGER) + 1 WHERE key = 'library.revision'; END""")
 
     def rebase_managed_paths(self, data_dir: Path) -> None:
         root = Path(data_dir).resolve()
@@ -402,6 +473,9 @@ class Database:
     def _migrate_legacy_schema(self, conn: sqlite3.Connection) -> None:
         works_columns = _table_columns(conn, "works")
         _add_column_if_missing(conn, "works", works_columns, "favorite", "INTEGER NOT NULL DEFAULT 0")
+        if "metadata_gallery_id" not in works_columns:
+            _add_column_if_missing(conn, "works", works_columns, "metadata_gallery_id", "INTEGER")
+            conn.execute("UPDATE works SET metadata_gallery_id = remote_gallery_id")
         _add_column_if_missing(
             conn, "work_files", _table_columns(conn, "work_files"),
             "library_item_id", "INTEGER REFERENCES library_items(id) ON DELETE SET NULL",
@@ -421,6 +495,11 @@ class Database:
         if "archive_info_json" not in item_columns:
             _add_column_if_missing(conn, "library_items", item_columns, "archive_info_json", "TEXT")
             conn.execute("UPDATE library_items SET status = 'pending', stable_since = 0 WHERE status = 'ready'")
+        for name, declaration in (("scrape_status", "TEXT NOT NULL DEFAULT 'pending'"),
+                                  ("scrape_retry_at", "REAL NOT NULL DEFAULT 0"),
+                                  ("scrape_attempts", "INTEGER NOT NULL DEFAULT 0"), ("scrape_result_json", "TEXT")):
+            _add_column_if_missing(conn, "library_items", _table_columns(conn, "library_items"), name, declaration)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_library_items_scrape ON library_items(scrape_status, scrape_retry_at)")
 
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:
@@ -531,6 +610,14 @@ class Database:
             )
 
         _add_column_if_missing(conn, "work_tags", _table_columns(conn, "work_tags"), "source", "TEXT NOT NULL DEFAULT 'legacy'")
+        _add_column_if_missing(conn, "work_tags", _table_columns(conn, "work_tags"), "tag_key", "TEXT")
+        tag_key = "'local:' || COALESCE(tag_type, 'tag') || ':' || lower(trim(COALESCE(remote_name, remote_slug, '')))"
+        conn.execute(f"UPDATE work_tags SET tag_key = {tag_key} WHERE tag_key IS NULL OR tag_key LIKE 'remote:%'")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_work_tags_key_work ON work_tags(tag_key, work_id)")
+        for event in ("INSERT", "UPDATE OF remote_tag_id, tag_type, remote_name, remote_slug"):
+            conn.execute(f"DROP TRIGGER IF EXISTS work_tags_key_{event.split()[0].lower()}")
+            conn.execute(f"""CREATE TRIGGER IF NOT EXISTS work_tags_key_{event.split()[0].lower()} AFTER {event} ON work_tags
+                BEGIN UPDATE work_tags SET tag_key = {tag_key} WHERE id = NEW.id; END""")
 
     def execute(self, sql: str, params: Iterable[Any] = ()) -> sqlite3.Cursor:
         with self.connect() as conn:

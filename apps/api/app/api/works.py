@@ -1,7 +1,8 @@
 from pathlib import Path
+import hashlib
 import zipfile
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 
 from app.api.schemas import FavoritePatch, ReaderStatePatch, ReadingSessionPatch, ReadingSessionStart
@@ -25,20 +26,28 @@ def get_work(work_id: int):
 
 
 @router.get("/{work_id}/cover")
-def get_cover(work_id: int, w: int | None = Query(default=None, ge=64, le=1024)):
+def get_cover(work_id: int, request: Request, w: int | None = Query(default=None, ge=64, le=1024)):
+    headers = {"Cache-Control": "private, no-cache"}
     if w is not None:
         try:
             body, media_type = services.archive.read_cover_thumbnail(work_id, w)
-            return Response(content=body, media_type=media_type, headers={"Cache-Control": "private, max-age=86400"})
+            headers["ETag"] = '"' + hashlib.blake2s(body).hexdigest() + '"'
+            response = Response(content=body, media_type=media_type, headers=headers)
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-    work = services.archive.get_work(work_id)
-    if not work or not work.get("cover_path"):
-        raise HTTPException(status_code=404, detail="Cover not found")
-    path = Path(work["cover_path"])
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Cover file missing")
-    return FileResponse(path)
+    else:
+        work = services.archive.get_work(work_id)
+        if not work or not work.get("cover_path"):
+            raise HTTPException(status_code=404, detail="Cover not found")
+        path = Path(work["cover_path"])
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="Cover file missing")
+        response = FileResponse(path, stat_result=path.stat(), headers=headers)
+        headers["ETag"] = response.headers["ETag"]
+    validators = [value.strip().removeprefix("W/") for value in request.headers.get("If-None-Match", "").split(",")]
+    if "*" in validators or headers["ETag"] in validators:
+        return Response(status_code=304, headers=headers)
+    return response
 
 
 @router.get("/{work_id}/pages")

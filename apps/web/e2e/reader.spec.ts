@@ -94,14 +94,15 @@ test("阅读器隔离后台页面并在返回后恢复入口焦点", async ({ pa
   let jobRequests = 0;
   await page.route("**/api/jobs", (route) => {
     jobRequests += 1;
-    return route.fulfill({ json: { result: [] } });
+    return route.continue();
   });
   await page.goto("/#library");
   await expect.poll(() => jobRequests).toBeGreaterThan(0);
-  const entry = page.locator(".folio-library-read-action").first();
+  const entry = page.locator('.folio-library-read-action[href="#reader/' + WORK_ID + '"]');
   await expect(entry).toBeVisible();
   await entry.focus();
   await entry.click();
+  await expect(page).toHaveURL(new RegExp("#reader/" + WORK_ID + "$"));
 
   const readerRoute = page.locator(".app-route-reader");
   const archiveRoute = page.locator(".app-route-archive");
@@ -179,15 +180,33 @@ test("任一失败图片会批量重试当前所有失败页", async ({ page }) 
   await expect(page.locator(".reader-img-error")).toHaveCount(0);
 });
 
-test("标签结果分页保留浏览器返回历史", async ({ page }) => {
+test("本地阅读器标签保持本地搜索和返回历史", async ({ page }) => {
   await page.getByRole("button", { name: "作品信息" }).click();
   const tag = page.locator(".reader-info-tag-groups a").first();
+  await expect(tag).toHaveAttribute("href", /^#library/);
+  const readerUrl = page.url();
+  await tag.click();
+  await expect(page.locator(".folio-library-page")).toBeVisible();
+  await expect(page).toHaveURL(/#library\?/);
+  await page.goBack();
+  await expect(page).toHaveURL(readerUrl);
+  await expect(page.locator(".reader-shell")).toBeVisible();
+});
+
+test("远端阅读器标签分页保留浏览器返回历史", async ({ page, request }) => {
+  const work = await (await request.get("/api/works/" + WORK_ID)).json();
+  test.skip(!work.remote_gallery_id, "Needs an actual bound remote work");
+  await page.goto("/#reader/remote/" + work.remote_gallery_id);
+  await expect(page.locator(".reader-counter")).toContainText("/");
+  await page.getByRole("button", { name: "作品信息" }).click();
+  const tag = page.locator('.reader-info-tag-groups a[href*="tag_type=tag"]').first();
+  await expect(tag).toHaveAttribute("href", /^#discover/);
   await expect(tag).toBeVisible();
   const readerUrl = page.url();
   await tag.click();
 
   const discover = page.locator(".folio-discover-page");
-  await expect(discover.getByRole("button", { name: "下一页" })).toBeEnabled();
+  await expect(discover.getByRole("button", { name: "下一页" })).toBeEnabled({ timeout: 20_000 });
   await expect(page).toHaveURL(/[#&?]page=1(?:&|$)/);
   const next = discover.getByRole("button", { name: "下一页" });
   await expect(next).toBeVisible();

@@ -63,6 +63,12 @@ export function PopularFan({ loading, items, blurCovers, onOpen, hrefFor, onImpo
                           alt=""
                           privateBlur={blurCovers}
                           loading="lazy"
+                          onLoad={event => {
+                            const image = event.currentTarget;
+                            image.closest<HTMLElement>(".folio-discover-popular-card")?.style.setProperty(
+                              "--popular-ratio", String(image.naturalWidth / image.naturalHeight),
+                            );
+                          }}
                         />
                       ) : (
                         <span className="folio-cover-fallback">暂无封面</span>

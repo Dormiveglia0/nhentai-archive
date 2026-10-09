@@ -1,13 +1,15 @@
-import { BookOpen, Download, Heart, PenTool, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Download, Heart, PenTool, Wand2, X } from "lucide-react";
 import { m } from "motion/react";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import { api, type LibraryTag, type LibraryWork } from "../../lib/api";
 import { usePrefersReducedMotion } from "../../lib/motion";
-import { libraryTagHref, pageHref } from "../../lib/navigation";
+import { libraryTagHref, libraryTagKey, pageHref } from "../../lib/navigation";
+import { MetadataScrapePanel } from "./MetadataScrapePanel";
+import { CreatorSubscribeButton, isCreatorTag, useCreatorSubscriptions } from "../subscriptions/CreatorSubscribeButton";
 import { AmbientCover } from "../folio/ui/AmbientCover";
 import { WorkDeleteAction } from "../folio/ui/WorkDeleteAction";
-import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle } from "./libraryHelpers";
+import { authorLine, formatBytes, languageLabel, readStatusLabel, workTitle, workCoverHref } from "./libraryHelpers";
 import "../folio/ui/WorkDetail.css";
 
 type Props = {
@@ -17,16 +19,18 @@ type Props = {
   onPickTag: (tag: LibraryTag) => void;
   onToggleFavorite: (work: LibraryWork) => void;
   onDeleted: () => void;
+  onUpdated: () => void;
 };
 
 const TAG_GROUPS = [
-  { label: "作者", types: ["artist", "group"] },
+  { label: "作者", types: ["artist"] },
+  { label: "社团", types: ["group"] },
   { label: "原作 / 角色", types: ["parody", "character"] },
   { label: "内容标签", types: ["tag"] },
   { label: "分类 / 语言", types: ["category", "language"] },
 ];
 
-export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted }: Props) {
+export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted, onUpdated }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const reduced = usePrefersReducedMotion();
@@ -35,9 +39,11 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
   const [retry, setRetry] = useState(0);
   const [coverRatio, setCoverRatio] = useState(.75);
   const [coverFailed, setCoverFailed] = useState(false);
+  const [scraping, setScraping] = useState(false);
   const title = workTitle(work);
   const progress = work.completed ? 100 : work.progress_percent ?? 0;
   const tags = detail?.id === work.id ? detail.tags ?? [] : work.tags ?? [];
+  const subscriptions = useCreatorSubscriptions(tags.some(isCreatorTag));
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -62,7 +68,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
       if (alive) setError("完整标签读取失败");
     });
     return () => { alive = false; };
-  }, [work.id, retry]);
+  }, [work, retry]);
 
   return (
     <m.dialog ref={dialogRef} className="folio-work-dialog" aria-labelledby={titleId}
@@ -82,7 +88,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
       <div className="folio-work-detail">
         <div className="folio-work-detail-cover" style={{ "--work-cover-ratio": coverRatio } as CSSProperties}>
           <span className="folio-work-cover-register" aria-hidden="true"><i /><i /><i /><i /></span>
-          {work.cover_path && !coverFailed ? <AmbientCover src={`/api/works/${work.id}/cover?w=768`} alt="作品封面" privateBlur={blurCovers}
+          {work.cover_path && !coverFailed ? <AmbientCover src={workCoverHref(work, 768)} alt="作品封面" privateBlur={blurCovers}
             onLoad={event => setCoverRatio(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)} onError={() => setCoverFailed(true)} />
             : <span className="folio-cover-fallback">{coverFailed ? <>封面读取失败<button type="button" onClick={() => setCoverFailed(false)}>重新加载</button></> : "暂无封面"}</span>}
         </div>
@@ -106,20 +112,27 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
               <a href={pageHref({ name: "export", workId: work.id })} aria-label="导出 CBZ"><Download size={16} />导出</a>
               <WorkDeleteAction workId={work.id} title={title} onDeleted={() => { onClose(); onDeleted(); }} />
             </div>
+            <div className="folio-work-detail-main-actions folio-work-detail-source-actions">
+              <button type="button" aria-expanded={scraping} onClick={() => setScraping(value => !value)}><Wand2 size={16} />刮削元数据</button>
+              {work.remote_gallery_id ? <a href={pageHref({ name: "gallery", galleryId: work.remote_gallery_id, returnTo: window.location.hash })}><ArrowUpRight size={16} />远端详情</a> : null}
+            </div>
           </div>
         </div>
       </div>
+      {scraping ? <MetadataScrapePanel key={work.id} workId={work.id} title={work.title} blurCovers={blurCovers}
+        onClose={() => setScraping(false)} onApplied={() => { setRetry(value => value + 1); onUpdated(); }} /> : null}
       {tags.length ? <div className="folio-work-detail-tags">
         {TAG_GROUPS.map(group => {
           const items = tags.filter(tag => group.types.includes(tag.type ?? ""));
           return items.length ? <section className="folio-work-detail-tag-group" key={group.label}>
-            <h3>{group.label}</h3><div>{items.map(tag => <a key={tag.id} href={libraryTagHref(tag)} onClick={event => {
+            <h3>{group.label}</h3><div>{items.map(tag => <span className="creator-tag" key={libraryTagKey(tag)}><a href={libraryTagHref(tag)} onClick={event => {
               if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
               event.preventDefault(); onClose(); onPickTag(tag);
-            }}>{tag.display}</a>)}</div>
+            }}>{tag.display}</a><CreatorSubscribeButton tag={tag} vm={subscriptions} /></span>)}</div>
           </section> : null;
         })}
       </div> : null}
+      {subscriptions.error ? <p className="creator-feedback" role="alert">{subscriptions.error}</p> : null}
       {error ? <div className="folio-work-detail-error" role="alert">{error}<button type="button" onClick={() => setRetry(value => value + 1)}>重试</button></div> : null}
     </m.dialog>
   );

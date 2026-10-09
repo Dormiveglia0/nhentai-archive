@@ -98,7 +98,7 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
 
   async function applyMetadataRefresh() {
     const matches = refreshPreview?.result.flatMap((row) =>
-      row.match?.eligible ? [{ work_id: row.work.id, ...row.match }] : []
+      row.match?.eligible ? [{ work_id: row.work.id, version: row.version, query: row.query, ...row.match }] : []
     ) ?? [];
     if (!matches.length || refreshDirty) return;
     setBusy(true);

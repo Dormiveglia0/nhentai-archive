@@ -1,0 +1,46 @@
+.folio-subscriptions-list, .folio-smtp fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
+.folio-subscriptions-list article { display: grid; grid-template-columns: minmax(0, 1fr) 160px auto; gap: 24px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--folio-line); }
+.folio-subscription-main { min-width: 0; }
+.folio-subscription-main > a { display: flex; align-items: baseline; gap: 10px; color: var(--folio-ink); text-decoration: none; }
+.folio-subscription-main > a > span { flex-shrink: 0; color: var(--folio-red); font-size: 13px; }
+.folio-subscription-main strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 15px; }
+.folio-subscription-main > p { margin: 8px 0 0; color: var(--folio-muted); font-size: 13px; line-height: 1.7; }
+.folio-subscription-main .folio-media-error { color: var(--folio-red); }
+.folio-subscriptions-list button[aria-pressed="true"] { color: var(--folio-red); border-color: var(--folio-red); }
+.folio-subscription-filters { display: inline-flex; border-bottom: 1px solid var(--folio-line); margin-top: 18px; }
+.folio-subscription-filters button { position: relative; isolation: isolate; min-height: 40px; min-width: 72px; padding: 0 18px; border: 0; background: transparent; color: var(--folio-muted); font-size: 13px; }
+.folio-subscription-filters button span { position: relative; z-index: 1; }
+.folio-subscription-filters button.is-active { color: var(--folio-red); }
+.folio-subscription-updates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 10px; }
+.folio-subscription-updates article { min-width: 0; border-bottom: 1px solid var(--folio-line); }
+.folio-subscription-update-link { display: flex; gap: 15px; align-items: center; min-width: 0; padding: 18px 0; color: var(--folio-ink); text-decoration: none; }
+.folio-subscription-update-cover { width: 60px; height: 80px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--folio-line); position: relative; overflow: hidden; }
+.folio-subscription-update-cover > .folio-subscription-thumb { width: 100%; height: 100%; }
+.folio-subscription-update-link > div:nth-child(2) { min-width: 0; flex: 1; }
+.folio-subscription-update-link strong { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; font-size: 14px; font-weight: 500; }
+.folio-subscription-update-link span { display: block; margin-top: 8px; color: var(--folio-muted); font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.folio-subscription-update-link > i { width: 5px; height: 14px; background: var(--folio-red); flex-shrink: 0; }
+.folio-subscription-update-link:hover strong { color: var(--folio-red); }
+.folio-smtp .folio-toggle-row { margin-top: 12px; }
+.folio-smtp .folio-field-matrix { margin-top: 24px; }
+.folio-smtp-clear { display: flex; gap: 8px; align-items: center; grid-column: 1 / -1; color: var(--folio-muted); font-size: 13px; }
+.folio-smtp-actions { margin-top: 24px; flex-wrap: wrap; }
+.folio-smtp-actions .is-primary { color: var(--folio-paper-bright); background: var(--folio-red); border-color: var(--folio-red); }
+.folio-smtp-actions .is-primary:hover:not(:disabled) { color: var(--folio-paper-bright); background: var(--folio-ink); border-color: var(--folio-ink); }
+.folio-smtp-outbox { margin-top: 28px; border-top: 1px solid var(--folio-line); border-bottom: 1px solid var(--folio-line); }
+.folio-smtp-outbox summary { padding: 17px 0; font-size: 14px; cursor: pointer; }
+.folio-smtp-outbox > div { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; padding: 14px 0; border-top: 1px solid var(--folio-line); font-size: 13px; }
+.folio-smtp-outbox > div > span:first-child { flex: 1; min-width: 120px; }
+.folio-smtp-outbox strong { display: block; font-weight: 500; }
+.folio-smtp-outbox time { display: block; color: var(--folio-muted); margin-top: 6px; }
+.folio-smtp-outbox p { flex-basis: 100%; margin: 0; }
+
+@media (max-width: 920px) {
+  .folio-subscriptions-list article { grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; }
+  .folio-subscriptions-list .folio-media-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .folio-subscriptions-list article { grid-template-columns: minmax(0, 1fr); }
+  .folio-subscriptions-list article > .folio-select { max-width: 240px; }
+  .folio-subscription-updates { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,6 +1,6 @@
 import { AlertTriangle, RefreshCw, Save } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
-import { type FormEvent, useRef } from "react";
+import { type FormEvent, useEffect, useRef } from "react";
 
 import { SlidingIndicator, transitionTabs } from "../../lib/motion";
 import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
@@ -10,6 +10,7 @@ import { ExportDefaultsSection } from "./ExportDefaultsSection";
 import { PreferencesSection } from "./PreferencesSection";
 import { StorageSection } from "./StorageSection";
 import { TranslationSection } from "./TranslationSection";
+import { NotificationSection } from "./NotificationSection";
 import { useSettingsState } from "./useSettingsState";
 import "./SettingsPage.css";
 
@@ -35,9 +36,10 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
     copy: "查看阅读时长、作品排行与作品分布。",
   },
   storage: {
-    title: "存储与路径",
-    copy: "查看数据目录、文件占用与可回收空间。",
+    title: "媒体库与存储",
+    copy: "管理媒体库、扫描与阅读缓存。",
   },
+  notifications: { title: "订阅与邮件通知", copy: "管理作者、社团订阅与SMTP通知。" },
 };
 
 export function SettingsPage({
@@ -49,8 +51,15 @@ export function SettingsPage({
   const current = SECTION_COPY[vm.section];
   const formRef = useRef<HTMLFormElement>(null);
 
+  useEffect(() => {
+    formRef.current?.querySelector<HTMLElement>(".folio-settings-nav [aria-current='page']")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [vm.section]);
+
   function selectSection(section: SettingsSection) {
-    transitionTabs(SETTINGS_SECTIONS.map(item => item.id), vm.section, section, vm.setSection, "settings");
+    transitionTabs(SETTINGS_SECTIONS.map(item => item.id), vm.section, section, target => {
+      vm.setSection(target);
+      window.history.replaceState(null, "", "#settings?section=" + target);
+    }, "settings");
     const form = formRef.current;
     const scroll = form?.closest<HTMLElement>(".folio-scroll");
     if (!form || !scroll) return;
@@ -68,7 +77,7 @@ export function SettingsPage({
     void vm.load();
   }
 
-  const showActions = vm.dirty || (vm.section !== "data" && vm.section !== "storage");
+  const showActions = vm.dirty || !["data", "storage", "notifications"].includes(vm.section);
 
   return (
     <form ref={formRef} className={`folio-page-body folio-settings-body folio-settings-page${showActions ? "" : " is-readonly"}`} onSubmit={onSubmit}>
@@ -107,6 +116,7 @@ export function SettingsPage({
           {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
           {vm.section === "data" ? <DataSection /> : null}
           {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
+          {vm.section === "notifications" ? <NotificationSection blurCovers={vm.settings?.privacy.blur_covers_default ?? true} /> : null}
 
           <AnimatePresence mode="popLayout">
             {vm.error ? (

@@ -52,7 +52,13 @@ class MediaLibraryService:
         rows = self.db.fetchall(
             """WITH stats AS (
                 SELECT library_id, COUNT(*) AS item_count, COUNT(DISTINCT work_id) AS work_count,
-                  SUM(status = 'error') AS error_count FROM library_items GROUP BY library_id
+                  SUM(status = 'error') AS error_count, SUM(status = 'pending') AS pending_count,
+                  SUM(status = 'missing') AS missing_count,
+                  SUM(scrape_status = 'review') AS scrape_review_count FROM library_items GROUP BY library_id
+              ), active_scans AS (
+                SELECT json_extract(target_json, '$.library_id') AS library_id, MAX(id) AS job_id
+                FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
+                GROUP BY json_extract(target_json, '$.library_id')
               ) SELECT l.*, COALESCE(s.item_count, 0) AS item_count,
               CASE WHEN l.kind = 'managed' THEN (
                 SELECT COUNT(DISTINCT work_id) FROM (
@@ -61,11 +67,15 @@ class MediaLibraryService:
                     AND (path GLOB 'library/*' OR substr(path, 1, length(l.root_path) + 1) = l.root_path || '/')
                 )
               ) ELSE COALESCE(s.work_count, 0) END AS work_count,
-              COALESCE(s.error_count, 0) AS error_count
+              COALESCE(s.error_count, 0) AS error_count, COALESCE(s.pending_count, 0) AS pending_count,
+              COALESCE(s.missing_count, 0) AS missing_count, COALESCE(s.scrape_review_count, 0) AS scrape_review_count,
+              j.id AS active_scan_job_id, j.status AS active_scan_status,
+              EXISTS(SELECT 1 FROM library_scan_runs r WHERE r.library_id = l.id AND r.status = 'running') AS scanning
               FROM media_libraries l LEFT JOIN stats s ON s.library_id = l.id
+              LEFT JOIN active_scans a ON a.library_id = l.id LEFT JOIN jobs j ON j.id = a.job_id
               WHERE removed_at IS NULL ORDER BY kind <> 'managed', l.id"""
         )
-        return {"result": [self._public(row) for row in rows]}
+        return {"result": [self._public(row) for row in rows], "defaults": LIBRARY_DEFAULTS}
 
     def get(self, library_id: int, include_removed: bool = False) -> dict[str, Any]:
         row = self.db.fetchone("SELECT * FROM media_libraries WHERE id = ?", (library_id,))
@@ -135,6 +145,8 @@ class MediaLibraryService:
                 )
                 conn.execute("UPDATE media_libraries SET root_device = NULL, root_inode = NULL, resolved_root_path = NULL WHERE id = ?", (library_id,))
                 conn.execute("UPDATE library_items SET status = 'pending', stable_since = 0 WHERE library_id = ?", (library_id,))
+            if any(config[key] != current["config"][key] for key in ("auto_scrape", "auto_bind", "language_mode", "language")):
+                conn.execute("UPDATE library_items SET scrape_status = 'pending', scrape_retry_at = 0, scrape_attempts = 0 WHERE library_id = ?", (library_id,))
         return self.get(library_id)
 
     def remove(self, library_id: int) -> dict[str, Any]:
@@ -360,5 +372,6 @@ class MediaLibraryService:
 
     def _public(self, row: dict[str, Any]) -> dict[str, Any]:
         return {**{key: value for key, value in row.items() if key != "config_json"},
+                **({"scanning": bool(row["scanning"])} if "scanning" in row else {}),
                 "enabled": bool(row["enabled"]), "read_only": bool(row["read_only"]),
                 "config": self._config(json.loads(row["config_json"]))}

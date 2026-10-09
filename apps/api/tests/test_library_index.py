@@ -119,6 +119,12 @@ def test_empty_or_unavailable_mount_preserves_metadata(tmp_path):
     except FileNotFoundError:
         pass
     assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1
+    # Catalog health and counts remain available after the mounted root disappears.
+    catalog = libraries.list()
+    visible = next(row for row in catalog["result"] if row["id"] == library["id"])
+    assert visible["work_count"] == 1 and visible["missing_count"] == 0
+    assert visible["scanning"] is False and visible["active_scan_job_id"] is None
+    assert catalog["defaults"]["language_mode"] == "any"
 
 
 def test_replaced_root_does_not_mark_old_books_missing_on_first_observation(tmp_path):

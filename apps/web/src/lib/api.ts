@@ -154,7 +154,8 @@ export type Work = {
 };
 
 export type LibraryTag = {
-  id: number;
+  id: number | null;
+  key?: string;
   type?: string;
   name?: string;
   slug?: string;
@@ -162,6 +163,8 @@ export type LibraryTag = {
 };
 
 export type LibraryWork = Work & {
+  display_title?: string | null;
+  metadata_gallery_id?: number | null;
   favorite: boolean;
   language?: string | null;
   media_id?: string | null;
@@ -290,7 +293,8 @@ export type ReadingStatistics = {
 };
 
 export type LibraryTagFilter = {
-  id: number;
+  id: number | null;
+  key?: string;
   type?: string;
   name?: string;
   slug?: string;
@@ -308,6 +312,7 @@ export type LibrarySearchParams = {
   source?: string;
   language?: string;
   tag_ids?: number[];
+  tag_keys?: string[];
   favorite_only?: boolean;
 };
 
@@ -317,6 +322,7 @@ export type LibrarySearchResult = {
   page: number;
   per_page: number;
   num_pages: number;
+  revision: number;
 };
 
 export type GovernanceReason = {
@@ -528,6 +534,11 @@ export type MetadataRefreshMatch = {
   margin: number;
   eligible: boolean;
   reason?: string | null;
+  language?: string | null;
+  automatic_eligible?: boolean;
+  selectable?: boolean;
+  thumbnail_url?: string | null;
+  diffs?: Array<{ field: string; label: string; local: string | number | null; remote: string | number | null; changed: boolean; protected: boolean }>;
 };
 
 export type MetadataRefreshPreview = {
@@ -535,6 +546,10 @@ export type MetadataRefreshPreview = {
     work: Pick<LibraryWork, "id" | "title" | "source" | "remote_gallery_id" | "page_count">;
     match: MetadataRefreshMatch | null;
     reason?: string | null;
+    version: string;
+    query: string;
+    config: { auto_bind: boolean; language_mode: "any" | "strict" | "prefer"; language: string };
+    candidates: MetadataRefreshMatch[];
   }>;
   summary: {
     works: number;
@@ -786,6 +801,136 @@ export type Job = {
   retry_after?: number | null;
   created_at: string;
   updated_at: string;
+};
+
+export type MediaLibraryConfig = {
+  recursive: boolean;
+  watch: boolean;
+  scan_interval_seconds: number;
+  stable_seconds: number;
+  io_timeout_seconds: number;
+  include_hidden: boolean;
+  follow_symlinks: boolean;
+  exclude_patterns: string[];
+  auto_scrape: boolean;
+  auto_bind: boolean;
+  language_mode: "any" | "strict" | "prefer";
+  language: "chinese" | "japanese" | "english";
+  cache_mode: "auto" | "always" | "off";
+};
+
+export type MediaLibrary = {
+  id: number;
+  name: string;
+  root_path: string;
+  kind: "managed" | "local" | "mounted";
+  enabled: boolean;
+  read_only: boolean;
+  health: string;
+  last_error: string | null;
+  watch_error: string | null;
+  last_scan_at: string | null;
+  config: MediaLibraryConfig;
+  work_count: number;
+  item_count: number;
+  error_count: number;
+  pending_count: number;
+  missing_count: number;
+  scrape_review_count: number;
+  scanning: boolean;
+  active_scan_job_id: number | null;
+  active_scan_status: Job["status"] | null;
+};
+
+export type MediaLibraryInput = Pick<MediaLibrary, "name" | "root_path" | "kind" | "enabled" | "read_only" | "config">;
+
+export type LibraryScanRun = {
+  id: number;
+  status: string;
+  counts: Record<string, number>;
+  errors: { path: string; reason: string }[];
+  started_at: string;
+  completed_at: string | null;
+};
+
+export type LibraryItem = {
+  id: number;
+  relative_path: string;
+  work_id: number | null;
+  status: string;
+  size_bytes: number | null;
+  last_error: string | null;
+};
+
+export type ReadingCacheConfig = {
+  max_bytes: number;
+  ttl_hours: number;
+  max_parallel: number;
+  min_free_bytes: number;
+};
+
+export type ReadingCacheSummary = {
+  config: ReadingCacheConfig;
+  ready_bytes: number;
+  reserved_bytes: number;
+  ready_count: number;
+  active_count: number;
+  path: string;
+};
+
+export type CreatorSubscription = {
+  id: number;
+  remote_tag_id: number;
+  tag_type: "artist" | "group";
+  name: string;
+  slug: string;
+  enabled: boolean;
+  email_enabled: boolean;
+  interval_seconds: number;
+  baseline_complete: boolean;
+  status: "queued" | "checking" | "idle" | "error";
+  scan_page: number;
+  last_checked_at: string | null;
+  last_error: string | null;
+  next_check_at: number;
+  seen_count?: number;
+  unread_count?: number;
+};
+
+export type SubscriptionUpdate = {
+  id: number;
+  subscription_id: number;
+  name: string;
+  slug: string;
+  tag_type: "artist" | "group";
+  remote_tag_id: number;
+  gallery_id: number;
+  gallery: GallerySummary;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type SmtpSettings = {
+  enabled: boolean;
+  host: string;
+  port: number;
+  security: "starttls" | "ssl" | "none";
+  username: string;
+  password_configured: boolean;
+  sender: string;
+  recipient: string;
+  site_url: string;
+  timeout_seconds: number;
+  last_test: { ok: boolean; message: string } | null;
+};
+
+export type MailOutbox = {
+  result: {
+    id: number; subscription_id: number | null; name: string | null; tag_type: string | null;
+    status: "pending" | "sending" | "sent" | "failed" | "cancelled";
+    attempts: number; last_error: string | null; created_at: string; sent_at: string | null;
+  }[];
+  counts: Partial<Record<"pending" | "sending" | "sent" | "failed" | "cancelled", number>>;
 };
 
 export const EXPORT_SYNC_THRESHOLD = 5;
@@ -1173,6 +1318,7 @@ export const api = {
     request<Job>(`/api/discover/galleries/${id}/import`, { method: "POST", headers: JSON_HEADERS }),
   workbenchOverview: () => request<WorkbenchOverview>("/api/workbench/overview"),
   librarySummary: () => request<LibrarySummary>("/api/library/summary"),
+  libraryRevision: () => request<{ revision: number }>("/api/library/revision"),
   librarySearch: (params: LibrarySearchParams = {}) => {
     const query = new URLSearchParams();
     query.set("q", params.q ?? "");
@@ -1183,6 +1329,7 @@ export const api = {
     query.set("source", params.source ?? "all");
     query.set("language", params.language ?? "all");
     if (params.tag_ids?.length) query.set("tag_ids", params.tag_ids.join(","));
+    params.tag_keys?.forEach(key => query.append("tag_keys", key));
     query.set("favorite_only", String(Boolean(params.favorite_only)));
     return request<LibrarySearchResult>(`/api/library/search?${query.toString()}`);
   },
@@ -1229,21 +1376,21 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ work_ids, actions })
     }).then(clearDiscoverCache),
-  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}) =>
+  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}) =>
     request<MetadataRefreshPreview>("/api/governance/metadata-refresh/preview", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ work_ids, gallery_ids })
+      body: JSON.stringify({ work_ids, gallery_ids, queries })
     }),
-  metadataRefreshApply: (matches: Array<{ work_id: number } & MetadataRefreshMatch>) =>
+  metadataRefreshApply: (matches: Array<{ work_id: number; version?: string; query?: string; bind?: boolean } & MetadataRefreshMatch>) =>
     request<MetadataRefreshResult>("/api/governance/metadata-refresh/apply", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        matches: matches.map(({ work_id, gallery_id, source }) => ({
+        matches: matches.map(({ work_id, gallery_id, source, version, query, bind }) => ({
           work_id,
           gallery_id,
-          source
+          source, version, query, bind
         }))
       })
     }).then(clearDiscoverCache),
@@ -1357,6 +1504,26 @@ export const api = {
   deleteJob: (id: number) => request<{ deleted: number }>(`/api/jobs/${id}`, { method: "DELETE" }),
   clearJobs: () => request<{ deleted: number }>("/api/jobs/clear", { method: "POST", headers: JSON_HEADERS }),
   settings: () => request<SettingsSummary>("/api/settings"),
+  creatorSubscriptions: () => request<{ result: CreatorSubscription[] }>("/api/subscriptions"),
+  subscribeCreator: (remote_tag_id: number, tag_type: "artist" | "group") => request<CreatorSubscription>("/api/subscriptions", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ remote_tag_id, tag_type }),
+  }),
+  updateSubscription: (id: number, payload: Partial<Pick<CreatorSubscription, "enabled" | "email_enabled" | "interval_seconds">>) => request<CreatorSubscription>(`/api/subscriptions/${id}`, {
+    method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
+  }),
+  unsubscribeCreator: (id: number) => request<{ removed: number }>(`/api/subscriptions/${id}`, { method: "DELETE" }),
+  checkSubscription: (id: number) => request<CreatorSubscription>(`/api/subscriptions/${id}/check`, { method: "POST", headers: JSON_HEADERS }),
+  subscriptionUpdates: (page = 1, unread_only = false) => request<{ result: SubscriptionUpdate[]; total: number; unread_count: number; page: number; per_page: number }>(`/api/subscriptions/updates?page=${page}&unread_only=${unread_only}`),
+  readSubscriptionUpdates: (update_id?: number) => request<{ ok: boolean }>("/api/subscriptions/updates/read", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ update_id: update_id ?? null }),
+  }),
+  smtpSettings: () => request<SmtpSettings>("/api/settings/smtp"),
+  configureSmtp: (payload: Partial<Omit<SmtpSettings, "password_configured" | "last_test">> & { password?: string; clear_password?: boolean }) => request<SmtpSettings>("/api/settings/smtp", {
+    method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
+  }),
+  testSmtp: () => request<{ ok: boolean; message: string }>("/api/settings/smtp/test", { method: "POST", headers: JSON_HEADERS }),
+  mailOutbox: () => request<MailOutbox>("/api/settings/smtp/outbox"),
+  retryMail: (id: number) => request<{ queued: number }>(`/api/settings/smtp/outbox/${id}/retry`, { method: "POST", headers: JSON_HEADERS }),
   updateSettings: (payload: Record<string, unknown>) =>
     request<SettingsSummary>("/api/settings", {
       method: "PATCH",
@@ -1375,10 +1542,25 @@ export const api = {
   nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime"),
   scanLibraryPreview: () =>
     request<LibraryScanPreview>("/api/library/scan/preview", { method: "POST", headers: JSON_HEADERS }),
-  enqueueLibraryScan: (paths?: string[]) =>
+  mediaLibraries: () => request<{ result: MediaLibrary[]; defaults: MediaLibraryConfig }>("/api/library/directories"),
+  addMediaLibrary: (payload: MediaLibraryInput) => request<MediaLibraryInput & { id: number }>("/api/library/directories", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(payload),
+  }),
+  updateMediaLibrary: (id: number, payload: Partial<MediaLibraryInput>) => request<MediaLibraryInput & { id: number }>(`/api/library/directories/${id}`, {
+    method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
+  }),
+  removeMediaLibrary: (id: number) => request<{ removed: number; source_files_deleted: boolean; metadata_preserved: boolean }>(`/api/library/directories/${id}`, { method: "DELETE" }),
+  libraryScanRuns: (id: number, limit = 5) => request<{ result: LibraryScanRun[] }>(`/api/library/directories/${id}/runs?limit=${limit}`),
+  libraryItems: (id: number, status = "error", page = 1) => request<{ result: LibraryItem[]; total: number; page: number; per_page: number }>(`/api/library/directories/${id}/items?status=${encodeURIComponent(status)}&page=${page}&per_page=20`),
+  readingCache: () => request<ReadingCacheSummary>("/api/library/cache"),
+  configureReadingCache: (payload: ReadingCacheConfig) => request<ReadingCacheSummary>("/api/library/cache", {
+    method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
+  }),
+  clearReadingCache: () => request<{ deleted: number; freed_bytes: number }>("/api/library/cache/clear", { method: "POST", headers: JSON_HEADERS }),
+  enqueueLibraryScan: (paths?: string[], libraryId?: number) =>
     request<Job>("/api/library/scan", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ paths: paths ?? null }),
+      body: JSON.stringify({ paths: paths ?? null, library_id: libraryId ?? null }),
     }),
 };

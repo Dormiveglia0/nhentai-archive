@@ -1,7 +1,8 @@
 import type { GalleryDetail } from "../../../lib/api";
 
 export const TAG_GROUPS: Array<{ key: string; label: string; types: string[] }> = [
-  { key: "credit", label: "社团 / 作者", types: ["group", "artist"] },
+  { key: "artist", label: "作者", types: ["artist"] },
+  { key: "group", label: "社团", types: ["group"] },
   { key: "parody", label: "原作", types: ["parody"] },
   { key: "character", label: "角色", types: ["character"] },
   { key: "tag", label: "内容标签", types: ["tag"] },

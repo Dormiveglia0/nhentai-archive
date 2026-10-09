@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type SettingsSummary } from "../../lib/api";
-import type { SettingsSection } from "../folio/config";
+import { SETTINGS_SECTIONS, type SettingsSection } from "../folio/config";
+
+function sectionFromLocation() {
+  const selected = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("section");
+  return SETTINGS_SECTIONS.find(item => item.id === selected)?.id;
+}
 
 export function useSettingsState(
   onBlurCoversChange: (value: boolean) => void,
 ) {
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
-  const [section, setSection] = useState<SettingsSection>("connection");
+  const [section, setSection] = useState<SettingsSection>(() => sectionFromLocation() ?? "connection");
+
+  useEffect(() => {
+    const sync = () => { const selected = sectionFromLocation(); if (selected) setSection(selected); };
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
 
   const [apiKey, setApiKey] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");

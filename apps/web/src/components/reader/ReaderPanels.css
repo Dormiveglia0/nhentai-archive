@@ -215,6 +215,9 @@
   color: #faf7ef;
 }
 
+.reader-info-tag-groups .creator-subscribe { border: 0; border-left: 1px solid var(--reader-line); color: var(--reader-muted); }
+.reader-info-tag-groups .creator-subscribe[aria-pressed="true"] { color: var(--reader-red); }
+
 .reader-info-actions {
   padding: 0 20px 20px;
   display: grid;

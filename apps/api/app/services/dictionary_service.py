@@ -588,13 +588,14 @@ class DictionaryService:
         self.db.execute("DELETE FROM local_tag_dictionary WHERE id = ?", (dictionary_id,))
         return {"deleted": True, "dictionary_id": dictionary_id}
 
-    def link_work_tags(self, work_id: int, tags: list[dict[str, Any]]) -> None:
+    def link_work_tags(self, work_id: int, tags: list[dict[str, Any]], conn=None) -> None:
         for tag in tags:
             remote_id = tag.get("id")
             if remote_id is None:
                 continue
-            self.cache_remote_tag(tag)
-            dictionary = self._dictionary_for_tag(tag)
+            if conn is None:
+                self.cache_remote_tag(tag)
+            dictionary = self._dictionary_for_tag(tag, conn)
             self._upsert_work_tag(
                 work_id,
                 int(remote_id),
@@ -602,21 +603,23 @@ class DictionaryService:
                 tag.get("type"),
                 tag.get("name"),
                 tag.get("slug"),
+                conn=conn, source="remote",
             )
 
-    def sync_work_tags(self, work_id: int, tags: list[dict[str, Any]]) -> dict[str, int]:
-        self.link_work_tags(work_id, tags)
+    def sync_work_tags(self, work_id: int, tags: list[dict[str, Any]], conn=None) -> dict[str, int]:
+        self.link_work_tags(work_id, tags, conn)
+        execute = conn.execute if conn is not None else self.db.execute
         remote_ids = list(dict.fromkeys(int(tag["id"]) for tag in tags if tag.get("id") is not None))
         if remote_ids:
             placeholders = ",".join("?" for _ in remote_ids)
-            cursor = self.db.execute(
-                f"DELETE FROM work_tags WHERE work_id = ? AND remote_tag_id IS NOT NULL "
+            cursor = execute(
+                f"DELETE FROM work_tags WHERE work_id = ? AND source IN ('remote', 'legacy') AND remote_tag_id IS NOT NULL "
                 f"AND remote_tag_id NOT IN ({placeholders})",
                 [work_id, *remote_ids],
             )
         else:
-            cursor = self.db.execute(
-                "DELETE FROM work_tags WHERE work_id = ? AND remote_tag_id IS NOT NULL",
+            cursor = execute(
+                "DELETE FROM work_tags WHERE work_id = ? AND source IN ('remote', 'legacy') AND remote_tag_id IS NOT NULL",
                 (work_id,),
             )
         return {"linked": len(remote_ids), "removed": max(0, cursor.rowcount)}
@@ -848,18 +851,19 @@ class DictionaryService:
                     work_ids.add(int(row["id"]))
         return sorted(work_ids)
 
-    def _dictionary_for_tag(self, tag: dict[str, Any]) -> dict[str, Any] | None:
+    def _dictionary_for_tag(self, tag: dict[str, Any], conn=None) -> dict[str, Any] | None:
+        fetch = (lambda sql, args: conn.execute(sql, args).fetchone()) if conn is not None else self.db.fetchone
         remote_id = tag.get("id")
         if remote_id is not None:
-            row = self.db.fetchone("SELECT * FROM local_tag_dictionary WHERE remote_tag_id = ? AND ignored = 0", (int(remote_id),))
+            row = fetch("SELECT * FROM local_tag_dictionary WHERE remote_tag_id = ? AND ignored = 0", (int(remote_id),))
             if row:
                 return row
         for value in (tag.get("name"), tag.get("slug")):
             if not value:
                 continue
-            row = self.db.fetchone(
-                "SELECT * FROM local_tag_dictionary WHERE normalized_key = ? AND ignored = 0",
-                (normalize_key(str(value)),),
+            row = fetch(
+                "SELECT * FROM local_tag_dictionary WHERE normalized_key = ? AND tag_type = ? AND ignored = 0",
+                (normalize_key(str(value)), tag.get("type") or "tag"),
             )
             if row:
                 return row
@@ -873,19 +877,24 @@ class DictionaryService:
         tag_type: str | None,
         remote_name: str | None = None,
         remote_slug: str | None = None,
+        conn=None,
+        source: str = "manual",
     ) -> None:
         if remote_tag_id is None:
             return
-        remote = self.db.fetchone("SELECT name, slug, type FROM remote_tags WHERE remote_id = ?", (remote_tag_id,))
-        self.db.execute(
+        remote = (conn.execute("SELECT name, slug, type FROM remote_tags WHERE remote_id = ?", (remote_tag_id,)).fetchone()
+                  if conn is not None else self.db.fetchone("SELECT name, slug, type FROM remote_tags WHERE remote_id = ?", (remote_tag_id,)))
+        execute = conn.execute if conn is not None else self.db.execute
+        execute(
             """
-            INSERT INTO work_tags (work_id, remote_tag_id, dictionary_id, tag_type, remote_name, remote_slug)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO work_tags (work_id, remote_tag_id, dictionary_id, tag_type, remote_name, remote_slug, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(work_id, remote_tag_id) DO UPDATE SET
               dictionary_id = COALESCE(excluded.dictionary_id, work_tags.dictionary_id),
               tag_type = excluded.tag_type,
               remote_name = excluded.remote_name,
-              remote_slug = excluded.remote_slug
+              remote_slug = excluded.remote_slug,
+              source = CASE WHEN work_tags.source = 'manual' THEN 'manual' ELSE excluded.source END
             """,
             (
                 work_id,
@@ -894,6 +903,7 @@ class DictionaryService:
                 tag_type or (remote["type"] if remote else None),
                 remote_name or (remote["name"] if remote else None),
                 remote_slug or (remote["slug"] if remote else None),
+                source,
             ),
         )
 

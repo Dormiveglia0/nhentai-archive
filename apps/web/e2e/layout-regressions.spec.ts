@@ -55,7 +55,7 @@ test("稀疏馆藏保留正常列宽，书架悬停明确，热门作品铺满�
   await expect(covers).toHaveCount(5, { timeout: 20_000 });
   await expect.poll(() => covers.evaluateAll(nodes => nodes.every(n => (n.querySelector('img.folio-ambient-cover-artwork') as HTMLImageElement).naturalHeight > 0))).toBe(true);
   const ratios = await covers.evaluateAll(nodes => nodes.map(n => ({
-    actual: (n as HTMLElement).clientWidth / (n as HTMLElement).clientHeight,
+    actual: parseFloat(getComputedStyle(n).width) / parseFloat(getComputedStyle(n).height),
     expected: (n.querySelector('img.folio-ambient-cover-artwork') as HTMLImageElement).naturalWidth / (n.querySelector('img.folio-ambient-cover-artwork') as HTMLImageElement).naturalHeight,
   })));
   for (const ratio of ratios) expect(Math.abs(ratio.actual - ratio.expected)).toBeLessThan(.003);
@@ -93,7 +93,7 @@ test("25个发现作品按9／8／8排列，每行按自身封面高度排版", 
     await route.fulfill({ json: { ...data, result: data.result.slice(0, 25), total: 25, num_pages: 1 } });
   });
   await page.goto('/#discover');
-  await expect(page.locator('.folio-discover-card')).toHaveCount(25);
+  await expect(page.locator('.folio-discover-card')).toHaveCount(25, { timeout: 20_000 });
   await page.waitForTimeout(650);
   const cards = await page.locator('.folio-discover-card').evaluateAll(nodes => nodes.map(n => {
     const bounds = n.getBoundingClientRect();

@@ -17,7 +17,9 @@ type Props = {
 
 export function DiscoverCard({ item, blurCovers, href, onOpen, onImport, onPickTag }: Props) {
   const tags = item.tags ?? [];
-  const author = tagName(tags, "artist") || tagName(tags, "group") || "未知作者";
+  const artist = tagName(tags, "artist");
+  const group = tagName(tags, "group");
+  const author = [artist, group ? "社团 " + group : ""].filter(Boolean).join(" / ") || "未知作者";
   const language = languageLabel(tags);
   const category = tagName(tags, "category") || "远端作品";
   const contentTags = tags.filter((tag) => tag.type === "tag" || tag.type === "character");

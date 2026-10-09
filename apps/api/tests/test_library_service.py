@@ -83,6 +83,57 @@ def test_summary_counts_only_real_rows(tmp_path):
     assert summary["untagged"] == 3
 
 
+def test_library_revision_tracks_content_commits_but_not_other_settings(tmp_path):
+    _, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    initial = library.revision()
+    work_id = _import_work(archive, tmp_path, "revision", "Revision", "local", None)
+    added = library.revision()
+    assert added > initial
+    assert library.search()["revision"] == added
+    db.execute("INSERT INTO settings(key, value) VALUES ('test.unrelated', '1')")
+    assert library.revision() == added
+    try:
+        with db.connect() as conn:
+            conn.execute("UPDATE works SET title = 'Rollback' WHERE id = ?", (work_id,))
+            raise ValueError("rollback")
+    except ValueError:
+        pass
+    assert library.revision() == added
+    db.execute("INSERT INTO work_tags(work_id, tag_type, remote_name) VALUES (?, 'artist', 'Creator')", (work_id,))
+    tagged = library.revision()
+    assert tagged > added
+    ReaderService(db).update_state(work_id, page_index=1)
+    read = library.revision()
+    assert read > tagged
+    db.init_schema()
+    assert library.revision() == read
+    db.execute("DELETE FROM works WHERE id = ?", (work_id,))
+    assert library.revision() > read
+
+
+def test_local_tag_keys_keep_artist_group_scope_and_support_and_filters(tmp_path):
+    _, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    a = _import_work(archive, tmp_path, "local-a", "Alpha", "local", None)
+    b = _import_work(archive, tmp_path, "local-b", "Beta", "local", None)
+    for work_id, kind in ((a, "artist"), (b, "group")):
+        db.execute("INSERT INTO work_tags(work_id, tag_type, remote_name, remote_slug) VALUES (?, ?, 'Same Name', 'same name')", (work_id, kind))
+    db.execute("INSERT INTO work_tags(work_id, tag_type, remote_name, remote_slug) VALUES (?, 'tag', 'winter', 'winter')", (a,))
+    filters = library.tag_filters()["result"]
+    assert len(filters) == 3 and all(row["id"] is None for row in filters)
+    artist = next(row for row in filters if row["type"] == "artist")
+    group = next(row for row in filters if row["type"] == "group")
+    winter = next(row for row in filters if row["type"] == "tag")
+    assert artist["key"] != group["key"]
+    assert [row["id"] for row in library.search(tag_keys=[artist["key"], winter["key"]])["result"]] == [a]
+    assert [row["id"] for row in library.search(tag_keys=[group["key"]])["result"]] == [b]
+    assert library.search(tag_keys=[artist["key"], group["key"]])["total"] == 0
+    db.execute("UPDATE work_tags SET remote_name = 'New Name', remote_slug = 'new name' WHERE work_id = ? AND tag_type = 'artist'", (a,))
+    assert library.search(tag_keys=[artist["key"]])["total"] == 0
+    assert library.work(a)["tags"][0]["key"] == "local:artist:new name"
+
+
 def test_summary_treats_translated_as_a_marker_not_a_language(tmp_path):
     settings, db, archive = _setup(tmp_path)
     library = LibraryService(db)
@@ -93,6 +144,15 @@ def test_summary_treats_translated_as_a_marker_not_a_language(tmp_path):
     ])
 
     assert [item["value"] for item in library.summary()["languages"]] == ["chinese"]
+    local_id = _import_work(archive, tmp_path, "local-language", "Local Language", "local", None)
+    db.execute("UPDATE works SET language = 'zh-CN' WHERE id = ?", (local_id,))
+    _link_tags(db, local_id, [{"id": 10, "type": "language", "name": "translated", "slug": "translated"}])
+    assert library.summary()["languages"] == [{"value": "chinese", "label": "中文", "count": 2}]
+    assert {item["id"] for item in library.search(language="zh")["result"]} == {work_id, local_id}
+    db.execute("UPDATE works SET language = 'english' WHERE id = ?", (local_id,))
+    _link_tags(db, local_id, [{"id": 30, "type": "language", "name": "japanese", "slug": "japanese"}])
+    assert library.search(language="english")["total"] == 0
+    assert [item["id"] for item in library.search(language="ja")["result"]] == [local_id]
 
 
 def test_search_filters_and_pagination(tmp_path):
