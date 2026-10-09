@@ -209,7 +209,7 @@ class MediaLibraryService:
     def source_file(self, work_id: int, available: bool = True, item_id: int | None = None) -> dict[str, Any] | None:
         ready = " AND (f.library_item_id IS NULL OR i.status = 'ready')" if available else ""
         selected = " AND f.library_item_id = ?" if item_id is not None else ""
-        return self.db.fetchone(
+        rows = self.db.fetchall(
             f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
             i.mtime_ns, i.device, i.inode, i.relative_path, l.id AS library_id,
             l.kind AS library_kind, l.root_path, l.resolved_root_path, l.read_only, l.config_json
@@ -218,12 +218,14 @@ class MediaLibraryService:
             WHERE f.work_id = ? AND f.kind = 'source_cbz'
             AND (f.library_item_id IS NULL OR l.removed_at IS NULL){ready}{selected}
             ORDER BY f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
-            l.kind = 'local' DESC, f.id DESC LIMIT 1""", (work_id, item_id) if item_id is not None else (work_id,),
+            l.kind = 'local' DESC, f.id DESC""", (work_id, item_id) if item_id is not None else (work_id,),
         )
+        # Legacy managed paths can be stale; indexed sources need no filesystem probe.
+        return next((row for row in rows if self.file_available(row)), rows[0] if rows else None)
 
     def files(self, work_id: int | None = None, metadata: bool = False) -> list[dict[str, Any]]:
         """File inventory without loading page manifests or touching source mounts."""
-        return self.db.fetchall(
+        rows = self.db.fetchall(
             "SELECT f.*," + (" i.metadata_json, i.archive_info_json," if metadata else "") + """ i.status AS source_status, i.mtime_ns, i.device, i.inode, i.fingerprint,
             l.id AS library_id, l.name AS library_name, l.kind AS library_kind,
             l.root_path, COALESCE(l.read_only,
@@ -236,6 +238,7 @@ class MediaLibraryService:
             f.library_item_id IS NULL DESC, l.kind = 'managed' DESC,
             l.kind = 'local' DESC, f.id DESC""", (work_id,) if work_id is not None else (),
         )
+        return sorted(rows, key=lambda row: (row["work_id"], not self.file_available(row)))
 
     @staticmethod
     def file_available(row: dict[str, Any]) -> bool:

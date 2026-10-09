@@ -83,6 +83,40 @@ def test_invalid_archive_does_not_interrupt_valid_files_and_can_recover(tmp_path
     assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 2
 
 
+def test_missing_legacy_source_does_not_hide_ready_indexed_source(tmp_path):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    source = root / "book.cbz"
+    create_archive(source)
+    index.scan(library["id"])
+    indexed = db.fetchone("SELECT * FROM work_files")
+    work_id = indexed["work_id"]
+    legacy = settings.library_dir / "old.cbz"
+    db.execute("INSERT INTO work_files(work_id,kind,path) VALUES (?,'source_cbz',?)", (work_id, str(legacy)))
+    assert libraries.source_file(work_id)["id"] == indexed["id"]
+    assert libraries.files(work_id)[0]["id"] == indexed["id"]
+    assert ArchiveService(db, settings).read_page(work_id, 1)[1] == "image/jpeg"
+    legacy.write_bytes(source.read_bytes())
+    assert libraries.source_file(work_id)["path"] == str(legacy)
+    assert libraries.files(work_id)[0]["path"] == str(legacy)
+    assert db.fetchone("SELECT COUNT(*) AS n FROM work_files")["n"] == 2
+
+
+def test_webp_type_is_explicit_and_old_page_types_still_read_correctly(tmp_path):
+    settings, db, _, index, root, library = setup_index(tmp_path)
+    body = io.BytesIO()
+    Image.new("RGB", (100, 150), "gray").save(body, format="WEBP")
+    source = root / "webp.cbz"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr("001.webp", body.getvalue())
+    index.scan(library["id"])
+    work_id = db.fetchone("SELECT id FROM works")["id"]
+    reader = ArchiveService(db, settings)
+    pages = reader.list_pages(work_id)
+    assert pages[0]["media_type"] == "image/webp"
+    pages[0]["media_type"] = "application/octet-stream"
+    assert reader._read_archive_page(source, pages, 1) == (body.getvalue(), "image/webp")
+
+
 def test_stability_wait_and_changes_do_not_create_duplicate_work(tmp_path, monkeypatch):
     _, db, _, index, root, library = setup_index(tmp_path, stable_seconds=5)
     create_archive(root / "book.cbz")

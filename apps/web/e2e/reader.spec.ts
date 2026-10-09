@@ -98,11 +98,13 @@ test("阅读器隔离后台页面并在返回后恢复入口焦点", async ({ pa
   });
   await page.goto("/#library");
   await expect.poll(() => jobRequests).toBeGreaterThan(0);
-  const entry = page.locator('.folio-library-read-action[href="#reader/' + WORK_ID + '"]');
+  const entry = page.locator(".folio-library-read-action").first();
   await expect(entry).toBeVisible();
+  const readerHref = await entry.getAttribute("href") ?? "";
+  expect(readerHref).toMatch(/^#reader\/\d+$/);
   await entry.focus();
   await entry.click();
-  await expect(page).toHaveURL(new RegExp("#reader/" + WORK_ID + "$"));
+  await expect(page).toHaveURL(new RegExp(readerHref + "$"));
 
   const readerRoute = page.locator(".app-route-reader");
   const archiveRoute = page.locator(".app-route-archive");

@@ -18,6 +18,7 @@ from app.services.media_library_service import MediaLibraryService
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+mimetypes.add_type("image/webp", ".webp")
 
 # Characters that are illegal in filenames on common filesystems, plus control chars.
 _ILLEGAL_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
@@ -238,7 +239,7 @@ class ArchiveService:
                 member = archive.getinfo(page["archive_member"])
             if member.file_size > MAX_COVER_BYTES or member.flag_bits & 1:
                 raise ValueError("页面超过64MB或归档已加密，无法读取")
-            return archive.read(member), page["media_type"]
+            return archive.read(member), mimetypes.guess_type(member.filename)[0] or page["media_type"]
 
     def read_page_thumbnail(self, work_id: int, page_index: int, width: int = 320, lease: str | None = None,
                             source_revision: str | None = None) -> tuple[bytes, str]:
