@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { Direction, Fit, Mode, ReaderPageItem } from "./readerHelpers";
 import { SinglePageView } from "./SinglePageView";
@@ -13,6 +13,7 @@ type ReaderViewportProps = {
   zoom: number;
   isRemote: boolean;
   loading: boolean;
+  loadingControls?: ReactNode;
   onFlip: (delta: number) => void;
   onJump: (pageIndex: number) => void;
   onToggleChrome: () => void;
@@ -28,6 +29,7 @@ export function ReaderViewport({
   zoom,
   isRemote,
   loading,
+  loadingControls,
   onFlip,
   onJump,
   onToggleChrome,
@@ -43,7 +45,7 @@ export function ReaderViewport({
   return (
     <div className="reader-viewport">
       {loading && pages.length === 0 ? (
-        <div className="reader-loading" role="status"><svg viewBox="0 0 100 120" aria-hidden="true"><path d="M18 18V108H82V32L68 18ZM68 18V32H82M10 10H70M26 26V116H90" /><path className="reader-loading-trace" d="M18 108V18H68L82 32V108H18" pathLength="1" /><path d="M32 52H68M32 64H68M32 76H56" /></svg><p>正在读取页面…</p></div>
+        <div className="reader-loading" role="status"><svg viewBox="0 0 100 120" aria-hidden="true"><path d="M18 18V108H82V32L68 18ZM68 18V32H82M10 10H70M26 26V116H90" /><path className="reader-loading-trace" d="M18 108V18H68L82 32V108H18" pathLength="1" /><path d="M32 52H68M32 64H68M32 76H56" /></svg><p>正在读取页面…</p>{loadingControls}</div>
       ) : mode === "webtoon" ? (
         <WebtoonView
           pages={pages}

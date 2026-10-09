@@ -6,6 +6,11 @@ import ssl
 import threading
 import time
 import uuid
+import base64
+from concurrent.futures import ThreadPoolExecutor
+from html import escape
+from io import BytesIO
+from pathlib import Path
 from email.headerregistry import Address
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
@@ -13,6 +18,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from app.database import Database
+from PIL import Image
 
 
 SMTP_DEFAULTS = {"enabled": False, "host": "", "port": 587, "security": "starttls", "username": "",
@@ -20,8 +26,9 @@ SMTP_DEFAULTS = {"enabled": False, "host": "", "port": 587, "security": "starttl
 
 
 class NotificationService:
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, settings=None, client=None):
         self.db = db
+        self.settings, self.client = settings, client
         self._lock = threading.Lock()
 
     def config(self, conn=None) -> dict[str, Any]:
@@ -98,30 +105,91 @@ class NotificationService:
     def enqueue(self, subscription_id: int, token: str, payload: dict, conn) -> None:
         if not self.config(conn)["enabled"]:
             return
-        conn.execute("""INSERT INTO mail_outbox(subscription_id, dedup_key, message_id, payload_json)
-                       VALUES (?, ?, ?, ?) ON CONFLICT(dedup_key) DO NOTHING""",
-                     (subscription_id, f"subscription:{subscription_id}:{token}", make_msgid(domain="nh-archive.local"),
-                      json.dumps(payload, ensure_ascii=False)))
+        galleries = payload.get("galleries", [])
+        # Bound each message's embedded covers and media preparation time.
+        for index in range(0, max(1, len(galleries)), 12):
+            part = {**payload, "galleries": galleries[index:index + 12]}
+            if len(galleries) > 12:
+                part["subject"] += f" · {index // 12 + 1}/{(len(galleries) + 11) // 12}"
+            conn.execute("""INSERT INTO mail_outbox(subscription_id, dedup_key, message_id, payload_json)
+                           VALUES (?, ?, ?, ?) ON CONFLICT(dedup_key) DO NOTHING""",
+                         (subscription_id, f"subscription:{subscription_id}:{token}:{index}", make_msgid(domain="nh-archive.local"),
+                          json.dumps(part, ensure_ascii=False)))
 
-    def _send(self, payload: dict, message_id: str, config: dict) -> None:
-        if not config["host"] or not config["sender"] or not config["recipient"]:
-            raise ValueError("请先配置SMTP服务器和收发件邮箱")
+    def _cover(self, gallery):
+        try:
+            if gallery.get("cover_path"):
+                root = (self.settings.data_dir if self.settings else self.db.path.parent).resolve()
+                path = Path(gallery["cover_path"])
+                path = (root / path if not path.is_absolute() else path).resolve()
+                if not path.is_relative_to(root / "covers") or path.stat().st_size > 2_000_000:
+                    return None
+                data = path.read_bytes()
+            elif self.client:
+                thumb = gallery.get("thumbnail") or gallery.get("cover")
+                path = thumb.get("path") if isinstance(thumb, dict) else thumb
+                if not path:
+                    return None
+                with self.client.open_media(path, thumbnail=True, timeout=3) as response:
+                    data = response.read(2_000_001)
+                if len(data) > 2_000_000:
+                    return None
+            else:
+                return None
+            with Image.open(BytesIO(data)) as source:
+                if source.width * source.height > 25_000_000:
+                    return None
+                source.thumbnail((480, 640))
+                output = BytesIO()
+                source.convert("RGB").save(output, format="JPEG", quality=85)
+                return output.getvalue()
+        except Exception:
+            return None  # A unavailable cover must not suppress the work notification.
+
+    def _message(self, payload: dict, message_id: str, config: dict):
         message = EmailMessage()
         message["From"] = Address("NH Archive", addr_spec=config["sender"])
         message["To"] = config["recipient"]
         message["Subject"] = payload["subject"].replace("\r", " ").replace("\n", " ")[:240]
         message["Message-ID"] = message_id
         message["Date"] = formatdate(usegmt=True)
-        lines = [payload.get("heading", payload["subject"]), ""]
-        for gallery in payload.get("galleries", []):
+        heading = payload.get("heading", payload["subject"])
+        lines, cards = [heading, ""], []
+        galleries = payload.get("galleries", [])[:12]
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            covers = list(pool.map(self._cover, galleries))
+        attachments = []
+        for index, (gallery, cover) in enumerate(zip(galleries, covers)):
             title = gallery.get("english_title") or gallery.get("title", {})
             if isinstance(title, dict):
                 title = title.get("japanese") or title.get("pretty") or title.get("english")
-            gallery_id = int(gallery["id"])
-            link = (config["site_url"].rstrip("/") + f"/#gallery/{gallery_id}" if config["site_url"] else
-                    f"https://nhentai.net/g/{gallery_id}/")
-            lines.extend([str(title or f"作品 {gallery_id}"), link, ""])
+            title = str(gallery.get("pretty_title") or title or "作品")
+            work_id, gallery_id = gallery.get("work_id"), gallery.get("id")
+            route = f"reader/{int(work_id)}" if work_id else f"gallery/{int(gallery_id)}"
+            link = config["site_url"].rstrip("/") + "/#" + route if config["site_url"] else (f"https://nhentai.net/g/{int(gallery_id)}/" if gallery_id else "")
+            tags = gallery.get("tags") or [self.db.fetchone("SELECT type, name FROM remote_tags WHERE remote_id=?", (tag_id,)) for tag_id in gallery.get("tag_ids", [])[:100]]
+            creators = " / ".join(str(tag.get("name") or tag.get("display")) for tag in tags if tag and tag.get("type") in {"artist", "group"})
+            language = gallery.get("language") or " / ".join(str(tag.get("name")) for tag in tags if tag and tag.get("type") == "language")
+            info = " · ".join(str(value) for value in (creators, language, f"{gallery.get('num_pages', 0)} 页") if value)
+            lines.extend([title, info, link, ""])
+            image = ""
+            if cover:
+                cid = f"work-cover-{index}@nh-archive.local"
+                attachments.append((cid, cover))
+                image = f'<td style="width:120px;padding:0 22px 0 0;vertical-align:top"><img src="cid:{cid}" width="120" alt="作品封面" style="display:block;width:120px;height:auto;border:0"></td>'
+            action = f'<a href="{escape(link, quote=True)}" style="display:inline-block;color:#ad382e;text-decoration:none;border-bottom:1px solid #ad382e;padding:8px 0">查看作品 →</a>' if link else ""
+            cards.append(f'<tr><td style="padding:24px 0;border-bottom:1px solid #d9d0c1"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>{image}<td style="vertical-align:top"><h2 style="margin:0 0 12px;font-size:18px;font-weight:500;line-height:1.6;word-break:break-word">{escape(title)}</h2><p style="margin:0 0 12px;color:#716a5f;font-size:13px;line-height:1.7">{escape(info)}</p>{action}</td></tr></table></td></tr>')
         message.set_content("\n".join(lines))
+        html = f'<!doctype html><html lang="zh-CN"><body style="margin:0;padding:24px 12px;background:#eee8dc;color:#171815;font-family:Arial,sans-serif"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#faf7ef;border-top:3px solid #ad382e"><tr><td style="padding:28px 28px 12px;font-size:16px;letter-spacing:2px">NH ARCHIVE</td></tr><tr><td style="padding:0 28px"><h1 style="margin:12px 0 10px;font-size:22px;font-weight:500;line-height:1.6">{escape(heading)}</h1><table role="presentation" width="100%" cellspacing="0" cellpadding="0">{"".join(cards)}</table></td></tr><tr><td style="padding:24px 28px;color:#716a5f;font-size:12px;line-height:1.7">{"通知格式预览 · 此邮件未产生订阅更新" if payload.get("test") else "你订阅的作者或社团有新作品。可在网站发现页管理订阅。"}</td></tr></table></td></tr></table></body></html>'
+        message.add_alternative(html, subtype="html")
+        for cid, cover in attachments:
+            message.get_payload()[-1].add_related(cover, maintype="image", subtype="jpeg", cid=f"<{cid}>", disposition="inline")
+        return message
+
+    def _send(self, payload: dict, message_id: str, config: dict) -> None:
+        if not config["host"] or not config["sender"] or not config["recipient"]:
+            raise ValueError("请先配置SMTP服务器和收发件邮箱")
+        message = self._message(payload, message_id, config)
         cls = smtplib.SMTP_SSL if config["security"] == "ssl" else smtplib.SMTP
         options = {"timeout": config["timeout_seconds"]}
         if config["security"] == "ssl":
@@ -149,9 +217,30 @@ class NotificationService:
             return "请检查SMTP配置与邮件内容"
         return "SMTP发送失败（" + type(exc).__name__ + "）"
 
+    def _test_payload(self):
+        work = self.db.fetchone("SELECT * FROM works ORDER BY RANDOM() LIMIT 1")
+        if not work:
+            raise ValueError("没有可用于通知预览的作品")
+        tags = self.db.fetchall("SELECT tag_type AS type, remote_name AS name FROM work_tags WHERE work_id=?", (work["id"],))
+        return {"subject": "NH Archive 新作品通知测试", "heading": "作品更新", "test": True,
+                "galleries": [{"work_id": work["id"], "id": work["remote_gallery_id"], "title": work["pretty_title"] or work["title_japanese"] or work["title"],
+                               "cover_path": work["cover_path"], "num_pages": work["page_count"], "language": work["language"], "tags": tags}]}
+
+    def preview(self):
+        config = self.config()
+        config = {**config, "sender": config["sender"] or "preview@nh-archive.local", "recipient": config["recipient"] or "preview@nh-archive.local"}
+        payload = self._test_payload()
+        message = self._message(payload, make_msgid(), config)
+        html = message.get_body(preferencelist=("html",)).get_content()
+        for part in message.walk():
+            if part.get_content_maintype() == "image":
+                cid = part["Content-ID"].strip("<>")
+                html = html.replace("cid:" + cid, "data:image/jpeg;base64," + base64.b64encode(part.get_payload(decode=True)).decode())
+        return {"html": html, "work_id": payload["galleries"][0]["work_id"]}
+
     def test(self):
         try:
-            self._send({"subject": "NH Archive 邮件通知测试", "heading": "邮件通知配置已连接成功。"},
+            self._send(self._test_payload(),
                        make_msgid(domain="nh-archive.local"), self.config())
             result = {"ok": True, "message": "测试邮件已发送"}
         except Exception as exc:

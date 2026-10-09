@@ -1394,7 +1394,7 @@ export const api = {
         }))
       })
     }).then(clearDiscoverCache),
-  exportQueue: () => request<ExportQueue>("/api/exports/queue"),
+  exportQueue: (ids?: number[]) => request<ExportQueue>("/api/exports/queue" + (ids?.length ? "?work_ids=" + ids.join(",") : "")),
   exportSummary: () => request<ExportSummaryStats>("/api/exports/summary"),
   exportPreview: (id: number, options?: ExportRequestOptions) =>
     options
@@ -1543,13 +1543,16 @@ export const api = {
   scanLibraryPreview: () =>
     request<LibraryScanPreview>("/api/library/scan/preview", { method: "POST", headers: JSON_HEADERS }),
   mediaLibraries: () => request<{ result: MediaLibrary[]; defaults: MediaLibraryConfig }>("/api/library/directories"),
+  previewMail: () => request<{ html: string; work_id: number }>("/api/settings/smtp/preview"),
+  browseDirectories: (path: string) => request<{ path: string; parent: string; result: { name: string; path: string }[]; truncated: boolean }>("/api/library/browse?path=" + encodeURIComponent(path)),
   addMediaLibrary: (payload: MediaLibraryInput) => request<MediaLibraryInput & { id: number }>("/api/library/directories", {
     method: "POST", headers: JSON_HEADERS, body: JSON.stringify(payload),
   }),
   updateMediaLibrary: (id: number, payload: Partial<MediaLibraryInput>) => request<MediaLibraryInput & { id: number }>(`/api/library/directories/${id}`, {
     method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
   }),
-  removeMediaLibrary: (id: number) => request<{ removed: number; source_files_deleted: boolean; metadata_preserved: boolean }>(`/api/library/directories/${id}`, { method: "DELETE" }),
+  removeMediaLibrary: (id: number, purge = false) => request<{ removed: number; source_files_deleted: boolean; metadata_preserved: boolean; removed_works: number }>(`/api/library/directories/${id}?purge=${purge}`, { method: "DELETE" }),
+  mediaLibraryRemovalPreview: (id: number) => request<{ exclusive_works: number; shared_works: number; purge_allowed: boolean; warnings: string[] }>(`/api/library/directories/${id}/remove-preview`),
   libraryScanRuns: (id: number, limit = 5) => request<{ result: LibraryScanRun[] }>(`/api/library/directories/${id}/runs?limit=${limit}`),
   libraryItems: (id: number, status = "error", page = 1) => request<{ result: LibraryItem[]; total: number; page: number; per_page: number }>(`/api/library/directories/${id}/items?status=${encodeURIComponent(status)}&page=${page}&per_page=20`),
   readingCache: () => request<ReadingCacheSummary>("/api/library/cache"),

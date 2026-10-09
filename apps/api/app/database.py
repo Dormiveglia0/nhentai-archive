@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS creator_subscriptions (
   slug TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,
   email_enabled INTEGER NOT NULL DEFAULT 1,
-  interval_seconds INTEGER NOT NULL DEFAULT 21600,
+  interval_seconds INTEGER NOT NULL DEFAULT 86400,
   baseline_complete INTEGER NOT NULL DEFAULT 0,
   scan_page INTEGER NOT NULL DEFAULT 1,
   scan_token TEXT NOT NULL DEFAULT '',
@@ -444,6 +444,7 @@ class Database:
             conn.execute("DROP VIEW IF EXISTS reading_session_events")
             conn.executescript(SCHEMA)
             self._migrate_legacy_schema(conn)
+            conn.execute("UPDATE creator_subscriptions SET interval_seconds = 86400 WHERE interval_seconds NOT IN (86400, 259200, 604800)")
             conn.executescript(INDEXES)
             conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES ('library.revision', '0')")
             for table in ("works", "work_files", "work_metadata", "work_tags", "reader_progress", "local_tag_dictionary"):

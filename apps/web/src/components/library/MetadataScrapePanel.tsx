@@ -1,6 +1,8 @@
 import { Check, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, type MetadataRefreshMatch, type MetadataRefreshPreview } from "../../lib/api";
+import { useNativeDialog } from "../../lib/useNativeDialog";
 import "./MetadataScrapePanel.css";
 
 type Props = { workId: number; title: string; blurCovers: boolean; onApplied: () => void; onClose: () => void };
@@ -13,15 +15,13 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const revision = useRef(0);
-  const section = useRef<HTMLElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    section.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
-    input.current?.focus({ preventScroll: true });
-    return () => { revision.current++; if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+    return () => { revision.current++; };
   }, []);
+  const dismiss = useNativeDialog(dialog, onClose, true, busy);
 
   async function search() {
     const current = ++revision.current;
@@ -51,10 +51,10 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
     } finally { if (current === revision.current) setBusy(false); }
   }
 
-  return <section ref={section} className="folio-scrape" aria-label="刮削元数据" aria-busy={busy}>
-    <header><h3>刮削元数据</h3><button type="button" aria-label="关闭刮削" onClick={onClose}><X size={18} /></button></header>
+  return createPortal(<dialog ref={dialog} className="folio-scrape" aria-label="刮削元数据" aria-busy={busy}>
+    <header><h3>刮削元数据</h3><button type="button" aria-label="关闭刮削" disabled={busy} onClick={dismiss}><X size={18} /></button></header>
     <form onSubmit={event => { event.preventDefault(); void search(); }}>
-      <input ref={input} aria-label="作品名称或 ID" placeholder="作品名称或 ID" maxLength={240} value={query} disabled={busy}
+      <input ref={input} autoFocus aria-label="作品名称或 ID" placeholder="作品名称或 ID" maxLength={240} value={query} disabled={busy}
         onChange={event => { revision.current++; setQuery(event.target.value); setPreview(null); setChosen(null); setError(""); setNotice(""); }} />
       <button type="submit" disabled={busy || !query.trim()}><Search size={16} />{busy ? "处理中" : "搜索"}</button>
     </form>
@@ -84,7 +84,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
         </div> : null}
       </div> : <p role="status">{preview.reason || "没有匹配的作品"}</p>}
     </> : null}
-  </section>;
+  </dialog>, document.querySelector(".folio") ?? document.body);
 }
 
 function DiffTable({ diffs }: { diffs: NonNullable<MetadataRefreshMatch["diffs"]> }) {

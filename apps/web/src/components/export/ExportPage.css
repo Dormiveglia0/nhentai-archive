@@ -122,3 +122,14 @@
   .folio-export-primary { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .folio-export-work-item { transition: none; } }
+.folio-export-dialog { width: min(760px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 48px); padding: 0; margin: auto; border: 1px solid var(--folio-ink); border-radius: 0; background: var(--folio-paper); color: var(--folio-ink); overflow: auto; }
+.folio-export-dialog::backdrop { background: rgba(23,24,21,.6); }
+.folio-export-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; position: sticky; z-index: 5; top: 0; padding: 16px 24px; border-bottom: 1px solid var(--folio-line); background: var(--folio-paper); }
+.folio-export-dialog > header h2 { margin: 0; font-size: 19px; font-weight: 500; }
+.folio-export-dialog > header button { width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; color: var(--folio-ink); background: transparent; }
+.folio-export-dialog > p { margin: 20px 24px; font-size: 14px; }
+.folio-export-dialog .folio-export-inspector { position: relative; top: auto; border: 0; box-shadow: none; min-height: 0; }
+.folio-export-dialog .folio-export-action-zone { position: relative; }
+.folio-export-context-list { display: flex; gap: 8px; padding: 18px 24px 0; overflow: auto; }
+.folio-export-context-list button { flex: 0 0 180px; padding: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); text-align: left; }
+.folio-export-context-list button[aria-pressed="true"] { color: var(--folio-red); border-color: var(--folio-red); }

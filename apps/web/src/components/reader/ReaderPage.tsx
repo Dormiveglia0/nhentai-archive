@@ -151,22 +151,6 @@ export function ReaderPage({ source }: Props) {
     return () => window.removeEventListener("keydown", handle);
   }, [activePanel, data.pageCount, flip, jumpOpen, openPanel, prefs.direction, prefs.mode, toggleFullscreen, zoomBy]);
 
-  if (data.preparingJob && data.loading) {
-    const job = data.preparingJob;
-    return <section className="reader-shell reader-error-shell">
-      <div className="reader-error-card reader-preparation" role="status">
-        <strong>{job.status === "paused" ? "阅读准备已暂停" : "正在准备阅读"}</strong>
-        <progress max={100} value={job.progress.percent} aria-label="归档缓存进度" />
-        <p>{job.status === "queued" ? "等待下载" : job.stage === "verifying_archive" ? "校验归档" : `${job.progress.percent}%`}</p>
-        <div>
-          <button type="button" onClick={() => { void (job.status === "paused" ? api.resumeJob(job.id) : api.pauseJob(job.id)).catch((reason) => setUiError(String(reason))); }}>{job.status === "paused" ? "继续" : "暂停"}</button>
-          <button type="button" onClick={() => { void api.cancelJob(job.id).then(goBack).catch((reason) => setUiError(String(reason))); }}>取消</button>
-        </div>
-        {uiError ? <p role="alert">{uiError}</p> : null}
-      </div>
-    </section>;
-  }
-
   if (data.error) {
     return (
       <section className="reader-shell reader-error-shell">
@@ -195,6 +179,14 @@ export function ReaderPage({ source }: Props) {
         zoom={zoom}
         isRemote={data.isRemote}
         loading={data.loading}
+        loadingControls={data.preparingJob ? <div className="reader-preparation">
+          <progress max={100} value={data.preparingJob.progress.percent} aria-label="归档缓存进度" />
+          <p>{data.preparingJob.status === "paused" ? "已暂停" : data.preparingJob.status === "queued" ? "等待读取" : `${data.preparingJob.progress.percent}%`}</p>
+          <div>
+            <button type="button" onClick={() => { const job = data.preparingJob!; void (job.status === "paused" ? api.resumeJob(job.id) : api.pauseJob(job.id)).catch(reason => setUiError(String(reason))); }}>{data.preparingJob.status === "paused" ? "继续" : "暂停"}</button>
+            <button type="button" onClick={() => { void api.cancelJob(data.preparingJob!.id).then(goBack).catch(reason => setUiError(String(reason))); }}>取消</button>
+          </div>
+        </div> : null}
         onFlip={flip}
         onJump={jump}
         onToggleChrome={toggleChrome}

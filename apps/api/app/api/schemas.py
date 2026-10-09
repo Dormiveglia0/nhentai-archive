@@ -39,7 +39,7 @@ class SettingsPatch(BaseModel):
 class SubscriptionCreate(BaseModel):
     remote_tag_id: int = Field(gt=0, strict=True)
     tag_type: Literal["artist", "group"]
-    interval_seconds: int = Field(default=21600, ge=300, le=86400, strict=True)
+    interval_seconds: Literal[86400, 259200, 604800] = 86400
     email_enabled: bool = True
 
 

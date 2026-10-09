@@ -8,10 +8,9 @@ import { pageHref, tagSearchHref } from "../../lib/navigation";
 import { AmbientCover } from "../folio/ui/AmbientCover";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { useCreatorSubscriptions } from "../subscriptions/CreatorSubscribeButton";
-import { SmtpSection } from "./SmtpSection";
-import "./NotificationSection.css";
+import "../settings/NotificationSection.css";
 
-const INTERVALS = [{ value: "3600", label: "每小时" }, { value: "21600", label: "每6小时" }, { value: "43200", label: "每12小时" }, { value: "86400", label: "每天" }];
+const INTERVALS = [{ value: "86400", label: "每1天" }, { value: "259200", label: "每3天" }, { value: "604800", label: "每7天" }];
 
 function subscriptionStatus(subscription: CreatorSubscription) {
   if (!subscription.enabled) return "已暂停";
@@ -22,8 +21,8 @@ function subscriptionStatus(subscription: CreatorSubscription) {
   return subscription.last_checked_at ? "上次检查 " + (parseUtcTimestamp(subscription.last_checked_at)?.toLocaleString() ?? "—") : "等待检查";
 }
 
-export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
-  const vm = useCreatorSubscriptions(true);
+export function SubscriptionsPanel({ blurCovers, view }: { blurCovers: boolean; view: "updates" | "subscriptions" }) {
+  const vm = useCreatorSubscriptions(view === "subscriptions");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -35,6 +34,7 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
   const [updatesLoading, setUpdatesLoading] = useState(true);
 
   useEffect(() => {
+    if (view !== "updates") return;
     let alive = true;
     let timer = 0;
     setUpdatesLoading(true);
@@ -55,11 +55,11 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
     }
     void load();
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [page, unreadOnly, revision]);
+  }, [page, unreadOnly, revision, view]);
 
-  async function mutate(action: () => Promise<unknown>) {
+  async function mutate(action: () => Promise<unknown>, feedback = "订阅已更新") {
     setBusy(true); setError(""); setMessage("");
-    try { await action(); vm.refresh(); setRevision(value => value + 1); setMessage("订阅已更新"); }
+    try { await action(); vm.refresh(); setRevision(value => value + 1); setMessage(feedback); }
     catch (exc) { setError(exc instanceof Error ? exc.message : String(exc)); }
     finally { setBusy(false); }
   }
@@ -69,7 +69,8 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
     catch (exc) { setUpdatesError(exc instanceof Error ? exc.message : String(exc)); }
   }
 
-  return <section className="folio-settings-section folio-notifications" aria-label="订阅与通知">
+  return <section className="folio-notifications" aria-label={view === "subscriptions" ? "订阅管理" : "作品更新"}>
+    {view === "subscriptions" ? <>
     <div className="folio-settings-subhead"><h3><Bell size={16} />作者与社团订阅</h3><button className="folio-settings-mini-action" type="button" aria-label="刷新订阅" onClick={() => { vm.refresh(); setRevision(value => value + 1); }}><RefreshCw size={15} /></button></div>
     {error || vm.error ? <p className="folio-media-error" role="alert">{error || vm.error}</p> : null}
     {message ? <p className="folio-media-feedback" role="status">{message}</p> : null}
@@ -80,7 +81,7 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
           <p>{subscriptionStatus(subscription)}</p>
           {subscription.last_error ? <p className="folio-media-error">{subscription.last_error}</p> : null}
         </div>
-        <FolioSelect label="检查间隔" value={String(subscription.interval_seconds)} options={INTERVALS.some(option => Number(option.value) === subscription.interval_seconds) ? INTERVALS : [...INTERVALS, { value: String(subscription.interval_seconds), label: "每" + subscription.interval_seconds + "秒" }]}
+        <FolioSelect label="检查间隔" value={String(subscription.interval_seconds)} options={INTERVALS}
           onChange={value => void mutate(() => api.updateSubscription(subscription.id, { interval_seconds: Number(value) }))} />
         <div className="folio-media-actions">
           <button className="folio-settings-mini-action" type="button" disabled={!subscription.enabled || subscription.status === "checking" || subscription.status === "queued"} onClick={() => void mutate(() => api.checkSubscription(subscription.id))}><RefreshCw size={14} />检查</button>
@@ -91,6 +92,7 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
       </article>)}
     </fieldset>}
 
+    </> : <>
     <div className="folio-settings-subhead"><h3>作品更新{updates?.unread_count ? " · " + updates.unread_count + " 未读" : ""}</h3><button className="folio-settings-mini-action" type="button" disabled={!updates?.unread_count} onClick={() => void read()}><Check size={14} />全部已读</button></div>
     <div className="folio-subscription-filters">
       {[{ value: false, label: "全部" }, { value: true, label: "未读" }].map(filter => <button key={filter.label} type="button" aria-pressed={unreadOnly === filter.value} className={unreadOnly === filter.value ? "is-active" : ""} onClick={() => { setUnreadOnly(filter.value); setPage(1); }}>
@@ -103,11 +105,15 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
         const gallery = update.gallery;
         const title = gallery.title_japanese || gallery.pretty_title || gallery.title;
         return <article className={update.read_at ? "is-read" : ""} key={update.id}>
-          <a className="folio-subscription-update-link" href={pageHref({ name: "gallery", galleryId: update.gallery_id, returnTo: "settings?section=notifications" })} onClick={() => void read(update.id)} onAuxClick={event => { if (event.button === 1) void read(update.id); }}>
+          <a className="folio-subscription-update-link" href={pageHref({ name: "gallery", galleryId: update.gallery_id, returnTo: "discover?view=updates" })} onClick={() => void read(update.id)} onAuxClick={event => { if (event.button === 1) void read(update.id); }}>
             <div className="folio-subscription-update-cover">{gallery.thumbnail.url ? <AmbientCover className="folio-subscription-thumb is-fill-portrait" src={gallery.thumbnail.url} alt="" privateBlur={blurCovers} loading="lazy" /> : <Bell size={18} />}</div>
             <div><strong title={title}>{title}</strong><span>{update.tag_type === "artist" ? "作者 " : "社团 "}{update.name} · {gallery.page_count} 页</span></div>
             {!update.read_at ? <i aria-label="未读" /> : null}
           </a>
+          <div className="folio-subscription-update-actions">
+            {gallery.work_id ? <a href={pageHref({ name: "reader", workId: gallery.work_id })}>阅读</a> : <button type="button" disabled={busy} onClick={() => void mutate(() => api.importGallery(update.gallery_id), "导入已加入队列")}>导入</button>}
+            {!update.read_at ? <button type="button" onClick={() => void read(update.id)}>标记已读</button> : null}
+          </div>
         </article>;
       })}
       {!updatesLoading && !updates?.result.length ? <p className="folio-media-hint">{unreadOnly ? "没有未读更新" : "暂无作品更新"}</p> : null}
@@ -116,6 +122,7 @@ export function NotificationSection({ blurCovers }: { blurCovers: boolean }) {
       <button type="button" aria-label="上一页更新" disabled={updatesLoading || page <= 1} onClick={() => setPage(value => value - 1)}><ChevronLeft size={17} /></button><span>{page} / {Math.ceil(updates.total / updates.per_page)}</span>
       <button type="button" aria-label="下一页更新" disabled={updatesLoading || page * updates.per_page >= updates.total} onClick={() => setPage(value => value + 1)}><ChevronRight size={17} /></button>
     </div> : null}
-    <SmtpSection />
+    </>}
+    <a className="folio-subscription-mail-settings" href="#settings?section=notifications"><Mail size={15} />邮件设置</a>
   </section>;
 }

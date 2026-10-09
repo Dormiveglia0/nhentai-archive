@@ -1,8 +1,9 @@
 import { AlertTriangle, Trash2, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 
 import type { FileDeletePreview } from "../../lib/api";
 import { formatBytes } from "./fileHelpers";
+import { useNativeDialog } from "../../lib/useNativeDialog";
 
 const WARNING_LABELS: Record<string, string> = {
   has_progress: "含阅读进度",
@@ -25,23 +26,7 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!preview || !dialog) return;
-    dialog.showModal();
-    cancelRef.current?.focus();
-    return () => {
-      if (dialog.open) dialog.close();
-      window.requestAnimationFrame(() => {
-        if (
-          returnFocus?.isConnected
-          && (!(returnFocus instanceof HTMLButtonElement) || !returnFocus.disabled)
-        ) {
-          returnFocus.focus();
-        }
-      });
-    };
-  }, [preview, returnFocus]);
+  const dismiss = useNativeDialog(dialogRef, () => { onCancel(); if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true }); }, Boolean(preview), busy);
 
   if (!preview) return null;
   const hasHealthyWork = preview.items.some((item) => item.kind === "work" && item.status === "ready");
@@ -57,10 +42,6 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
       aria-labelledby="folio-files-delete-title"
       aria-describedby="folio-files-delete-summary"
       aria-busy={busy}
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onCancel();
-      }}
     >
       <header>
         <h2 id="folio-files-delete-title">确认删除</h2>
@@ -86,7 +67,7 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
         <button type="button" className="is-danger" onClick={onConfirm} disabled={busy || !canDelete}>
           <Trash2 size={14} />{hasHealthyWork ? "确认永久删除" : "确认删除"}
         </button>
-        <button ref={cancelRef} type="button" onClick={onCancel} disabled={busy}>
+        <button ref={cancelRef} type="button" onClick={dismiss} disabled={busy} autoFocus>
           <X size={14} />取消
         </button>
       </div>

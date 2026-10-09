@@ -16,8 +16,8 @@ export function ExportDefaultsSection({ vm }: { vm: SettingsVM }) {
         <div>
           <strong>作品名.cbz</strong>
         </div>
-        <a className="folio-line-button" href={pageHref({ name: "export" })}>
-          打开导出中心
+        <a className="folio-line-button" href={pageHref({ name: "library" })}>
+          从我的库导出
           <ArrowUpRight size={15} />
         </a>
       </div>

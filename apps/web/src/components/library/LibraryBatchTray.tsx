@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { Download, RefreshCw, Trash2, Wand2, X } from "lucide-react";
+import { RefreshCw, Trash2, Wand2, X } from "lucide-react";
 
 import {
   api,
-  EXPORT_SYNC_THRESHOLD,
   type FileDeletePreview,
   type FileDeleteTarget,
   type MetadataRefreshMatch,
   type MetadataRefreshPreview,
 } from "../../lib/api";
 import { formatBytes } from "./libraryHelpers";
+import { ExportAction } from "../export/ExportAction";
 
 type Props = {
   selectedIds: number[];
@@ -42,25 +42,6 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
     setGalleryIds({});
     setRefreshDirty(false);
   }, [selectionKey]);
-
-  async function exportSelected() {
-    setBusy(true);
-    setNotice(null);
-    setError(null);
-    try {
-      if (count > EXPORT_SYNC_THRESHOLD) {
-        const job = await api.enqueueBulkExport(selectedIds.map((work_id) => ({ work_id })));
-        setNotice(`已加入任务中心（任务 #${job.id}），完成后可在任务页下载合集`);
-      } else {
-        await api.downloadExportBundle(selectedIds.map((work_id) => ({ work_id })));
-        setNotice(`已开始下载 ${count} 部作品的合集`);
-      }
-    } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function fillMissing() {
     setBusy(true);
@@ -200,9 +181,7 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
         />
       ) : (
         <div className="folio-library-batch-actions">
-          <button type="button" onClick={exportSelected} disabled={busy || count === 0}>
-            <Download size={15} /> 导出下载
-          </button>
+          <ExportAction workIds={selectedIds} label="导出下载" disabled={busy || count === 0} />
           <button type="button" onClick={fillMissing} disabled={busy || count === 0}>
             <Wand2 size={15} /> 补全缺失元数据
           </button>

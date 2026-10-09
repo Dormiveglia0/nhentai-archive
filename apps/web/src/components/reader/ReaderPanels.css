@@ -432,6 +432,14 @@
   color: var(--reader-paper);
 }
 
+.reader-img-error.reader-webtoon-img,
+.reader-img-error.reader-single-img {
+  display: flex;
+  object-fit: unset;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+
 @media (max-width: 720px) {
   .reader-panel { width: calc(100vw - 24px); right: 12px; }
   .reader-thumb-layout { padding: 72px 16px 22px; align-items: flex-start; }

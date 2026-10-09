@@ -324,18 +324,11 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: none;
   position: relative;
 }
 
 /* Route focus lands on this non-interactive landmark; controls keep their own focus rings. */
 .folio-scroll:focus { outline: none; }
-
-.folio-scroll::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
 
 .folio-page {
   min-width: 0;
@@ -403,6 +396,8 @@
 :root[data-folio-slide="page"] .folio-scroll { view-transition-name: folio-content; }
 :root[data-folio-slide="settings"] .folio-settings-stage { view-transition-name: folio-settings-content; }
 :root[data-folio-slide="tasks"] .folio-tasks-main { view-transition-name: folio-tasks-content; }
+:root[data-folio-slide="discover"] .folio-discover-stage { view-transition-name: folio-discover-content; }
+:root[data-folio-slide="files"] .folio-files-stage { view-transition-name: folio-files-content; }
 ::view-transition-group(*) { animation-duration: .46s; }
 ::view-transition-image-pair(*) { overflow: clip; }
 ::view-transition-old(*), ::view-transition-new(*) { mix-blend-mode: normal; animation-duration: .46s; animation-timing-function: cubic-bezier(.22, .8, .25, 1); animation-fill-mode: both; }

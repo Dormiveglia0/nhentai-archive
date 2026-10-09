@@ -1424,3 +1424,7 @@
     transition: none;
   }
 }
+.folio-discover-tabs { display: flex; gap: 0; margin-bottom: 30px; border-bottom: 1px solid var(--folio-line); }
+.folio-discover-tabs button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; min-width: 110px; padding: 0 24px; border: 0; border-radius: 0; color: var(--folio-muted); background: transparent; overflow: visible; }
+.folio-discover-tabs button[aria-current] { color: var(--folio-red); }
+.folio-discover-tabs button > svg, .folio-discover-tabs button > span { position: relative; z-index: 1; }

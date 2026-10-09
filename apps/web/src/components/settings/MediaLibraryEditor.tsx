@@ -1,9 +1,11 @@
-import { Save, X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { FolderOpen, Save, X } from "lucide-react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { api, type MediaLibrary, type MediaLibraryConfig, type MediaLibraryInput } from "../../lib/api";
 import { FolioSelect, FolioToggleRow } from "../folio/ui/FolioPrimitives";
+import { useNativeDialog } from "../../lib/useNativeDialog";
+import { DirectoryPicker } from "./DirectoryPicker";
 
 export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
   library: MediaLibrary | null;
@@ -19,18 +21,11 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
   const [config, setConfig] = useState<MediaLibraryInput["config"]>(library?.config ?? defaults);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [rootPath, setRootPath] = useState(library?.root_path ?? "");
+  const [browsing, setBrowsing] = useState(false);
   const managed = kind === "managed";
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    const previous = document.activeElement as HTMLElement | null;
-    dialog?.showModal();
-    dialog?.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
-    return () => {
-      dialog?.close();
-      if (previous?.isConnected) previous.focus({ preventScroll: true });
-    };
-  }, []);
+  const dismiss = useNativeDialog(dialogRef, onClose, true, busy);
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,22 +57,24 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
   }
 
   return createPortal(
-    <dialog ref={dialogRef} className="folio-media-editor" aria-labelledby={titleId}
-      onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
+    <dialog ref={dialogRef} className="folio-media-editor" aria-labelledby={titleId}>
       <form onSubmit={event => void save(event)} onInvalidCapture={event => {
         const details = (event.target as HTMLElement).closest("details");
         if (details) details.open = true;
       }}>
         <header>
           <h2 id={titleId}>{library ? "编辑媒体库" : "添加媒体库"}</h2>
-          <button className="folio-media-icon-button" type="button" aria-label="关闭媒体库设置" disabled={busy} onClick={onClose}><X size={19} /></button>
+          <button className="folio-media-icon-button" type="button" aria-label="关闭媒体库设置" disabled={busy} onClick={dismiss}><X size={19} /></button>
         </header>
         <fieldset disabled={busy}>
           <div className="folio-field-matrix">
             <label className="folio-field"><span>库名</span><input name="name" defaultValue={library?.name ?? ""} required maxLength={100} autoFocus /><i /></label>
             {managed ? <label className="folio-field"><span>访问方式</span><input value="本地导入" readOnly /><i /></label> :
               <FolioSelect label="访问方式" value={kind} options={[{ value: "local", label: "本地目录" }, { value: "mounted", label: "挂载目录（rclone / 网络存储）" }]} onChange={setKind} />}
-            <label className="folio-field folio-field-wide"><span>目录路径（Docker 内的路径）</span><input name="root_path" defaultValue={library?.root_path ?? ""} placeholder="/media/comics" required readOnly={managed} maxLength={4096} /><i /></label>
+            <div className="folio-field-wide folio-directory-path">
+              <label className="folio-field"><span>目录路径</span><input name="root_path" value={rootPath} onChange={event => setRootPath(event.target.value)} placeholder="/media/comics" required readOnly={managed} maxLength={4096} /><i /></label>
+              {!managed ? <button type="button" className="folio-line-button" onClick={() => setBrowsing(true)}><FolderOpen size={16} />浏览</button> : null}
+            </div>
           </div>
           <div className="folio-toggle-list">
             <FolioToggleRow label="启用此库" copy="暂停后保留作品信息，停止自动扫描与刮削。" checked={enabled} onChange={setEnabled} />
@@ -117,10 +114,11 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
         </fieldset>
         {error ? <p className="folio-media-error" role="alert">{error}</p> : null}
         <footer>
-          <button type="button" className="folio-line-button" disabled={busy} onClick={onClose}>取消</button>
+          <button type="button" className="folio-line-button" disabled={busy} onClick={dismiss}>取消</button>
           <button type="submit" className="folio-line-button is-primary" disabled={busy}><Save size={15} />{busy ? "正在保存" : library ? "保存媒体库" : "添加媒体库"}</button>
         </footer>
       </form>
+      {browsing ? <DirectoryPicker initialPath={rootPath} onSelect={setRootPath} onClose={() => setBrowsing(false)} /> : null}
     </dialog>, document.querySelector(".folio") ?? document.body,
   );
 }

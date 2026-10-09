@@ -148,6 +148,7 @@ def test_unsubscribe_during_remote_request_rejects_late_updates_and_mail(tmp_pat
 
 def test_smtp_config_masks_secrets_and_stdlib_transport_uses_selected_security(tmp_path, monkeypatch):
     _db, _client, notifications, _service = _services(tmp_path)
+    _db.execute("INSERT INTO works(title, source, page_count) VALUES ('Test archive', 'local', 1)")
     calls = []
 
     class SMTP:
@@ -165,6 +166,7 @@ def test_smtp_config_masks_secrets_and_stdlib_transport_uses_selected_security(t
             assert message["To"] == "receiver@localhost"
             assert message["Message-ID"]
             assert "private-test-secret" not in message.as_string()
+            assert message.get_body(preferencelist=("html",)) is not None
             calls.append(("sent", message["Subject"]))
             return {}
 
@@ -185,6 +187,26 @@ def test_smtp_config_masks_secrets_and_stdlib_transport_uses_selected_security(t
             notifications.configure(bad)
     notifications.configure({"enabled": False, "clear_password": True})
     assert not notifications.public_config()["password_configured"]
+
+
+def test_notification_embeds_cover_escapes_metadata_and_uses_day_intervals(tmp_path):
+    from PIL import Image
+    db, client, notifications, service = _services(tmp_path)
+    subscription = service.subscribe(10, "artist")
+    assert subscription["interval_seconds"] == 86400
+    for days in (1, 3, 7):
+        assert service.update(subscription["id"], {"interval_seconds": days * 86400})["interval_seconds"] == days * 86400
+    with pytest.raises(ValueError):
+        service.update(subscription["id"], {"interval_seconds": 3600})
+    (tmp_path / "covers").mkdir()
+    Image.new("RGB", (20, 30), "white").save(tmp_path / "covers" / "unit.jpg")
+    message = notifications._message({"subject": "作品更新", "galleries": [{"work_id": 1, "title": '<script>alert("x")</script>', "num_pages": 3,
+        "cover_path": "covers/unit.jpg", "tags": [{"type": "artist", "name": "A&B"}]}]}, "<unit@localhost>", {**smtp_config(), "site_url": "http://localhost"})
+    html = message.get_body(preferencelist=("html",)).get_content()
+    assert "<script>" not in html and "&lt;script&gt;" in html and "A&amp;B" in html
+    assert "cid:work-cover-0@nh-archive.local" in html and "/#reader/1" in html and "3 页" in html
+    assert [part.get_content_type() for part in message.walk()].count("image/jpeg") == 1
+    assert "A&B" in message.get_body(preferencelist=("plain",)).get_content()
 
 
 def test_mail_outbox_retries_same_message_and_never_resends_sent_updates(tmp_path, monkeypatch):

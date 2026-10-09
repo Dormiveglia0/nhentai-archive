@@ -102,11 +102,10 @@
   gap: 20px;
   border-bottom: 1px solid var(--folio-line);
   cursor: pointer;
-  transition: background-color 260ms ease, padding-left 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color 260ms ease;
 }
 
 .folio-toggle-row.is-active {
-  padding-left: 10px;
   background: rgba(173, 56, 46, 0.045);
 }
 
@@ -197,4 +196,3 @@
 .folio-manifest strong {
   font-weight: 500;
 }
-

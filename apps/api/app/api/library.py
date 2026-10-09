@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.api.schemas import LibraryScanRequest, MediaLibraryCreate, MediaLibraryPatch
 from app.container import services
+from app.services.directory_browser import browse_directories
 
 
 router = APIRouter(prefix="/library")
@@ -103,6 +104,14 @@ def directories():
     return services.media_libraries.list()
 
 
+@router.get("/browse")
+def browse_directory(path: str = "/"):
+    try:
+        return browse_directories(path)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @router.post("/directories", status_code=201)
 def add_directory(payload: MediaLibraryCreate):
     try:
@@ -120,10 +129,18 @@ def update_directory(library_id: int, payload: MediaLibraryPatch):
 
 
 @router.delete("/directories/{library_id}")
-def remove_directory(library_id: int):
+def remove_directory(library_id: int, purge: bool = False):
     try:
-        return services.media_libraries.remove(library_id)
-    except ValueError as exc:
+        return services.files.remove_library(library_id, purge)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/directories/{library_id}/remove-preview")
+def directory_removal_preview(library_id: int):
+    try:
+        return services.files.library_removal_preview(library_id)
+    except (ValueError, OSError) as exc:
         raise HTTPException(400, str(exc)) from exc
 
 

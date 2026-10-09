@@ -281,7 +281,7 @@ class FileMaintenanceService:
         }
 
     # --- preview_delete cascade analysis (read-only) ----------------------
-    def _work_files(self, work_id: int) -> list[tuple[Path, dict[str, Any] | None]]:
+    def _work_files(self, work_id: int, keep_sources: bool = False) -> list[tuple[Path, dict[str, Any] | None]]:
         if self.cache and self.cache.direct_in_use(work_id):
             raise PermissionError("作品正在读取或导出，请结束后再删除")
         if self.db.fetchone("""SELECT 1 FROM jobs WHERE type = 'remote_import'
@@ -308,6 +308,9 @@ class FileMaintenanceService:
             CASE WHEN json_valid(target_json) THEN json_extract(target_json, '$.library_id') END IN ({','.join('?' for _ in library_ids)}) LIMIT 1""", tuple(library_ids)):
             raise PermissionError("目录库正在扫描，请结束扫描后再删除")
         for row in rows:
+            # Removed libraries retain metadata; clearing it must never touch their source files.
+            if row["kind"] == "source_cbz" and (keep_sources or row.get("removed_at")):
+                continue
             source = row if row["kind"] == "source_cbz" else None
             ap = self.libraries.resolve_file(row, for_write=True) if source else self._abs(row["path"])
             if ap is not None:
@@ -444,6 +447,51 @@ class FileMaintenanceService:
         # ponytail: shared cache lock serializes deletion; use per-work locks if bulk throughput requires it.
         with self.cache._lock if self.cache else nullcontext():
             return self._delete(targets)
+
+    def _exclusive_library_works(self, library_id):
+        return self.db.fetchall("""SELECT DISTINCT i.work_id FROM library_items i
+            WHERE i.library_id = ? AND i.work_id IS NOT NULL AND NOT EXISTS (
+              SELECT 1 FROM work_files f LEFT JOIN library_items other ON other.id = f.library_item_id
+              WHERE f.work_id = i.work_id AND f.kind = 'source_cbz'
+              AND (other.library_id IS NULL OR other.library_id <> ?))""", (library_id, library_id))
+
+    def library_removal_preview(self, library_id: int):
+        self.libraries.get(library_id)
+        self.libraries._require_idle(library_id)
+        rows = self._exclusive_library_works(library_id)
+        warnings = []
+        for row in rows:
+            try:
+                self._work_files(row["work_id"], keep_sources=True)
+            except (OSError, ValueError) as exc:
+                warnings.append(str(exc))
+        total = self.db.fetchone("SELECT COUNT(DISTINCT work_id) AS n FROM library_items WHERE library_id=?", (library_id,))["n"]
+        return {"exclusive_works": len(rows), "shared_works": total - len(rows), "purge_allowed": not warnings, "warnings": list(dict.fromkeys(warnings))}
+
+    def remove_library(self, library_id: int, purge: bool = False) -> dict[str, Any]:
+        with self.cache._lock if self.cache else nullcontext():
+            with self.db.connect() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                self.libraries.get(library_id)
+                self.libraries._require_idle(library_id)
+                rows = self._exclusive_library_works(library_id)
+                if self.libraries.get(library_id)["kind"] == "managed":
+                    raise ValueError("本地导入库不能移除")
+                paths = [(row["work_id"], self._work_files(row["work_id"], keep_sources=True)) for row in rows] if purge else []
+                # Check every work before changing the library or deleting derived files.
+                errors = []
+                for work_id, files in paths:
+                    for path, source in files:
+                        self._unlink(path, {"kind": "work", "work_id": work_id}, errors, source)
+                if errors:
+                    raise ValueError("；".join(item["message"] for item in errors))
+                conn.execute("UPDATE media_libraries SET enabled=0, removed_at=CURRENT_TIMESTAMP, health='removed' WHERE id=?", (library_id,))
+                conn.execute("UPDATE library_items SET status='detached' WHERE library_id=?", (library_id,))
+                for work_id, _files in paths:
+                    conn.execute("DELETE FROM works WHERE id=?", (work_id,))
+                    conn.execute("UPDATE library_items SET work_id=NULL WHERE work_id=?", (work_id,))
+            return {"removed": library_id, "source_files_deleted": False, "metadata_preserved": not purge,
+                    "removed_works": len(paths), "preserved_works": len(rows) if not purge else 0}
 
     def _delete(self, targets: list[dict[str, Any]]) -> dict[str, Any]:
         deleted_files = 0

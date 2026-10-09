@@ -38,11 +38,11 @@ class SubscriptionService:
 
     @staticmethod
     def _interval(value):
-        if isinstance(value, bool) or not isinstance(value, int) or not 300 <= value <= 86400:
-            raise ValueError("检查间隔须在5分钟至24小时之间")
+        if isinstance(value, bool) or not isinstance(value, int) or value not in {86400, 259200, 604800}:
+            raise ValueError("检查间隔请选择1、3或7天")
         return value
 
-    def subscribe(self, remote_tag_id: int, tag_type: str, interval_seconds=21600, email_enabled=True):
+    def subscribe(self, remote_tag_id: int, tag_type: str, interval_seconds=86400, email_enabled=True):
         if tag_type not in {"artist", "group"} or isinstance(remote_tag_id, bool) or not isinstance(remote_tag_id, int) or remote_tag_id <= 0:
             raise ValueError("订阅需要真实的作者或社团标签ID")
         self._interval(interval_seconds)

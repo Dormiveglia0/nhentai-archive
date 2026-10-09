@@ -10,7 +10,7 @@ import { ExportDefaultsSection } from "./ExportDefaultsSection";
 import { PreferencesSection } from "./PreferencesSection";
 import { StorageSection } from "./StorageSection";
 import { TranslationSection } from "./TranslationSection";
-import { NotificationSection } from "./NotificationSection";
+import { SmtpSection } from "./SmtpSection";
 import { useSettingsState } from "./useSettingsState";
 import "./SettingsPage.css";
 
@@ -39,7 +39,7 @@ const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
     title: "媒体库与存储",
     copy: "管理媒体库、扫描与阅读缓存。",
   },
-  notifications: { title: "订阅与邮件通知", copy: "管理作者、社团订阅与SMTP通知。" },
+  notifications: { title: "邮件通知", copy: "配置邮件发送与接收。" },
 };
 
 export function SettingsPage({
@@ -116,7 +116,7 @@ export function SettingsPage({
           {vm.section === "export" ? <ExportDefaultsSection vm={vm} /> : null}
           {vm.section === "data" ? <DataSection /> : null}
           {vm.section === "storage" ? <StorageSection vm={vm} /> : null}
-          {vm.section === "notifications" ? <NotificationSection blurCovers={vm.settings?.privacy.blur_covers_default ?? true} /> : null}
+          {vm.section === "notifications" ? <SmtpSection /> : null}
 
           <AnimatePresence mode="popLayout">
             {vm.error ? (

@@ -2,7 +2,7 @@ import { flushSync } from "react-dom";
 
 let active: ViewTransition | undefined;
 let revision = 0;
-type Scope = "page" | "settings" | "tasks";
+type Scope = "page" | "settings" | "tasks" | "discover" | "files";
 
 export function cancelPageTransition() {
   revision += 1;

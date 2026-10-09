@@ -1,3 +1,6 @@
+import "./NotificationSection.css";
+import { createPortal } from "react-dom";
+import { useNativeDialog } from "../../lib/useNativeDialog";
 import { Mail, RefreshCw, Save, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -6,6 +9,7 @@ import { parseUtcTimestamp } from "../../lib/format";
 import { FolioSelect, FolioToggleRow } from "../folio/ui/FolioPrimitives";
 
 export function SmtpSection() {
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [config, setConfig] = useState<SmtpSettings | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [security, setSecurity] = useState<SmtpSettings["security"]>("starttls");
@@ -97,6 +101,7 @@ export function SmtpSection() {
     {error ? <p className="folio-media-error" role="alert">{error}</p> : null}
     {message ? <p className="folio-media-feedback" role="status">{message}</p> : null}
     <div className="folio-media-actions folio-smtp-actions">
+      <button className="folio-line-button" type="button" onClick={() => setPreviewOpen(true)}><Mail size={15} />预览邮件</button>
       <button className="folio-line-button is-primary" type="button" disabled={!config || busy || !dirty} onClick={() => void save()}><Save size={15} />保存邮件设置</button>
       <button className="folio-line-button" type="button" disabled={!config?.host || !config.sender || !config.recipient || busy || dirty} onClick={() => void test()}><Send size={15} />发送测试邮件</button>
     </div>
@@ -110,5 +115,22 @@ export function SmtpSection() {
         {mail.last_error ? <p className="folio-media-error">{mail.last_error}</p> : null}
       </div>)}
     </details>
+    {previewOpen ? <MailPreviewDialog onClose={() => setPreviewOpen(false)} /> : null}
   </section>;
+}
+
+function MailPreviewDialog({ onClose }: { onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const dismiss = useNativeDialog(dialog, onClose);
+  const [html, setHtml] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    api.previewMail().then(value => { if (alive) setHtml(value.html); }).catch(reason => { if (alive) setError(reason.message); });
+    return () => { alive = false; };
+  }, []);
+  return createPortal(<dialog ref={dialog} className="folio-mail-preview" aria-label="通知邮件预览">
+    <header><h2>通知邮件预览</h2><button type="button" autoFocus onClick={dismiss}>关闭</button></header>
+    {error ? <p className="folio-media-error" role="alert">{error}</p> : html ? <iframe title="通知邮件正文" sandbox="" srcDoc={html} /> : <p role="status">正在读取作品…</p>}
+  </dialog>, document.querySelector(".folio") ?? document.body);
 }

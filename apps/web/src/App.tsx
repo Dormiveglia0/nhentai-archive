@@ -38,8 +38,8 @@ const DictionaryPage = lazy(() =>
 const TasksPage = lazy(() =>
   import("./components/tasks/TasksPage").then((module) => ({ default: module.TasksPage })),
 );
-const ExportPage = lazy(() =>
-  import("./components/export/ExportPage").then((module) => ({ default: module.ExportPage })),
+const LegacyExportEntry = lazy(() =>
+  import("./components/export/LegacyExportEntry").then((module) => ({ default: module.LegacyExportEntry })),
 );
 const FilesPage = lazy(() =>
   import("./components/files/FilesPage").then((module) => ({ default: module.FilesPage })),
@@ -177,7 +177,7 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
               {archivePage.name === "governance" ? <GovernancePage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
               {archivePage.name === "dictionary" ? <DictionaryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "tasks" ? <TasksPage blurCovers={blurCovers} /> : null}
-              {archivePage.name === "export" ? <ExportPage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
+              {archivePage.name === "export" ? <LegacyExportEntry initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
               {archivePage.name === "files" ? <FilesPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "settings" ? <SettingsPage onBlurCoversChange={setBlurCovers} /> : null}
             </Suspense>

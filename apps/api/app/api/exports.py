@@ -15,8 +15,13 @@ router = APIRouter()
 
 
 @router.get("/exports/queue")
-def queue():
-    return services.exports.queue()
+def queue(work_ids: str = ""):
+    try:
+        if len(work_ids) > 4096:
+            raise ValueError("作品选择过多")
+        return services.exports.queue([int(value) for value in work_ids.split(",")] if work_ids else None)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/exports/summary")

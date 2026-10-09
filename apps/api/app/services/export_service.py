@@ -37,8 +37,8 @@ class ExportService:
     def summary(self) -> dict[str, Any]:
         return self._queue_summary(self._queue_states())
 
-    def queue(self) -> dict[str, Any]:
-        states = self._queue_states()
+    def queue(self, work_ids: list[int] | None = None) -> dict[str, Any]:
+        states = self._queue_states(work_ids)
         return {"result": states, "summary": self._queue_summary(states)}
 
     def _queue_summary(self, states: list[dict[str, Any]]) -> dict[str, int]:
@@ -49,7 +49,10 @@ class ExportService:
             "warnings": sum(bool(state["warnings"]) for state in states),
         }
 
-    def _queue_states(self) -> list[dict[str, Any]]:
+    def _queue_states(self, work_ids: list[int] | None = None) -> list[dict[str, Any]]:
+        if work_ids is not None and (not work_ids or len(work_ids) > 500 or any(not isinstance(i, int) or i <= 0 for i in work_ids)):
+            raise ValueError("请选择1至500部作品")
+        where = f"WHERE w.id IN ({','.join('?' for _ in work_ids)})" if work_ids is not None else ""
         rows = self.db.fetchall(
             f"""
             SELECT
@@ -92,8 +95,9 @@ class ExportService:
               LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
               GROUP BY wt.work_id
             ) tags ON tags.work_id = w.id
+            {where}
             ORDER BY w.updated_at DESC, w.id DESC
-            """
+            """, work_ids or (),
         )
         sources = {}
         for source in self.libraries.files(metadata=True):

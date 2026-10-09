@@ -89,53 +89,6 @@
   margin-top: 14px;
 }
 
-.folio-settings-subhead {
-  min-height: 48px;
-  margin-top: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--folio-line);
-}
-
-.folio-settings-subhead h3 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: "Noto Serif SC", "Songti SC", serif;
-  font-size: 15px;
-}
-
-.folio-settings-subhead h3 svg {
-  color: var(--folio-red);
-}
-
-.folio-settings-subhead > span {
-  color: var(--folio-muted);
-  font-size: 12px;
-}
-
-.folio-settings-mini-action {
-  min-height: 34px;
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid var(--folio-line);
-  background: transparent;
-  color: var(--folio-muted);
-  font-size: 12px;
-  transition: border-color 180ms ease, color 180ms ease, transform 180ms ease;
-}
-
-.folio-settings-mini-action:hover:not(:disabled) {
-  border-color: var(--folio-ink);
-  color: var(--folio-ink);
-  transform: translateY(-1px);
-}
-
 .folio-settings-inline-error {
   margin: 12px 0 0;
   color: var(--folio-red);

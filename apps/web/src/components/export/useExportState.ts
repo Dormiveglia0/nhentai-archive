@@ -52,12 +52,13 @@ export type ExportViewModel = {
   setStatusFilter: (filter: "all" | "ready" | "warning" | "blocked") => void;
 };
 
-export function useExportState(initialWorkId?: number): ExportViewModel {
+export function useExportState(initialWorkId?: number, initialIds: number[] = []): ExportViewModel {
+  const contextKey = initialIds.join(",");
   const [queue, setQueue] = useState<ExportQueue | null>(null);
   const [summary, setSummary] = useState<ExportSummaryStats | null>(null);
   const [settings, setSettings] = useState<SettingsSummary | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(
-    new Set(initialWorkId ? [initialWorkId] : [])
+    new Set(initialIds.length ? initialIds : initialWorkId ? [initialWorkId] : [])
   );
   const [focusId, setFocusId] = useState<number | null>(initialWorkId ?? null);
   const [outputNames, setOutputNames] = useState<Record<number, string>>({});
@@ -77,7 +78,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
   const previewRequestRef = useRef(0);
   const [query, setQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "warning" | "blocked">("all");
-  const [multiSelect, setMultiSelect] = useState(false);
+  const [multiSelect, setMultiSelect] = useState(initialIds.length > 1);
 
   const items = useMemo(() => queue?.result ?? [], [queue]);
   const selectedItems = useMemo(
@@ -126,14 +127,13 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     setLoading(true);
     setError(null);
     try {
-      const [queuePayload, summaryPayload, settingsPayload] = await Promise.all([
-        api.exportQueue(),
-        api.exportSummary(),
+      const [queuePayload, settingsPayload] = await Promise.all([
+        api.exportQueue(contextKey ? contextKey.split(",").map(Number) : undefined),
         api.settings(),
       ]);
       if (requestId !== loadRequestRef.current) return;
       setQueue(queuePayload);
-      setSummary(summaryPayload);
+      setSummary(queuePayload.summary);
       setSettings(settingsPayload);
       // Seed export option switches from the saved defaults, once per session.
       if (!defaultsApplied.current && settingsPayload.export.default_options) {
@@ -165,7 +165,7 @@ export function useExportState(initialWorkId?: number): ExportViewModel {
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
     }
-  }, []);
+  }, [contextKey]);
 
   useEffect(() => {
     void load(initialWorkId ?? null);

@@ -1,5 +1,6 @@
-import { Download, RefreshCw, Save, Tags } from "lucide-react";
+import { RefreshCw, Save, Tags } from "lucide-react";
 
+import { ExportAction } from "../export/ExportAction";
 import { pageHref } from "../../lib/navigation";
 
 export function GovernanceActionBar({
@@ -45,10 +46,7 @@ export function GovernanceActionBar({
         <Tags size={16} />
         <span>管理词典</span>
       </a>
-      <a className="folio-governance-action is-secondary" aria-label="进入导出" title="进入导出" href={pageHref({ name: "export", workId })}>
-        <Download size={16} />
-        <span>进入导出</span>
-      </a>
+      <ExportAction workIds={[workId]} className="folio-governance-action is-secondary" label="导出" />
       <button className="folio-governance-action is-secondary" aria-label="重新读取" title="重新读取" type="button" onClick={() => void onReload()}>
         <RefreshCw size={16} />
         <span>重新读取</span>

@@ -43,7 +43,7 @@ def build_services() -> SimpleNamespace:
     media_libraries = archive.libraries
     library_index = LibraryIndexService(settings, db, media_libraries)
     discover = DiscoverService(db, client)
-    notifications = NotificationService(db)
+    notifications = NotificationService(db, settings, client)
     subscriptions = SubscriptionService(db, client, discover, notifications)
     reader = ReaderService(db, archive.cache)
     library = LibraryService(db)

@@ -149,7 +149,7 @@ class NhentaiClient:
         query = urllib.parse.urlencode({"path": safe_path, "thumbnail": str(thumbnail).lower()})
         return f"/api/discover/media?{query}"
 
-    def open_media(self, path: str, thumbnail: bool = False):
+    def open_media(self, path: str, thumbnail: bool = False, timeout: float | None = None):
         parsed = urllib.parse.urlsplit(path)
         if parsed.scheme or parsed.netloc or ".." in parsed.path.split("/"):
             raise NhentaiApiError(400, "invalid_media_path", "Invalid remote media path")
@@ -161,7 +161,7 @@ class NhentaiClient:
             headers={"Accept": "image/avif,image/webp,image/*,*/*;q=0.8", "User-Agent": self.user_agent},
         )
         try:
-            response = urllib.request.urlopen(request, timeout=self.timeout)
+            response = urllib.request.urlopen(request, timeout=timeout or self.timeout)
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", "replace")
             raise normalize_remote_error(exc.code, body, _retry_after(exc)) from exc

@@ -43,7 +43,6 @@ export const FOLIO_PAGES: PageDefinition[] = [
   { id: "governance", label: "整理", title: "作品整理", description: "补全作品信息，整理标签与文件。", icon: PenLine },
   { id: "dictionary", label: "词典", title: "词典", description: "管理标签翻译与别名。", icon: Languages },
   { id: "tasks", label: "队列", title: "队列", description: "查看任务进度与日志。", icon: Workflow },
-  { id: "export", label: "导出", title: "导出", description: "选择作品并下载 CBZ。", icon: Download },
   { id: "files", label: "文件", title: "文件", description: "查看文件状态，整理存储空间。", icon: FileArchive },
   { id: "settings", label: "设置", title: "设置", description: "集中管理连接、翻译、阅读、导出与本地存储。", icon: Settings },
 ];
@@ -55,5 +54,5 @@ export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; descriptio
   { id: "export", label: "导出", description: "CBZ 打包默认值", icon: Download },
   { id: "data", label: "统计", description: "阅读记录与作品统计", icon: BarChart3 },
   { id: "storage", label: "媒体库", description: "扫描、刮削与阅读缓存", icon: Folder },
-  { id: "notifications", label: "订阅与通知", description: "作者、社团与邮件通知", icon: Mail },
+  { id: "notifications", label: "邮件通知", description: "邮件发送配置", icon: Mail },
 ];

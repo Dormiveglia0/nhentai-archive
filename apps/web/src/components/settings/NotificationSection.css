@@ -1,5 +1,11 @@
 .folio-subscriptions-list, .folio-smtp fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
-.folio-subscriptions-list article { display: grid; grid-template-columns: minmax(0, 1fr) 160px auto; gap: 24px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--folio-line); }
+.folio-subscriptions-list article { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 20px; align-items: end; padding: 22px 0; border-bottom: 1px solid var(--folio-line); }
+.folio-subscriptions-list article > .folio-select > button { height: 44px; }
+.folio-subscriptions-list .folio-media-actions { height: 44px; align-items: stretch; flex-wrap: nowrap; }
+.folio-subscriptions-list .folio-media-actions button { min-height: 44px; }
+.folio-subscription-update-actions { display: flex; gap: 12px; padding: 0 0 16px 75px; }
+.folio-subscription-update-actions a, .folio-subscription-update-actions button, .folio-subscription-mail-settings { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; color: var(--folio-ink); background: transparent; border: 1px solid var(--folio-line); text-decoration: none; font-size: 13px; }
+.folio-subscription-mail-settings { margin-top: 28px; }
 .folio-subscription-main { min-width: 0; }
 .folio-subscription-main > a { display: flex; align-items: baseline; gap: 10px; color: var(--folio-ink); text-decoration: none; }
 .folio-subscription-main > a > span { flex-shrink: 0; color: var(--folio-red); font-size: 13px; }
@@ -36,11 +42,19 @@
 .folio-smtp-outbox p { flex-basis: 100%; margin: 0; }
 
 @media (max-width: 920px) {
-  .folio-subscriptions-list article { grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; }
-  .folio-subscriptions-list .folio-media-actions { grid-column: 1 / -1; }
+  .folio-subscriptions-list article { grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
+  .folio-subscription-main { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
-  .folio-subscriptions-list article { grid-template-columns: minmax(0, 1fr); }
-  .folio-subscriptions-list article > .folio-select { max-width: 240px; }
+  .folio-subscriptions-list article { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  .folio-subscriptions-list .folio-media-actions { gap: 4px; }
+  .folio-subscriptions-list .folio-media-actions button { padding-inline: 8px; }
   .folio-subscription-updates { grid-template-columns: minmax(0, 1fr); }
 }
+.folio-mail-preview { width: min(760px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 0; border: 1px solid var(--folio-ink); border-radius: 0; background: var(--folio-paper); color: var(--folio-ink); }
+.folio-mail-preview::backdrop { background: rgba(23,24,21,.6); }
+.folio-mail-preview header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--folio-line); }
+.folio-mail-preview h2 { margin: 0; font-size: 17px; font-weight: 500; }
+.folio-mail-preview header button { min-height: 44px; padding: 0 12px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); }
+.folio-mail-preview iframe { width: 100%; height: 70dvh; display: block; border: 0; }
+.folio-mail-preview > p { margin: 24px; }

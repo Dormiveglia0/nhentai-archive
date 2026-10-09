@@ -1,8 +1,9 @@
 import { AlertTriangle, LoaderCircle, Trash2, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { api, type FileDeletePreview } from "../../../lib/api";
 import { formatBytes } from "../../../lib/format";
+import { useNativeDialog } from "../../../lib/useNativeDialog";
 
 type Props = {
   workId: number;
@@ -19,17 +20,7 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
   const titleId = useId();
   const summaryId = useId();
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!preview || !dialog) return;
-    dialog.showModal();
-    return () => {
-      if (dialog.open) dialog.close();
-      window.requestAnimationFrame(() => {
-        if (triggerRef.current?.isConnected) triggerRef.current.focus();
-      });
-    };
-  }, [preview]);
+  const dismiss = useNativeDialog(dialogRef, () => { setPreview(null); setError(null); }, Boolean(preview), busy, triggerRef);
 
   async function requestPreview() {
     setBusy(true);
@@ -87,13 +78,6 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
           aria-labelledby={titleId}
           aria-describedby={summaryId}
           aria-busy={busy}
-          onCancel={(event) => {
-            event.preventDefault();
-            if (!busy) {
-              setPreview(null);
-              setError(null);
-            }
-          }}
         >
           <header>
             <h2 id={titleId}>确认删除本地作品</h2>
@@ -118,10 +102,8 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setPreview(null);
-                setError(null);
-              }}
+              onClick={dismiss}
+              autoFocus
               disabled={busy}
             >
               <X size={15} />取消

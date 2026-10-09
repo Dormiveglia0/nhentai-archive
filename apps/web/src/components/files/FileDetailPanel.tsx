@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Check, Clipboard, Download, FileQuestion, Images, PenLine, Trash2, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Check, Clipboard, FileQuestion, Images, PenLine, Trash2, X } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -6,6 +6,7 @@ import type { FileEntry } from "../../lib/api";
 import { parseUtcTimestamp } from "../../lib/format";
 import { duration, ease } from "../../lib/motion";
 import { pageHref, tagSearchHref } from "../../lib/navigation";
+import { ExportAction } from "../export/ExportAction";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { entryStatusLabel, entryStatusTone, formatBytes, kindLabel } from "./fileHelpers";
 
@@ -140,9 +141,7 @@ function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: File
             <a href={pageHref({ name: "governance", workId: focus.work_id })}>
               <PenLine size={15} />编辑信息<ArrowUpRight size={13} />
             </a>
-            <a href={pageHref({ name: "export", workId: focus.work_id })}>
-              <Download size={15} />进入导出<ArrowUpRight size={13} />
-            </a>
+            <ExportAction workIds={[focus.work_id]} blurCovers={blurCovers} label="导出" />
           </>
         ) : null}
         <button type="button" onClick={() => void copyPath()} disabled={path === "—"} aria-live="polite">

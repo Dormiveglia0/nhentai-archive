@@ -25,6 +25,14 @@ def test_smtp():
     return services.notifications.test()
 
 
+@router.get("/smtp/preview")
+def preview_smtp():
+    try:
+        return services.notifications.preview()
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @router.get("/smtp/outbox")
 def mail_outbox():
     return services.notifications.outbox()

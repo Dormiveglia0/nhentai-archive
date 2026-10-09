@@ -1,5 +1,6 @@
-import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Folder, Pause, Pencil, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Folder, Pause, Pencil, Play, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { api, type LibraryItem, type LibraryScanRun, type MediaLibrary, type MediaLibraryConfig } from "../../lib/api";
 import { parseUtcTimestamp } from "../../lib/format";
@@ -7,6 +8,8 @@ import { statusLabel } from "../../lib/jobs";
 import { pageHref } from "../../lib/navigation";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { MediaLibraryEditor } from "./MediaLibraryEditor";
+import { useNativeDialog } from "../../lib/useNativeDialog";
+import "./StorageSection.css";
 
 const KINDS = { managed: "本地导入", local: "本地目录", mounted: "挂载目录" };
 const HEALTH: Record<string, string> = { unknown: "尚未检查", online: "正常", offline: "不可用", partial: "部分失败" };
@@ -60,6 +63,7 @@ export function MediaLibrariesSection() {
   const [libraries, setLibraries] = useState<MediaLibrary[]>([]);
   const [defaults, setDefaults] = useState<MediaLibraryConfig | null>(null);
   const [editing, setEditing] = useState<MediaLibrary | "new" | null>(null);
+  const [removing, setRemoving] = useState<MediaLibrary | null>(null);
   const [checking, setChecking] = useState<number | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -88,15 +92,13 @@ export function MediaLibrariesSection() {
     return () => { alive = false; window.clearTimeout(timer); };
   }, [revision]);
 
-  async function act(library: MediaLibrary, action: "scan" | "toggle" | "remove") {
-    if (action === "remove" && !window.confirm(`移除“${library.name}”？源文件和已保存的作品信息都会保留。`)) return;
+  async function act(library: MediaLibrary, action: "scan" | "toggle") {
     setBusy(library.id);
     setError("");
     setMessage("");
     try {
       if (action === "scan") { await api.enqueueLibraryScan(undefined, library.id); setMessage("扫描已加入队列"); }
       if (action === "toggle") await api.updateMediaLibrary(library.id, { enabled: !library.enabled });
-      if (action === "remove") { await api.removeMediaLibrary(library.id); if (checking === library.id) setChecking(null); setMessage("媒体库已移除，源文件与作品信息已保留"); }
       reload();
     } catch (exc) { setError(exc instanceof Error ? exc.message : String(exc)); }
     finally { setBusy(null); }
@@ -126,11 +128,44 @@ export function MediaLibrariesSection() {
           <button type="button" className="folio-settings-mini-action" disabled={busy !== null} onClick={() => void act(library, "toggle")}>{library.enabled ? <Pause size={14} /> : <Play size={14} />}{library.enabled ? "暂停" : "启用"}</button>
           <button type="button" className="folio-settings-mini-action" disabled={busy !== null} onClick={() => setEditing(library)}><Pencil size={14} />设置</button>
           <button type="button" className="folio-settings-mini-action" aria-expanded={checking === library.id} onClick={() => setChecking(value => value === library.id ? null : library.id)}><ChevronDown size={14} />记录</button>
-          {library.kind !== "managed" ? <button type="button" className="folio-settings-mini-action is-danger" aria-label={"移除媒体库 " + library.name} disabled={busy !== null || library.scanning || !!library.active_scan_job_id} onClick={() => void act(library, "remove")}><Trash2 size={14} /></button> : null}
+          {library.kind !== "managed" ? <button type="button" className="folio-settings-mini-action is-danger" aria-label={"移除媒体库 " + library.name} disabled={busy !== null || library.scanning || !!library.active_scan_job_id} onClick={() => setRemoving(library)}><Trash2 size={14} /></button> : null}
         </div>
         {checking === library.id ? <LibraryChecks library={library} /> : null}
       </article>)}
     </div>
     {editing && defaults ? <MediaLibraryEditor library={editing === "new" ? null : editing} defaults={defaults} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setMessage("媒体库设置已保存"); reload(); }} /> : null}
+    {removing ? <RemoveLibraryDialog library={removing} onClose={() => setRemoving(null)} onRemoved={purge => { setRemoving(null); setChecking(null); setMessage(purge ? "媒体库及独有作品信息已移除，源文件已保留" : "媒体库已移除，作品信息已保留"); reload(); }} /> : null}
   </section>;
+}
+
+function RemoveLibraryDialog({ library, onClose, onRemoved }: { library: MediaLibrary; onClose: () => void; onRemoved: (purge: boolean) => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [purge, setPurge] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState<Awaited<ReturnType<typeof api.mediaLibraryRemovalPreview>> | null>(null);
+  const dismiss = useNativeDialog(dialog, onClose, true, busy);
+  useEffect(() => {
+    let alive = true;
+    api.mediaLibraryRemovalPreview(library.id).then(value => { if (alive) setPreview(value); }).catch(reason => { if (alive) setError(reason.message); });
+    return () => { alive = false; };
+  }, [library.id]);
+  async function remove() {
+    setBusy(true); setError("");
+    try { await api.removeMediaLibrary(library.id, purge); onRemoved(purge); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); setBusy(false); }
+  }
+  return createPortal(<dialog ref={dialog} className="folio-media-editor folio-remove-library" aria-label="移除媒体库">
+    <header><h2>移除“{library.name}”</h2><button type="button" className="folio-media-icon-button" disabled={busy} onClick={dismiss} aria-label="关闭移除媒体库"><X size={18} /></button></header>
+    <div className="folio-directory-picker-body">
+      <fieldset disabled={busy} className="folio-remove-options">
+        <label><input type="radio" name="purge" checked={!purge} onChange={() => setPurge(false)} /><span><strong>保留作品信息</strong><small>保留收藏、阅读记录和元数据，作品暂时无法从此库读取。</small></span></label>
+        <label><input type="radio" name="purge" checked={purge} disabled={!preview?.purge_allowed} onChange={() => setPurge(true)} /><span><strong>清理独有作品信息{preview ? ` · ${preview.exclusive_works} 部` : ""}</strong><small>同时清理阅读记录及缓存。其他媒体库的作品信息和所有源文件保留。</small></span></label>
+      </fieldset>
+      {preview?.shared_works ? <p className="folio-media-hint">{preview.shared_works} 部作品关联其他来源，将保留。</p> : null}
+      {preview?.warnings.map(warning => <p key={warning} className="folio-media-error">{warning}</p>)}
+      {error ? <p role="alert" className="folio-media-error">{error}</p> : null}
+    </div>
+    <footer><button type="button" className="folio-line-button" autoFocus disabled={busy} onClick={dismiss}>取消</button><button type="button" className="folio-line-button is-primary" disabled={busy || !preview || (purge && !preview.purge_allowed)} onClick={() => void remove()}>{busy ? "正在移除" : "确认移除"}</button></footer>
+  </dialog>, document.querySelector(".folio") ?? document.body);
 }

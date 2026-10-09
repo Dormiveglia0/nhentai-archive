@@ -1,5 +1,7 @@
 # NH Archive Agent Map
 
+当前阶段（2026-10-09）：正在实施 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。正式端口 4349 仍运行基线镜像 4046b0fd69ea，本轮未发布。订阅/更新由 `subscriptions/SubscriptionsPanel.tsx` 挂载于发现；设置仅保留 SMTP。导出使用 `export/ExportDialog.tsx` 上下文弹窗，旧链接由 `LegacyExportEntry.tsx` 兼容。下方历史完成状态不代表本轮完成。
+
 Use this file as the first frontend navigation index. Read only the row for the module being changed; do not load the former monolithic demo files into context.
 
 ## Active Frontend Contract

@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Download, Heart, PenTool, Wand2, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Heart, PenTool, Wand2, X } from "lucide-react";
 import { m } from "motion/react";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
@@ -6,6 +6,7 @@ import { api, type LibraryTag, type LibraryWork } from "../../lib/api";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { libraryTagHref, libraryTagKey, pageHref } from "../../lib/navigation";
 import { MetadataScrapePanel } from "./MetadataScrapePanel";
+import { ExportAction } from "../export/ExportAction";
 import { CreatorSubscribeButton, isCreatorTag, useCreatorSubscriptions } from "../subscriptions/CreatorSubscribeButton";
 import { AmbientCover } from "../folio/ui/AmbientCover";
 import { WorkDeleteAction } from "../folio/ui/WorkDeleteAction";
@@ -109,7 +110,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
             </div>
             <div className="folio-work-detail-tools">
               <a href={pageHref({ name: "governance", workId: work.id })} aria-label="编辑作品信息"><PenTool size={16} />编辑</a>
-              <a href={pageHref({ name: "export", workId: work.id })} aria-label="导出 CBZ"><Download size={16} />导出</a>
+              <ExportAction workIds={[work.id]} blurCovers={blurCovers} />
               <WorkDeleteAction workId={work.id} title={title} onDeleted={() => { onClose(); onDeleted(); }} />
             </div>
             <div className="folio-work-detail-main-actions folio-work-detail-source-actions">
