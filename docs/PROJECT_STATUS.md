@@ -1,12 +1,15 @@
 # NH Archive Project Status
 
-## Active Update — 2026-10-09
+2026-10-09 本轮已交付并部署到4349：多目录媒体库、增量监控、版本化阅读缓存、语言/置信度刮削、本地标签范围、作者/社团订阅与SMTP均已接通。完整后端323项、最终镜像323项通过；125项浏览器检查分批通过，问题作品另16项阅读/导出复验在测试入口修订后通过。真实rclone1.74.4/WebDAV/FUSE/Docker只读映射完成缓存、直接阅读、掉线保留、恢复和自动新增验证；10秒补偿配置下实际新增6.334秒被发现，新增扫描未产生自动任务或整包缓存。最终镜像media-20261009-published/latest（4046b0fd69ea），入口index-DMjx0tAq.js。生产113作品、110任务、27进度、736历史、95本地会话、422远端会话和认证记录已核对保留，完整性/外键通过。功能源码16c3db2已推送；证据与测量范围见MEDIA_LIBRARY_UPDATE.md。
 
-媒体目录库、挂载阅读缓存、刮削、作者/社团订阅和SMTP通知是当前长期目标，完整范围与阶段证据见`docs/MEDIA_LIBRARY_UPDATE.md`。更新前状态已推送为`7d2d426`及回滚标签`archive/ui-refined-20261009`。目录索引`0d57c16`、阅读缓存`c7813ca`、文件权限/删除`f373869`及治理/导出兼容`e2c1c87`已本地提交，迁移副本保留110作品/107任务。治理/审核/预览使用持久元数据，回写只更新选中源与清单，导出/回写按1MB打包；任务行日志已移除，详情日志保留。挂载关闭缓存后的读取/导出已有四进程隔离及短队列，超时/取消/卡死占用保护；直接阅读版本、重试恢复、迟到旧错误和会话页数保护已接通。最新302项后端、13项实际浏览器检查及2项延迟响应复验、构建通过，真实93本地会话迁移保留字段/时间。实际32.8MB副本直接首页读取82.591ms，导出0.767秒，父进程Python堆峰值0.42MB/2.17MB；源/副本、CRC与数据库保留。本地原生监控与挂载补偿已接通：事件持久合并、稳定重试、失败退避、人工任务优先及关闭/重启保护；307项后端通过，重启修复后11项回归通过。实际32.8MB副本新增/改名/删除约1.5秒，未变化补偿7.944ms且无归档读取/额外任务，作品/原件/数据库保留。刮削、订阅/邮件与设置/详情界面尚未完成，不能提前发布或宣布长期目标完成。
+
+## Completed Update — 2026-10-09
+
+媒体库、缓存、刮削、订阅和SMTP长期目标已交付。更新前源码`7d2d426`、标签`archive/ui-refined-20261009`和全部八个功能阶段提交均已推送到`codex/media-libraries-subscriptions`。最终集成`63ad3af`和源选择/WebP修复`16c3db2`对应当前部署。原镜像回滚标签`rollback-media-20261009`及新鲜备份`/tmp/nh-media-update-20261009/deploy/before-deploy.db`已保存；代码、镜像和数据库需成套回滚。最新证据见`docs/MEDIA_LIBRARY_UPDATE.md`。
 
 ## Current Version
 
-Feature-complete local loop after Phase 7 task center and final governance/export closure. Latest UI revision (2026-10-08): `ui-20261008-refined` / `latest` (`bce20c33aa80`) is deployed on port 4349; 106 browser checks and 236 backend tests pass.
+Current release (2026-10-09): `media-20261009-published` / `latest` (`4046b0fd69ea`) is healthy on port 4349. Full 323 backend/image tests, scoped 125 browser checks and actual rclone/FUSE/Docker verification pass. The 2026-10-08 UI review is the preserved visual baseline, recorded in `UI_AUDIT.md` and `DESIGNER_AUDIT.md`.
 
 Current real slice:
 
