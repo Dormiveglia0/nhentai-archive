@@ -576,6 +576,13 @@ class GovernanceService:
         if row["read_only"] or row["library_kind"] == "mounted":
             return False, ["该目录库只读，不能修改源文件"]
         library_id = row["library_id"] or self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
+        if self.db.fetchone("""SELECT 1 FROM jobs WHERE type='reader_verify' AND status IN ('queued','running','paused','cancelling')
+            AND json_extract(target_json,'$.work_id')=? LIMIT 1""", (work_id,)):
+            return False, ["作品正在核验，请结束任务后再回写"]
+        if self.db.fetchone("""SELECT 1 FROM jobs j, json_each(j.target_json, '$.plan') p
+            WHERE j.type='library_migration' AND j.status IN ('queued','running','paused','cancelling')
+            AND json_extract(p.value, '$.work_id')=? LIMIT 1""", (work_id,)):
+            return False, ["作品正在迁移，请结束任务后再回写"]
         if self.db.fetchone("SELECT 1 FROM library_scan_runs WHERE library_id = ? AND status = 'running' LIMIT 1", (library_id,)):
             return False, ["源文件正在扫描，请结束扫描后再回写"]
         if not self.libraries.file_available(row):

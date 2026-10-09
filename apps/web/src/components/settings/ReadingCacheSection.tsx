@@ -70,22 +70,22 @@ export function ReadingCacheSection() {
 
   return <section className="folio-reading-cache" aria-label="阅读缓存">
     <div className="folio-settings-subhead"><h3>阅读缓存</h3><button className="folio-settings-mini-action" type="button" aria-label="刷新缓存用量" onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /></button></div>
-    {summary ? <div className="folio-cache-usage">
-      <div><strong>{formatBytes(summary.ready_bytes + summary.reserved_bytes)} / {formatBytes(summary.config.max_bytes)}</strong><span>{summary.ready_count} 部已缓存 · {summary.active_count} 部在用</span></div>
-      <progress aria-label="阅读缓存用量" value={Math.min(summary.ready_bytes + summary.reserved_bytes, summary.config.max_bytes)} max={summary.config.max_bytes} />
-      {summary.reserved_bytes ? <p>下载预留 {formatBytes(summary.reserved_bytes)}</p> : null}
-      {summary.ready_bytes + summary.reserved_bytes > summary.config.max_bytes ? <p className="folio-media-error">在用缓存超过当前配额，退出阅读后自动回收。</p> : null}
-    </div> : <p className="folio-media-hint">正在读取缓存用量…</p>}
-    {config ? <fieldset ref={fieldsRef} key={JSON.stringify(config)} className="folio-cache-fields" disabled={busy} onChange={() => setDirty(true)} onKeyDown={event => {
+    <div className="folio-cache-usage" aria-busy={!summary}>
+      <div><strong>{summary ? `${formatBytes(summary.ready_bytes + summary.reserved_bytes)} / ${formatBytes(summary.config.max_bytes)}` : "正在读取缓存用量…"}</strong><span>{summary ? `${summary.ready_count} 部已缓存 · ${summary.active_count} 部在用` : "正在读取缓存状态…"}</span></div>
+      <progress aria-label="阅读缓存用量" value={summary ? Math.min(summary.ready_bytes + summary.reserved_bytes, summary.config.max_bytes) : undefined} max={summary?.config.max_bytes ?? 1} />
+      {summary?.reserved_bytes ? <p>下载预留 {formatBytes(summary.reserved_bytes)}</p> : null}
+      {summary && summary.ready_bytes + summary.reserved_bytes > summary.config.max_bytes ? <p className="folio-media-error">在用缓存超过当前配额，退出阅读后自动回收。</p> : null}
+    </div>
+    <fieldset ref={fieldsRef} key={JSON.stringify(config)} className="folio-cache-fields" disabled={busy || !config} onChange={() => setDirty(true)} onKeyDown={event => {
       if (event.key === "Enter" && event.target instanceof HTMLInputElement) { event.preventDefault(); if (!busy) void save(); }
     }}>
       <div className="folio-field-matrix">
-        <label className="folio-field"><span>缓存配额（GiB）</span><input name="max_gib" type="number" defaultValue={config.max_bytes / 1024 ** 3} min={.0625} max={1024} step="any" required /><i /></label>
-        <label className="folio-field"><span>空闲保留期限（小时）</span><input name="ttl_hours" type="number" defaultValue={config.ttl_hours} min={1} max={8760} step={1} required /><i /></label>
-        <label className="folio-field"><span>同时下载数量</span><input name="max_parallel" type="number" defaultValue={config.max_parallel} min={1} max={4} step={1} required /><i /></label>
-        <label className="folio-field"><span>磁盘保留空间（MiB）</span><input name="free_mib" type="number" defaultValue={config.min_free_bytes / 1024 ** 2} min={0} max={1048576} step="any" required /><i /></label>
+        <label className="folio-field"><span>缓存配额（GiB）</span><input name="max_gib" type="number" defaultValue={config ? config.max_bytes / 1024 ** 3 : ""} min={.0625} max={1024} step="any" required /><i /></label>
+        <label className="folio-field"><span>空闲保留期限（小时）</span><input name="ttl_hours" type="number" defaultValue={config?.ttl_hours ?? ""} min={1} max={8760} step={1} required /><i /></label>
+        <label className="folio-field"><span>同时下载数量</span><input name="max_parallel" type="number" defaultValue={config?.max_parallel ?? ""} min={1} max={4} step={1} required /><i /></label>
+        <label className="folio-field"><span>磁盘保留空间（MiB）</span><input name="free_mib" type="number" defaultValue={config ? config.min_free_bytes / 1024 ** 2 : ""} min={0} max={1048576} step="any" required /><i /></label>
       </div>
-    </fieldset> : null}
+    </fieldset>
     {error || loadError ? <p className="folio-media-error" role="alert">{error || loadError}</p> : null}
     {message ? <p className="folio-media-feedback" role="status">{message}</p> : null}
     <div className="folio-media-actions folio-cache-actions">

@@ -1,6 +1,6 @@
 import { ArrowRight, ArrowUpRight, BookOpen } from "lucide-react";
 import { m } from "motion/react";
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import type { LibraryWork } from "../../../lib/api";
 import { usePrefersReducedMotion } from "../../../lib/motion";
 import { workTitle, workCoverHref } from "../../../lib/format";
@@ -8,8 +8,8 @@ import { pageHref } from "../../../lib/navigation";
 import { AmbientCover } from "./AmbientCover";
 import "./HomeHero.css";
 
-export function HomeHero({ works = [], blurCovers = true, loading = false }: {
-  works?: LibraryWork[]; blurCovers?: boolean; loading?: boolean;
+export function HomeHero({ works = [], blurCovers = true, loading = false, activity }: {
+  works?: LibraryWork[]; blurCovers?: boolean; loading?: boolean; activity?: ReactNode;
 }) {
   const reduced = usePrefersReducedMotion();
   const [failedCovers, setFailedCovers] = useState<number[]>([]);
@@ -54,19 +54,19 @@ export function HomeHero({ works = [], blurCovers = true, loading = false }: {
           </div>
         </m.article>
       </section>
-      {recent.length ? <section className="folio-home-recent" aria-label="最近添加的作品">
+      {activity ?? (recent.length ? <section className="folio-home-recent" aria-label="最近添加的作品">
         <header><h2>最近添加</h2><a href={pageHref({ name: "library" })}>查看全部<ArrowUpRight size={15} /></a></header>
         <div className="folio-home-recent-list">{recent.map((work, index) => <m.article className="folio-home-book" key={work.id} data-work-id={work.id}
           initial={reduced ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .5, delay: reduced ? 0 : (index + 1) * .06, ease: [.22, 1, .36, 1] }}>
           <div className="folio-home-cover-slot"><a className="folio-home-cover" href={readHref(work)} aria-label={`阅读 ${workTitle(work)}`} style={{ "--home-cover-ratio": ratios[work.id] ?? .75 } as CSSProperties}>{cover(work)}</a>{retry(work)}</div>
           <a className="folio-home-recent-work" href={readHref(work)}><strong title={workTitle(work)}>{workTitle(work)}</strong><span>{work.page_count} 页<ArrowUpRight size={16} /></span></a>
         </m.article>)}</div>
-      </section> : null}
+      </section> : null)}
       <a className="folio-home-discover" href={pageHref({ name: "discover" })}>发现作品<ArrowRight size={18} /></a>
-    </div> : <div className="folio-home-empty">
+    </div> : <div className={activity ? "folio-home-hero" : undefined}><div className="folio-home-empty">
       <BookOpen size={42} strokeWidth={1} aria-hidden="true" />
       <h1 role={loading ? "status" : undefined}>{loading ? "正在读取作品…" : "库里还没有作品"}</h1>
       <div className="folio-home-entry"><a className="folio-home-read" href={pageHref({ name: "discover" })}>发现作品<ArrowRight size={18} /></a><a className="folio-home-files" href={pageHref({ name: "files" })}>扫描本地文件<ArrowUpRight size={16} /></a></div>
-    </div>}
+    </div>{!loading && activity}</div>}
   </section>;
 }

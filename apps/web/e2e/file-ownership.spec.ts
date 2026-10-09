@@ -35,8 +35,8 @@ for (const width of [1440, 390]) {
     await expect(batch.getByRole("button", { name: "确认删除", exact: true })).toBeDisabled();
     await batch.getByRole("button", { name: "取消", exact: true }).click();
 
-    await page.goto("/#files");
-    await page.locator(".folio-files-row-main").first().click();
+    await page.goto("/#files?view=files");
+    await page.locator(`.folio-files-row[data-work-id="${workId}"]`).locator(".folio-files-row-main").click();
     const fileDetail = page.locator(".folio-files-detail");
     await expect(fileDetail.getByText("只读", { exact: true })).toBeVisible();
     await fileDetail.getByRole("button", { name: "预览删除影响", exact: true }).click();

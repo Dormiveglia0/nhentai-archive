@@ -8,8 +8,8 @@ const libraryId = Number(process.env.E2E_METADATA_LIBRARY_ID);
 const workId = Number(process.env.E2E_METADATA_WORK_ID);
 const secondary = process.env.E2E_MONITOR_ACTUAL_SOURCE ?? "";
 const artifacts = process.env.E2E_LIVE_LIBRARY_ARTIFACT_DIR;
-test.skip(!root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-") || !libraryId || !workId ||
-  secondary !== "/tmp/nh-media-update-20261009/monitor-actual-secondary.cbz", "Requires owned copies of two different actual archives");
+test.skip(!(root === "/tmp/nh-reader-media-update-20261009/owned" || root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-")) || !libraryId || !workId ||
+  !(secondary === "/tmp/nh-reader-media-update-20261009/owned/monitor-actual-secondary.cbz" || secondary === "/tmp/nh-media-update-20261009/monitor-actual-secondary.cbz"), "Requires owned copies of two different actual archives");
 
 test("原生文件监听自动刷新作品墙、更新封面且保留打开的详情", async ({ page, request }) => {
   test.setTimeout(90_000);
@@ -27,7 +27,7 @@ test("原生文件监听自动刷新作品墙、更新封面且保留打开的�
   try {
     expect((await request.patch("/api/library/directories/" + libraryId, { data: { config: { watch: true, stable_seconds: 0,
       scan_interval_seconds: 10, auto_bind: false, auto_scrape: false } } })).ok()).toBe(true);
-    await page.goto("/#library");
+    await page.goto("/#library?library_id=" + libraryId);
     await expect(page.locator(".folio-library-card")).toHaveCount(1);
     await page.locator('.folio-library-card-title[href="#reader/' + workId + '"]').click();
     const dialog = page.locator(".folio-work-dialog");
@@ -38,7 +38,7 @@ test("原生文件监听自动刷新作品墙、更新封面且保留打开的�
     await expect(page.locator(".folio-library-card")).toHaveCount(2, { timeout: 20_000 });
     const addedMs = performance.now() - started;
     await expect(dialog).toBeVisible();
-    const added = (await (await request.get("/api/library/search")).json()).result.find((work: { id: number }) => work.id !== workId);
+    const added = (await (await request.get("/api/library/search?library_id=" + libraryId)).json()).result.find((work: { id: number }) => work.id !== workId);
     expect(added?.page_count).toBeGreaterThan(0);
     addedId = added.id;
     expect(added.remote_gallery_id).toBeNull();

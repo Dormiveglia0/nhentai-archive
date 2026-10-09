@@ -137,8 +137,12 @@ test("作品卡和书架的竖向封面贴边填充，横向封面完整展示",
     await expect(portraits.first()).toHaveCSS('object-fit', 'cover');
     const search = page.getByRole('searchbox', { name: '搜索作品' });
     await search.fill(String(work.remote_gallery_id));
+    const searched = page.waitForResponse(response => response.url().includes('/api/library/search') && new URL(response.url()).searchParams.get('q') === String(work.remote_gallery_id));
     await search.press('Enter');
+    await searched;
     const card = page.locator('.folio-library-card').filter({ has: page.locator(`a[href='#reader/${work.id}']`) });
+    await expect(page.locator('.folio-library-results')).toHaveAttribute('aria-busy', 'false');
+    await expect(card).toBeVisible();
     await card.scrollIntoViewIfNeeded();
     const landscape = card.locator('.folio-ambient-cover-artwork[data-orientation="landscape"]');
     await expect(landscape.first()).toHaveCSS('object-fit', 'contain');

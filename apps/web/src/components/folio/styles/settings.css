@@ -297,7 +297,8 @@
 }
 
 .folio-settings-mini-action {
-  min-height: 34px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0 10px;
   display: inline-flex;
   align-items: center;

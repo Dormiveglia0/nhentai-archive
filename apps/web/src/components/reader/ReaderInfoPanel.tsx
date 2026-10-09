@@ -49,7 +49,7 @@ export function ReaderInfoPanel({
   onHoverChange,
 }: ReaderInfoPanelProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
-  const subscriptions = useCreatorSubscriptions(open && tags.some(isCreatorTag));
+  const subscriptions = useCreatorSubscriptions(open && tags.some(isCreatorTag), true);
   const tagGroups = READER_TAG_GROUPS.map((group) => ({
     ...group,
     tags: tags.filter((tag) => group.types.includes(tag.type)),
@@ -61,7 +61,7 @@ export function ReaderInfoPanel({
     const frame = window.requestAnimationFrame(() => closeButton.current?.focus());
     return () => {
       window.cancelAnimationFrame(frame);
-      previous?.focus();
+      previous?.focus({ preventScroll: true });
     };
   }, [open]);
 

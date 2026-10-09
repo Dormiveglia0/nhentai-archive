@@ -440,6 +440,9 @@
   text-align: center;
 }
 
+.reader-image-pending { min-height: 42vh; display: grid; place-items: center; color: var(--reader-muted); font-size: 12px; }
+.reader-image-pending.reader-webtoon-img, .reader-image-pending.reader-single-img { display: grid; }
+
 @media (max-width: 720px) {
   .reader-panel { width: calc(100vw - 24px); right: 12px; }
   .reader-thumb-layout { padding: 72px 16px 22px; align-items: flex-start; }

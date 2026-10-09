@@ -25,12 +25,13 @@ export function SmtpSection() {
   const fieldsRef = useRef<HTMLFieldSetElement>(null);
 
   useEffect(() => {
+    if (config) return;
     let alive = true;
     api.smtpSettings().then(payload => {
       if (alive) { setConfig(payload); setEnabled(payload.enabled); setSecurity(payload.security); }
     }).catch(exc => { if (alive) setError(exc.message); });
     return () => { alive = false; };
-  }, []);
+  }, [revision, Boolean(config)]);
 
   useEffect(() => {
     let alive = true;
@@ -78,6 +79,12 @@ export function SmtpSection() {
     catch (exc) { setError(exc instanceof Error ? exc.message : String(exc)); }
     finally { setBusy(false); }
   }
+
+  if (!config) return <section className="folio-smtp" aria-label="邮件通知" aria-busy={!error}>
+    <div className="folio-settings-subhead"><h3><Mail size={16} />邮件通知</h3></div>
+    {error ? <p className="folio-media-error" role="alert">{error}<button className="folio-settings-mini-action" type="button" onClick={() => setRevision(value => value + 1)}>重试</button></p>
+      : <p className="folio-media-hint" role="status">正在读取邮件配置…</p>}
+  </section>;
 
   return <section className="folio-smtp" aria-label="邮件通知">
     <div className="folio-settings-subhead"><h3><Mail size={16} />邮件通知</h3></div>
@@ -130,7 +137,7 @@ function MailPreviewDialog({ onClose }: { onClose: () => void }) {
     return () => { alive = false; };
   }, []);
   return createPortal(<dialog ref={dialog} className="folio-mail-preview" aria-label="通知邮件预览">
-    <header><h2>通知邮件预览</h2><button type="button" autoFocus onClick={dismiss}>关闭</button></header>
+    <header><h2>通知邮件预览</h2><button type="button" data-dialog-focus autoFocus onClick={dismiss}>关闭</button></header>
     {error ? <p className="folio-media-error" role="alert">{error}</p> : html ? <iframe title="通知邮件正文" sandbox="" srcDoc={html} /> : <p role="status">正在读取作品…</p>}
   </dialog>, document.querySelector(".folio") ?? document.body);
 }

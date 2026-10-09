@@ -392,7 +392,7 @@
 .folio-library-filter-row {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(4, minmax(140px, 1fr)) auto auto;
+  grid-template-columns: repeat(5, minmax(105px, 1fr)) auto auto;
   align-items: end;
   gap: 12px;
   padding-top: 14px;
@@ -1117,23 +1117,15 @@
   .folio-library-filters[open] > summary > svg:last-child { transform: rotate(180deg); }
 
   .folio-library-filter-row {
-    grid-template-columns: repeat(2, minmax(170px, 1fr)) auto auto;
-  }
-
-  .folio-library-filter-row .folio-select:nth-child(4) {
-    grid-column: 2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .folio-library-favorite-filter {
-    grid-column: 3;
-    grid-row: 1 / span 2;
-    height: 100%;
+    grid-column: auto;
   }
 
   .folio-library-reset {
-    grid-column: 4;
-    grid-row: 1 / span 2;
-    height: 100%;
+    grid-column: 1 / -1;
   }
 
   .folio-library-shelves {

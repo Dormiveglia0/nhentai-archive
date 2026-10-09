@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 
 from app.api.schemas import FavoritePatch, ReaderStatePatch, ReadingSessionPatch, ReadingSessionStart
 from app.container import services
+from app.services.nhentai_client import NhentaiApiError
 
 
 router = APIRouter(prefix="/works")
@@ -53,6 +54,38 @@ def get_cover(work_id: int, request: Request, w: int | None = Query(default=None
 @router.get("/{work_id}/pages")
 def list_pages(work_id: int):
     return {"result": services.archive.list_pages(work_id)}
+
+
+@router.get("/{work_id}/bridge")
+def bridge_status(work_id: int, fresh: bool = False):
+    return services.reader_bridge.status(work_id, fresh)
+
+
+@router.patch("/{work_id}/bridge")
+def bridge_enable(work_id: int, enabled: bool):
+    try:
+        return services.reader_bridge.enable(work_id, enabled)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@router.post("/{work_id}/bridge/verify")
+def bridge_verify(work_id: int):
+    try:
+        return services.library_scan_jobs.enqueue_verification(work_id)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@router.get("/{work_id}/bridge/pages/{page_index}")
+def bridge_page(work_id: int, page_index: int, version: str = Query(pattern=r"^[a-f0-9]{64}$")):
+    try:
+        body, mime = services.reader_bridge.page(work_id, page_index, version)
+        return Response(body, media_type=mime, headers={"Cache-Control": "private, no-store"})
+    except NhentaiApiError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.post("/{work_id}/reading-source")
@@ -142,6 +175,7 @@ def patch_reading_session(work_id: int, session_id: int, patch: ReadingSessionPa
             patch.duration_seconds,
             patch.page_index,
             patch.finished,
+            patch.cache_lease,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

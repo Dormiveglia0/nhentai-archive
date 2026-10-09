@@ -1,11 +1,17 @@
-# Next Stage Prompt: After Media Libraries And Creator Subscriptions
+# Next Stage Prompt: After Reader And Media Experience
 
-当前阶段（2026-10-09）：正在实施 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。正式端口 4349 仍运行基线镜像 4046b0fd69ea，本轮未发布。订阅/更新由 `subscriptions/SubscriptionsPanel.tsx` 挂载于发现；设置仅保留 SMTP。导出使用 `export/ExportDialog.tsx` 上下文弹窗，旧链接由 `LegacyExportEntry.tsx` 兼容。下方历史完成状态不代表本轮完成。
+当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。正在发布4349；正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
 
-2026-10-09 本轮已交付并部署到4349：多目录媒体库、增量监控、版本化阅读缓存、语言/置信度刮削、本地标签范围、作者/社团订阅与SMTP均已接通。完整后端323项、最终镜像323项通过；125项浏览器检查分批通过，问题作品另16项阅读/导出复验在测试入口修订后通过。真实rclone1.74.4/WebDAV/FUSE/Docker只读映射完成缓存、直接阅读、掉线保留、恢复和自动新增验证；10秒补偿配置下实际新增6.334秒被发现，新增扫描未产生自动任务或整包缓存。最终镜像media-20261009-published/latest（4046b0fd69ea），入口index-DMjx0tAq.js。生产113作品、110任务、27进度、736历史、95本地会话、422远端会话和认证记录已核对保留，完整性/外键通过。功能源码16c3db2已推送；证据与测量范围见MEDIA_LIBRARY_UPDATE.md。
+2026-10-09 历史版本已部署到4349：多目录媒体库、增量监控、版本化阅读缓存、语言/置信度刮削、本地标签范围、作者/社团订阅与SMTP均已接通。完整后端323项、最终镜像323项通过；125项浏览器检查分批通过，问题作品另16项阅读/导出复验在测试入口修订后通过。真实rclone1.74.4/WebDAV/FUSE/Docker只读映射完成缓存、直接阅读、掉线保留、恢复和自动新增验证；10秒补偿配置下实际新增6.334秒被发现，新增扫描未产生自动任务或整包缓存。最终镜像media-20261009-published/latest（4046b0fd69ea），入口index-DMjx0tAq.js。生产113作品、110任务、27进度、736历史、95本地会话、422远端会话和认证记录已核对保留，完整性/外键通过。功能源码16c3db2已推送；证据与测量范围见MEDIA_LIBRARY_UPDATE.md。
 
 
 2026-10-09 media-library/subscription goal is delivered. Preserve every implemented requirement and read `docs/MEDIA_LIBRARY_UPDATE.md` for the completion audit, actual verification and rollback. Start new work from the published task branch. The following phase notes are historical evidence; their former incomplete states and smaller test counts do not describe the current release.
+
+## Current Contract
+
+保留全页字节核验与版本失效，不能因元数据/页数匹配就启用双来源。迁移默认复制，禁止覆盖，保留原ID与人工数据，移动需完成校验、登记及共享/在读检查；复用 `library_migration` 和 `reader_verify` 任务，不另造队列。媒体库属于文件页，订阅/更新属于发现，设置保留邮件及存储配置，导出属于上下文弹窗。所有操作使用真实数据，不增加演示作品或随机统计。
+
+复用 `useNativeDialog` 的动画、背景/Escape、显式初始焦点及返回焦点。跳页输入仅在开启时读取当前页，连续阅读观察回调不能改写用户输入。顶部与各组选项指示器连续移动，只提交最终页面；保留自然封面、直角风格、原NH Logo与独立favicon。初次加载不得插入表单/书架推挤已显示控件。
 
 ## Historical Phase Evidence
 

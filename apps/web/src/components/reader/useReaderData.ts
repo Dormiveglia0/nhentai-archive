@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api, type GalleryDetail, type Job, type LibraryWork, type PageInfo } from "../../lib/api";
+import { api, type GalleryDetail, type Job, type LibraryWork, type PageInfo, type ReaderBridgeStatus } from "../../lib/api";
+import type { ReadingSessionSource } from "./useReadingSession";
 import { workCoverHref } from "../../lib/format";
 import { clamp, PERSIST_DEBOUNCE_MS, type ReaderPageItem } from "./readerHelpers";
 
@@ -21,6 +22,9 @@ export function useReaderData(source: ReaderSource) {
 
   const [work, setWork] = useState<LibraryWork | null>(null);
   const [gallery, setGallery] = useState<GalleryDetail | null>(null);
+  const [bridge, setBridge] = useState<ReaderBridgeStatus | null>(null);
+  const [pageIdentity, setPageIdentity] = useState("");
+  const [sessionSource, setSessionSource] = useState<ReadingSessionSource>(null);
   const [localPages, setLocalPages] = useState<PageInfo[]>([]);
   const [pageIndex, setPageIndex] = useState(1);
   const [completed, setCompleted] = useState(false);
@@ -68,6 +72,9 @@ export function useReaderData(source: ReaderSource) {
     setWork(null);
     setGallery(null);
     setLocalPages([]);
+    setBridge(null);
+    setPageIdentity("");
+    setSessionSource(null);
     setPageIndex(1);
     setCompleted(false);
     setCacheLease(null);
@@ -77,36 +84,76 @@ export function useReaderData(source: ReaderSource) {
     async function load() {
       try {
         if (stableSource.kind === "local") {
-          const [nextWork, nextState] = await Promise.all([
-            api.work(stableSource.workId),
-            api.readerState(stableSource.workId),
-          ]);
-          if (request !== loadRequest.current) return;
-          let prepared = await api.prepareReadingSource(stableSource.workId);
-          while (!["ready", "direct", "failed", "cancelled"].includes(prepared.status)) {
+          let localReady = false, usingBridge = false, bridgeStamp = "", failed = false;
+          let bridgePages: ReaderBridgeStatus["pages"] = [];
+          const preparation = api.prepareReadingSource(stableSource.workId).then(value => {
+            if (request !== loadRequest.current || failed) {
+              if (value.lease) void api.releaseReadingSource(stableSource.workId, value.lease).catch(() => undefined);
+            } else openedLease = value.lease;
+            return value;
+          });
+          void preparation.catch(() => undefined);
+          const remote = api.readerBridge(stableSource.workId).catch(() => null);
+          try {
+            const [nextWork, nextState] = await Promise.all([
+              api.work(stableSource.workId), api.readerState(stableSource.workId),
+            ]);
             if (request !== loadRequest.current) return;
+            setWork(nextWork);
+            setPageIndex(clamp(nextState.page_index || 1, 1, Math.max(nextWork.page_count, 1)));
+            setCompleted(Boolean(nextState.completed) && nextState.page_count === nextWork.page_count);
+            void remote.then(async initial => {
+              if (request !== loadRequest.current || localReady || failed || !initial?.eligible) return;
+              const value = await api.readerBridge(stableSource.workId, true).catch(() => null);
+              if (request !== loadRequest.current || localReady || failed || !value?.eligible || !value.pages.length) return;
+              usingBridge = true; bridgeStamp = value.source_stamp || ""; bridgePages = value.pages;
+              setBridge(value); setPageIdentity(bridgeStamp); setSourceRevision(value.source_revision || null);
+              setSessionSource({ kind: "local", id: stableSource.workId, sourceRevision: value.source_revision });
+              setLoading(false);
+            });
+            let prepared = await preparation;
+            while (!["ready", "direct", "failed", "cancelled"].includes(prepared.status)) {
+              if (request !== loadRequest.current) return;
+              setPreparingJob(prepared.job ?? null);
+              await new Promise(resolve => window.setTimeout(resolve, 800));
+              if (request !== loadRequest.current) return;
+              prepared = await api.prepareReadingSource(stableSource.workId);
+            }
+            openedLease = prepared.lease;
+            if (request !== loadRequest.current) {
+              if (openedLease) void api.releaseReadingSource(stableSource.workId, openedLease).catch(() => undefined);
+              return;
+            }
+            localReady = true;
             setPreparingJob(prepared.job ?? null);
-            await new Promise((resolve) => window.setTimeout(resolve, 800));
+            if (prepared.status === "failed" || prepared.status === "cancelled") throw new Error(prepared.error || prepared.job?.error || "阅读准备已取消");
+            const readyPages = prepared.pages ?? [], pageCount = readyPages.length;
+            const sameSource = usingBridge && bridgeStamp === prepared.source_stamp;
+            if (sameSource) await flush();
             if (request !== loadRequest.current) return;
-            prepared = await api.prepareReadingSource(stableSource.workId);
+            setLocalPages(readyPages.map(page => ({ ...page,
+              width: page.width ?? (sameSource ? bridgePages[page.page_index - 1]?.width : undefined),
+              height: page.height ?? (sameSource ? bridgePages[page.page_index - 1]?.height : undefined),
+            }))); setPageIdentity(prepared.source_stamp || prepared.source_revision || openedLease || "direct");
+            setCacheLease(openedLease); setSourceRevision(openedLease ? null : prepared.source_revision ?? null);
+            setSessionSource(previous => sameSource && previous ? previous : { kind: "local", id: stableSource.workId, cacheLease: openedLease, sourceRevision: openedLease ? null : prepared.source_revision });
+            setPageIndex(previous => pageCount ? clamp(sameSource ? previous : nextState.page_index || 1, 1, pageCount) : 1);
+            if (!sameSource) setCompleted(Boolean(nextState.completed) && nextState.page_count === pageCount);
+          } catch (reason) {
+            failed = true;
+            if (usingBridge && request === loadRequest.current) {
+              const valid = await api.readerBridge(stableSource.workId).catch(() => null);
+              if (request !== loadRequest.current) return;
+              if (!valid?.eligible || valid.source_stamp !== bridgeStamp) {
+                usingBridge = false; setBridge(null); setSessionSource(null);
+              }
+            }
+            if (usingBridge && request === loadRequest.current) setActionError(`本地准备失败，当前使用已核验的远端页面：${reason instanceof Error ? reason.message : String(reason)}`);
+            else {
+              if (openedLease) { void api.releaseReadingSource(stableSource.workId, openedLease).catch(() => undefined); openedLease = null; }
+              throw reason;
+            }
           }
-          openedLease = prepared.lease;
-          if (request !== loadRequest.current) {
-            if (openedLease) void api.releaseReadingSource(stableSource.workId, openedLease).catch(() => undefined);
-            return;
-          }
-          setPreparingJob(prepared.job ?? null);
-          if (prepared.status === "failed" || prepared.status === "cancelled") {
-            throw new Error(prepared.error || prepared.job?.error || "阅读准备已取消");
-          }
-          const readyPages = prepared.pages ?? [];
-          const pageCount = readyPages.length;
-          setWork(nextWork);
-          setLocalPages(readyPages);
-          setCacheLease(openedLease);
-          setSourceRevision(prepared.source_revision ?? null);
-          setPageIndex(pageCount ? clamp(nextState.page_index || 1, 1, pageCount) : 1);
-          setCompleted(Boolean(nextState.completed) && nextState.page_count === pageCount);
         } else {
           const detail = await api.gallery(stableSource.galleryId);
           if (request !== loadRequest.current) return;
@@ -163,11 +210,18 @@ export function useReaderData(source: ReaderSource) {
   const pages = useMemo<ReaderPageItem[]>(() => {
     if (stableSource.kind === "local") {
       const query = cacheLease ? `?lease=${cacheLease}` : sourceRevision ? `?source_revision=${sourceRevision}` : "";
-      return localPages.map((page) => ({
-        key: `local-${stableSource.workId}-${cacheLease || sourceRevision || "direct"}-${page.page_index}`,
+      if (localPages.length) return localPages.map((page) => ({
+        key: `local-${stableSource.workId}-${pageIdentity}-${page.page_index}`,
         pageIndex: page.page_index,
+        width: page.width, height: page.height,
         src: `/api/works/${stableSource.workId}/pages/${page.page_index}${query}`,
         thumbSrc: `/api/works/${stableSource.workId}/pages/${page.page_index}/thumb${query}`,
+      }));
+      return (bridge?.pages ?? []).map(page => ({
+        key: `local-${stableSource.workId}-${pageIdentity}-${page.page_index}`,
+        pageIndex: page.page_index,
+        width: page.width, height: page.height,
+        src: page.page_index >= pageIndex - 1 && page.page_index <= pageIndex + 4 ? page.url : "",
       }));
     }
     return (gallery?.pages ?? []).filter((page) => Boolean(page.url)).map((page, index) => ({
@@ -175,7 +229,7 @@ export function useReaderData(source: ReaderSource) {
       pageIndex: index + 1,
       src: page.url!,
     }));
-  }, [cacheLease, gallery?.pages, localPages, sourceRevision, stableSource]);
+  }, [cacheLease, gallery?.pages, localPages, sourceRevision, stableSource, bridge, pageIndex, pageIdentity]);
 
   const isRemote = stableSource.kind === "remote";
   const pageCount = pages.length;
@@ -280,6 +334,7 @@ export function useReaderData(source: ReaderSource) {
     queued,
     cacheLease,
     sourceRevision,
+    sessionSource,
     preparingJob,
     isRemote,
     sourceKey,

@@ -25,7 +25,7 @@ test.describe("界面与封面回归", () => {
   test("作品、Tag 与主导航均可用鼠标中键原生打开新页面", async ({ page, context }) => {
     await page.setViewportSize({ width: 1280, height: 860 });
     await page.goto("/#discover");
-    await expect(page.locator(".folio-topnav a[href]")).toHaveCount(9);
+    await expect(page.locator(".folio-topnav a[href]")).toHaveCount(8);
     await expect.poll(() => new URL(page.url()).hash).toContain("page=1");
 
     const currentUrl = page.url();
@@ -234,6 +234,7 @@ test.describe("界面与封面回归", () => {
   });
 
   test("横向发现封面保留完整画面并用同图氛围层填满固定卡框", async ({ page, request }) => {
+    const settings = await (await request.get("/api/settings")).json();
     const work = await (await request.get(`/api/works/${LANDSCAPE_WORK_ID}`)).json();
     expect(work?.remote_gallery_id).toBeTruthy();
     const galleryResponse = await request.get(`/api/discover/galleries/${work.remote_gallery_id}`);
@@ -294,8 +295,8 @@ test.describe("界面与封面回归", () => {
     expect(metrics.foreground.top).toBeGreaterThan(metrics.frame.top);
     expect(metrics.foreground.bottom).toBeLessThan(metrics.frame.bottom);
     expect(metrics.sameSource).toBeTruthy();
-    expect(metrics.backdropFilter).toContain("blur(7px)");
-    expect(metrics.backdropOpacity).toBeGreaterThanOrEqual(0.89);
+    expect(metrics.backdropFilter).toContain(settings.privacy.blur_covers_default ? "blur(24px)" : "blur(7px)");
+    expect(metrics.backdropOpacity).toBeGreaterThanOrEqual(settings.privacy.blur_covers_default ? 0.71 : 0.89);
     await cover.screenshot({ path: "/tmp/nh-archive-landscape-discover-card.png" });
 
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -444,7 +445,6 @@ test.describe("界面与封面回归", () => {
       ["governance", "作品整理"],
       ["dictionary", "词典"],
       ["tasks", "队列"],
-      ["export", "导出"],
       ["files", "文件"],
       ["settings", "设置"],
     ] as const;
@@ -571,7 +571,7 @@ test.describe("界面与封面回归", () => {
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "取消" }).click();
 
-    await page.goto("/#files");
+    await page.goto("/#files?view=files");
     await expect(page.locator(".folio-files-row-delete")).toHaveCount(0);
   });
 

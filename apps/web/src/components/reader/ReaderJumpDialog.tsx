@@ -24,9 +24,9 @@ export function ReaderJumpDialog({ open, pageIndex, pageCount, onJump, onClose }
     const frame = window.requestAnimationFrame(() => { inputRef.current?.focus(); inputRef.current?.select(); });
     return () => {
       window.cancelAnimationFrame(frame);
-      previous?.focus();
+      previous?.focus({ preventScroll: true });
     };
-  }, [open, pageIndex]);
+  }, [open]);
 
   function submit(event: FormEvent) {
     event.preventDefault();

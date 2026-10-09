@@ -13,7 +13,7 @@ export function ExportDialog({ workIds, blurCovers, onClose }: { workIds: number
   const dismiss = useNativeDialog(dialog, onClose, true, vm.downloading);
   const focus = vm.items.find(item => item.work.id === vm.focusId) ?? null;
   return createPortal(<dialog ref={dialog} className="folio-export-dialog" aria-label="导出作品" aria-busy={vm.loading || vm.downloading}>
-    <header><h2>导出{workIds.length > 1 ? ` · ${workIds.length} 部作品` : "作品"}</h2><button type="button" aria-label="关闭导出" autoFocus disabled={vm.downloading} onClick={dismiss}><X size={20} /></button></header>
+    <header><h2>导出{workIds.length > 1 ? ` · ${workIds.length} 部作品` : "作品"}</h2><button type="button" aria-label="关闭导出" data-dialog-focus autoFocus disabled={vm.downloading} onClick={dismiss}><X size={20} /></button></header>
     {vm.error ? <p className="folio-media-error" role="alert">{vm.error}</p> : null}
     {vm.notice ? <p role="status">{vm.notice}</p> : null}
     {vm.loading ? <p role="status">正在读取作品…</p> : <>

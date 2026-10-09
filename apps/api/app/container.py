@@ -17,10 +17,12 @@ from app.services.library_scan_service import LibraryScanService
 from app.services.library_index_service import LibraryIndexService
 from app.services.library_monitor_service import LibraryMonitorService
 from app.services.library_service import LibraryService
+from app.services.library_migration_service import LibraryMigrationService
 from app.services.metadata_refresh_service import MetadataRefreshService
 from app.services.nhentai_client import NhentaiClient
 from app.services.notification_service import NotificationService
 from app.services.reader_service import ReaderService
+from app.services.reader_bridge_service import ReaderBridgeService
 from app.services.settings_service import SettingsService
 from app.services.subscription_service import SubscriptionService
 from app.services.translation_service import TranslationService
@@ -57,6 +59,8 @@ def build_services() -> SimpleNamespace:
     export_jobs = ExportJobService(settings, jobs, exports)
     library_scan = LibraryScanService(settings, db)
     library_scan_jobs = LibraryScanJobService(settings, jobs, library_index, media_libraries)
+    library_scan_jobs.migration = LibraryMigrationService(settings, db, media_libraries, library_index, files, jobs)
+    library_scan_jobs.bridge = ReaderBridgeService(db, archive, client, jobs)
 
     return SimpleNamespace(
         settings=settings,
@@ -69,6 +73,7 @@ def build_services() -> SimpleNamespace:
         notifications=notifications,
         subscriptions=subscriptions,
         reader=reader,
+        reader_bridge=library_scan_jobs.bridge,
         library=library,
         translation=translation,
         dictionary=dictionary,

@@ -108,6 +108,10 @@ class LibraryMonitorService:
             events = self.db.fetchall("SELECT relative_path, due_at FROM library_changes WHERE library_id = ? AND due_at <= ?", (library_id, now))
             due = bool(events)
             periodic = library["next_scan_at"] <= now
+            if self.db.fetchone("""SELECT 1 FROM jobs j, json_each(j.target_json, '$.plan') p
+                WHERE j.type='library_migration' AND j.status IN ('queued','running','paused','cancelling')
+                AND (json_extract(j.target_json, '$.library_id')=? OR json_extract(p.value, '$.source_library_id')=?) LIMIT 1""", (library_id, library_id)):
+                continue
             if not (due or periodic) or self.db.fetchone("""SELECT 1 FROM jobs WHERE type = 'library_scan'
                 AND status IN ('queued', 'running', 'paused', 'cancelling')
                 AND json_extract(target_json, '$.library_id') = ? LIMIT 1""", (library_id,)):

@@ -6,6 +6,7 @@ import {
   type LibraryTag,
   type LibraryTagFilter,
   type LibraryWork,
+  type MediaLibrary,
 } from "../../lib/api";
 import type { LibraryView } from "./LibraryToolbar";
 import { libraryTagKey } from "../../lib/navigation";
@@ -46,6 +47,11 @@ export function useLibraryState(perPage: number) {
   const [language, setLanguage] = useState("all");
   const [readStatus, setReadStatus] = useState("all");
   const [source, setSource] = useState("all");
+  const [libraryId, setLibraryId] = useState(() => {
+    const value = Number(new URLSearchParams(window.location.hash.split("?")[1]).get("library_id"));
+    return Number.isInteger(value) && (value > 0 || value === -1) ? String(value) : "all";
+  });
+  const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
   const [sort, setSort] = useState("recent_updated");
   const [tags, setTags] = useState<LibraryTagFilter[]>(() => initialFilters.current?.tags ?? []);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
@@ -60,24 +66,42 @@ export function useLibraryState(perPage: number) {
   const requestToken = useRef(0);
   const overviewToken = useRef(0);
   const lastQuery = useRef("");
+  const libraryHash = useRef(window.location.hash);
   const libraryRevision = useRef<number | null>(null);
   const searching = useRef(false);
 
+  useEffect(() => {
+    function syncLocation() {
+      const hash = window.location.hash;
+      if (!/^#library(?:\?|$)/.test(hash) || hash === libraryHash.current) return;
+      libraryHash.current = hash;
+      const filters = initialLocationFilters();
+      const value = Number(new URLSearchParams(hash.split("?")[1]).get("library_id"));
+      setQ(filters.q); setTags(filters.tags);
+      setLibraryId(Number.isInteger(value) && (value > 0 || value === -1) ? String(value) : "all");
+      setPage(1);
+    }
+    window.addEventListener("hashchange", syncLocation);
+    return () => window.removeEventListener("hashchange", syncLocation);
+  }, []);
+
   const filtersActive =
-    Boolean(q) || language !== "all" || readStatus !== "all" || source !== "all" || sort !== "recent_updated" || tags.length > 0 || favoriteOnly;
+    Boolean(q) || libraryId !== "all" || language !== "all" || readStatus !== "all" || source !== "all" || sort !== "recent_updated" || tags.length > 0 || favoriteOnly;
 
   const loadOverview = useCallback(async () => {
     const current = ++overviewToken.current;
     try {
-      const [summaryPayload, continuing, added] = await Promise.all([
+      const [summaryPayload, continuing, added, media] = await Promise.all([
         api.librarySummary(),
         api.libraryContinueReading(12),
         api.libraryRecentAdded(12),
+        api.mediaLibraries(),
       ]);
       if (overviewToken.current !== current) return;
       setSummary(summaryPayload);
       setContinueReading(continuing.result);
       setRecentAdded(added.result);
+      setMediaLibraries(media.result);
     } catch (exception) {
       if (overviewToken.current !== current) return;
       setError(exception instanceof Error ? exception.message : String(exception));
@@ -93,7 +117,7 @@ export function useLibraryState(perPage: number) {
 
   useEffect(() => {
     if (perPage < 1) return;
-    const query = JSON.stringify([q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly]);
+    const query = JSON.stringify([q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly, libraryId]);
     const background = lastQuery.current === query;
     lastQuery.current = query;
     const current = ++requestToken.current;
@@ -113,6 +137,7 @@ export function useLibraryState(perPage: number) {
       language,
       tag_keys: tags.map(libraryTagKey),
       favorite_only: favoriteOnly,
+      library_id: libraryId === "all" ? undefined : Number(libraryId),
     })
       .then((payload) => {
         if (requestToken.current !== current) return;
@@ -146,7 +171,7 @@ export function useLibraryState(perPage: number) {
     return () => {
       if (requestToken.current === current) requestToken.current += 1;
     };
-  }, [q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly, reloadKey]);
+  }, [q, page, perPage, sort, readStatus, source, language, tags, favoriteOnly, libraryId, reloadKey]);
 
   useEffect(() => {
     let stopped = false;
@@ -190,6 +215,7 @@ export function useLibraryState(perPage: number) {
     setLanguage("all");
     setReadStatus("all");
     setSource("all");
+    setLibraryId("all");
     setSort("recent_updated");
     setTags([]);
     setFavoriteOnly(false);
@@ -263,6 +289,9 @@ export function useLibraryState(perPage: number) {
     readStatus,
     setReadStatus: (value: string) => resetPage(() => setReadStatus(value)),
     source,
+    libraryId,
+    mediaLibraries,
+    setLibraryId: (value: string) => resetPage(() => setLibraryId(value)),
     setSource: (value: string) => resetPage(() => setSource(value)),
     sort,
     setSort: (value: string) => resetPage(() => setSort(value)),

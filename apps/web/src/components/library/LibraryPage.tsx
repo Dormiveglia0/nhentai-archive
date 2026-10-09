@@ -22,6 +22,10 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
   const closeInspector = useCallback(() => library.setSelected(null), [library.setSelected]);
   const gridRows = balanceGridRows(library.works.length, gridColumns);
 
+  if (!library.summary && !library.error) return <section className="folio-page-body folio-library-page" aria-busy="true">
+    <div className="folio-library-summary-loading" role="status">正在读取我的库…</div>
+  </section>;
+
   return (
     <section className="folio-page-body folio-library-page">
       <LibrarySummaryStrip summary={library.summary} />
@@ -35,6 +39,9 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         onReadStatus={library.setReadStatus}
         source={library.source}
         onSource={library.setSource}
+        libraryId={library.libraryId}
+        onLibraryId={library.setLibraryId}
+        mediaLibraries={library.mediaLibraries}
         sort={library.sort}
         onSort={library.setSort}
         tags={library.tags}
@@ -60,7 +67,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             title="库里还没有作品"
             copy="添加媒体库，或从发现页导入漫画。"
             action="添加媒体库"
-            actionHref="#settings?section=storage"
+            actionHref="#files"
           />
         </section>
       ) : null}
@@ -78,7 +85,6 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
             <header className="folio-library-results-head">
               <FolioPanelHeading
                 title="作品列表"
-                description={library.filtersActive ? "已按当前条件筛选。" : "全部已收藏的漫画。"}
               />
               <div className="folio-library-result-controls">
                 <span>{library.loading ? "读取中…" : `${library.total.toLocaleString()} 部作品`}</span>

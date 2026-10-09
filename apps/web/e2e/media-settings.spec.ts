@@ -6,7 +6,7 @@ const root = process.env.E2E_METADATA_ROOT ?? "";
 const libraryId = Number(process.env.E2E_METADATA_LIBRARY_ID);
 const workId = Number(process.env.E2E_METADATA_WORK_ID);
 const artifacts = process.env.E2E_MEDIA_SETTINGS_ARTIFACT_DIR;
-test.skip(!root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-") || !libraryId || !workId,
+test.skip(!(root === "/tmp/nh-reader-media-update-20261009/owned" || root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-")) || !libraryId || !workId,
   "Requires an owned actual archive in the isolated metadata QA database");
 
 for (const width of [1440, 390]) {
@@ -17,6 +17,7 @@ for (const width of [1440, 390]) {
     expect(originalLibrary.root_path).toBe(join(root, "media"));
     const originalCache = await (await request.get("/api/library/cache")).json();
     expect(originalCache.active_count).toBe(0);
+    expect((await request.post("/api/library/cache/clear")).ok()).toBe(true);
     const source = join(root, "media", "selected.cbz");
     const before = await stat(source);
     const directory = join(root, "settings-ui-" + width);
@@ -30,14 +31,13 @@ for (const width of [1440, 390]) {
     page.on("pageerror", error => errors.push(error.message));
     try {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-      await page.goto("/#settings");
-      await page.getByRole("button", { name: "媒体库", exact: true }).click();
+      await page.goto("/#files");
       const section = page.getByRole("region", { name: "媒体库", exact: true });
       await section.getByRole("button", { name: "添加库", exact: true }).click();
       const editor = page.getByRole("dialog", { name: "添加媒体库", exact: true });
       await expect(editor.getByLabel("库名", { exact: true })).toBeFocused();
       await editor.getByLabel("库名", { exact: true }).fill(name);
-      await editor.getByLabel("目录路径（Docker 内的路径）", { exact: true }).fill(directory);
+      await editor.getByLabel("目录路径", { exact: true }).fill(directory);
       await editor.locator(".folio-toggle-row").filter({ hasText: "自动检查文件变化" }).click();
       await editor.getByRole("button", { name: /^语言策略：/ }).click();
       await page.keyboard.press("Escape");
@@ -81,6 +81,7 @@ for (const width of [1440, 390]) {
       await row.getByRole("button", { name: "启用", exact: true }).click();
       await expect(row.getByRole("button", { name: "扫描", exact: true })).toBeEnabled();
 
+      await page.goto("/#settings?section=storage");
       const cache = page.getByRole("region", { name: "阅读缓存", exact: true });
       await cache.getByLabel("缓存配额（GiB）", { exact: true }).fill("1");
       await cache.getByLabel("空闲保留期限（小时）", { exact: true }).fill("24");
@@ -109,10 +110,11 @@ for (const width of [1440, 390]) {
       await expect(cache.getByRole("status")).toContainText("已清理 1 部缓存");
       expect((await (await request.get("/api/library/cache")).json()).ready_bytes).toBe(0);
       expect(await cache.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      await page.goto("/#files");
       expect(await section.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       if (artifacts) await section.screenshot({ path: join(artifacts, "libraries-" + width + ".png") });
-      page.once("dialog", dialog => dialog.accept());
       await row.getByRole("button", { name: "移除媒体库 " + name, exact: true }).click();
+      await page.getByRole("dialog", { name: "移除媒体库", exact: true }).getByRole("button", { name: "确认移除", exact: true }).click();
       await expect(row).toHaveCount(0);
       expect((await stat(join(directory, "selected.cbz"))).size).toBe(before.size);
       expect((await stat(source)).mtimeMs).toBe(before.mtimeMs);

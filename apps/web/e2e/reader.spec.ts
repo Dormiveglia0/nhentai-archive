@@ -167,6 +167,9 @@ test("任一失败图片会批量重试当前所有失败页", async ({ page }) 
   await expect(page.locator(".reader-img-error")).toHaveCount(2);
   await page.keyboard.press("g");
   await page.getByRole("textbox", { name: "目标页码" }).fill("1");
+  await page.locator(".reader-webtoon [data-page-index='3']").evaluate(node => node.scrollIntoView({ block: "center" }));
+  await expect(page.locator(".reader-counter")).toHaveText(/^3\s*\//);
+  await expect(page.getByRole("textbox", { name: "目标页码" })).toHaveValue("1");
   await page.getByRole("button", { name: "跳转", exact: true }).click();
   await expect(page.locator(".reader-img-error[data-page-index='1']")).toBeInViewport();
   const failedPaths = await page.locator(".reader-img-error").evaluateAll((items, workId) => items.map((item) => `/api/works/${workId}/pages/${item.getAttribute("data-page-index")}`), WORK_ID);

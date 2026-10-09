@@ -39,8 +39,9 @@ test("全站同类控件的指示条连续滑动，跨项不加载中间页面",
   page.on('request', request => requests.push(new URL(request.url()).pathname));
   await page.goto('/#workbench');
   await expect(page.locator('.folio-home')).toBeVisible();
+  await expect(page.locator('.folio-home-library-state .folio-home-state-row')).toBeVisible();
   requests.length = 0;
-  await slide(page, '.folio-topnav', 8);
+  await slide(page, '.folio-topnav', 7);
   await expect(page.locator('.folio-settings-nav')).toBeVisible();
   expect(requests.filter(path => /\/api\/(library|discover|governance|dictionary|files|exports)\//.test(path))).toEqual([]);
   await slide(page, '.folio-settings-nav', 2);
@@ -51,14 +52,15 @@ test("全站同类控件的指示条连续滑动，跨项不加载中间页面",
   await slide(page, '.folio-reading-period', 3);
   await slide(page, '.folio-reading-work-ranking > header > div', 1);
   await page.goto('/#settings?section=storage');
-  await expect(page.locator('.folio-media-libraries')).toBeVisible();
+  await expect(page.getByRole('region', {name:'阅读缓存',exact:true})).toBeVisible();
   await page.goto('/#settings?section=notifications');
+  await expect(page.locator('.folio-smtp')).toBeVisible();
+  await page.goto('/#discover?view=subscriptions');
   await expect(page.locator('.folio-notifications')).toBeVisible();
-  await page.goto('/#files');
-  await slide(page, '.folio-files-tabs', 2);
-  await page.goto('/#export');
-  await expect(page.locator('.folio-export-tabs')).toBeVisible();
-  await slide(page, '.folio-export-tabs', 2);
+  await page.goto('/#files?view=files');
+  await slide(page, '.folio-files-primary-tabs', 2);
+  await slide(page, '.folio-files-primary-tabs', 1);
+  await slide(page, '.folio-files-toolbar .folio-files-tabs', 2);
   await page.goto('/#tasks');
   await slide(page, '.folio-tasks-tabs', 3);
   await page.goto('/#library');
@@ -109,7 +111,7 @@ for (const width of [1440, 390]) test(`${width}px 库详情完整显示真实横
 
 test("文件选择与删除预览可取消，导出预览可切换选项，词典弹窗恢复焦点", async ({ page, request }) => {
   const before = await (await request.get('/api/library/summary')).json();
-  await page.goto('/#files');
+  await page.goto('/#files?view=files');
   await page.locator('.folio-files-select').first().click();
   await page.getByRole('button', { name: '预览删除影响', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '确认删除', exact: true });
@@ -117,7 +119,7 @@ test("文件选择与删除预览可取消，导出预览可切换选项，词�
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   expect((await (await request.get('/api/library/summary')).json()).total).toBe(before.total);
-  await page.goto('/#export');
+  await page.goto(`/#export/${process.env.E2E_WORK_ID}`);
   const preview = page.locator('.folio-export-inspector .folio-export-name-input');
   await expect(preview).toBeVisible();
   const comic = page.getByRole('checkbox', { name: '写入 ComicInfo.xml', exact: true });

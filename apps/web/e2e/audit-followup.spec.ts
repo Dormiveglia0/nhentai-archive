@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { parseUtcTimestamp } from "../src/lib/format";
+import { parseUtcTimestamp, workTitle } from "../src/lib/format";
 import { dateBucket, timeOfDay } from "../src/components/history/historyHelpers";
 
 test.skip(!process.env.E2E_STORAGE_STATE, "需要隔离数据与真实会话");
@@ -77,7 +77,7 @@ test("手机任务详情保留列表位置，原生弹窗可用键盘退出并�
 test("手机文件可连续多选，详情和删除预览均可取消且恢复入口", async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const total = (await (await request.get("/api/library/summary")).json()).total;
-  await page.goto("/#files");
+  await page.goto("/#files?view=files");
   await page.locator(".folio-files-select").nth(0).click();
   await page.locator(".folio-files-select").nth(1).click();
   await expect(page.locator(".folio-files-select[aria-pressed='true']")).toHaveCount(2);
@@ -98,41 +98,41 @@ test("手机文件可连续多选，详情和删除预览均可取消且恢复�
   expect((await (await request.get("/api/library/summary")).json()).total).toBe(total);
 });
 
-test("手机单部导出选择后直接看见对应作品信息", async ({ page }) => {
+test("手机从作品详情打开导出，预览对应作品并恢复入口", async ({ page, request }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#export");
-  const entry = page.locator(".folio-export-work-item").nth(1);
-  const title = await entry.locator("strong").textContent();
-  await entry.click();
-  const selected = page.locator(".folio-export-inspector-head-text > strong");
-  await expect(selected).toHaveText(title!);
-  await expect(selected).toBeInViewport();
-  await expect(page.locator(".folio-export-summary-line")).toContainText("当前作品");
-  await expect(page.locator(".folio-export-summary-line")).not.toContainText("已选 0");
+  const { result } = await (await request.get("/api/library/search?per_page=1")).json();
+  await page.goto(`/#export/${result[0].id}`);
+  const dialog = page.getByRole("dialog", { name: "导出作品", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".folio-export-inspector-head-text > strong")).toHaveText(workTitle(result[0]));
+  await expect(dialog.locator(".folio-export-summary-line")).toContainText("当前作品");
+  await dialog.getByRole("button", { name: "关闭导出" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".folio-library-page")).toBeVisible();
 });
 
-test("批量导出只剩一项时下载所选作品，取消全部后不下载当前预览", async ({ page, request }) => {
-  const { result } = await (await request.get("/api/exports/queue")).json();
-  const ready = result.filter((item: { blockers: unknown[] }) => item.blockers.length === 0).slice(0, 2);
-  expect(ready).toHaveLength(2);
-  await page.goto("/#export");
+test("批量导出保留外部选择，取消到零项后不下载预览作品", async ({ page, request }) => {
+  const { result } = await (await request.get("/api/library/search?per_page=100&sort=recent_updated")).json();
+  expect(result.length).toBeGreaterThanOrEqual(2);
+  await page.goto("/#library");
   await page.getByRole("button", { name: "批量选择", exact: true }).click();
-  const entries = page.locator(".folio-export-work-item");
-  const first = entries.nth(result.findIndex((item: { work: { id: number } }) => item.work.id === ready[0].work.id));
-  const second = entries.nth(result.findIndex((item: { work: { id: number } }) => item.work.id === ready[1].work.id));
-  await first.click();
-  await second.click();
-  await second.click();
-  await expect(first).toHaveAttribute("aria-pressed", "true");
-  await expect(second).toHaveAttribute("aria-pressed", "false");
+  const entries = page.locator(".folio-library-cover");
+  await entries.nth(0).click(); await entries.nth(1).click();
+  await page.getByRole("button", { name: "导出下载", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "导出作品", exact: true });
+  await expect(dialog.getByRole("button", { name: "下载所选 2 项 (.zip)", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "关闭导出" }).click();
+  await entries.nth(1).click();
+  await page.getByRole("button", { name: "导出下载", exact: true }).click();
   await page.route("**/api/works/*/export/download*", route => route.abort());
   const download = page.waitForRequest(request => /\/api\/works\/\d+\/export\/download/.test(new URL(request.url()).pathname));
-  await page.getByRole("button", { name: "下载所选 1 项", exact: true }).click();
-  expect(new URL((await download).url()).pathname).toBe(`/api/works/${ready[0].work.id}/export/download`);
-  await expect(page.getByRole("button", { name: "下载所选 1 项", exact: true })).toBeEnabled();
-  await first.click();
-  await expect(page.locator(".folio-export-primary")).toBeDisabled();
+  await dialog.getByRole("button", { name: "下载此作品", exact: true }).click();
+  expect(new URL((await download).url()).pathname).toBe(`/api/works/${result[0].id}/export/download`);
+  await expect(dialog.getByRole("button", { name: "关闭导出" })).toBeEnabled();
+  await dialog.getByRole("button", { name: "关闭导出" }).click();
+  await entries.nth(0).click();
+  await expect(page.getByRole("button", { name: "导出下载", exact: true })).toBeDisabled();
 });
 
 for (const width of [390, 320]) test(`${width}px 词典搜索与首个真实候选位于固定操作栏上方`, async ({ page }) => {

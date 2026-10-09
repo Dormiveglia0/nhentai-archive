@@ -103,7 +103,7 @@ export function WorkDeleteAction({ workId, title, onDeleted }: Props) {
             <button
               type="button"
               onClick={dismiss}
-              autoFocus
+              data-dialog-focus autoFocus
               disabled={busy}
             >
               <X size={15} />取消

@@ -128,7 +128,7 @@ export function ThumbnailOverlay({ open, pages, pageIndex, onJump, onClose }: Th
     const frame = window.requestAnimationFrame(() => closeButton.current?.focus());
     return () => {
       window.cancelAnimationFrame(frame);
-      previous?.focus();
+      previous?.focus({ preventScroll: true });
     };
   }, [open]);
 

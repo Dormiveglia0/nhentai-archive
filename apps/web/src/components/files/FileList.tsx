@@ -40,6 +40,7 @@ export function FileList({ entries, selected, focusId, onPick, onToggle, loading
             return (
               <StaggerItem key={entry.id} className="folio-files-row-wrap">
                 <div
+                  data-work-id={entry.work_id ?? undefined}
                   className={
                     "folio-files-row" +
                     (isSelected ? " is-selected" : "") +

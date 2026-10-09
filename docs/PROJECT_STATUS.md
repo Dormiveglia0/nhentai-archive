@@ -1,15 +1,15 @@
 # NH Archive Project Status
 
-当前阶段（2026-10-09）：正在实施 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。正式端口 4349 仍运行基线镜像 4046b0fd69ea，本轮未发布。订阅/更新由 `subscriptions/SubscriptionsPanel.tsx` 挂载于发现；设置仅保留 SMTP。导出使用 `export/ExportDialog.tsx` 上下文弹窗，旧链接由 `LegacyExportEntry.tsx` 兼容。下方历史完成状态不代表本轮完成。
+当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。正在发布4349；正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
 
-2026-10-09 本轮已交付并部署到4349：多目录媒体库、增量监控、版本化阅读缓存、语言/置信度刮削、本地标签范围、作者/社团订阅与SMTP均已接通。完整后端323项、最终镜像323项通过；125项浏览器检查分批通过，问题作品另16项阅读/导出复验在测试入口修订后通过。真实rclone1.74.4/WebDAV/FUSE/Docker只读映射完成缓存、直接阅读、掉线保留、恢复和自动新增验证；10秒补偿配置下实际新增6.334秒被发现，新增扫描未产生自动任务或整包缓存。最终镜像media-20261009-published/latest（4046b0fd69ea），入口index-DMjx0tAq.js。生产113作品、110任务、27进度、736历史、95本地会话、422远端会话和认证记录已核对保留，完整性/外键通过。功能源码16c3db2已推送；证据与测量范围见MEDIA_LIBRARY_UPDATE.md。
+2026-10-09 历史版本已部署到4349：多目录媒体库、增量监控、版本化阅读缓存、语言/置信度刮削、本地标签范围、作者/社团订阅与SMTP均已接通。完整后端323项、最终镜像323项通过；125项浏览器检查分批通过，问题作品另16项阅读/导出复验在测试入口修订后通过。真实rclone1.74.4/WebDAV/FUSE/Docker只读映射完成缓存、直接阅读、掉线保留、恢复和自动新增验证；10秒补偿配置下实际新增6.334秒被发现，新增扫描未产生自动任务或整包缓存。最终镜像media-20261009-published/latest（4046b0fd69ea），入口index-DMjx0tAq.js。生产113作品、110任务、27进度、736历史、95本地会话、422远端会话和认证记录已核对保留，完整性/外键通过。功能源码16c3db2已推送；证据与测量范围见MEDIA_LIBRARY_UPDATE.md。
 
 
 ## Completed Update — 2026-10-09
 
 媒体库、缓存、刮削、订阅和SMTP长期目标已交付。更新前源码`7d2d426`、标签`archive/ui-refined-20261009`和全部八个功能阶段提交均已推送到`codex/media-libraries-subscriptions`。最终集成`63ad3af`和源选择/WebP修复`16c3db2`对应当前部署。原镜像回滚标签`rollback-media-20261009`及新鲜备份`/tmp/nh-media-update-20261009/deploy/before-deploy.db`已保存；代码、镜像和数据库需成套回滚。最新证据见`docs/MEDIA_LIBRARY_UPDATE.md`。
 
-## Current Version
+## Previous Version — 2026-10-09
 
 Current release (2026-10-09): `media-20261009-published` / `latest` (`4046b0fd69ea`) is healthy on port 4349. Full 323 backend/image tests, scoped 125 browser checks and actual rclone/FUSE/Docker verification pass. The 2026-10-08 UI review is the preserved visual baseline, recorded in `UI_AUDIT.md` and `DESIGNER_AUDIT.md`.
 

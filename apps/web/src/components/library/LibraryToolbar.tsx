@@ -1,7 +1,7 @@
 import { ChevronDown, Heart, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
-import type { LibrarySummary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
+import type { LibrarySummary, MediaLibrary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { LibraryTagFilter } from "./LibraryTagFilter";
 import { READ_STATUS_OPTIONS, SORT_OPTIONS, SOURCE_OPTIONS } from "./libraryHelpers";
@@ -26,6 +26,9 @@ type Props = {
   summary: LibrarySummary | null;
   canReset: boolean;
   onReset: () => void;
+  libraryId: string;
+  onLibraryId: (value: string) => void;
+  mediaLibraries: MediaLibrary[];
 };
 
 export function LibraryToolbar(props: Props) {
@@ -88,6 +91,12 @@ export function LibraryToolbar(props: Props) {
       <details className="folio-library-filters" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
       <summary><SlidersHorizontal size={16} />筛选与排序<ChevronDown size={16} /></summary>
       <div className="folio-library-filter-row">
+        <FolioSelect label="媒体库" value={props.libraryId} onChange={props.onLibraryId} options={[
+          { value: "all", label: "全部媒体库" },
+          ...props.mediaLibraries.map(library => ({ value: String(library.id), label: library.name })),
+          ...(props.libraryId !== "all" && props.libraryId !== "-1" && !props.mediaLibraries.some(library => String(library.id) === props.libraryId) ? [{ value: props.libraryId, label: "已移除的媒体库" }] : []),
+          { value: "-1", label: "无可用来源" },
+        ]} />
         <FolioSelect label="语言" value={props.language} options={languageOptions} onChange={props.onLanguage} />
         <FolioSelect label="阅读状态" value={props.readStatus} options={READ_STATUS_OPTIONS} onChange={props.onReadStatus} />
         <FolioSelect label="来源" value={props.source} options={SOURCE_OPTIONS} onChange={props.onSource} />

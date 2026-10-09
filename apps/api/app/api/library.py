@@ -1,11 +1,32 @@
 from fastapi import APIRouter, HTTPException, Query
 
-from app.api.schemas import LibraryScanRequest, MediaLibraryCreate, MediaLibraryPatch
+from app.api.schemas import LibraryScanRequest, LibraryMigrationRequest, MediaLibraryCreate, MediaLibraryPatch
 from app.container import services
 from app.services.directory_browser import browse_directories
 
 
 router = APIRouter(prefix="/library")
+
+
+@router.get("/migration/candidates")
+def migration_candidates(page: int = 1, q: str = ""):
+    return services.library_scan_jobs.migration.candidates(page, q)
+
+
+@router.post("/migration/preview")
+def migration_preview(payload: LibraryMigrationRequest):
+    try:
+        return services.library_scan_jobs.migration.preview(payload.work_ids, payload.library_id, payload.move, payload.conflict)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.post("/migration")
+def migration_start(payload: LibraryMigrationRequest):
+    try:
+        return services.library_scan_jobs.enqueue_migration(payload.work_ids, payload.library_id, payload.move, payload.conflict)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/cache")
@@ -48,10 +69,11 @@ def search(
     tag_ids: str = "",
     favorite_only: bool = False,
     tag_keys: list[str] = Query(default=[]),
+    library_id: int | None = None,
 ):
     ids = [int(value) for value in tag_ids.split(",") if value.strip().isdigit()]
     try:
-        return services.library.search(q, page, per_page, sort, read_status, source, language, ids, favorite_only, tag_keys)
+        return services.library.search(q, page, per_page, sort, read_status, source, language, ids, favorite_only, tag_keys, library_id)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 

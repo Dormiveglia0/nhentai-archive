@@ -3,65 +3,48 @@ import { RotateCw } from "lucide-react";
 import "./ReaderPanels.css";
 
 type ReaderImageProps = {
-  src: string;
-  alt: string;
-  className?: string;
-  style?: CSSProperties;
-  loading?: "lazy" | "eager";
-  /** 供 webtoon 观察当前页用,渲染为 data-page-index */
-  pageIndex?: number;
-  retryToken: number;
-  onRetry: () => void;
+  src: string; alt: string; className?: string; style?: CSSProperties;
+  width?: number; height?: number; loading?: "lazy" | "eager";
+  pageIndex?: number; retryToken: number; onRetry: () => void;
 };
 
-/**
- * 阅读页图片,自带加载失败占位 + 重试。重试通过改变内部 key 强制重挂 <img>
- * 触发同一 src 的重新请求(失败响应不进缓存),避免给远端 URL 追加查询参数。
- * forwardRef 指向当前图片或失败占位，连续阅读仍能观察和跳转失败页。
- */
 export const ReaderImage = forwardRef<HTMLElement, ReaderImageProps>(function ReaderImage(
-  { src, alt, className, style, loading, pageIndex, retryToken, onRetry },
-  ref
+  { src, alt, className, style, width, height, loading, pageIndex, retryToken, onRetry }, ref
 ) {
+  const [displayedSrc, setDisplayedSrc] = useState(src);
   const [attempt, setAttempt] = useState(0);
   const [errored, setErrored] = useState(false);
+  const imageNode = useRef<HTMLImageElement | null>(null);
   const lastRetryToken = useRef(retryToken);
-
+  useEffect(() => {
+    if (src === displayedSrc) return;
+    if (!src && displayedSrc && imageNode.current?.naturalWidth) return;
+    // Keep a decoded identical remote page until its local replacement is ready.
+    if (src && imageNode.current?.complete && imageNode.current.naturalWidth && !errored) {
+      let alive = true;
+      const next = new Image();
+      next.onload = () => { void next.decode().catch(() => undefined).then(() => { if (alive) { setDisplayedSrc(src); setErrored(false); } }); };
+      next.onerror = () => { /* Preserve the verified page; bulk retry also retries this handover. */ };
+      next.src = src;
+      return () => { alive = false; next.onload = null; next.onerror = null; next.src = ""; };
+    }
+    setDisplayedSrc(src); setErrored(false);
+  }, [src, displayedSrc, errored, retryToken]);
   useEffect(() => {
     if (lastRetryToken.current === retryToken) return;
     lastRetryToken.current = retryToken;
     if (!errored) return;
-    setErrored(false);
-    setAttempt((value) => value + 1);
+    setErrored(false); setAttempt(value => value + 1);
   }, [errored, retryToken]);
 
-  if (errored) {
-    return (
-      <div ref={ref as Ref<HTMLDivElement>} className={className ? `reader-img-error ${className}` : "reader-img-error"} style={style} data-page-index={pageIndex}>
-        <span>图片加载失败</span>
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); onRetry(); }}
-        >
-          <RotateCw size={15} />
-          重试全部
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <img
-      key={attempt}
-      ref={ref as Ref<HTMLImageElement>}
-      className={className}
-      style={style}
-      src={src}
-      alt={alt}
-      loading={loading}
-      draggable={false}
-      data-page-index={pageIndex}
-      onError={() => setErrored(true)}
-    />
-  );
+  const reserved = width && height ? { aspectRatio: `${width} / ${height}`, ...style } : style;
+  if (errored || !displayedSrc) return <div ref={ref as Ref<HTMLDivElement>} className={`${errored ? "reader-img-error" : "reader-image-pending"} ${className || ""}`} style={reserved} data-page-index={pageIndex}>
+    <span>{errored ? "图片加载失败" : "正在读取页面…"}</span>
+    {errored ? <button type="button" onClick={event => { event.stopPropagation(); onRetry(); }}><RotateCw size={15} />重试全部</button> : null}
+  </div>;
+  return <img key={attempt} ref={node => {
+    imageNode.current = node;
+    if (typeof ref === "function") ref(node); else if (ref) ref.current = node;
+  }} className={className} style={reserved} src={displayedSrc} alt={alt} loading={loading} width={width} height={height}
+    decoding="async" draggable={false} data-page-index={pageIndex} onError={event => { if (event.currentTarget.getAttribute("src") === displayedSrc) setErrored(true); }} />;
 });

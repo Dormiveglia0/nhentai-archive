@@ -6,7 +6,7 @@ const workId = Number(process.env.E2E_METADATA_WORK_ID);
 const galleryId = Number(process.env.E2E_METADATA_GALLERY_ID);
 const libraryId = Number(process.env.E2E_METADATA_LIBRARY_ID);
 const artifacts = process.env.E2E_METADATA_ARTIFACT_DIR;
-test.skip(!root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-") || !workId || !galleryId || !libraryId,
+test.skip(!(root === "/tmp/nh-reader-media-update-20261009/owned" || root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-")) || !workId || !galleryId || !libraryId,
   "Requires an owned actual archive and its actual remote reference");
 
 for (const width of [1440, 390]) {
@@ -19,8 +19,8 @@ for (const width of [1440, 390]) {
     expect(before.remote_gallery_id).toBeNull();
     const localTag = before.tags.find((tag: { key?: string; type: string }) => tag.type === "tag" && tag.key?.startsWith("local:"));
     expect(localTag?.key).toMatch(/^local:/);
-    await page.goto("/#library");
-    await page.locator(".folio-library-card-title").first().click();
+    await page.goto("/#library?library_id=" + libraryId);
+    await page.locator('.folio-library-card-title[href="#reader/' + workId + '"]').click();
     const dialog = page.locator(".folio-work-dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveCSS("transform", "none");
@@ -31,9 +31,9 @@ for (const width of [1440, 390]) {
     await localLink.click();
     expect((await (await searched).json()).result.some((work: { id: number }) => work.id === workId)).toBe(true);
     await expect(dialog).toHaveCount(0);
-    await page.locator(".folio-library-card-title").first().click();
+    await page.locator('.folio-library-card-title[href="#reader/' + workId + '"]').click();
     await dialog.getByRole("button", { name: "刮削元数据", exact: true }).click();
-    const panel = page.getByRole("region", { name: "刮削元数据", exact: true });
+    const panel = page.getByRole("dialog", { name: "刮削元数据", exact: true });
     await expect(panel.getByRole("textbox")).toBeFocused();
     await panel.getByRole("textbox").fill(String(galleryId));
     await panel.getByRole("button", { name: "搜索", exact: true }).click();
@@ -67,7 +67,7 @@ for (const width of [1440, 390]) {
     const readerTag = info.locator('a[href*="' + tagQuery + '"]').first();
     await expect(readerTag).toHaveAttribute("href", /^#library/);
     await readerTag.click();
-    await expect(page.locator(".folio-library-card")).toHaveCount(1);
+    await expect(page.locator('.folio-library-card-title[href="#reader/' + workId + '"]')).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
@@ -75,15 +75,16 @@ for (const width of [1440, 390]) {
 test("绑定后原生远端详情链接和远端标签范围", async ({ page, request }) => {
   test.setTimeout(60_000);
   expect((await request.patch("/api/library/directories/" + libraryId, { data: { config: { auto_bind: true } } })).ok()).toBe(true);
-  await page.goto("/#library");
-  await page.locator(".folio-library-card-title").first().click();
+  await page.goto("/#library?library_id=" + libraryId);
+  await page.locator('.folio-library-card-title[href="#reader/' + workId + '"]').click();
   const dialog = page.locator(".folio-work-dialog");
   await dialog.getByRole("button", { name: "刮削元数据", exact: true }).click();
-  const panel = page.getByRole("region", { name: "刮削元数据", exact: true });
+  const panel = page.getByRole("dialog", { name: "刮削元数据", exact: true });
   await panel.getByRole("textbox").fill(String(galleryId));
   await panel.getByRole("button", { name: "搜索", exact: true }).click();
   await panel.getByRole("button", { name: "确认应用并绑定" }).click();
   await expect(panel.getByRole("status")).toContainText("元数据已更新");
+  await panel.getByRole("button", { name: "关闭刮削" }).click();
   const link = dialog.getByRole("link", { name: "远端详情", exact: true });
   await expect(link).toHaveAttribute("href", new RegExp("^#gallery/" + galleryId));
   await link.click();

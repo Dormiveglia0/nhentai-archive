@@ -28,7 +28,7 @@ export function useDiscoverState(initialTag: RemoteTag | undefined, perPage: num
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState<number | null>(0);
   const [items, setItems] = useState<GallerySummary[]>([]);
-  const [popularLoading, setPopularLoading] = useState(false);
+  const [popularLoading, setPopularLoading] = useState(true);
   const [popularItems, setPopularItems] = useState<GallerySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -304,6 +304,7 @@ export type LibraryTagFilter = {
 };
 
 export type LibrarySearchParams = {
+  library_id?: number;
   q?: string;
   page?: number;
   per_page?: number;
@@ -730,12 +731,20 @@ export type ExportBatchItem = {
 };
 
 export type PageInfo = {
+  width?: number;
+  height?: number;
   id?: number;
   work_id: number;
   page_index: number;
   archive_member: string;
   media_type: string;
   size_bytes: number;
+};
+
+export type ReaderBridgeStatus = {
+  status: "unavailable" | "unverified" | "verifying" | "verified" | "incompatible" | "failed";
+  enabled: boolean; eligible: boolean; reason?: string | null; version?: string; source_revision?: string; source_stamp?: string; job?: Job | null;
+  pages: { page_index: number; width?: number; height?: number; url: string }[];
 };
 
 export type ReaderState = {
@@ -748,6 +757,7 @@ export type ReaderState = {
 };
 
 export type ReadingSource = {
+  source_stamp?: string;
   status: string;
   cache_id: number | null;
   lease: string | null;
@@ -843,6 +853,13 @@ export type MediaLibrary = {
 };
 
 export type MediaLibraryInput = Pick<MediaLibrary, "name" | "root_path" | "kind" | "enabled" | "read_only" | "config">;
+
+export type MigrationOptions = { work_ids: number[]; library_id: number; move: boolean; conflict: "rename" | "skip" };
+export type MigrationCandidate = { id: number; title: string; pretty_title: string | null; page_count: number; size_bytes: number };
+export type MigrationPreview = {
+  library_id: number; library_name: string; root_path: string; move: boolean; total_bytes: number; free_bytes: number; ready: number; blocked: number;
+  plan: { work_id: number; title: string; status: "ready" | "blocked" | "skipped"; reason?: string; name?: string; size_bytes?: number }[];
+};
 
 export type LibraryScanRun = {
   id: number;
@@ -1175,7 +1192,7 @@ async function cachedDiscoverRequest<T>(url: string, ttlMs = 60_000): Promise<T>
 }
 
 async function jobsWithCacheCoherence(): Promise<{ result: Job[] }> {
-  const payload = await request<{ result: Job[] }>("/api/jobs");
+  const payload = await cachedDiscoverRequest<{ result: Job[] }>("/api/jobs", 0);
   const signature = payload.result
     .filter(
       (job) =>
@@ -1327,6 +1344,7 @@ export const api = {
     query.set("sort", params.sort ?? "recent_updated");
     query.set("read_status", params.read_status ?? "all");
     query.set("source", params.source ?? "all");
+    if (params.library_id) query.set("library_id", String(params.library_id));
     query.set("language", params.language ?? "all");
     if (params.tag_ids?.length) query.set("tag_ids", params.tag_ids.join(","));
     params.tag_keys?.forEach(key => query.append("tag_keys", key));
@@ -1454,6 +1472,9 @@ export const api = {
   work: (id: number) => request<LibraryWork>(`/api/works/${id}`),
   pages: (id: number) => request<{ result: PageInfo[] }>(`/api/works/${id}/pages`),
   prepareReadingSource: (id: number) => request<ReadingSource>(`/api/works/${id}/reading-source`, { method: "POST" }),
+  readerBridge: (id: number, fresh = false) => request<ReaderBridgeStatus>(`/api/works/${id}/bridge?fresh=${fresh}`),
+  verifyReaderBridge: (id: number) => request<Job>(`/api/works/${id}/bridge/verify`, { method: "POST" }),
+  enableReaderBridge: (id: number, enabled: boolean) => request<ReaderBridgeStatus>(`/api/works/${id}/bridge?enabled=${enabled}`, { method: "PATCH" }),
   releaseReadingSource: (id: number, lease: string) => request<{ released: boolean }>(`/api/works/${id}/reading-source/${lease}`, { method: "DELETE", keepalive: true }),
   readerState: (id: number) => request<ReaderState>(`/api/works/${id}/reader-state`),
   setWorkFavorite: (id: number, favorite: boolean) =>
@@ -1468,11 +1489,11 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ session_key: sessionKey, page_index: pageIndex, cache_lease: cacheLease, source_revision: sourceRevision }),
     }),
-  updateReadingSession: (id: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false) =>
+  updateReadingSession: (id: number, sessionId: number, durationSeconds: number, pageIndex: number, finished = false, keepalive = false, cacheLease?: string | null) =>
     request<ReadingSession>(`/api/works/${id}/reading-sessions/${sessionId}`, {
       method: "PATCH",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished }),
+      body: JSON.stringify({ duration_seconds: durationSeconds, page_index: pageIndex, finished, cache_lease: cacheLease }),
       keepalive,
     }),
   startRemoteReadingSession: (galleryId: number, sessionKey: string, pageIndex: number) =>
@@ -1543,6 +1564,9 @@ export const api = {
   scanLibraryPreview: () =>
     request<LibraryScanPreview>("/api/library/scan/preview", { method: "POST", headers: JSON_HEADERS }),
   mediaLibraries: () => request<{ result: MediaLibrary[]; defaults: MediaLibraryConfig }>("/api/library/directories"),
+  migrationCandidates: (page = 1, q = "") => request<{ result: MigrationCandidate[]; total: number; page: number; per_page: number }>(`/api/library/migration/candidates?page=${page}&q=${encodeURIComponent(q)}`),
+  migrationPreview: (options: MigrationOptions) => request<MigrationPreview>("/api/library/migration/preview", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(options) }),
+  migrateLibrary: (options: MigrationOptions) => request<Job>("/api/library/migration", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(options) }),
   previewMail: () => request<{ html: string; work_id: number }>("/api/settings/smtp/preview"),
   browseDirectories: (path: string) => request<{ path: string; parent: string; result: { name: string; path: string }[]; truncated: boolean }>("/api/library/browse?path=" + encodeURIComponent(path)),
   addMediaLibrary: (payload: MediaLibraryInput) => request<MediaLibraryInput & { id: number }>("/api/library/directories", {

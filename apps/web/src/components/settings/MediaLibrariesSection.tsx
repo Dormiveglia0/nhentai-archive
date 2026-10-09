@@ -77,7 +77,7 @@ export function MediaLibrariesSection() {
     let timer = 0;
     async function load() {
       if (!alive) return;
-      if (!document.hidden) {
+      if (!document.hidden && !document.querySelector<HTMLElement>(".app-route-archive")?.inert) {
         try {
           const payload = await api.mediaLibraries();
           if (!alive) return;
@@ -120,7 +120,7 @@ export function MediaLibrariesSection() {
         <div className="folio-library-directory-main">
           <div><h4>{library.name}</h4><span className={library.health === "offline" || library.health === "partial" ? "folio-media-error" : ""}>{library.active_scan_status ? statusLabel(library.active_scan_status) : library.scanning ? "正在扫描" : !library.enabled ? "已暂停" : HEALTH[library.health] ?? library.health}</span></div>
           <p className="folio-library-directory-path" title={library.root_path}>{library.root_path}</p>
-          <p className="folio-library-directory-stats"><span>{KINDS[library.kind]} · {library.read_only ? "只读" : "可写"}</span><span>{library.work_count} 部作品</span>{library.pending_count ? <span>{library.pending_count} 待稳定</span> : null}{library.error_count ? <span className="folio-media-error">{library.error_count} 读取失败</span> : null}{library.missing_count ? <span>{library.missing_count} 缺失</span> : null}{library.scrape_review_count ? <span>{library.scrape_review_count} 刮削待确认</span> : null}</p>
+          <p className="folio-library-directory-stats"><span>{KINDS[library.kind]} · {library.read_only ? "只读" : "可写"}</span><a href={pageHref({ name: "library" }) + "?library_id=" + library.id}>{library.work_count} 部作品<ArrowUpRight size={12} /></a>{library.pending_count ? <span>{library.pending_count} 待稳定</span> : null}{library.error_count ? <span className="folio-media-error">{library.error_count} 读取失败</span> : null}{library.missing_count ? <span>{library.missing_count} 缺失</span> : null}{library.scrape_review_count ? <span>{library.scrape_review_count} 刮削待确认</span> : null}</p>
           {library.last_error || library.watch_error ? <p className="folio-media-error">{library.last_error ?? library.watch_error}</p> : null}
         </div>
         <div className="folio-media-actions">
@@ -166,6 +166,6 @@ function RemoveLibraryDialog({ library, onClose, onRemoved }: { library: MediaLi
       {preview?.warnings.map(warning => <p key={warning} className="folio-media-error">{warning}</p>)}
       {error ? <p role="alert" className="folio-media-error">{error}</p> : null}
     </div>
-    <footer><button type="button" className="folio-line-button" autoFocus disabled={busy} onClick={dismiss}>取消</button><button type="button" className="folio-line-button is-primary" disabled={busy || !preview || (purge && !preview.purge_allowed)} onClick={() => void remove()}>{busy ? "正在移除" : "确认移除"}</button></footer>
+    <footer><button type="button" className="folio-line-button" data-dialog-focus autoFocus disabled={busy} onClick={dismiss}>取消</button><button type="button" className="folio-line-button is-primary" disabled={busy || !preview || (purge && !preview.purge_allowed)} onClick={() => void remove()}>{busy ? "正在移除" : "确认移除"}</button></footer>
   </dialog>, document.querySelector(".folio") ?? document.body);
 }

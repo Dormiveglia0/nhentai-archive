@@ -7,7 +7,6 @@ import { FolioField } from "../folio/ui/FolioPrimitives";
 import { FolioMetricGrid, type FolioMetricItem } from "../folio/ui/FolioMetricGrid";
 import { formatBytes } from "../../lib/format";
 import type { SettingsVM } from "./useSettingsState";
-import { MediaLibrariesSection } from "./MediaLibrariesSection";
 import { ReadingCacheSection } from "./ReadingCacheSection";
 import "./StorageSection.css";
 
@@ -56,7 +55,7 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
 
   return (
     <section className="folio-settings-section" aria-label="媒体库与存储" aria-busy={loading}>
-      <MediaLibrariesSection />
+      <div className="folio-settings-subhead"><h3><Folder size={16} />媒体库</h3><a className="folio-line-button" href={pageHref({ name: "files" })}>管理媒体库<ArrowUpRight size={15} /></a></div>
       <ReadingCacheSection />
       {error ? (
         <div className="folio-settings-fetch-error" role="alert">

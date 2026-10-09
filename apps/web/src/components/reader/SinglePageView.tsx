@@ -42,6 +42,8 @@ export function SinglePageView({ page, fit, zoom, direction, onFlip, onToggleChr
         className={`reader-single-img fit-${fit}`}
         style={{ transform: `scale(${zoom})` }}
         src={page.src}
+        width={page.width}
+        height={page.height}
         alt={`第 ${page.pageIndex} 页`}
         retryToken={retryToken}
         onRetry={onRetry}

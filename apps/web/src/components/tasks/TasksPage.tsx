@@ -8,15 +8,18 @@ import { TaskInspector } from "./TaskInspector";
 import { TaskList } from "./TaskList";
 import { TaskSummaryStrip } from "./TaskSummaryStrip";
 import { useTasksState } from "./useTasksState";
+import { useNativeDialog } from "../../lib/useNativeDialog";
 import "./TasksPage.css";
 
 export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   const tasks = useTasksState();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 900px)").matches);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const dismiss = useNativeDialog(dialogRef, () => setInspectorOpen(false), mobile && inspectorOpen);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 900px)");
-    const change = () => { dialogRef.current?.close(); setMobile(media.matches); };
+    const change = () => { setInspectorOpen(false); setMobile(media.matches); };
     media.addEventListener("change", change);
     return () => media.removeEventListener("change", change);
   }, []);
@@ -24,7 +27,7 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
   function focusJob(id: number) {
     tasks.focusJob(id);
     if (window.matchMedia("(max-width: 900px)").matches) {
-      window.requestAnimationFrame(() => { if (!dialogRef.current?.open) dialogRef.current?.showModal(); });
+      setInspectorOpen(true);
     }
   }
 
@@ -84,12 +87,8 @@ export function TasksPage({ blurCovers }: { blurCovers: boolean }) {
         </section>
         {mobile ? null : inspector}
       </FadeIn>
-      {mobile ? <dialog ref={dialogRef} className="folio-tasks-dialog" aria-label="任务详情" onClick={event => {
-        if (event.target !== event.currentTarget) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.currentTarget.close();
-      }}>
-        <header><span>任务详情</span><button type="button" aria-label="关闭任务详情" onClick={() => dialogRef.current?.close()}><X size={18} /></button></header>
+      {mobile ? <dialog ref={dialogRef} className="folio-tasks-dialog" aria-label="任务详情">
+        <header><span>任务详情</span><button type="button" aria-label="关闭任务详情" onClick={dismiss}><X size={18} /></button></header>
         {inspector}
       </dialog> : null}
     </section>

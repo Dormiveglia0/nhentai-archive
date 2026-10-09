@@ -46,8 +46,9 @@ export function ReaderPage({ source }: Props) {
   useReadingSession(
     data.isRemote
       ? source.kind === "remote" && data.pageCount > 0 ? { kind: "remote", id: source.galleryId } : null
-      : data.work ? { kind: "local", id: data.work.id, cacheLease: data.cacheLease, sourceRevision: data.sourceRevision } : null,
+      : data.sessionSource,
     data.pageIndex,
+    data.cacheLease,
   );
 
   useEffect(() => {
@@ -73,7 +74,11 @@ export function ReaderPage({ source }: Props) {
   }, [uiError]);
 
   const flip = useCallback((delta: number) => data.setPage(data.pageIndex + delta), [data.pageIndex, data.setPage]);
-  const jump = useCallback((pageIndex: number) => data.setPage(pageIndex), [data.setPage]);
+  const jump = useCallback((pageIndex: number) => {
+    const target = clamp(pageIndex, 1, Math.max(1, data.pageCount));
+    data.setPage(target);
+    document.querySelector<HTMLElement>(`.reader-webtoon [data-page-index="${target}"]`)?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [data.setPage, data.pageCount]);
   const zoomBy = useCallback((steps: number) => {
     setZoom((value) => clamp(Number((value + steps * ZOOM_STEP).toFixed(2)), ZOOM_MIN, ZOOM_MAX));
   }, []);
@@ -179,16 +184,16 @@ export function ReaderPage({ source }: Props) {
         zoom={zoom}
         isRemote={data.isRemote}
         loading={data.loading}
-        loadingControls={data.preparingJob ? <div className="reader-preparation">
+        loadingControls={data.preparingJob && (["queued", "running", "paused", "cancelling"].includes(data.preparingJob.status) || (data.pages.length > 0 && data.preparingJob.status === "failed")) ? <div className="reader-preparation">
           <progress max={100} value={data.preparingJob.progress.percent} aria-label="归档缓存进度" />
-          <p>{data.preparingJob.status === "paused" ? "已暂停" : data.preparingJob.status === "queued" ? "等待读取" : `${data.preparingJob.progress.percent}%`}</p>
+          <p>{data.preparingJob.status === "failed" ? "本地读取失败" : data.preparingJob.status === "paused" ? "已暂停" : data.preparingJob.status === "queued" ? "等待读取" : `${data.preparingJob.progress.percent}%`}</p>
           <div>
-            <button type="button" onClick={() => { const job = data.preparingJob!; void (job.status === "paused" ? api.resumeJob(job.id) : api.pauseJob(job.id)).catch(reason => setUiError(String(reason))); }}>{data.preparingJob.status === "paused" ? "继续" : "暂停"}</button>
+            <button type="button" onClick={() => { const job = data.preparingJob!; if (job.status === "failed") { data.reload(); return; } void (job.status === "paused" ? api.resumeJob(job.id) : api.pauseJob(job.id)).catch(reason => setUiError(String(reason))); }}>{data.preparingJob.status === "failed" ? "重试" : data.preparingJob.status === "paused" ? "继续" : "暂停"}</button>
             <button type="button" onClick={() => { void api.cancelJob(data.preparingJob!.id).then(goBack).catch(reason => setUiError(String(reason))); }}>取消</button>
           </div>
         </div> : null}
         onFlip={flip}
-        onJump={jump}
+        onReachPage={data.setPage}
         onToggleChrome={toggleChrome}
         onPrepareRetry={data.retrySource}
       />

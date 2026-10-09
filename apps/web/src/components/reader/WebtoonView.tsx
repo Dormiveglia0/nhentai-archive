@@ -75,6 +75,8 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
           pageIndex={page.pageIndex}
           className={`reader-webtoon-img fit-${fit}`}
           src={page.src}
+          width={page.width}
+          height={page.height}
           alt={`第 ${page.pageIndex} 页`}
           loading={page.pageIndex >= pageIndex - 1 && page.pageIndex <= pageIndex + 4 ? "eager" : "lazy"}
           retryToken={retryToken}

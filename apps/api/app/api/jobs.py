@@ -12,7 +12,7 @@ def _dispatch(job_id: int):
     job_type = services.jobs.get(job_id)["type"]
     if job_type == "bulk_export":
         return services.export_jobs
-    if job_type == "library_scan":
+    if job_type in {"library_scan", "library_migration", "reader_verify"}:
         return services.library_scan_jobs
     if job_type == "archive_cache":
         return services.archive.cache

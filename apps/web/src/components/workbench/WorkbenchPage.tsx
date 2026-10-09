@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { api, type LibraryWork, type LibrarySummary, type ReadingStatistics } from "../../lib/api";
 import { HomeHero } from "../folio/ui/HomeHero";
+import { HomeActivity } from "./HomeActivity";
 import "./WorkbenchPage.css";
 
 const HomeLayoutPreview = lazy(() => import("./HomeLayoutPreview").then(module => ({ default: module.HomeLayoutPreview })));
@@ -28,7 +29,7 @@ function WorkbenchData({ blurCovers }: { blurCovers: boolean }) {
     setError("");
     setLoading(true);
     const results = await Promise.allSettled([
-      api.librarySearch({ per_page: preview ? 36 : 4, sort: "recent_added" }),
+      api.librarySearch({ per_page: preview ? 36 : 1, sort: "recent_added" }),
       api.libraryContinueReading(1),
       preview ? api.librarySummary() : Promise.resolve(undefined),
       preview ? api.libraryStatistics(30) : Promise.resolve(undefined),
@@ -44,7 +45,7 @@ function WorkbenchData({ blurCovers }: { blurCovers: boolean }) {
   }, [preview]);
   useEffect(() => { void load(); return () => { request.current += 1; }; }, [load]);
   return <div className="folio-workbench-page">
-    {preview ? <Suspense fallback={<p role="status">正在加载…</p>}><HomeLayoutPreview works={works} summary={summary} statistics={statistics} blurCovers={blurCovers} /></Suspense> : <HomeHero works={works} blurCovers={blurCovers} loading={loading} />}
+    {preview ? <Suspense fallback={<p role="status">正在加载…</p>}><HomeLayoutPreview works={works} summary={summary} statistics={statistics} blurCovers={blurCovers} /></Suspense> : <HomeHero works={works} blurCovers={blurCovers} loading={loading} activity={<HomeActivity blurCovers={blurCovers} />} />}
     {error ? <div className="folio-home-feedback" role="alert"><span>{error}</span><button type="button" onClick={() => void load()}>重试</button></div> : null}
   </div>;
 }

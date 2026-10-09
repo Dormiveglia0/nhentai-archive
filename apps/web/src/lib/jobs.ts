@@ -33,6 +33,8 @@ export function jobTypeLabel(type: string) {
     bulk_export: "批量导出",
     library_scan: "扫描库",
     archive_cache: "阅读缓存",
+    library_migration: "媒体库迁移",
+    reader_verify: "阅读源核验",
   };
   return labels[type] ?? type;
 }
@@ -43,6 +45,8 @@ export function jobTypeDescription(type: string) {
     bulk_export: "打包多部作品为可下载合集（临时产物·下载即删）",
     library_scan: "扫描目录变化并更新作品索引",
     archive_cache: "下载作品归档以供本地阅读",
+    library_migration: "校验并归并本地导入文件，保留作品记录",
+    reader_verify: "逐页比较本地与远端作品",
   };
   return labels[type] ?? "任务";
 }
@@ -66,6 +70,8 @@ export function stageLabel(stage: string) {
     indexing_archive: "解析入库",
     packaging: "打包合集",
     ingesting: "入库中",
+    migrating: "迁移文件",
+    verifying_pages: "逐页核验",
     completed: "已完成",
     failed: "失败",
     cancelling: "取消中",
@@ -75,6 +81,9 @@ export function stageLabel(stage: string) {
 }
 
 export function targetLabel(job: Job) {
+  if (job.type === "library_migration") {
+    return `${numberTarget(job, "migrated") ?? 0} / ${Array.isArray(job.target.plan) ? job.target.plan.filter(item => item && typeof item === "object" && "status" in item && item.status !== "skipped").length : 0} 部 · ${job.target.move ? "移动" : "复制"}`;
+  }
   if (job.type === "bulk_export") {
     const total = numberTarget(job, "total") ?? 0;
     const packaged = numberTarget(job, "packaged") ?? 0;
@@ -97,7 +106,7 @@ export function targetLabel(job: Job) {
 export function canRetry(job: Job) {
   if (job.status !== "failed") return false;
   if (job.type === "bulk_export") return true;
-  if (job.type === "library_scan" || job.type === "archive_cache") return true;
+  if (["library_scan", "archive_cache", "library_migration", "reader_verify"].includes(job.type)) return true;
   return job.type === "remote_import" && Boolean(numberTarget(job, "gallery_id"));
 }
 

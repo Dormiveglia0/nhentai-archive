@@ -91,6 +91,10 @@ class ReaderService:
 
         with self.db.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
+            if conn.execute("""SELECT 1 FROM jobs j, json_each(j.target_json, '$.plan') p
+                WHERE j.type='library_migration' AND j.status IN ('queued','running','paused','cancelling')
+                AND json_extract(j.target_json, '$.move')=1 AND json_extract(p.value, '$.work_id')=? LIMIT 1""", (work_id,)).fetchone():
+                raise ValueError("作品正在移动，请完成迁移后再阅读")
             if source_revision:
                 if not self.cache:
                     raise ValueError("阅读源不可用")
@@ -126,6 +130,7 @@ class ReaderService:
         duration_seconds: int,
         page_index: int,
         finished: bool = False,
+        cache_lease: str | None = None,
     ) -> dict[str, Any]:
         work = self.db.fetchone("SELECT page_count FROM works WHERE id = ?", (work_id,))
         if not work:
@@ -134,12 +139,17 @@ class ReaderService:
         session = self.db.fetchone("SELECT cache_lease, page_count FROM reading_sessions WHERE id = ? AND work_id = ?", (session_id, work_id))
         if session:
             page_count = int(session["page_count"])
-        if session and session["cache_lease"] and self.cache:
-            try:
-                self.cache.touch_lease(work_id, session["cache_lease"])
-            except ValueError:
-                if not finished:
-                    raise
+        if finished:
+            cache_lease = None
+        if cache_lease:
+            from app.services.archive_manifest import unpack_manifest
+            if not self.cache or not session:
+                raise ValueError("阅读缓存不可用")
+            snapshot = self.cache.touch_lease(work_id, cache_lease)
+            if len(unpack_manifest(snapshot["manifest"])) != page_count or not self.cache.is_current(snapshot):
+                raise ValueError("阅读缓存来源已变化")
+        if session and session["cache_lease"] and self.cache and not cache_lease and not finished:
+            self.cache.touch_lease(work_id, session["cache_lease"])
         bounded_page = max(1, min(page_index, page_count)) if page_count else 0
 
         with self.db.connect() as conn:
@@ -147,12 +157,13 @@ class ReaderService:
                 """
                 UPDATE reading_sessions
                 SET duration_seconds = MAX(duration_seconds, ?),
+                    cache_lease = COALESCE(?, cache_lease),
                     last_page_index = ?,
                     ended_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE ended_at END,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND work_id = ?
                 """,
-                (duration_seconds, bounded_page, int(finished), session_id, work_id),
+                (duration_seconds, cache_lease, bounded_page, int(finished), session_id, work_id),
             ).rowcount
             if not updated:
                 raise ValueError(f"Reading session {session_id} does not exist")

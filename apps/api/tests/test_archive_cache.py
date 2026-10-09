@@ -96,6 +96,26 @@ def test_concurrent_prepare_copies_once_and_reads_offline(tmp_path, monkeypatch)
     cache.close()
 
 
+def test_direct_session_attaches_cache_lease_without_restarting_history(tmp_path):
+    settings, db, libraries, index, root, library, archive, work_id = cached_library(tmp_path)
+    cache = archive.cache
+    reader = ReaderService(db, cache)
+    revision = cache.revision(cache.direct_source(work_id))
+    session = reader.start_session(work_id, "bridge-to-cache", 1, source_revision=revision)
+    assert wait_for_cache(cache, cache.prepare(work_id))["status"] == "completed"
+    ready = cache.prepare(work_id)
+    updated = reader.update_session(work_id, session["id"], 15, 2, cache_lease=ready["lease"])
+    assert updated["id"] == session["id"] and updated["cache_lease"] == ready["lease"]
+    assert updated["last_page_index"] == 2
+    assert len(db.fetchall("SELECT id FROM reading_history WHERE work_id=?", (work_id,))) == 1
+    assert cache.sweep(clear=True)["deleted"] == 0
+    cache.release(work_id, ready["lease"])
+    finished = reader.update_session(work_id, session["id"], 20, 2, finished=True, cache_lease=ready["lease"])
+    assert finished["ended_at"] is not None
+    assert cache.sweep(clear=True)["deleted"] == 1
+    cache.close()
+
+
 def test_reader_snapshot_stays_on_original_revision_and_protects_new_progress(tmp_path):
     settings, db, _, index, root, library, archive, work_id = cached_library(tmp_path)
     cache = archive.cache

@@ -7,6 +7,7 @@ import { parseUtcTimestamp } from "../../lib/format";
 import { duration, ease } from "../../lib/motion";
 import { pageHref, tagSearchHref } from "../../lib/navigation";
 import { ExportAction } from "../export/ExportAction";
+import { useNativeDialog } from "../../lib/useNativeDialog";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { entryStatusLabel, entryStatusTone, formatBytes, kindLabel } from "./fileHelpers";
 
@@ -32,12 +33,9 @@ export function FileDetailPanel({ focus, blurCovers, busy, onClose, onDelete }: 
     media.addEventListener("change", change);
     return () => media.removeEventListener("change", change);
   }, []);
-  useEffect(() => {
-    if (mobile && focus && !dialogRef.current?.open) dialogRef.current?.showModal();
-  }, [focus, mobile]);
+  const dismiss = useNativeDialog(dialogRef, onClose, Boolean(mobile && focus));
   function close() {
-    dialogRef.current?.close();
-    onClose();
+    if (mobile) dismiss(); else onClose();
   }
   const content = <>
       <header className="folio-files-column-head">
@@ -56,11 +54,7 @@ export function FileDetailPanel({ focus, blurCovers, busy, onClose, onDelete }: 
       </AnimatePresence>
   </>;
   if (!mobile) return <section className={`folio-files-detail${focus ? " is-active" : ""}`} aria-label="文件详情">{content}</section>;
-  return focus ? <dialog ref={dialogRef} className="folio-files-detail is-active" aria-label="文件详情" onCancel={event => { event.preventDefault(); close(); }} onClick={event => {
-    if (event.target !== event.currentTarget) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
-  }}>{content}</dialog> : null;
+  return focus ? <dialog ref={dialogRef} className="folio-files-detail is-active" aria-label="文件详情">{content}</dialog> : null;
 }
 
 function FileDetail({ focus, blurCovers, busy, onDelete }: Props & { focus: FileEntry }) {

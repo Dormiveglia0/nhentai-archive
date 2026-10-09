@@ -67,7 +67,7 @@ export function FileDeleteDialog({ preview, label, returnFocus, error, busy, onC
         <button type="button" className="is-danger" onClick={onConfirm} disabled={busy || !canDelete}>
           <Trash2 size={14} />{hasHealthyWork ? "确认永久删除" : "确认删除"}
         </button>
-        <button ref={cancelRef} type="button" onClick={dismiss} disabled={busy} autoFocus>
+        <button ref={cancelRef} type="button" onClick={dismiss} disabled={busy} data-dialog-focus autoFocus>
           <X size={14} />取消
         </button>
       </div>

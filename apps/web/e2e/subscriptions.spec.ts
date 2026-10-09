@@ -8,8 +8,8 @@ const galleryId = Number(process.env.E2E_METADATA_GALLERY_ID);
 const workId = Number(process.env.E2E_METADATA_WORK_ID);
 const fixturePath = process.env.E2E_SMTP_FIXTURE ?? "";
 const artifacts = process.env.E2E_SUBSCRIPTIONS_ARTIFACT_DIR;
-test.skip(!root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-") || !galleryId || !workId ||
-  !fixturePath.startsWith("/tmp/nh-media-update-20261009/smtp-owned-loopback/"), "Requires the owned actual archive and loopback SMTP receiver");
+test.skip(!(root === "/tmp/nh-reader-media-update-20261009/owned" || root.startsWith("/tmp/nh-media-update-20261009/metadata-browser-owned-")) || !galleryId || !workId ||
+  !(fixturePath.startsWith("/tmp/nh-reader-media-update-20261009/smtp-owned-loopback/") || fixturePath.startsWith("/tmp/nh-media-update-20261009/smtp-owned-loopback/")), "Requires the owned actual archive and loopback SMTP receiver");
 
 async function received(root: string): Promise<{ security: string; message_id: string; recipients: string[] }[]> {
   try { return (await readFile(join(root, "received.jsonl"), "utf8")).trim().split("\n").filter(Boolean).map(line => JSON.parse(line)); }
@@ -106,8 +106,8 @@ for (const width of [1440, 390]) {
       await expect.poll(async () => (await (await request.get("/api/subscriptions")).json()).result.find((item: { id: number }) => item.id === subscriptionId)?.baseline_complete,
         { timeout: 20_000 }).toBe(true);
       expect((await (await request.get("/api/subscriptions/updates")).json()).result.filter((item: { subscription_id: number }) => item.subscription_id === subscriptionId)).toHaveLength(0);
-      await page.goto("/#settings?section=notifications");
-      const section = page.getByRole("region", { name: "订阅与通知", exact: true });
+      await page.goto("/#discover?view=subscriptions");
+      const section = page.getByRole("region", { name: "订阅管理", exact: true });
       const row = section.locator(".folio-subscriptions-list article").filter({ has: page.getByRole("link", { name: creator, exact: true }) });
       await expect(row).toContainText("上次检查");
       await row.getByRole("button", { name: "暂停订阅 " + tag.name, exact: true }).click();
@@ -115,8 +115,8 @@ for (const width of [1440, 390]) {
       await row.getByRole("button", { name: "启用订阅 " + tag.name, exact: true }).click();
       await expect(row).toContainText("上次检查", { timeout: 12_000 });
       await row.getByRole("button", { name: /^检查间隔：/ }).click();
-      await row.getByRole("group", { name: "检查间隔选项" }).getByRole("button", { name: "每小时", exact: true }).click();
-      await expect(row.getByRole("button", { name: /^检查间隔：/ })).toContainText("每小时");
+      await row.getByRole("group", { name: "检查间隔选项" }).getByRole("button", { name: "每3天", exact: true }).click();
+      await expect(row.getByRole("button", { name: /^检查间隔：/ })).toContainText("每3天");
       const feed = await (await request.get("/api/discover/tagged?tag_id=" + tag.id + "&per_page=100&sort=date")).json();
       const newest = feed.result[0].gallery_id;
       expect(newest).toBeGreaterThan(0);
@@ -128,13 +128,13 @@ for (const width of [1440, 390]) {
         { timeout: 20_000 }).toBe(1);
       await expect.poll(async () => (await (await request.get("/api/settings/smtp/outbox")).json()).result.find((mail: { subscription_id: number }) => mail.subscription_id === subscriptionId)?.status,
         { timeout: 20_000 }).toBe("sent");
-      await section.getByRole("button", { name: "刷新订阅", exact: true }).click();
-      await expect(section.locator('.folio-subscription-update-link[href^="#gallery/' + newest + '"]')).toContainText(feed.result[0].title_japanese || feed.result[0].pretty_title || feed.result[0].title, { timeout: 12_000 });
-      expect(await row.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-      expect(await section.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-      expect(await section.locator(".folio-subscription-filters button").first().evaluate(element => getComputedStyle(element).borderRadius)).toBe("0px");
-      if (artifacts) { await mkdir(artifacts, { recursive: true }); await section.screenshot({ path: join(artifacts, "subscriptions-" + width + ".png") }); }
-      const updatedLink = section.locator('.folio-subscription-update-link[href^="#gallery/' + newest + '"]');
+      await page.goto("/#discover?view=updates");
+      const updates = page.getByRole("region", { name: "作品更新", exact: true });
+      await expect(updates.locator('.folio-subscription-update-link[href^="#gallery/' + newest + '"]')).toContainText(feed.result[0].title_japanese || feed.result[0].pretty_title || feed.result[0].title, { timeout: 12_000 });
+      expect(await updates.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      expect(await updates.locator(".folio-subscription-filters button").first().evaluate(element => getComputedStyle(element).borderRadius)).toBe("0px");
+      if (artifacts) { await mkdir(artifacts, { recursive: true }); await updates.screenshot({ path: join(artifacts, "subscriptions-" + width + ".png") }); }
+      const updatedLink = updates.locator('.folio-subscription-update-link[href^="#gallery/' + newest + '"]');
       const opened = context.waitForEvent("page");
       await updatedLink.click({ modifiers: ["Control"] });
       const otherPage = await opened;
@@ -142,14 +142,14 @@ for (const width of [1440, 390]) {
       await otherPage.close();
       await expect.poll(async () => (await (await request.get("/api/subscriptions/updates")).json()).result.find((item: { subscription_id: number }) => item.subscription_id === subscriptionId)?.read_at).toBeTruthy();
       await page.goto("/#library");
-      await page.locator(".folio-library-card-title").first().click();
+      await page.locator('.folio-library-card-title[href="#reader/' + workId + '"]').click();
       const dialog = page.locator(".folio-work-dialog");
       await expect(dialog.getByRole("button", { name: "取消订阅" + creator, exact: true })).toBeVisible();
       await dialog.locator("a.is-primary").click();
       await expect(page.locator(".reader-counter")).toContainText("/");
       await page.getByRole("button", { name: "作品信息", exact: true }).click();
       await expect(page.locator(".reader-info-panel").getByRole("button", { name: "取消订阅" + creator, exact: true })).toBeVisible();
-      await page.goto("/#settings?section=notifications");
+      await page.goto("/#discover?view=subscriptions");
       await section.locator(".folio-subscriptions-list").getByRole("button", { name: "取消订阅 " + tag.name, exact: true }).click();
       await expect(row).toHaveCount(0);
       expect(errors).toEqual([]);

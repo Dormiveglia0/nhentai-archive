@@ -281,7 +281,16 @@ class FileMaintenanceService:
         }
 
     # --- preview_delete cascade analysis (read-only) ----------------------
-    def _work_files(self, work_id: int, keep_sources: bool = False) -> list[tuple[Path, dict[str, Any] | None]]:
+    def _work_files(self, work_id: int, keep_sources: bool = False, except_job_id: int | None = None) -> list[tuple[Path, dict[str, Any] | None]]:
+        if self.db.fetchone("SELECT 1 FROM reading_sessions WHERE work_id=? AND ended_at IS NULL AND updated_at > datetime('now', '-2 minutes')", (work_id,)):
+            raise PermissionError("作品正在阅读，请结束后再修改")
+        if self.db.fetchone("""SELECT 1 FROM jobs WHERE type='reader_verify' AND status IN ('queued','running','paused','cancelling')
+            AND json_extract(target_json,'$.work_id')=? LIMIT 1""", (work_id,)):
+            raise PermissionError("作品正在核验，请结束任务后再修改")
+        if self.db.fetchone("""SELECT 1 FROM jobs j, json_each(j.target_json, '$.plan') p
+            WHERE j.type='library_migration' AND j.status IN ('queued','running','paused','cancelling')
+            AND j.id <> COALESCE(?, -1) AND json_extract(p.value, '$.work_id')=? LIMIT 1""", (except_job_id, work_id)):
+            raise PermissionError("作品正在迁移，请结束任务后再修改")
         if self.cache and self.cache.direct_in_use(work_id):
             raise PermissionError("作品正在读取或导出，请结束后再删除")
         if self.db.fetchone("""SELECT 1 FROM jobs WHERE type = 'remote_import'
@@ -452,8 +461,9 @@ class FileMaintenanceService:
         return self.db.fetchall("""SELECT DISTINCT i.work_id FROM library_items i
             WHERE i.library_id = ? AND i.work_id IS NOT NULL AND NOT EXISTS (
               SELECT 1 FROM work_files f LEFT JOIN library_items other ON other.id = f.library_item_id
+              LEFT JOIN media_libraries source_library ON source_library.id = other.library_id
               WHERE f.work_id = i.work_id AND f.kind = 'source_cbz'
-              AND (other.library_id IS NULL OR other.library_id <> ?))""", (library_id, library_id))
+              AND (other.library_id IS NULL OR (other.library_id <> ? AND source_library.removed_at IS NULL)))""", (library_id, library_id))
 
     def library_removal_preview(self, library_id: int):
         self.libraries.get(library_id)

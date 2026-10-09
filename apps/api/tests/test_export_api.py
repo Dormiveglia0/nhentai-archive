@@ -10,7 +10,7 @@ class FakeExports:
     def summary(self):
         return {"total": 2, "ready": 1, "blocked": 1, "warnings": 0}
 
-    def queue(self):
+    def queue(self, work_ids=None):
         return {
             "result": [{"work": {"id": 7}, "output_name": "book.cbz"}],
             "summary": {"total": 1, "ready": 1, "blocked": 0, "warnings": 0},

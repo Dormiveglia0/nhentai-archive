@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api, type MetadataRefreshMatch, type MetadataRefreshPreview } from "../../lib/api";
 import { useNativeDialog } from "../../lib/useNativeDialog";
+import { ReaderBridgeControl } from "./ReaderBridgeControl";
 import "./MetadataScrapePanel.css";
 
 type Props = { workId: number; title: string; blurCovers: boolean; onApplied: () => void; onClose: () => void };
@@ -12,6 +13,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
   const [preview, setPreview] = useState<MetadataRefreshPreview["result"][number] | null>(null);
   const [chosen, setChosen] = useState<MetadataRefreshMatch | null>(null);
   const [busy, setBusy] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const revision = useRef(0);
@@ -21,7 +23,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
   useEffect(() => {
     return () => { revision.current++; };
   }, []);
-  const dismiss = useNativeDialog(dialog, onClose, true, busy);
+  const dismiss = useNativeDialog(dialog, onClose, true, applying);
 
   async function search() {
     const current = ++revision.current;
@@ -39,7 +41,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
   async function apply() {
     if (!chosen || !preview || chosen.selectable === false) return;
     const current = ++revision.current;
-    setBusy(true); setError(""); setNotice("");
+    setBusy(true); setApplying(true); setError(""); setNotice("");
     try {
       const result = await api.metadataRefreshApply([{ ...chosen, source: "manual_id", work_id: workId, version: preview.version }]);
       if (current !== revision.current) return;
@@ -48,18 +50,19 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
       setNotice("元数据已更新"); setPreview(null); setChosen(null); onApplied();
     } catch (exception) {
       if (current === revision.current) setError(exception instanceof Error ? exception.message : String(exception));
-    } finally { if (current === revision.current) setBusy(false); }
+    } finally { if (current === revision.current) { setBusy(false); setApplying(false); } }
   }
 
   return createPortal(<dialog ref={dialog} className="folio-scrape" aria-label="刮削元数据" aria-busy={busy}>
-    <header><h3>刮削元数据</h3><button type="button" aria-label="关闭刮削" disabled={busy} onClick={dismiss}><X size={18} /></button></header>
-    <form onSubmit={event => { event.preventDefault(); void search(); }}>
-      <input ref={input} autoFocus aria-label="作品名称或 ID" placeholder="作品名称或 ID" maxLength={240} value={query} disabled={busy}
+    <header><h3>刮削元数据</h3><button type="button" aria-label="关闭刮削" disabled={applying} onClick={dismiss}><X size={18} /></button></header>
+    <form onSubmit={event => { event.preventDefault(); event.stopPropagation(); void search(); }}>
+      <input ref={input} data-dialog-focus autoFocus aria-label="作品名称或 ID" placeholder="作品名称或 ID" maxLength={240} value={query} disabled={busy}
         onChange={event => { revision.current++; setQuery(event.target.value); setPreview(null); setChosen(null); setError(""); setNotice(""); }} />
       <button type="submit" disabled={busy || !query.trim()}><Search size={16} />{busy ? "处理中" : "搜索"}</button>
     </form>
     {error ? <p className="folio-scrape-error" role="alert">{error}</p> : null}
     {notice ? <p role="status"><Check size={16} />{notice}</p> : null}
+    <ReaderBridgeControl key={notice} workId={workId} />
     {preview ? <>
       {preview.candidates.length ? <div className="folio-scrape-results">
         <div className="folio-scrape-candidates" aria-label="匹配候选">
@@ -78,6 +81,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
             <DiffTable diffs={chosen.diffs.filter(diff => !diff.changed)} />
           </details> : null}
           {chosen.reason ? <p>{chosen.reason}</p> : null}
+          {chosen.diffs?.some(diff => diff.field === "pages" && diff.changed) ? <p>页数不一致，将保留本地阅读并停用远端过渡。</p> : null}
           <button className="is-primary" type="button" disabled={busy || chosen.selectable === false} onClick={() => void apply()}>
             <Check size={16} />{preview.config.auto_bind ? "确认应用并绑定" : "确认应用元数据"}
           </button>

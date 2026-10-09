@@ -27,13 +27,15 @@ export type ReadingSessionSource =
   | { kind: "remote"; id: number }
   | null;
 
-export function useReadingSession(source: ReadingSessionSource, pageIndex: number) {
+export function useReadingSession(source: ReadingSessionSource, pageIndex: number, currentLease?: string | null) {
   const cacheLease = source?.kind === "local" ? source.cacheLease ?? null : null;
   const sourceRevision = source?.kind === "local" ? source.sourceRevision ?? null : null;
   const sourceKey = source ? `${source.kind}:${source.id}:${cacheLease ?? sourceRevision ?? ""}` : "";
   const sourceKind = source?.kind ?? null;
   const sourceId = source?.id ?? null;
   const pageRef = useRef(pageIndex);
+  const leaseRef = useRef(currentLease);
+  leaseRef.current = currentLease;
   const keyRef = useRef<{ sourceKey: string; key: string }>({ sourceKey: "", key: "" });
   pageRef.current = pageIndex;
 
@@ -57,8 +59,10 @@ export function useReadingSession(source: ReadingSessionSource, pageIndex: numbe
     const seconds = () => Math.max(0, Math.floor((elapsedMs + (activeSince === null ? 0 : performance.now() - activeSince)) / 1000));
     const flush = (finished = false, keepalive = false) => {
       if (sessionId === null) return;
-      const update = sourceKind === "local" ? api.updateReadingSession : api.updateRemoteReadingSession;
-      void update(sourceId, sessionId, seconds(), pageRef.current, finished, keepalive).catch(() => undefined);
+      const update = sourceKind === "local"
+        ? api.updateReadingSession(sourceId, sessionId, seconds(), pageRef.current, finished, keepalive, leaseRef.current)
+        : api.updateRemoteReadingSession(sourceId, sessionId, seconds(), pageRef.current, finished, keepalive);
+      void update.catch(() => undefined);
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {

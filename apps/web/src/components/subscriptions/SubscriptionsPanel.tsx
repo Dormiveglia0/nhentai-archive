@@ -40,7 +40,7 @@ export function SubscriptionsPanel({ blurCovers, view }: { blurCovers: boolean; 
     setUpdatesLoading(true);
     async function load() {
       if (!alive) return;
-      if (!document.hidden) {
+      if (!document.hidden && !document.querySelector<HTMLElement>(".app-route-archive")?.inert) {
         try {
           const result = await api.subscriptionUpdates(page, unreadOnly);
           if (alive) {

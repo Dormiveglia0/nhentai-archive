@@ -272,6 +272,13 @@ class MetadataRefreshService:
                  payload.get("media_id") if bind else work.get("media_id"), titles["english"] or work["title"],
                  titles["japanese"] or work.get("title_japanese"), titles["pretty"] or work.get("pretty_title"),
                  _remote_language(payload), work["id"]))
+            if linked and bind:
+                page_match = int(work["page_count"]) == _page_count(payload)
+                conn.execute("""INSERT INTO reader_bridges(work_id,remote_gallery_id,status,error) VALUES (?,?,?,?)
+                    ON CONFLICT(work_id) DO UPDATE SET remote_gallery_id=excluded.remote_gallery_id,
+                    status=CASE WHEN reader_bridges.remote_gallery_id=excluded.remote_gallery_id AND ? THEN reader_bridges.status ELSE excluded.status END,
+                    error=CASE WHEN reader_bridges.remote_gallery_id=excluded.remote_gallery_id AND ? THEN reader_bridges.error ELSE excluded.error END""",
+                    (work["id"], linked, "unverified" if page_match else "incompatible", None if page_match else "本地与远端页数不同，仅使用本地阅读", page_match, page_match))
             values = {"title": titles["english"], "title_japanese": titles["japanese"], "pretty_title": titles["pretty"],
                       "language": _remote_language(payload)}
             for kind in ("artist", "group", "tag"):

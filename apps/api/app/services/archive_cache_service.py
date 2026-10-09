@@ -76,7 +76,7 @@ def _copy_source(connection, source: dict[str, Any], destination: str) -> None:
         connection.send(("done", copied))
     except Exception as exc:
         try:
-            connection.send(("error", str(exc)[:500] or type(exc).__name__))
+            connection.send(("source_changed" if isinstance(exc, ValueError) else "error", str(exc)[:500] or type(exc).__name__))
         except (BrokenPipeError, EOFError):
             pass
     finally:
@@ -184,7 +184,7 @@ class ArchiveCacheService:
             pages = unpack_manifest(source["manifest"]) if source.get("manifest") else self.db.fetchall(
                 "SELECT * FROM work_pages WHERE work_id = ? ORDER BY page_index", (work_id,))
             return {"status": "direct", "cache_id": None, "lease": None,
-                    "source_revision": self.revision(source), "pages": [{**p, "work_id": work_id} for p in pages]}
+                    "source_revision": self.revision(source), "source_stamp": _version(source), "pages": [{**p, "work_id": work_id} for p in pages]}
         if not source.get("manifest") or not source.get("fingerprint"):
             raise ValueError("作品尚未完成扫描")
         with self._lock:
@@ -197,6 +197,7 @@ class ArchiveCacheService:
                     self.db.execute("INSERT INTO archive_cache_leases VALUES (?, ?, ?)", (token, row["id"], time.time() + LEASE_SECONDS))
                     self.db.execute("UPDATE archive_cache SET accessed_at = ? WHERE id = ?", (time.time(), row["id"]))
                     return {"status": "ready", "cache_id": row["id"], "lease": token,
+                            "source_stamp": _version(source),
                             "pages": [{**p, "work_id": work_id} for p in unpack_manifest(row["manifest"])]}
                 self.db.execute("UPDATE archive_cache SET status = 'failed', last_error = '本地缓存已丢失' WHERE id = ?", (row["id"],))
                 if row["job_id"]:
@@ -386,6 +387,9 @@ class ArchiveCacheService:
                 deadline += time.monotonic() - before
                 if connection.poll(0.2):
                     kind, value = connection.recv()
+                    if kind == "source_changed":
+                        self.db.execute("UPDATE reader_bridges SET status='unverified',error=? WHERE work_id=? AND source_revision=?", (value, source["work_id"], self.revision(source)))
+                        raise OSError(value)
                     if kind == "error":
                         raise OSError(value)
                     if kind == "done":

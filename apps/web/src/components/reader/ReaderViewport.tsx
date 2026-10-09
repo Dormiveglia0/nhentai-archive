@@ -15,7 +15,7 @@ type ReaderViewportProps = {
   loading: boolean;
   loadingControls?: ReactNode;
   onFlip: (delta: number) => void;
-  onJump: (pageIndex: number) => void;
+  onReachPage: (pageIndex: number) => void;
   onToggleChrome: () => void;
   onPrepareRetry: () => Promise<boolean>;
 };
@@ -31,7 +31,7 @@ export function ReaderViewport({
   loading,
   loadingControls,
   onFlip,
-  onJump,
+  onReachPage,
   onToggleChrome,
   onPrepareRetry,
 }: ReaderViewportProps) {
@@ -51,7 +51,7 @@ export function ReaderViewport({
           pages={pages}
           pageIndex={pageIndex}
           fit={fit}
-          onReachPage={onJump}
+          onReachPage={onReachPage}
           onToggleChrome={onToggleChrome}
           retryToken={retryToken}
           onRetry={() => void retry()}
@@ -70,6 +70,7 @@ export function ReaderViewport({
           emptyHint={emptyHint}
         />
       )}
+      {pages.length > 0 && loadingControls ? <div className="reader-preparation-overlay">{loadingControls}</div> : null}
     </div>
   );
 }

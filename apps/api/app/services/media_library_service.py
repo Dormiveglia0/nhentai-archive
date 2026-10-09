@@ -164,6 +164,13 @@ class MediaLibraryService:
         return {"removed": library_id, "source_files_deleted": False, "metadata_preserved": True}
 
     def _require_idle(self, library_id: int) -> None:
+        if self.db.fetchone("""SELECT 1 FROM jobs WHERE type='reader_verify' AND status IN ('queued','running','paused','cancelling')
+            AND json_extract(target_json,'$.source_library_id')=? LIMIT 1""", (library_id,)):
+            raise ValueError("媒体库有作品正在核验，请结束后再修改")
+        if self.db.fetchone("""SELECT 1 FROM jobs j, json_each(j.target_json, '$.plan') p
+            WHERE j.type='library_migration' AND j.status IN ('queued','running','paused','cancelling')
+            AND (json_extract(j.target_json, '$.library_id')=? OR json_extract(p.value, '$.source_library_id')=?) LIMIT 1""", (library_id, library_id)):
+            raise ValueError("媒体库正在迁移，请结束任务后再修改")
         if self.db.fetchone("SELECT 1 FROM library_scan_runs WHERE library_id = ? AND status = 'running' LIMIT 1", (library_id,)):
             raise ValueError("目录库正在扫描，请先暂停自动检查或取消扫描任务")
         if self.db.fetchone("""SELECT id FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')

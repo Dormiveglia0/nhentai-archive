@@ -10,7 +10,7 @@ export function isCreatorTag(tag: CreatorTag): tag is CreatorTag & { id: number;
   return Number.isInteger(tag.id) && Number(tag.id) > 0 && (tag.type === "artist" || tag.type === "group");
 }
 
-export function useCreatorSubscriptions(enabled: boolean) {
+export function useCreatorSubscriptions(enabled: boolean, inReader = false) {
   const [subscriptions, setSubscriptions] = useState<CreatorSubscription[]>([]);
   const [loading, setLoading] = useState(enabled);
   const [busyTag, setBusyTag] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function useCreatorSubscriptions(enabled: boolean) {
     setLoading(true);
     async function load() {
       if (!alive) return;
-      if (!document.hidden) {
+      if (!document.hidden && (inReader || !document.querySelector<HTMLElement>(".app-route-archive")?.inert)) {
         try {
           const payload = await api.creatorSubscriptions();
           if (alive) { setSubscriptions(payload.result); setLoadError(""); }
@@ -35,7 +35,7 @@ export function useCreatorSubscriptions(enabled: boolean) {
     }
     void load();
     return () => { alive = false; window.clearTimeout(timer); };
-  }, [enabled, revision]);
+  }, [enabled, revision, inReader]);
 
   async function toggle(tag: CreatorTag) {
     if (!isCreatorTag(tag) || busyTag) return;

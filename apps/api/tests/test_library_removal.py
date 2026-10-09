@@ -44,6 +44,10 @@ def test_library_purge_cleans_exclusive_records_and_preserves_shared_sources(tmp
     assert result["removed_works"] == 1
     assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1
     assert (root / "shared.cbz").is_file() and (root / "exclusive.cbz").is_file() and (other / "shared.cbz").is_file()
+    assert files.library_removal_preview(second["id"])["exclusive_works"] == 1
+    assert files.remove_library(second["id"], purge=True)["removed_works"] == 1
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 0
+    assert (root / "shared.cbz").is_file() and (other / "shared.cbz").is_file()
     assert not db.fetchall("PRAGMA foreign_key_check")
 
 

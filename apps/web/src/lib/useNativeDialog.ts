@@ -27,6 +27,7 @@ export function useNativeDialog(ref: RefObject<HTMLDialogElement>, onClose: () =
     closing.current = false;
     const previous = returnFocus?.current ?? document.activeElement as HTMLElement | null;
     dialog.showModal();
+    dialog.querySelector<HTMLElement>("[data-dialog-focus]")?.focus({ preventScroll: true });
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       dialog.animate([{ opacity: 0, transform: "translateY(20px)" }, { opacity: 1, transform: "translateY(0)" }],
         { duration: 240, easing: "cubic-bezier(.22,1,.36,1)" });

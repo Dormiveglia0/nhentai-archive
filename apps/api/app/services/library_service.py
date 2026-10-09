@@ -153,6 +153,7 @@ class LibraryService:
         tag_ids: list[int] | None = None,
         favorite_only: bool = False,
         tag_keys: list[str] | None = None,
+        library_id: int | None = None,
     ) -> dict[str, Any]:
         revision = self.revision()
         page = max(1, int(page))
@@ -163,6 +164,18 @@ class LibraryService:
         tag_ids = [int(tid) for tid in (tag_ids or []) if tid is not None]
 
         where, params = self._build_filters(q, read_status, source, language, tag_ids, favorite_only)
+        if library_id is not None:
+            if library_id != -1 and library_id < 1:
+                raise ValueError("媒体库筛选无效")
+            if library_id == -1:
+                where.append("""NOT EXISTS (SELECT 1 FROM work_files f LEFT JOIN library_items i ON i.id=f.library_item_id
+                    LEFT JOIN media_libraries l ON l.id=i.library_id WHERE f.work_id=w.id AND f.kind='source_cbz'
+                    AND (f.library_item_id IS NULL OR (l.removed_at IS NULL AND i.status='ready')))""")
+            else:
+                where.append("""EXISTS (SELECT 1 FROM work_files f LEFT JOIN library_items i ON i.id=f.library_item_id
+                    WHERE f.work_id=w.id AND f.kind='source_cbz' AND (i.library_id=? OR
+                    (f.library_item_id IS NULL AND ?=(SELECT id FROM media_libraries WHERE kind='managed'))))""")
+                params.extend([library_id, library_id])
         keys = list(dict.fromkeys(tag_keys or []))
         if len(keys) > 40 or any(not isinstance(key, str) or len(key) > 320 or not key.startswith(("local:", "remote:")) for key in keys):
             raise ValueError("标签筛选无效或超过40项")

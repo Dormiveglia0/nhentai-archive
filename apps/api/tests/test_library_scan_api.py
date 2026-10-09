@@ -9,6 +9,7 @@ from app import main
 from app.config import Settings
 from app.database import Database
 from app.services.archive_service import ArchiveService
+from app.services.file_service import FileMaintenanceService
 from app.services.job_service import JobService
 from app.services.library_index_service import LibraryIndexService
 from app.services.library_scan_job_service import LibraryScanJobService
@@ -43,7 +44,7 @@ def test_directory_api_scans_nested_source_and_preserves_it_on_removal(tmp_path,
     jobs = JobService(db)
     index = LibraryIndexService(settings, db, archive.libraries)
     scan_jobs = LibraryScanJobService(settings, jobs, index, archive.libraries)
-    for name, value in {"media_libraries": archive.libraries, "library_scan_jobs": scan_jobs, "archive": archive}.items():
+    for name, value in {"media_libraries": archive.libraries, "library_scan_jobs": scan_jobs, "archive": archive, "files": FileMaintenanceService(db, settings, archive.cache)}.items():
         monkeypatch.setattr(main.services, name, value)
     root = tmp_path / "media"
     (root / "nested").mkdir(parents=True)

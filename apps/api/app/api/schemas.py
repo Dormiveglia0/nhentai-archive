@@ -20,6 +20,7 @@ class ReadingSessionPatch(BaseModel):
     duration_seconds: int = Field(ge=0)
     page_index: int = 1
     finished: bool = False
+    cache_lease: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
 
 
 class FavoritePatch(BaseModel):
@@ -159,6 +160,13 @@ class FileDeleteRequest(BaseModel):
 class LibraryScanRequest(BaseModel):
     paths: list[str] | None = Field(default=None, max_length=5000)
     library_id: int | None = Field(default=None, gt=0)
+
+
+class LibraryMigrationRequest(BaseModel):
+    work_ids: list[int] = Field(min_length=1, max_length=500)
+    library_id: int = Field(gt=0)
+    move: bool = False
+    conflict: Literal["rename", "skip"] = "rename"
 
 
 class MediaLibraryCreate(BaseModel):

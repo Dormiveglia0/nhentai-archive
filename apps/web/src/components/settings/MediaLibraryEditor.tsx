@@ -68,7 +68,7 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
         </header>
         <fieldset disabled={busy}>
           <div className="folio-field-matrix">
-            <label className="folio-field"><span>库名</span><input name="name" defaultValue={library?.name ?? ""} required maxLength={100} autoFocus /><i /></label>
+            <label className="folio-field"><span>库名</span><input name="name" defaultValue={library?.name ?? ""} required maxLength={100} data-dialog-focus autoFocus /><i /></label>
             {managed ? <label className="folio-field"><span>访问方式</span><input value="本地导入" readOnly /><i /></label> :
               <FolioSelect label="访问方式" value={kind} options={[{ value: "local", label: "本地目录" }, { value: "mounted", label: "挂载目录（rclone / 网络存储）" }]} onChange={setKind} />}
             <div className="folio-field-wide folio-directory-path">
