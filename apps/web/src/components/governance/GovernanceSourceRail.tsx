@@ -7,9 +7,9 @@ import { formatBytes } from "../../lib/format";
 export function GovernanceSourceRail({
   aggregate,
 }: {
-  aggregate: GovernanceAggregate | null;
+  aggregate: GovernanceAggregate;
 }) {
-  const sourceFile = aggregate?.files.find((file) => file.kind === "source_cbz");
+  const sourceFile = aggregate.files.find((file) => file.kind === "source_cbz");
 
   return (
     <aside className="folio-governance-source" aria-label="当前作品整理清单">
@@ -17,8 +17,7 @@ export function GovernanceSourceRail({
         <h2>处理清单</h2>
       </header>
 
-      {aggregate ? (
-        <>
+      <>
           <section className="folio-governance-source-actions">
             <strong>下一步</strong>
             {aggregate.recommended_actions.length ? (
@@ -58,10 +57,7 @@ export function GovernanceSourceRail({
             <span className={aggregate.dictionary.conflicts ? "is-alert" : ""}><em>冲突</em><b>{aggregate.dictionary.conflicts}</b></span>
           </section>
 
-        </>
-      ) : (
-        <div className="folio-governance-source-empty"><i /><i /><i /><i /></div>
-      )}
+      </>
     </aside>
   );
 }

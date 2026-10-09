@@ -104,3 +104,8 @@
 .folio-remove-options strong { display: block; font-size: 14px; font-weight: 500; }
 .folio-remove-options small { display: block; margin-top: 8px; font-size: 13px; line-height: 1.7; color: var(--folio-muted); }
 .folio-remove-options label:has(input:checked) { border-color: var(--folio-red); background: var(--folio-red-soft); }
+
+.folio-storage-groups { display: grid; gap: 32px; }
+.folio-storage-group { min-width: 0; display: grid; gap: 20px; }
+.folio-storage-head-actions { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 600px) { .folio-storage-head-actions { gap: 4px; } .folio-storage-head-actions .folio-line-button { padding-inline: 10px; font-size: 12px; } }

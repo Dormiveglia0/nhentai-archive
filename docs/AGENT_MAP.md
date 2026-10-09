@@ -1,183 +1,63 @@
 # NH Archive Agent Map
 
-当前阶段（2026-10-10）：阅读与媒体库体验更新已实现并完成分批验收，分支 `codex/reader-media-experience`，回滚标签 `archive/media-integrated-20261009`。完整API/镜像337项、浏览器141项不同案例、56组全站视觉与性能检查及实际归档/SMTP/rclone/FUSE检查通过。已部署4349，镜像 `reader-media-20261010-published` / `latest`（`ef8a7d1e4ed5`），健康检查通过；114部作品与原有进度、会话、标签和源文件保留，89个静态资源逐字节匹配。正式数据路径保持 `/opt/nhentai/.local-data:/data`。最新实现、测量范围与发布记录见 `docs/READER_MEDIA_EXPERIENCE_UPDATE.md`；下方2026-10-09及更早条目为历史基线。
+当前工作：`codex/site-layout-refinement`，页面布局、订阅与交互完善。实施与验收记录见 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md)。上一版已部署的阅读与媒体库更新见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)。状态以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准。
 
-Use this file as the first frontend navigation index. Read only the row for the module being changed; do not load the former monolithic demo files into context.
+前端修改先读本文件，再读对应组件；不要把历史原型当成当前设计。
 
-## Active Frontend Contract
+## 当前约定
 
-- 2026-10-08 final review overrides older homepage/layout notes below. Preserve sharp paper/ink/vermilion geometry; only metric cards may retain small rounded corners. Keep the original NH top-left logo; the black/red favicon is independent. Homepage headings are small functional labels, not display typography. Cross-tab jumps animate one continuous indicator movement and commit only the selected target; never mount intermediate pages. See `docs/UI_AUDIT.md` for the independent design review, actual interaction checks and deployment evidence.
-- Visual source of truth: `http://127.0.0.1:5173/demo`, shared system `apps/web/src/components/folio/`, and demo-only bodies in `apps/web/src/components/demo/modules/`.
-- Formal application: `components/auth/AuthGate.tsx` authenticates before `apps/web/src/App.tsx` mounts any hash route; real data calls live in `apps/web/src/lib/api.ts`.
-- Dependency direction: `demo -> folio` and `formal feature -> folio`. `folio` must never import `demo`; formal routes must never import demo modules or demo state.
-- Migration rule: rewrite each formal page structure with Folio components while retaining its existing real state hook/API flow. Do not skin legacy DOM with cross-page override CSS. Do not copy demo-only state or invent works, tasks, metrics, tag candidates, paths, or covers.
-- Product copy names user actions and results; do not expose implementation notes or “真实数据” guarantees as page content. Login is an independent paper surface with no pre-auth page silhouettes or content. Preserve focus feedback and the measured field-edge → responsive topbar scan, followed by app reveal; no welcome slogans.
-- Shared motion comes from `apps/web/src/lib/motion/`; module scenes may use CSS keyframes but must respect `prefers-reduced-motion`.
-- Historical 2026-10-09 media update: directory/cache APIs, monitoring/compensation, language-aware scraping and local tag keys are implemented. `settings/MediaLibrariesSection.tsx`, `MediaLibraryEditor.tsx` and `ReadingCacheSection.tsx` own directory/scanning/cache controls; `library/MetadataScrapePanel.tsx` owns real candidate selection. `subscriptions/CreatorSubscribeButton.tsx` supplies typed artist/group actions to gallery/local/reader tags; `settings/NotificationSection.tsx` and `SmtpSection.tsx` own subscriptions, updates and private SMTP configuration. Full 323 backend/image tests/build and 125 scoped browser checks pass; 16 reader/export checks on the affected work and real rclone/FUSE/Docker checks also pass. Release 16c3db2 is deployed on port 4349 as media-20261009-published/latest (4046b0fd69ea). Read `docs/MEDIA_LIBRARY_UPDATE.md` for current evidence.
+- 正式应用是 React + FastAPI + SQLite，先经 `auth/AuthGate.tsx` 再挂载路由。真实 API 统一在 `src/lib/api.ts`。
+- 视觉基线为 `components/folio/` 与正式组件；`/demo` 只演示控件和排版。依赖方向为 `demo -> folio`、`formal -> folio`，正式应用不得导入 demo。
+- 保留 NH 原标志、独立黑红 favicon、纸墨朱红与直角线条。度量卡可保留小圆角。语言标签省略显示，完整内容放在 title。
+- 页头不重复顶部导航。各页直接组织首屏内容；`ModuleBackdrop` 的有限 SVG 绘制不占布局空间。
+- 跨项跳转只移动指示条并挂载目标页，不能加载途经页面。减少动态效果立即提交；后台、离屏、阅读器打开时暂停轮播和无用轮询。
+- 不添加假作品、任务、统计、标签候选或成人示例素材。页面文字只解释用户需要的动作和结果。
 
-## Demo Dependency Map
+## 页面定位
 
-```text
-FrontendDemo.tsx
-  -> ../folio/config.ts
-  -> ../folio/shell/FolioChrome.tsx
-       -> ../folio/shell/PageNavigation.tsx
-       -> ../folio/shell/PageHeading.tsx -> ../folio/scenes/ModuleScene.tsx -> scenes/*Scene.tsx
-       -> ../folio/shell/ModuleBackdrop.tsx
-       -> ../folio/Folio.css -> ../folio/styles/*.css
-  -> modules/DemoPage.tsx -> modules/*Demo.tsx
-       -> ../folio/ui/FolioPrimitives.tsx
-  -> ui/DemoCommandBar.tsx
-```
+以下路径相对 `apps/web/src/components/`。
 
-`FrontendDemo.tsx` owns only demo navigation, notices, and settings reset. `components/folio/` owns reusable visual structure. `components/demo/` owns only public-preview content and must not become a production dependency.
+| 页面 | 正式组件与状态 | 样式与实际数据 |
+| --- | --- | --- |
+| 首页 `#workbench` | `workbench/WorkbenchPage.tsx`、`HomeActivity.tsx`、`folio/ui/HomeHero.tsx` | 对应 CSS；`librarySearch`、`libraryContinueReading`、`latest`、订阅、媒体库和任务；最多6部真实本地作品轮播及6部最新远端作品 |
+| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`LibraryToolbar.tsx`、`LibraryBatchTray.tsx` | `LibraryPage.css`、`folio/styles/library-discover.css`；库摘要、筛选、标签、收藏、导入；范围按媒体库，旧 source API 保留兼容 |
+| 本地详情 | `library/WorkInspector.tsx`、`MetadataScrapePanel.tsx`、`ReaderBridgeControl.tsx` | `folio/ui/WorkDetail.css`、`MetadataScrapePanel.css`；原生悬浮弹窗、自然封面、阅读/编辑/导出/删除、刮削与双来源 |
+| 发现 | `discover/DiscoverPage.tsx`、`useDiscoverState.ts`、`DiscoverToolbar.tsx`、`DiscoverFeed.tsx`、`PopularFan.tsx` | `DiscoverPage.css` 与共享发现规则；真实最新/热门/筛选、阅读、导入；作品与订阅旁常驻更新区 |
+| 远端详情 `#gallery/{id}` | `discover/GalleryDetailPage.tsx`、`gallery/useGalleryDetail.ts`、`gallery/*` | `gallery/*.css`；作品信息、标签、预览和相关推荐；保留独立详情构图 |
+| 订阅与更新 | `subscriptions/CreatorSubscribeButton.tsx`、`SubscriptionsPanel.tsx`、`SubscriptionUpdates.tsx`、`UpdatesIndicator.tsx`、`useSubscriptionUpdates.ts` | `settings/NotificationSection.css`；作者/社团订阅、4部近期作品、未读、已读；同一 gallery 合并跨订阅更新，原始日文标题精确匹配才折叠预览中的语言版本 |
+| 整理 | `governance/GovernancePage.tsx`、`useGovernanceState.ts`、`Governance*Panel.tsx`、`GovernanceSourceRail.tsx` | `GovernancePage.css`、`GovernanceEditor.css`、共享治理规则；字段、标签、翻译、核对与源文件回写 |
+| 词典 | `dictionary/DictionaryPage.tsx`、`useDictionaryState.ts`、其子组件 | `DictionaryPage.css`、`DictionaryEditor.css` 与共享规则；搜索、候选、影响预览、应用、批量处理 |
+| 队列 | `tasks/TasksPage.tsx`、`useTasksState.ts`、其子组件 | `TasksPage.css`、共享任务规则；状态筛选、日志、暂停/恢复/取消/重试/删除 |
+| 文件 | `files/FilesPage.tsx`、`useFilesState.ts`、`FileList.tsx`、`FileDetailPanel.tsx`、`FileDeleteDialog.tsx`、`MigrationPanel.tsx` | `FilesPage.css`；媒体库/清单/迁移三个视图；选择与目标分区、复制/移动、冲突处理、预览和迁移任务 |
+| 设置 | `settings/SettingsPage.tsx`、`useSettingsState.ts`、对应 `*Section.tsx` | `SettingsPage.css`、`folio/styles/settings.css`；连接、翻译、访问/阅读、导出默认、统计、存储、邮件 |
+| 目录与缓存 | `settings/MediaLibrariesSection.tsx`、`MediaLibraryEditor.tsx`、`ReadingCacheSection.tsx`、`StorageSection.tsx` | `StorageSection.css`；实际目录选择、监控/补偿、扫描、阅读缓存与用量；目录配置在文件页 |
+| 阅读器 | `reader/ReaderPage.tsx`、`ReaderViewport.tsx`、`WebtoonView.tsx`、`ReaderToolbar.tsx`、`ReaderScrubber.tsx`、`ReaderInfoPanel.tsx`、其状态 hooks | `ReaderPage.css`、`ReaderToolbar.css`、`ReaderPanels.css`；本地/远端阅读、进度与会话、直接阅读、版本恢复、双来源交接；控件覆盖图片 |
+| 阅读历史 | `history/HistoryPage.tsx`、`useHistoryState.ts`、`historyHelpers.ts` | `HistoryPage.css`；阅读记录、日期与真实会话 |
+| 导出 | `export/ExportAction.tsx`、`ExportDialog.tsx`、`useExportState.ts`、`LegacyExportEntry.tsx` | `ExportDialog.css`；预览后下载，保留旧 `#export` 链接兼容 |
 
-## Module Locator
+## 共用实现
 
-| Module | Demo page body | Header scene | Primary CSS | Formal page/state | Real API entry |
-| --- | --- | --- | --- | --- | --- |
-| 首页（#workbench） | `demo/modules/WorkbenchDemo.tsx` | `folio/ui/HomeHero.tsx` | `folio/ui/HomeHero.css`, `workbench/WorkbenchPage.css` | `workbench/WorkbenchPage.tsx` | `api.librarySearch({ per_page: 4, sort: "recent_added" })`, `api.libraryContinueReading(1)`; one focal continuing/recent work plus `workbench/HomeActivity.tsx` for actual unread updates, library health/migration and jobs; statistics only for independent `home-preview=1` |
-| 我的库 | `demo/modules/LibraryDemo.tsx` | `folio/scenes/LibraryScene.tsx` | `library/LibraryPage.css`, shared shelf/control rules in `folio/styles/library-discover.css`, scene prefix `folio-scene-library-*` | `library/LibraryPage.tsx`, `useLibraryState.ts`, `LibraryBatchTray.tsx`, shared `folio/ui/ContinueReadingRow.tsx` and feature components | `api.librarySummary/search/continueReading/recentAdded/tagFilters/setWorkFavorite/metadataRefreshPreview/metadataRefreshApply` |
-| 发现 | `demo/modules/DiscoverDemo.tsx` | `folio/scenes/DiscoverScene.tsx` | `discover/DiscoverPage.css`, shared controls in `folio/styles/library-discover.css`, scene prefix `folio-scene-discover-*`, backdrop prefix `folio-radar-*` | `discover/DiscoverPage.tsx`, `useDiscoverState.ts`, `TagFilterSelector.tsx` and feature components | `api.feed/popular/random/dictionaryCandidates/dictionaryAutocomplete/importGallery` |
-| 治理 | `demo/modules/GovernanceDemo.tsx` | `folio/scenes/GovernanceScene.tsx` | `governance/GovernancePage.css`, `GovernanceEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-edit-*` | `governance/GovernancePage.tsx`, `useGovernanceState.ts`, `GovernanceReviewPanel.tsx`, `GovernanceTranslationPanel.tsx`, `GovernanceTagBoard.tsx` / `GovernanceTagItem.tsx` and queue/source/action components | `api.governanceQueue/workGovernance/apply/review/translate/bulk*` |
-| 词典 | `demo/modules/DictionaryDemo.tsx` | `folio/scenes/DictionaryScene.tsx` | `dictionary/DictionaryPage.css`, `DictionaryEditor.css`, shared controls in `folio/styles/governance-dictionary.css`, scene prefix `folio-scene-dictionary-*` | `dictionary/DictionaryPage.tsx`, `useDictionaryState.ts` and feature components | `api.dictionarySummary/candidates/evidence/preview/apply/*` |
-| 队列 | `demo/modules/TasksDemo.tsx` | `folio/scenes/TasksScene.tsx` | `tasks/TasksPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-queue-*` | `tasks/TasksPage.tsx`, `useTasksState.ts` and feature components | `api.jobs/jobLogs/pause/resume/cancel/retry/delete/clear` |
-| 导出 | `demo/modules/ExportDemo.tsx` | `folio/scenes/ExportScene.tsx` | `export/ExportPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-export-*` | `export/ExportAction.tsx`, `ExportDialog.tsx`, `useExportState.ts`; `LegacyExportEntry.tsx` for old links | `api.exportQueue/preview/download/bundle/enqueueBulkExport` |
-| 文件 | `demo/modules/FilesDemo.tsx` | `folio/scenes/FilesScene.tsx` | `files/FilesPage.css`, shared controls in `folio/styles/tasks-export-files.css`, scene prefix `folio-scene-files-*` | `files/FilesPage.tsx`, `MigrationPanel.tsx`, `useFilesState.ts`, `FileList.tsx`, `FileDetailPanel.tsx`, `FileDeleteDialog.tsx`; `settings/MediaLibrariesSection.tsx` mounted here | `api.mediaLibraries/browseDirectories/migrationCandidates/previewMigration/enqueueMigration/filesOverview/inventory/duplicates/previewDelete/deleteFiles/enqueueLibraryScan` |
-| 设置 | `demo/modules/SettingsDemo.tsx` | `folio/scenes/SettingsScene.tsx` | `settings/SettingsPage.css`, shared controls in `folio/styles/settings.css`, scene prefix `folio-scene-settings-*` | `settings/SettingsPage.tsx`, `useSettingsState.ts`, `DataSection.tsx`, `ReadingStatisticsReport.tsx` and other section components | `api.settings/updateSettings/verify*/authChangePassword/runtime/librarySummary/libraryStatistics/filesOverview` |
+- `folio/config.ts`：8个主导航、设置章节与图标。
+- `folio/shell/FolioChrome.tsx`：顶部导航、手机菜单、滚动恢复、进度；`ArchiveShell.tsx` 接入全站更新提示，阅读器绕过 chrome。
+- `folio/shell/PageNavigation.tsx`：NH 原标志与导航线稿图标。`public/icon.svg` 只负责网页 favicon。
+- `lib/motion/SlidingIndicator.tsx`：实际容器坐标内450ms连续移动，支持滚动、打断与减少动态效果。
+- `lib/motion/pageTransition.ts`：目标页只提交一次；主页面/设置/文件/队列/发现使用原生 View Transitions，详情使用轻淡入和12px位移。快速导航取消过期回调。
+- `App.tsx`：详情入口先准备真实数据与懒加载模块，再在过渡截图后卸载旧弹窗；阅读器同步提交，保留前一页面和焦点。
+- `lib/useNativeDialog.ts`：原生 dialog 焦点、Escape/背景关闭与短时进出动画。`WorkInspector` 仅在进入阅读器时即时关闭，普通详情跳转等待页面卸载。
+- `folio/ui/`：控件、度量卡、封面、分页、标签滚动、继续阅读行与删除动作；优先复用。
+- `lib/navigation.ts`：原生 href 与 tag/本地标签范围；保留键盘、修饰键和新窗口行为。
+- `lib/format.ts` / `lib/jobs.ts`：格式化与任务规则，不把通用函数放到 feature 文件夹。
 
-Paths in the table are relative to `apps/web/src/components/` unless stated otherwise.
+## CSS 顺序
 
-## Secondary Route Locator
+`Folio.css` 按顺序加载 `base`、`chrome`、`workbench`、`library-discover`、`governance-dictionary`、`tasks-export-files`、`settings`、`feedback-motion`、`responsive`。功能页局部 CSS 按所属组件加载。改一个模块时不要叠加跨页覆盖规则。旧 PageHeading、scenes 目录和首页原型已退役。
 
-| Route | Composition owner | State/model owner | CSS owner | Real API entry |
-| --- | --- | --- | --- | --- |
-| `#history` | `history/HistoryPage.tsx` | `history/useHistoryState.ts`, `history/historyHelpers.ts` | `history/HistoryPage.css` | `api.libraryReadingHistory()` |
-| `#gallery/{id}` | `discover/GalleryDetailPage.tsx`, `discover/gallery/GalleryHero.tsx`, `GalleryTags.tsx`, `GalleryPagePreview.tsx`, `GalleryLightbox.tsx`, `GalleryRelated.tsx` | `discover/gallery/useGalleryDetail.ts`, `galleryDetailModel.ts` | feature-local files under `discover/gallery/` | `api.gallery/related/importGallery()` |
-| `#reader/{workId}`, `#reader/remote/{galleryId}` | `reader/ReaderPage.tsx`, `ReaderViewport.tsx`, `WebtoonView.tsx`, `ReaderToolbar.tsx`, `ReaderScrubber.tsx`, `ReaderInfoPanel.tsx` | `reader/useReaderData.ts`, `useReadingSession.ts`, `useReaderChrome.ts`, `useReaderPrefs.ts`, `readerHelpers.ts` | `reader/ReaderPage.css`, `ReaderToolbar.css`, `ReaderPanels.css` | `api.work` (full local tags), `pages/readerState/updateReaderState/startReadingSession/updateReadingSession/startRemoteReadingSession/updateRemoteReadingSession/setWorkFavorite/gallery/importGallery()` |
-
-Gallery/history render inside `FolioChrome`. Both readers intentionally bypass the application chrome and own an immersive fixed viewport; do not reintroduce the old shell underneath them.
-
-## Shared Owners
-
-| Concern | Owner |
-| --- | --- |
-| Page ids, labels, descriptions, icons, settings section definitions | `folio/config.ts` |
-| Full-screen grid, topbar, mobile drawer, scroll reset/progress | `folio/shell/FolioChrome.tsx` |
-| Page/settings/task transitions, forward/back direction and rapid-navigation cancellation | `transitionTabs()` in `lib/motion/pageTransition.ts` commits the selected target once. A 1→3 indicator crosses 2 visually without mounting page 2. Native snapshots capture `.folio-scroll`, `.folio-settings-stage` or `.folio-tasks-main`; navigation remains live. Reader changes cancel pending callbacks and commit synchronously so a finishing exit cannot overwrite rapid reentry; reduced motion applies the target directly. |
-| Sliding selection indicators across all segmented controls | `lib/motion/SlidingIndicator.tsx` measures within the actual control group, including its own scroll offset, then uses native Web Animations for a 450ms continuous transform. Cleanup preserves the interrupted position; reduced motion applies the target immediately. This avoids animating page-scroll changes when long lists shrink. Owners include top/mobile navigation, settings sections/providers/default reading mode, task/export/file filters, library grid/list and tag scope, discover tag scope/relation, governance queue, statistics period/ranking and reader mode. Demo counterparts reuse it. Parent buttons must allow the indicator to cross the group. Task tabs stay 52px high with no vertical overflow. |
-| Standard title composition (no explanatory subtitle) and scene placement; homepage owns its hero | `folio/shell/PageHeading.tsx`; pauses decorative scene animations when the heading is outside the viewport |
-| Large background atmosphere and discover radar hits | `folio/shell/ModuleBackdrop.tsx` + `folio/styles/base.css` |
-| Scene routing only | `folio/scenes/ModuleScene.tsx` |
-| Search field, custom select, field, toggle, empty state, panel heading | `folio/ui/FolioPrimitives.tsx` |
-| Formal summary/status metric entries and semantic tones | `folio/ui/FolioMetricGrid.tsx` + `folio/styles/workbench.css` |
-| Shared pagination, tag scroller, work shelf, and cover frame (portrait fill on cards/shelves; full-image contain on detail/reader) | `folio/ui/IconPager.tsx`, `TagScroller.tsx`, `ContinueReadingRow.tsx`, `AmbientCover.tsx` |
-| Floating local work details and restored gallery detail | `library/WorkInspector.tsx` uses native modal `<dialog>`, full `api.work()` tags and `folio/ui/WorkDetail.css`: reading/favorite row, equal edit/export/delete tools and a separate scrape/remote-detail row. `MetadataScrapePanel.*` shows actual candidates and field differences, defaults to changed fields and stacks comparisons on phones. The natural-aspect cover has no background mat. Gallery keeps its own `GalleryHero.css` / `GalleryTags.css` / `GalleryDetailPage.css`. Local tags use typed name keys; remote detail tags use real remote IDs. |
-| Reader control layout | `reader/ReaderToolbar.tsx` uses a native Popover for single/continuous mode, fit/direction/zoom. Toolbar and scrubber overlay the image; `.reader-viewport` stays inset 0 and hiding controls never changes fit dimensions. Scrubber arrows are always left/right for previous/next. `ReaderJumpDialog` uses a sharp paper modal; continuous images reserve space during loading. |
-| Modal entry/exit, backdrop/Escape and focus | `lib/useNativeDialog.ts` for native dialogs; explicit `data-dialog-focus` sets initial focus after `showModal`. Reader panels and `WorkInspector` retain their existing Motion owners. |
-| Shared byte, work-title and UTC timestamp formatting | `lib/format.ts`; `parseUtcTimestamp()` treats timezone-less API timestamps as UTC and preserves explicit offsets. Jobs, files, review records, history and statistics use it. History sends the browser's `timezone_offset_minutes`; the API groups and paginates on that local day, with UTC as the backward-compatible default. |
-| Shared job labels, status rules, and action predicates | `lib/jobs.ts` |
-| Fixed demo action bar | `demo/ui/DemoCommandBar.tsx` |
-| Demo page dispatch | `demo/modules/DemoPage.tsx` |
-| Live task overlay outside reader routes | `layout/TaskDock.tsx` + `layout/TaskDock.css` |
-| Single-password gate, persistent session, change-password flow, and lock action | `auth/AuthGate.tsx` delegates to `auth/AuthWakeDemo.tsx` + `auth/AuthWakeDemo.css`; `settings/PreferencesSection.tsx` + `useSettingsState.ts`; `App.tsx` keeps every formal/demo route behind it |
-| Hash dispatch and route-level code splitting | `App.tsx` |
-| Folio/immersive-reader loading states | `layout/RouteFallback.tsx` + `layout/RouteFallback.css` |
-| Tag-search URL + middle/modifier-click contract | `lib/navigation.ts::tagSearchHref()` for remote discovery and `libraryTagHref()` for local-library drill-downs; each owner must render a native anchor |
-| Back-button history contract | `lib/navigation.ts::goBack()`; visible “返回” controls pop browser history and must not synthesize a destination entry |
-| Reader failed-image retry fan-out | `reader/ReaderViewport.tsx` owns the shared retry token; `ReaderImage.tsx` retries only instances currently in an error state |
-| Local reading preparation and cache lifetime | `reader/useReaderData.ts` calls `api.prepareReadingSource/releaseReadingSource`, polls real cache jobs and uses leased snapshot pages. Progress saves finish before release, with keepalive on exit. `useReadingSession.ts` renews through heartbeat; `ReaderPage.*` owns preparation controls. Backend: `ArchiveCacheService` via `ArchiveService.cache`; `/library/cache` configuration/summary/clear is connected by `settings/ReadingCacheSection.tsx`. Settings/cache browser verification passes. `reader/ReaderBridgeControl.tsx` exposes actual full-page verification in scraping; `ReaderBridgeService` guards source/binding/catalog/bytes, and `ReaderImage` decodes local replacements before replacing verified remote pages. |
-| Actual grid-track measurement, whole-row page sizes and sparse-row size limits | `lib/useGridColumns.ts`; library rounds its 24-item target up to a full row, discover requests four measured rows |
-| Local favorites | `works.favorite`; library `WorkCard`/`WorkInspector` and reader `ReaderInfoPanel` mutate it through `api.setWorkFavorite()`; it is intentionally distinct from the remote gallery metric named `favorites` |
-| Reading-time sessions and reports | `reader/useReadingSession.ts` records visible foreground time for local and cached remote galleries with secure-context fallbacks; local sessions also create reading history while remote sessions never write local progress. `settings/ReadingStatisticsReport.tsx` renders their shared period/activity/ranking view plus local-only collection distribution from `api.libraryStatistics()` |
-
-`apps/web/src/styles/app.css` is now a base-only file (root tokens, reset, form inheritance, shared spin utility, reduced-motion override). Do not put feature or shell selectors back into it.
-
-## CSS Load Order
-
-`folio/Folio.css` is the ordered import manifest and is loaded by `folio/shell/FolioChrome.tsx`:
-
-1. `styles/base.css` — paper tokens, atmosphere, binding progress, shared focus.
-2. `styles/chrome.css` — topbar, nav, scroll container, page heading.
-3. `styles/scenes.css` — nine scene animation systems.
-4. `styles/workbench.css` — shared content primitives and workbench.
-5. `styles/library-discover.css` — query composer, filters, library/discover surfaces.
-6. `styles/governance-dictionary.css` — editor, evidence, modal.
-7. `styles/tasks-export-files.css` — operational modules.
-8. `styles/settings.css` — settings tabs, form sections, local transitions.
-9. `styles/feedback-motion.css` — command bar, notices, keyframes.
-10. `styles/responsive.css` — all breakpoints and reduced-motion overrides; keep this last.
-
-Preserve this order. Shared Folio structure goes here; production-only feature layout stays beside that feature and must use direct class ownership, not `.folio-formal .legacy-class` adapters.
-
-## Formal Migration Ledger
-
-| Stage | Route | Structure owner | Old CSS deletion boundary | Status |
-| --- | --- | --- | --- | --- |
-| 1 | `#workbench` | `workbench/WorkbenchPage.tsx` + `WorkbenchPage.css` | old `.workbench-*` and shelf selectors removed after direct Folio rewrite | migrated |
-| 2 | `#library` | `library/LibraryPage.tsx` + `useLibraryState.ts` + `LibraryPage.css` | old `.library-*`, inspector and batch selectors removed after direct Folio rewrite | migrated |
-| 3 | `#discover` | `discover/DiscoverPage.tsx` + `useDiscoverState.ts` + `DiscoverPage.css` | old discover toolbar/feed/page/tag-picker/popular-fan selectors removed after direct Folio rewrite | migrated |
-| 4 | `#governance`, `#dictionary` | feature-local components + state hooks | old governance/dictionary layout selectors and orphaned `FilterMenu` removed | migrated |
-| 5 | `#tasks`, `#export`, `#files` | feature-local components | old operational layout selectors replaced per component | migrated |
-| 6 | `#settings` | `settings/SettingsPage.tsx` + `useSettingsState.ts` + section components + `SettingsPage.css` | old settings deck/rail/form/export-recipe selectors and native selects removed | migrated |
-| 7 | detail/history/readers | `discover/gallery/*`, `history/*`, `reader/*` | old gallery and reader global selectors removed after route QA | migrated |
-| 8 | all routes | `App.tsx` + `layout/RouteFallback.*` | orphaned global shell CSS removed; each formal page/CSS loads on demand | migrated |
-
-Update one row to `migrated` only when its real page renders Folio structure directly, its old selectors are removed, and desktop/mobile browser QA passes.
-
-## Fast Change Recipes
-
-- Change one page layout: page body + its primary CSS file only.
-- Change one header animation: `folio/scenes/{Module}Scene.tsx` + its `folio-scene-{module}-*` rules in `folio/styles/scenes.css`.
-- Change top navigation: `folio/config.ts`, `folio/shell/PageNavigation.tsx`, then responsive nav rules.
-- Change page background: `folio/shell/ModuleBackdrop.tsx` + matching atmosphere rules in `folio/styles/base.css`.
-- Change a select/input/toggle everywhere: `folio/ui/FolioPrimitives.tsx` + the owning shared CSS layer.
-- Change route loading or split boundaries: `App.tsx` + `layout/RouteFallback.*`; keep `ArchiveShell` eager and readers outside it.
-- Change tag navigation: update the matching `lib/navigation.ts` builder (`tagSearchHref()` for discovery, `libraryTagHref()` for local-library scope), then preserve native `<a>` semantics in the feature owner; pointer-drag code may suppress only a completed primary-mouse drag; capture after movement exceeds the threshold, preserve keyboard/modifier clicks, and use native touch scrolling.
-- Migrate one real page: keep its existing hook/service, rewrite its JSX with Folio structure, add feature-local CSS, delete only the old selectors that page no longer uses, and never fetch in scene components.
-
-## Verification
+## 验证
 
 ```bash
-cd apps/web && npm run build
+npm --prefix apps/web run build
 git diff --check
+PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q
 ```
 
-For rendered changes, verify `/demo` at 1440×1000 plus 390×844, click the changed control, check console errors/warnings, and verify the affected formal hash route. Reader QA must distinguish remote no-progress-write behavior from intentional local progress persistence.
-
-Homepage uses one actual continuing/recent work as its focal natural-aspect cover, small functional headings (17px), bounded work titles, native reading/history/library/discover links, a red bookmark and finite SVG progress reveal. The formal homepage shows actual unread updates, media-library issues/scanning/migration and jobs through `HomeActivity`; its independent preview routes retain their own actual work layouts. No giant text, drag carousel, duplicate 首页 heading, decorative wireframe or statistics summary. Preserve cover blur, reduced motion, empty states and partial-load retry; preview query-string routes remain independent.
-
-Library query keeps selected tags and add-tag inline on desktop, with a fixed search button at the right. On phones the input owns row one, tags/add-tag and search own row two; tags scroll within their track, and the complete `标签 N` count and icon-only clear action remain visible. Filters use native `details` on phones; grid/list controls belong to the results header. Scope shared demo toolbar rules to `.folio-toolbar` so they cannot create spare columns on the formal form.
-
-The queue uses active/ended job groups, status filtering and a sticky desktop inspector. Mobile task and file details use native modal dialogs with Escape/backdrop/close and opener-focus restoration; file checkboxes only select, while file-name buttons open details. Mobile single-item export, dictionary and governance selection scrolls to its result/editor, respecting reduced motion; batch selection stays in the list. Dictionary search remains visible while optional filters/translation are folded on phones. Governance places fields and tags before compact review checks, omits duplicate subtitles and folds optional translation in native `details`; real suggestions reopen it.
-
-Reader controls cover the unchanged image viewport. While readers hide the archived shell, its infinite decorative animations are paused and resume on return. Reader/file modal headers keep their close controls visible while scrolling. Preserve all real task controls, downloads, deletion previews, privacy and irreversible-write warnings. Language labels on discover/library cards use ellipsis with full-text titles; never let them enlarge a card. Phone popular works use native horizontal cards with visible titles. `public/icon.svg` owns the black/red site mark; `PageNavigation.tsx` owns matching animated line icons.
-
-File ownership update (2026-10-09): `FileDetailPanel` consumes persisted library name/read-only status; deletion previews in `FileDeleteDialog`, `WorkDeleteAction` and `LibraryBatchTray` display service refusal reasons and disable zero-eligible confirmations. `WorkInspector` handles cancel only when the event target is its own native dialog, so child dialogs close independently and restore opener focus. Keep existing sharp geometry. `e2e/file-ownership.spec.ts` verifies all three flows with an actual indexed read-only work at1440/390; no generated UI fixtures.
-
-Governance/export source update (2026-10-09): `useGovernanceState` derives a source write-back blocker from actual `GovernanceFile.read_only/exists`, passes it through `GovernanceActionBar`, and permits ordinary local metadata saves. Export UI uses the same preview/options flow; HTTP downloads now stream an ephemeral server file. `e2e/source-operations.spec.ts` checks disabled read-only write-back, preview toggles, actual desktop/mobile downloads and layout using an owned real archive. Preserve Folio controls and native download semantics.
-
-Direct reader update (2026-10-09): preparation returns direct pages and `source_revision`; `useReaderData` uses them without a redundant pages request and sends the revision through image/thumb URLs, progress and `useReadingSession`. `ReaderViewport` invokes shared source validation before retrying failed images; changed versions reload through existing preparation. Late errors match the actual reading version before updating UI. Backend `ArchiveCacheService.mounted_read` bounds cache-off mount page/export IO; `reading_sessions.page_count` keeps initial bounds. `e2e/reader-direct.spec.ts` mutates only an owned actual `/tmp/direct-reader-owned-*` archive copy, rescans and restores it, verifies stale requests/progress/recovery at1440/390 and delays a real error response until the new source has opened. Keep immersive overlays and existing sharp controls.
-
-2026-09-08 独立首页静态预览：`/?home-preview=1#workbench` 使用 `workbench/HomeLayoutPreview.tsx` / `.css`，由 WorkbenchPage 按查询参数懒加载；正常首页不替换。复用真实作品/统计，并额外读取 libraryContinueReading(3)。完整封面按原比例显示，原生阅读链接，尊重隐私开关；未使用生图素材或添加展示动效。已验证1440/390/2560尺寸、横竖封面比例、标题占位和阅读链接。此入口用于用户审阅构图，不代表最终设计。
-
-2026-09-09 互动扉页原型：`/?home-preview=play#workbench` 懒加载 `workbench/HomePlayPreview.tsx` / `.css`，独立于正常首页与 `home-preview=1` 静态作品预览。不请求作品或统计，不添加假数据。书签支持拖动实时编排、松手吸附、点击/键盘切换；六个分镜提供形态反馈。复用 Motion 和原生 SVG，轻量 DOM 属性订阅避免每帧 React 重渲染；桌面/窄屏分别排版，减少动态效果取消过渡。验证三种视口、所有分镜、快速往返拖动、触屏、取消手势、键盘及最终布局不重叠。这是供用户评估核心玩法的原型，不代表最终首页设计。
-
-
-2026-09-10 三种独立首页体验预览：`/?home-preview=encounter#workbench`（方案1）、`/?home-preview=echo#workbench`（方案2）、`/?home-preview=imprint#workbench`（方案3）。实现位于 `apps/web/src/components/workbench/concepts/`，WorkbenchPage 按查询参数懒加载，原首页与 `1` / `play` 入口保留。
-- 方案1：从整个未读结果分页抽取，点击/滑动书签揭晓，收藏、阅读和本次回看均使用真实作品。
-- 方案2：从最近阅读开始（没有记录时取最近添加），查询真实作者/标签与最近阅读，支持沿作品追溯和返回探索路径；异步关系仅对当前作品生效。
-- 方案3：近30天阅读数据生成曲线，三个书签可用鼠标、触屏或方向键编排，保存当前构图为1800×1200 PNG。空记录不伪造数据。
-- 沿用 Folio 纸/墨/朱红及导航；封面隐私、加载失败重试、减少动态效果和响应式布局保留。无新增依赖，无生成图片素材，无 API/schema 变更。这三个入口供用户体验对比，尚未选定最终首页。
-- 验证入口：`apps/web/e2e/home-concepts.spec.ts` 覆盖抽取去重/收藏恢复、关系往返和拖动/键盘/PNG导出；浏览器检查1440×1000、390×844、2560×1440三种尺寸。
-
-
-2026-09-13 三方案视觉修订：页面取消自创名称和标题，预览入口仍使用 encounter / echo / imprint。方案1恢复贯穿抽取页片的朱红轨迹、边线层次和本次查看记录；方案2改为真实阅读记录、当前作品及作者/标签分支组成的开放关系图，封面缩为小型注记；方案3重做为三组短线簇、局部页形、四点拖动和日期联动，保留完整1800×1200 PNG导出，手机单独裁定视域，导出仍含完整构图。读数由现有API提供，未添加样例数据、生成图片素材或依赖。
-
-共享交互修复：原 `.folio button:active` 直接覆盖 transform，导致依赖 translate 定位的关系节点和拖动点在按下时跳开。按压反馈改用独立 translate / scale 属性，保留原定位与动效。`.folio-scroll` 作为路由焦点落点不显示整圈浏览器默认黑框，按钮/链接保留焦点提示。验证应覆盖三方案、原书签原型与书架导航，不能仅以构建通过代替视觉检查。
-
-
-2026-09-13 方案2交互修订：`?home-preview=echo#workbench` 保持独立预览。EchoPreview 固定左侧真实阅读记录顺序，显示月日/时分、作品标题与进度；中间封面及右侧关联封面随视口放大。关系按同作者/同系列/同角色及较低频的共享标签查询，排除原创作为系列，最多显示三个非空分组并跨组去重。标签频次取现有 tag-filters（最多200项），未覆盖的低频标签由搜索验证，不等同语义推荐；每个类型最多取一个标签、主题最多两个。底部重复时间轴移除，探索路径自然换行。切换使用 Motion 选中指示/封面过渡，最多缓存20部本次关系结果；细线与节点待机动效离屏/后台暂停，尊重减少动态效果。无新依赖/API/schema变更。回归覆盖关系往返、记录顺序、空分类隐藏和失败重试，配合1440/390/2560浏览器检查。
-
-
-方案2脉络构图恢复：取消三栏列表/卡片排版，阅读记录错落汇入中央作品，关联作品沿分类枝条展开。新增 `workbench/concepts/EchoConnections.tsx`，ResizeObserver 按真实节点位置绘制连接，绕开中央封面/标题，并提供路径过渡与悬停强调。保留前轮封面尺寸、时间信息、非空分类、缓存及探索路径；窄屏改为紧凑分枝排版。新增端点落位检查，不能只验点击成功而忽略关系图视觉。
+前端使用隔离真实副本与 `E2E_BASE_URL` / `E2E_STORAGE_STATE`。1440×1000、390×844 必验，320及横屏针对布局边界复验。新目标用 `e2e/site-layout-refinement.spec.ts`；全站滑动用 `site-audit.spec.ts`；边角 SVG 用 `scene-motion.spec.ts`。检查动画中间帧、可见性、焦点、滚动、控制台与性能，不能只验构建。

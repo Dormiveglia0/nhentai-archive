@@ -54,6 +54,8 @@
   gap: clamp(24px, 2.8vw, 44px);
 }
 
+.folio-governance-workspace.is-bulk { grid-template-columns: clamp(226px, 18vw, 270px) minmax(0, 1fr); }
+
 .folio-governance-editor {
   min-width: 0;
 }
@@ -755,13 +757,15 @@
 }
 
 .folio-governance-source header {
-  min-height: 136px;
-  padding: 18px 0;
+  min-height: 78px;
+  padding: 12px 0;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--folio-line);
 }
 
 .folio-governance-source h2 {
-  margin: 8px 0 0;
+  margin: 0;
   font-family: "Noto Serif SC", "Songti SC", serif;
   font-size: 21px;
 }
@@ -913,23 +917,6 @@
   font-size: 12px;
   text-decoration: none;
 }
-
-.folio-governance-source-empty {
-  min-height: 240px;
-  padding-top: 22px;
-}
-
-.folio-governance-source-empty i {
-  width: var(--line-width, 72%);
-  height: 1px;
-  margin: 18px 0;
-  display: block;
-  background: var(--folio-line);
-}
-
-.folio-governance-source-empty i:nth-child(2) { --line-width: 92%; }
-.folio-governance-source-empty i:nth-child(3) { --line-width: 58%; }
-.folio-governance-source-empty i:nth-child(4) { --line-width: 82%; }
 
 .folio-governance-actions {
   min-height: 78px;

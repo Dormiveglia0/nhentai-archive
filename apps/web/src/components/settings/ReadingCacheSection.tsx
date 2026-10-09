@@ -1,6 +1,7 @@
-import { RefreshCw, Save, Trash2 } from "lucide-react";
+import { ArrowUpRight, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { pageHref } from "../../lib/navigation";
 import { api, type ReadingCacheConfig, type ReadingCacheSummary } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 
@@ -69,7 +70,7 @@ export function ReadingCacheSection() {
   }
 
   return <section className="folio-reading-cache" aria-label="阅读缓存">
-    <div className="folio-settings-subhead"><h3>阅读缓存</h3><button className="folio-settings-mini-action" type="button" aria-label="刷新缓存用量" onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /></button></div>
+    <div className="folio-settings-subhead"><h3>阅读缓存</h3><div className="folio-storage-head-actions"><a className="folio-line-button" href={pageHref({ name: "files" })}>管理媒体库<ArrowUpRight size={15} /></a><button className="folio-settings-mini-action" type="button" aria-label="刷新缓存用量" onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /></button></div></div>
     <div className="folio-cache-usage" aria-busy={!summary}>
       <div><strong>{summary ? `${formatBytes(summary.ready_bytes + summary.reserved_bytes)} / ${formatBytes(summary.config.max_bytes)}` : "正在读取缓存用量…"}</strong><span>{summary ? `${summary.ready_count} 部已缓存 · ${summary.active_count} 部在用` : "正在读取缓存状态…"}</span></div>
       <progress aria-label="阅读缓存用量" value={summary ? Math.min(summary.ready_bytes + summary.reserved_bytes, summary.config.max_bytes) : undefined} max={summary?.config.max_bytes ?? 1} />

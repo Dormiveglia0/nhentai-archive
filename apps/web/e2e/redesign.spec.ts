@@ -191,11 +191,11 @@ test("切页有完整进出动画，快速切换与减少动态效果均到达�
   await page.evaluate(() => {
     for (const name of ["tasks", "discover", "settings"]) document.querySelector<HTMLAnchorElement>(`.folio-topnav a[href='#${name}']`)?.click();
   });
-  await expect(page.locator(".folio-page-copy h1")).toHaveText("设置");
+  await expect(page.locator(".folio-page-settings")).toBeVisible();
   await expect(page.locator(".folio-panel-heading p")).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.locator(".folio-topnav a[href='#dictionary']").click();
-  await expect(page.locator(".folio-page-copy h1")).toHaveText("词典");
+  await expect(page.locator(".folio-page-dictionary")).toBeVisible();
   expect(errors).toEqual([]);
 });
 

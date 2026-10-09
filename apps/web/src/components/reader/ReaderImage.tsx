@@ -14,6 +14,7 @@ export const ReaderImage = forwardRef<HTMLElement, ReaderImageProps>(function Re
   const [displayedSrc, setDisplayedSrc] = useState(src);
   const [attempt, setAttempt] = useState(0);
   const [errored, setErrored] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const imageNode = useRef<HTMLImageElement | null>(null);
   const lastRetryToken = useRef(retryToken);
   useEffect(() => {
@@ -34,7 +35,7 @@ export const ReaderImage = forwardRef<HTMLElement, ReaderImageProps>(function Re
     if (lastRetryToken.current === retryToken) return;
     lastRetryToken.current = retryToken;
     if (!errored) return;
-    setErrored(false); setAttempt(value => value + 1);
+    setErrored(false); setLoaded(false); setAttempt(value => value + 1);
   }, [errored, retryToken]);
 
   const reserved = width && height ? { aspectRatio: `${width} / ${height}`, ...style } : style;
@@ -45,6 +46,7 @@ export const ReaderImage = forwardRef<HTMLElement, ReaderImageProps>(function Re
   return <img key={attempt} ref={node => {
     imageNode.current = node;
     if (typeof ref === "function") ref(node); else if (ref) ref.current = node;
-  }} className={className} style={reserved} src={displayedSrc} alt={alt} loading={loading} width={width} height={height}
+  }} className={`${className || ""}${loaded ? "" : " reader-image-loading"}`} style={reserved} src={displayedSrc} alt={alt} loading={loading} width={width} height={height}
+    onLoad={() => setLoaded(true)}
     decoding="async" draggable={false} data-page-index={pageIndex} onError={event => { if (event.currentTarget.getAttribute("src") === displayedSrc) setErrored(true); }} />;
 });

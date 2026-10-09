@@ -244,6 +244,7 @@ CREATE TABLE IF NOT EXISTS creator_subscriptions (
   failures INTEGER NOT NULL DEFAULT 0,
   last_error TEXT,
   last_checked_at TEXT,
+  recent_json TEXT NOT NULL DEFAULT '[]',
   removed_at TEXT,
   revision INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -485,6 +486,12 @@ class Database:
         return _portable_managed_path(str(value), self._managed_root) or str(value)
 
     def _migrate_legacy_schema(self, conn: sqlite3.Connection) -> None:
+        subscription_columns = _table_columns(conn, "creator_subscriptions")
+        if "recent_json" not in subscription_columns:
+            _add_column_if_missing(conn, "creator_subscriptions", subscription_columns, "recent_json", "TEXT NOT NULL DEFAULT '[]'")
+            conn.execute("""UPDATE creator_subscriptions SET next_check_at = 0, status = 'queued',
+                scan_page = 1, scan_token = '', claim_token = NULL, check_lease_until = 0, revision = revision + 1
+                WHERE enabled = 1 AND removed_at IS NULL""")
         works_columns = _table_columns(conn, "works")
         _add_column_if_missing(conn, "works", works_columns, "favorite", "INTEGER NOT NULL DEFAULT 0")
         if "metadata_gallery_id" not in works_columns:

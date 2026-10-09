@@ -1114,10 +1114,6 @@
 }
 
 @media (max-width: 360px) {
-  .folio-page-dictionary .folio-page-copy {
-    width: 92%;
-  }
-
   .folio-dictionary-actions {
     padding-right: 10px;
     padding-left: 10px;

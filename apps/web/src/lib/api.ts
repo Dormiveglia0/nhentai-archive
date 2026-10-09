@@ -912,6 +912,7 @@ export type CreatorSubscription = {
   next_check_at: number;
   seen_count?: number;
   unread_count?: number;
+  recent_galleries: GallerySummary[];
 };
 
 export type SubscriptionUpdate = {
@@ -1180,15 +1181,21 @@ async function cachedDiscoverRequest<T>(url: string, ttlMs = 60_000): Promise<T>
   if (cached && cached.expiresAt > now) return cached.value as T;
   const promise = request<T>(url)
     .then((value) => {
-      DISCOVER_CACHE.set(url, { expiresAt: Date.now() + ttlMs, value });
+      if (DISCOVER_CACHE.get(url)?.promise === promise) DISCOVER_CACHE.set(url, { expiresAt: Date.now() + ttlMs, value });
       return value;
     })
     .catch((error) => {
-      DISCOVER_CACHE.delete(url);
+      if (DISCOVER_CACHE.get(url)?.promise === promise) DISCOVER_CACHE.delete(url);
       throw error;
     });
   DISCOVER_CACHE.set(url, { expiresAt: now + ttlMs, value: cached?.value, promise });
   return promise;
+}
+
+function subscriptionsChanged<T>(value: T): T {
+  for (const key of DISCOVER_CACHE.keys()) if (key.startsWith("/api/subscriptions")) DISCOVER_CACHE.delete(key);
+  window.dispatchEvent(new Event("nh-subscriptions-changed"));
+  return value;
 }
 
 async function jobsWithCacheCoherence(): Promise<{ result: Job[] }> {
@@ -1528,16 +1535,16 @@ export const api = {
   creatorSubscriptions: () => request<{ result: CreatorSubscription[] }>("/api/subscriptions"),
   subscribeCreator: (remote_tag_id: number, tag_type: "artist" | "group") => request<CreatorSubscription>("/api/subscriptions", {
     method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ remote_tag_id, tag_type }),
-  }),
+  }).then(subscriptionsChanged),
   updateSubscription: (id: number, payload: Partial<Pick<CreatorSubscription, "enabled" | "email_enabled" | "interval_seconds">>) => request<CreatorSubscription>(`/api/subscriptions/${id}`, {
     method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
-  }),
-  unsubscribeCreator: (id: number) => request<{ removed: number }>(`/api/subscriptions/${id}`, { method: "DELETE" }),
-  checkSubscription: (id: number) => request<CreatorSubscription>(`/api/subscriptions/${id}/check`, { method: "POST", headers: JSON_HEADERS }),
-  subscriptionUpdates: (page = 1, unread_only = false) => request<{ result: SubscriptionUpdate[]; total: number; unread_count: number; page: number; per_page: number }>(`/api/subscriptions/updates?page=${page}&unread_only=${unread_only}`),
+  }).then(subscriptionsChanged),
+  unsubscribeCreator: (id: number) => request<{ removed: number }>(`/api/subscriptions/${id}`, { method: "DELETE" }).then(subscriptionsChanged),
+  checkSubscription: (id: number) => request<CreatorSubscription>(`/api/subscriptions/${id}/check`, { method: "POST", headers: JSON_HEADERS }).then(subscriptionsChanged),
+  subscriptionUpdates: (page = 1, unread_only = false) => cachedDiscoverRequest<{ result: SubscriptionUpdate[]; total: number; unread_count: number; page: number; per_page: number }>(`/api/subscriptions/updates?page=${page}&unread_only=${unread_only}`, 500),
   readSubscriptionUpdates: (update_id?: number) => request<{ ok: boolean }>("/api/subscriptions/updates/read", {
     method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ update_id: update_id ?? null }),
-  }),
+  }).then(subscriptionsChanged),
   smtpSettings: () => request<SmtpSettings>("/api/settings/smtp"),
   configureSmtp: (payload: Partial<Omit<SmtpSettings, "password_configured" | "last_test">> & { password?: string; clear_password?: boolean }) => request<SmtpSettings>("/api/settings/smtp", {
     method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),

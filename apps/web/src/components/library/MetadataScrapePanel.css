@@ -38,9 +38,13 @@
   .folio-scrape td { display: grid; grid-template-columns: 38px minmax(0, 1fr); }
   .folio-scrape td::before { content: attr(data-label); color: var(--folio-muted); font-size: 12px; }
 }
-.folio-reader-bridge { padding: 16px 0; border-block: 1px solid var(--folio-line); margin-block: 24px; }
-.folio-reader-bridge summary { min-height: 44px; cursor: pointer; font-size: 13px; }
+.folio-reader-bridge { padding: 0; border-block: 1px solid var(--folio-line); margin-block: 24px; }
+.folio-reader-bridge summary { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-size: 13px; }
 .folio-reader-bridge summary > span { color: var(--folio-muted); margin-left: 14px; }
 .folio-reader-bridge .folio-toggle-row { margin-block: 14px; }
 .folio-reader-bridge-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .folio-reader-bridge-actions a { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; color: var(--folio-ink); font-size: 13px; text-decoration: none; }
+
+.folio-reader-bridge > summary::after { content: "+"; color: var(--folio-red); }
+.folio-reader-bridge[open] > summary::after { content: "−"; }
+.folio-reader-bridge summary > span { margin-left: auto; }

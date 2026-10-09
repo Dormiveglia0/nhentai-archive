@@ -2,7 +2,7 @@ import { ArrowRight, ArrowUpRight, Check, RefreshCw, Search, X } from "lucide-re
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { api, type Job, type MediaLibrary, type MigrationOptions, type MigrationPreview } from "../../lib/api";
+import { api, type Job, type MediaLibrary, type MigrationCandidate, type MigrationOptions, type MigrationPreview } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { pageHref } from "../../lib/navigation";
 import { useNativeDialog } from "../../lib/useNativeDialog";
@@ -12,7 +12,7 @@ import { IconPager } from "../folio/ui/IconPager";
 export function MigrationPanel({ onLibraries }: { onLibraries: () => void }) {
   const [libraries, setLibraries] = useState<MediaLibrary[]>([]);
   const [candidates, setCandidates] = useState<Awaited<ReturnType<typeof api.migrationCandidates>> | null>(null);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Map<number, MigrationCandidate>>(new Map());
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
   const [q, setQ] = useState("");
@@ -37,33 +37,45 @@ export function MigrationPanel({ onLibraries }: { onLibraries: () => void }) {
   }, [page, q, revision]);
   const rows = candidates?.result ?? [];
   const allSelected = rows.length > 0 && rows.every(row => selected.has(row.id));
-  function toggle(id: number) {
-    setSelected(value => { const next = new Set(value); if (next.has(id)) next.delete(id); else if (next.size < 500) next.add(id); return next; });
+  function toggle(row: MigrationCandidate) {
+    setSelected(value => { const next = new Map(value); if (next.has(row.id)) next.delete(row.id); else if (next.size < 500) next.set(row.id, row); return next; });
   }
+  const destination = libraries.find(library => String(library.id) === target);
+  const selectedBytes = [...selected.values()].reduce((total, row) => total + row.size_bytes, 0);
   return <section className="folio-migration" aria-label="媒体库迁移">
     <header className="folio-settings-subhead"><h3>归并本地导入</h3><button type="button" className="folio-settings-mini-action" aria-label="刷新迁移列表" onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} /></button></header>
     {error ? <p className="folio-media-error" role="alert">{error}</p> : null}
     {started ? <div className="folio-migration-started" role="status"><Check size={18} /><span>迁移已加入队列</span><a className="folio-line-button" href={pageHref({ name: "tasks" })}>查看进度<ArrowUpRight size={16} /></a></div> : null}
-    <div className="folio-migration-options">
-      <div>{libraries.length ? <FolioSelect label="目标媒体库" value={target} options={libraries.map(library => ({ value: String(library.id), label: library.name }))} onChange={setTarget} /> : <button type="button" className="folio-line-button" disabled={loading} onClick={onLibraries}>添加可写目录<ArrowUpRight size={15} /></button>}</div>
-      <div><FolioSelect label="迁移方式" value={move ? "move" : "copy"} onChange={value => setMove(value === "move")} options={[{ value: "copy", label: "复制 · 保留导入源文件" }, { value: "move", label: "移动 · 验证后移除导入源文件" }]} /></div>
-      <div><FolioSelect label="同名文件" value={conflict} onChange={value => setConflict(value as "rename" | "skip")} options={[{ value: "rename", label: "保留现有文件，自动重命名" }, { value: "skip", label: "跳过" }]} /></div>
+    <div className="folio-migration-layout">
+      <div className="folio-migration-selection">
+        <div className="folio-migration-list-head">
+          <label className="folio-migration-check"><input type="checkbox" aria-label="选择当前页作品" checked={allSelected} disabled={!rows.length || loading} onChange={() => setSelected(value => {
+            const next = new Map(value); rows.forEach(row => { if (allSelected) next.delete(row.id); else if (next.size < 500) next.set(row.id, row); }); return next;
+          })} />{candidates ? candidates.total + " 部可迁移" : "正在读取…"}</label>
+          <form onSubmit={event => { event.preventDefault(); setQ(query.trim()); setPage(1); }}><input aria-label="搜索可迁移作品" placeholder="搜索作品" value={query} onChange={event => setQuery(event.target.value)} /><button type="submit" aria-label="搜索可迁移作品"><Search size={17} /></button></form>
+        </div>
+        <div className="folio-migration-list" aria-busy={loading}>
+          {!rows.length ? <p className="folio-empty-copy">{loading ? "正在读取本地导入…" : q ? "没有匹配的作品" : "没有待归并的本地导入作品"}</p> : rows.map(row => <label key={row.id} className="folio-migration-row" data-work-id={row.id}>
+            <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row)} aria-label={"选择 " + (row.pretty_title || row.title)} disabled={loading || (!selected.has(row.id) && selected.size >= 500)} />
+            <span title={row.pretty_title || row.title}>{row.pretty_title || row.title}</span><small>{row.page_count} 页</small><strong>{formatBytes(row.size_bytes)}</strong>
+          </label>)}
+        </div>
+        <IconPager className="folio-files-pager" page={page} totalPages={Math.max(1, Math.ceil((candidates?.total ?? 0) / 50))} loading={loading} onPage={setPage} />
+      </div>
+      <aside className="folio-migration-options" aria-label="迁移设置">
+        <div className="folio-migration-route" aria-hidden="true"><svg viewBox="0 0 280 48" fill="none"><path d="M1 40V8H29L37 16H65V40Z M215 40V8H243L251 16H279V40Z" /><path className="folio-migration-route-line" d="M82 24H196M185 13L196 24L185 35" /></svg></div>
+        {libraries.length ? <FolioSelect label="目标媒体库" value={target} options={libraries.map(library => ({ value: String(library.id), label: library.name }))} onChange={setTarget} /> : <button type="button" className="folio-line-button" disabled={loading} onClick={onLibraries}>添加可写目录<ArrowUpRight size={15} /></button>}
+        {destination ? <p className="folio-migration-root" title={destination.root_path}>{destination.root_path}</p> : null}
+        <fieldset className="folio-migration-mode"><legend>迁移方式</legend>
+          <label><input type="radio" name="migration-mode" checked={!move} onChange={() => setMove(false)} /><span><strong>复制</strong><small>保留本地导入源文件</small></span></label>
+          <label><input type="radio" name="migration-mode" checked={move} onChange={() => setMove(true)} /><span><strong>移动</strong><small>校验成功后移除导入源文件</small></span></label>
+        </fieldset>
+        <FolioSelect label="同名文件" value={conflict} onChange={value => setConflict(value as "rename" | "skip")} options={[{ value: "rename", label: "自动重命名" }, { value: "skip", label: "跳过" }]} />
+        <div className="folio-migration-chosen" aria-live="polite"><span>已选 <strong>{selected.size}</strong> / 500 部</span><span>{formatBytes(selectedBytes)}</span><button type="button" disabled={!selected.size} onClick={() => setSelected(new Map())}>清空</button></div>
+        <button type="button" className="folio-line-button is-primary" disabled={!selected.size || !target || loading} onClick={() => setPreview({ work_ids: [...selected.keys()], library_id: Number(target), move, conflict })}>预览迁移<ArrowRight size={16} /></button>
+      </aside>
     </div>
-    <div className="folio-migration-list-head">
-      <label className="folio-migration-check"><input type="checkbox" aria-label="选择当前页作品" checked={allSelected} disabled={!rows.length || loading} onChange={() => setSelected(value => {
-        const next = new Set(value); rows.forEach(row => { if (allSelected) next.delete(row.id); else if (next.size < 500) next.add(row.id); }); return next;
-      })} />{selected.size ? `${selected.size} 部已选` : candidates ? `${candidates.total} 部可迁移` : "正在读取…"}</label>
-      <form onSubmit={event => { event.preventDefault(); setQ(query.trim()); setPage(1); }}><input aria-label="搜索可迁移作品" placeholder="搜索作品" value={query} onChange={event => setQuery(event.target.value)} /><button type="submit" aria-label="搜索可迁移作品"><Search size={17} /></button></form>
-    </div>
-    <div className="folio-migration-list" aria-busy={loading}>
-      {!rows.length ? <p className="folio-empty-copy">{loading ? "正在读取本地导入…" : "没有待归并的本地导入作品"}</p> : rows.map(row => <label key={row.id} className="folio-migration-row" data-work-id={row.id}>
-        <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={"选择 " + (row.pretty_title || row.title)} disabled={!selected.has(row.id) && selected.size >= 500} />
-        <span title={row.pretty_title || row.title}>{row.pretty_title || row.title}</span><small>{row.page_count} 页</small><strong>{formatBytes(row.size_bytes)}</strong>
-      </label>)}
-    </div>
-    <IconPager className="folio-files-pager" page={page} totalPages={Math.max(1, Math.ceil((candidates?.total ?? 0) / 50))} loading={loading} onPage={setPage} />
-    {candidates ? <footer className="folio-migration-footer"><button className="folio-settings-mini-action" type="button" disabled={!selected.size} onClick={() => setSelected(new Set())}>清空选择</button><button type="button" className="folio-line-button is-primary" disabled={!selected.size || !target || loading} onClick={() => setPreview({ work_ids: [...selected], library_id: Number(target), move, conflict })}>预览迁移<ArrowRight size={16} /></button></footer> : null}
-    {preview ? <MigrationDialog options={preview} onClose={() => setPreview(null)} onStarted={job => { setStarted(job); setPreview(null); setSelected(new Set()); }} /> : null}
+    {preview ? <MigrationDialog options={preview} onClose={() => setPreview(null)} onStarted={job => { setStarted(job); setPreview(null); setSelected(new Map()); }} /> : null}
   </section>;
 }
 

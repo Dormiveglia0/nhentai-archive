@@ -6,8 +6,8 @@ import { AuthGate } from "./components/auth/AuthGate";
 import { AuthWakeDemo } from "./components/auth/AuthWakeDemo";
 import { ArchiveShell } from "./components/layout/ArchiveShell";
 import { FolioRouteFallback, ReaderRouteFallback } from "./components/layout/RouteFallback";
-import { api } from "./lib/api";
-import { cancelPageTransition, duration, ease, transitionTabs, usePrefersReducedMotion } from "./lib/motion";
+import { api, type GalleryDetail } from "./lib/api";
+import { cancelPageTransition, duration, ease, transitionPage, transitionTabs, usePrefersReducedMotion } from "./lib/motion";
 import { FOLIO_PAGES } from "./components/folio/config";
 import { pageFromLocation, pageHref, type Page } from "./lib/navigation";
 
@@ -26,9 +26,8 @@ const HistoryPage = lazy(() =>
 const DiscoverPage = lazy(() =>
   import("./components/discover/DiscoverPage").then((module) => ({ default: module.DiscoverPage })),
 );
-const GalleryDetailPage = lazy(() =>
-  import("./components/discover/GalleryDetailPage").then((module) => ({ default: module.GalleryDetailPage })),
-);
+const loadGalleryPage = () => import("./components/discover/GalleryDetailPage").then(module => ({ default: module.GalleryDetailPage }));
+const GalleryDetailPage = lazy(loadGalleryPage);
 const GovernancePage = lazy(() =>
   import("./components/governance/GovernancePage").then((module) => ({ default: module.GovernancePage })),
 );
@@ -74,25 +73,42 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
   const readerEntry = useRef(0);
   routeRef.current = page;
   const [blurCovers, setBlurCovers] = useState(true);
+  const [preparedGallery, setPreparedGallery] = useState<GalleryDetail>();
+  const [navigating, setNavigating] = useState(false);
 
   useEffect(() => {
-    const sync = () => {
+    let navigation = 0;
+    const sync = async () => {
+      const current = ++navigation;
       const next = pageFromLocation();
       const previous = routeRef.current;
       const wasReader = previous.name === "reader" || previous.name === "readerRemote";
       const isReader = next.name === "reader" || next.name === "readerRemote";
+      cancelPageTransition();
+      setNavigating(false);
+      delete document.documentElement.dataset.folioLoading;
+      let detail: GalleryDetail | undefined;
+      if (next.name === "gallery" && !wasReader) {
+        setNavigating(true);
+        document.documentElement.dataset.folioLoading = "gallery";
+        const results = await Promise.allSettled([api.gallery(next.galleryId), loadGalleryPage()]);
+        if (current !== navigation) return;
+        if (results[0].status === "fulfilled") detail = results[0].value;
+        setNavigating(false);
+        delete document.documentElement.dataset.folioLoading;
+      }
+      const commit = () => { setPreparedGallery(detail); setPage(next); };
       if (isReader && !wasReader) readerEntry.current += 1;
       if (wasReader || isReader) {
-        cancelPageTransition();
-        // Commit before a finishing reader exit can restore stale children.
-        flushSync(() => setPage(next));
+        flushSync(commit);
+      } else if (previous.name === "gallery" || next.name === "gallery") {
+        void transitionPage(commit, next.name === "gallery" ? 1 : -1, "detail");
       } else {
-        transitionTabs<Page["name"]>(FOLIO_PAGES.map(item => item.id), previous.name, next.name,
-          name => setPage(name === next.name ? next : { name } as Page));
+        transitionTabs<Page["name"]>(FOLIO_PAGES.map(item => item.id), previous.name, next.name, commit);
       }
     };
     window.addEventListener("hashchange", sync);
-    return () => window.removeEventListener("hashchange", sync);
+    return () => { navigation += 1; window.removeEventListener("hashchange", sync); delete document.documentElement.dataset.folioLoading; };
   }, []);
 
   useEffect(() => {
@@ -168,10 +184,11 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
             onLogout={onLogout}
             suspended={Boolean(readerSource)}
           >
+            {navigating ? <div className="folio-route-loading" role="status" aria-label="正在打开作品详情" /> : null}
             <Suspense fallback={<FolioRouteFallback />}>
               {archivePage.name === "workbench" ? <WorkbenchPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={archivePage.tag} /> : null}
-              {archivePage.name === "gallery" ? <GalleryDetailPage galleryId={archivePage.galleryId} returnTo={archivePage.returnTo} blurCovers={blurCovers} /> : null}
+              {archivePage.name === "gallery" ? <GalleryDetailPage initialDetail={preparedGallery?.gallery_id === archivePage.galleryId ? preparedGallery : undefined} galleryId={archivePage.galleryId} returnTo={archivePage.returnTo} blurCovers={blurCovers} /> : null}
               {archivePage.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "governance" ? <GovernancePage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}

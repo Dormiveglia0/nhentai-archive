@@ -1,7 +1,7 @@
 import { AlertTriangle, ArrowLeft, Check, RotateCw } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
 
-import { FadeIn } from "../../lib/motion";
+import type { GalleryDetail } from "../../lib/api";
 import { goBack, pageHref } from "../../lib/navigation";
 import { GalleryHero } from "./gallery/GalleryHero";
 import { GalleryPagePreview } from "./gallery/GalleryPagePreview";
@@ -12,12 +12,13 @@ import "./gallery/GalleryDetailPage.css";
 
 type Props = {
   galleryId: number;
+  initialDetail?: GalleryDetail;
   returnTo?: string;
   blurCovers: boolean;
 };
 
-export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
-  const gallery = useGalleryDetail(galleryId);
+export function GalleryDetailPage({ galleryId, returnTo, blurCovers, initialDetail }: Props) {
+  const gallery = useGalleryDetail(galleryId, initialDetail);
   const backLabel = returnTo?.startsWith("reader/")
     ? "返回阅读器"
     : returnTo === "files"
@@ -59,7 +60,7 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
       ) : null}
 
       {!gallery.loading && gallery.detail ? (
-        <FadeIn key={gallery.detail.gallery_id} y={12} className="folio-gallery-detail">
+        <div key={gallery.detail.gallery_id} className="folio-gallery-detail">
           <GalleryHero
             detail={gallery.detail}
             title={gallery.title}
@@ -75,7 +76,7 @@ export function GalleryDetailPage({ galleryId, returnTo, blurCovers }: Props) {
           <GalleryTags detail={gallery.detail} />
           <GalleryPagePreview detail={gallery.detail} blurCovers={blurCovers} />
           <GalleryRelated detail={gallery.detail} blurCovers={blurCovers} />
-        </FadeIn>
+        </div>
       ) : null}
     </section>
   );

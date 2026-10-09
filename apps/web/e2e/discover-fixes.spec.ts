@@ -437,71 +437,24 @@ test.describe("界面与封面回归", () => {
     await expect(page.locator(".folio-library-card-cell").first()).toBeVisible();
   });
 
-  test("所有主页面使用同一页头场景尺寸且切页不缩放", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    const routes = [
-      ["library", "我的库"],
-      ["discover", "发现"],
-      ["governance", "作品整理"],
-      ["dictionary", "词典"],
-      ["tasks", "队列"],
-      ["files", "文件"],
-      ["settings", "设置"],
-    ] as const;
-    const heights: number[] = [];
-    const titleSizes: number[] = [];
-    for (const [route, expectedTitle] of routes) {
-      await page.goto(`/#${route}`);
-      await expect(page.locator(".folio-page")).toHaveCount(1);
-      const root = page.locator(`.folio-page-${route}`);
-      const title = root.locator(".folio-page-copy h1");
-      const head = root.locator(".folio-page-head");
-      const scene = root.locator(".folio-scene");
-      const body = root.locator(".folio-page-body");
-      await expect(title).toHaveText(expectedTitle);
-      await expect(head).toBeVisible();
-      await expect(scene).toBeVisible();
-      await expect(body).toBeVisible();
-      const [headBox, sceneBox, bodyBox] = await Promise.all([head.boundingBox(), scene.boundingBox(), body.boundingBox()]);
-      expect(headBox).not.toBeNull();
-      expect(sceneBox).not.toBeNull();
-      expect(bodyBox).not.toBeNull();
-      const geometry = {
-        headBottom: headBox!.y + headBox!.height,
-        sceneBottom: sceneBox!.y + sceneBox!.height,
-        bodyTop: bodyBox!.y,
-      };
-      heights.push(headBox!.height);
-      let titleSize = Number.NaN;
-      await expect.poll(async () => {
-        const value = await title.evaluate((node) => getComputedStyle(node).fontSize).catch(() => "");
-        titleSize = Number.parseFloat(value);
-        return Number.isFinite(titleSize);
-      }).toBeTruthy();
-      titleSizes.push(titleSize);
-      expect(geometry.sceneBottom).toBeLessThanOrEqual(geometry.headBottom + 1);
-      expect(geometry.bodyTop).toBeGreaterThanOrEqual(geometry.headBottom - 1);
+  test("所有主页面移除重复页头，首屏布局不空缺且切页不缩放", async ({ page }) => {
+    test.setTimeout(60_000);
+    const routes = ["library", "discover", "governance", "dictionary", "tasks", "files", "settings"];
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      for (const route of routes) {
+        await page.goto("/#" + route);
+        await expect(page.locator(".folio-page-" + route)).toBeVisible();
+        await page.waitForFunction(() => !document.documentElement.dataset.folioSlide);
+        await expect(page.locator(".folio-page-body")).toBeVisible();
+        await expect(page.locator(".folio-page-head, .folio-page-copy, .folio-scene")).toHaveCount(0);
+        await expect(page.locator(".folio-topbar")).toHaveCSS("opacity", "1");
+        await expect(page.locator(".folio-page")).toHaveCSS("opacity", "1");
+        const top = (await page.locator(".folio-page-body").boundingBox())!.y;
+        expect(top).toBeLessThan(160); expect(top).toBeGreaterThanOrEqual((await page.locator(".folio-topbar").boundingBox())!.height - 1);
+        expect(await page.locator(".folio-scroll").evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThan(2);
+      }
     }
-    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1);
-    expect(Math.max(...titleSizes) - Math.min(...titleSizes)).toBeLessThanOrEqual(0.1);
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    const mobileTitleSizes: number[] = [];
-    for (const [route, expectedTitle] of routes) {
-      await page.goto(`/#${route}`);
-      await expect(page.locator(".folio-page")).toHaveCount(1);
-      const title = page.locator(`.folio-page-${route} .folio-page-copy h1`);
-      await expect(title).toHaveText(expectedTitle);
-      let titleSize = Number.NaN;
-      await expect.poll(async () => {
-        const value = await title.evaluate((node) => getComputedStyle(node).fontSize).catch(() => "");
-        titleSize = Number.parseFloat(value);
-        return Number.isFinite(titleSize);
-      }).toBeTruthy();
-      mobileTitleSizes.push(titleSize);
-    }
-    expect(Math.max(...mobileTitleSizes) - Math.min(...mobileTitleSizes)).toBeLessThanOrEqual(0.1);
-
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/#workbench");
     await page.locator(".folio-topnav a").filter({ hasText: "设置" }).click();
@@ -565,6 +518,7 @@ test.describe("界面与封面回归", () => {
     const work = (await libraryResponse.json()).result.find((item: { remote_gallery_id?: number }) => item.remote_gallery_id);
     expect(work?.remote_gallery_id).toBeTruthy();
     await page.goto(`/#gallery/${work.remote_gallery_id}`);
+    await expect(page.locator(".folio-gallery-detail")).toBeVisible();
     const detailDelete = page.getByRole("button", { name: "删除", exact: true });
     await expect(detailDelete).toBeVisible({ timeout: 15_000 });
     await detailDelete.click();

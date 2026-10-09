@@ -71,61 +71,17 @@
 
 .folio-settings-stage {
   min-height: 450px;
-  padding-top: 32px;
+  padding-top: 24px;
   position: relative;
   isolation: isolate;
 }
 
-.folio-settings-head {
-  margin-bottom: 30px;
-  padding-bottom: 21px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  border-bottom: 1px solid var(--folio-line);
-}
 
-.folio-settings-head > div:first-child {
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: baseline;
-  column-gap: 12px;
-}
 
-.folio-settings-head > div:first-child > span {
-  color: var(--folio-red);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 13px;
-}
 
-.folio-settings-head h2 {
-  margin: 0;
-  font-family: "Noto Serif SC", "Songti SC", serif;
-  font-size: 28px;
-}
 
-.folio-settings-head p {
-  grid-column: 2;
-  margin: 6px 0 0;
-  color: var(--folio-muted);
-  font-size: 13px;
-}
 
-.folio-settings-state {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--folio-red);
-  font-size: 13px;
-}
 
-.folio-settings-state i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
 
 .folio-secret {
   height: 46px;
@@ -269,8 +225,9 @@
 }
 
 .folio-settings-subhead {
-  min-height: 48px;
-  margin-top: 30px;
+  min-height: 64px;
+  margin: 0;
+  padding-block: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -302,6 +259,7 @@
   padding: 0 10px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   border: 1px solid var(--folio-line);
   background: transparent;
@@ -334,3 +292,6 @@
 
 .folio-media-pager { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 18px; font-size: 13px; }
 .folio-media-pager button { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--folio-line); background: transparent; }
+
+.folio-settings-subhead :is(svg, button, a) { flex-shrink: 0; }
+.folio-settings-subhead h3 { min-width: 0; line-height: 1.5; }

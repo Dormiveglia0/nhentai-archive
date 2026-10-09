@@ -85,7 +85,7 @@ test("均衡网格保留密集行的填充，并限制稀疏行放大", () => {
 });
 
 
-test("25个发现作品按9／8／8排列，每行按自身封面高度排版", async ({ page }) => {
+test("发现侧栏收窄空间后作品保持正常列宽，每行按自身封面高度排版", async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1440 });
   await page.route('**/api/discover/feed?*', async route => {
     const response = await route.fetch();
@@ -99,11 +99,12 @@ test("25个发现作品按9／8／8排列，每行按自身封面高度排版", 
     const bounds = n.getBoundingClientRect();
     const tags = n.querySelector('.folio-discover-card-tags')!.getBoundingClientRect();
     const actions = n.querySelector('.folio-discover-card-actions')!.getBoundingClientRect();
-    return { y: Math.round(bounds.y), height: bounds.height, gap: actions.top - tags.bottom };
+    return { y: Math.round(bounds.y), width: bounds.width, height: bounds.height, gap: actions.top - tags.bottom };
   }));
   const rows = [...new Set(cards.map(n => n.y))];
-  expect(rows.map(y => cards.filter(n => n.y === y).length)).toEqual([9, 8, 8]);
-  expect(cards[9].height - cards[0].height).toBeGreaterThan(20);
+  const sizes = rows.map(y => cards.filter(n => n.y === y).length);
+  expect(sizes).toEqual([8, 8, 8, 1]);
+  expect(Math.max(...cards.map(n => n.width))).toBeLessThan(300);
   expect(Math.max(...cards.map(n => n.gap))).toBeLessThan(12);
 });
 

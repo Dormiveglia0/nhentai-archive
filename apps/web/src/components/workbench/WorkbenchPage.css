@@ -2,6 +2,7 @@
 .folio-home-feedback { display: flex; align-items: center; gap: 16px; color: var(--folio-muted); font-size: 14px; }
 .folio-home-feedback button { min-height: 44px; padding: 0 16px; background: var(--folio-paper-bright); border: 1px solid var(--folio-line-strong); color: var(--folio-ink); }
 .folio-home-activity { min-width: 0; display: grid; gap: 26px; }
+.folio-home-library-state { min-height: 180px; }
 .folio-home-activity section > header { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--folio-line-strong); }
 .folio-home-activity h2 { display: inline-flex; align-items: center; gap: 12px; }
 .folio-home-activity h2 > span { color: var(--folio-red); font-size: 13px; font-variant-numeric: tabular-nums; }
@@ -32,3 +33,22 @@
 @media (min-width: 681px) { .folio-home-activity { padding-left: 28px; border-left: 1px solid var(--folio-line); } .folio-home-hero > .folio-home-empty { min-height: 55dvh; } }
 @media (max-width: 680px) { .folio-home-activity { margin-top: 36px; } .folio-home-hero > .folio-home-empty { min-height: 32dvh; } }
 @media (prefers-reduced-motion: reduce) { .folio-home-job-progress i, .folio-home-update > svg, .folio-home-state-row > svg:last-child { transition: none; } }
+
+.folio-home-latest { width: min(1440px, 100%); padding: 0 clamp(24px, 5vw, 80px) 48px; margin: 0 auto; }
+.folio-home-latest > header { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--folio-line-strong); margin-bottom: 24px; }
+.folio-home-latest h2 { margin: 0; font-size: 17px; font-weight: 500; }
+.folio-home-latest > header a { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; color: var(--folio-muted); font-size: 13px; text-decoration: none; }
+.folio-home-latest-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 24px; }
+.folio-home-latest-work { min-width: 0; color: var(--folio-ink); text-decoration: none; display: grid; grid-template-rows: 200px auto auto; gap: 14px; }
+.folio-home-latest-cover { display: grid; place-items: center; min-width: 0; }
+.folio-home-latest-cover .folio-ambient-cover { width: 100%; height: 100%; background: none; }
+.folio-home-latest-cover :is(.folio-ambient-cover-backdrop, .folio-ambient-cover::after) { display: none; }
+.folio-home-latest-cover img { object-fit: contain; }
+.folio-home-latest-work strong { min-height: 3.2em; line-height: 1.6; font-size: 13px; font-weight: 500; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.folio-home-latest-work > span { display: flex; justify-content: space-between; color: var(--folio-muted); font-size: 12px; }
+.folio-home-latest-work svg { color: var(--folio-red); }
+.folio-home-latest-work:hover strong { color: var(--folio-red); }
+.folio-home-latest-pending { min-height: 280px; display: grid; place-items: center; color: var(--folio-muted); font-size: 13px; }
+.folio-workbench-page > .folio-home-feedback { width: min(1280px, calc(100% - 48px)); margin: 0 auto 24px; }
+@media (max-width: 1100px) { .folio-home-latest-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .folio-home-latest { padding: 0 24px 32px; } .folio-home-latest-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; } .folio-home-latest-work { grid-template-rows: 190px auto auto; } }

@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import { api, type LibraryTag, type LibraryWork } from "../../lib/api";
 import { usePrefersReducedMotion } from "../../lib/motion";
-import { libraryTagHref, libraryTagKey, pageHref } from "../../lib/navigation";
+import { libraryTagHref, libraryTagKey, pageFromLocation, pageHref } from "../../lib/navigation";
 import { MetadataScrapePanel } from "./MetadataScrapePanel";
 import { ExportAction } from "../export/ExportAction";
 import { CreatorSubscribeButton, isCreatorTag, useCreatorSubscriptions } from "../subscriptions/CreatorSubscribeButton";
@@ -57,7 +57,10 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
   }, []);
 
   useEffect(() => {
-    const close = () => { dialogRef.current?.close(); onClose(); };
+    const close = () => {
+      const next = pageFromLocation();
+      if (next.name === "reader" || next.name === "readerRemote") { dialogRef.current?.close(); onClose(); }
+    };
     window.addEventListener("hashchange", close);
     return () => window.removeEventListener("hashchange", close);
   }, [onClose]);

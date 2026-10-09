@@ -5,6 +5,7 @@ import logging
 import threading
 import time
 import uuid
+import unicodedata
 from typing import Any
 
 from app.database import Database
@@ -28,7 +29,14 @@ class SubscriptionService:
           (SELECT COUNT(*) FROM subscription_seen v WHERE v.subscription_id = s.id) AS seen_count
           FROM creator_subscriptions s LEFT JOIN updates u ON u.subscription_id = s.id
           WHERE removed_at IS NULL ORDER BY s.tag_type, s.name""")
-        return {"result": [self._public(row) for row in rows]}
+        gallery_ids = {item['id'] for row in rows for item in self._recent(row)[:4]}
+        imported = {}
+        ids = list(gallery_ids)
+        for start in range(0, len(ids), 500):
+            batch = ids[start:start + 500]
+            imported.update({item['remote_gallery_id']: item['id'] for item in self.db.fetchall(
+                'SELECT id, remote_gallery_id FROM works WHERE remote_gallery_id IN (' + ','.join('?' for _ in batch) + ')', batch)})
+        return {"result": [self._public(row, imported) for row in rows]}
 
     def get(self, subscription_id):
         row = self.db.fetchone("SELECT * FROM creator_subscriptions WHERE id = ? AND removed_at IS NULL", (subscription_id,))
@@ -143,6 +151,9 @@ class SubscriptionService:
                                "AND revision = ? AND claim_token = ?", (claimed["id"], claimed["revision"], claimed["claim_token"])).fetchone()
             if not row:
                 return False
+            if row["scan_page"] == 1:
+                conn.execute("UPDATE creator_subscriptions SET recent_json = ? WHERE id = ?",
+                             (json.dumps(self._distinct(items)[:12], ensure_ascii=False), row["id"]))
             known_anchor = False
             for item in items:
                 seen = conn.execute("SELECT scan_token FROM subscription_seen WHERE subscription_id = ? AND gallery_id = ?",
@@ -216,29 +227,61 @@ class SubscriptionService:
 
     def updates(self, page=1, unread_only=False):
         page = max(1, page)
-        where = "WHERE u.read_at IS NULL" if unread_only else ""
-        total = self.db.fetchone(f"SELECT COUNT(*) AS n FROM subscription_updates u {where}")["n"]
+        groups = "SELECT gallery_id, MAX(id) AS id, MIN(read_at) AS read_at, MAX(read_at IS NULL) AS unread FROM subscription_updates GROUP BY gallery_id"
+        where = "WHERE g.unread = 1" if unread_only else ""
+        total = self.db.fetchone(f"SELECT COUNT(*) AS n FROM ({groups}) g {where}")["n"]
         rows = self.db.fetchall(f"""SELECT u.*, s.name, s.slug, s.tag_type, s.remote_tag_id, w.id AS work_id
-          FROM subscription_updates u JOIN creator_subscriptions s ON s.id = u.subscription_id
+          , g.unread AS group_unread FROM ({groups}) g JOIN subscription_updates u ON u.id = g.id
+          JOIN creator_subscriptions s ON s.id = u.subscription_id
           LEFT JOIN works w ON w.remote_gallery_id = u.gallery_id {where} ORDER BY u.id DESC LIMIT 20 OFFSET ?""", ((page - 1) * 20,))
         result = []
         for row in rows:
-            summary = map_gallery_summary(json.loads(row["payload_json"]))
-            summary["thumbnail"]["url"] = self.client.media_proxy_url(summary["thumbnail"]["path"], thumbnail=True)
-            summary.update({"imported": row["work_id"] is not None, "work_id": row["work_id"], "tags": []})
-            result.append({**{key: value for key, value in row.items() if key not in {"payload_json", "scan_token", "work_id"}}, "gallery": summary})
-        unread = self.db.fetchone("SELECT COUNT(*) AS n FROM subscription_updates WHERE read_at IS NULL")["n"]
+            summary = self._summary(json.loads(row["payload_json"]), row["work_id"])
+            result.append({**{key: value for key, value in row.items() if key not in {"payload_json", "scan_token", "work_id", "group_unread"}},
+                           "read_at": None if row["group_unread"] else row["read_at"], "gallery": summary})
+        unread = self.db.fetchone("SELECT COUNT(DISTINCT gallery_id) AS n FROM subscription_updates WHERE read_at IS NULL")["n"]
         return {"result": result, "total": total, "unread_count": unread, "page": page, "per_page": 20}
 
     def mark_read(self, update_id=None):
-        where, params = (" AND id = ?", (update_id,)) if update_id is not None else ("", ())
+        where, params = (" AND gallery_id = (SELECT gallery_id FROM subscription_updates WHERE id = ?)", (update_id,)) if update_id is not None else ("", ())
         self.db.execute(f"UPDATE subscription_updates SET read_at = CURRENT_TIMESTAMP WHERE read_at IS NULL{where}", params)
         return {"ok": True}
 
+    def _summary(self, payload, work_id=None):
+        summary = map_gallery_summary(payload)
+        summary['thumbnail']['url'] = self.client.media_proxy_url(summary['thumbnail']['path'], thumbnail=True)
+        summary.update({'imported': work_id is not None, 'work_id': work_id, 'tags': []})
+        return summary
+
     @staticmethod
-    def _public(row):
-        return {**{key: value for key, value in row.items() if key not in {"claim_token", "check_lease_until", "scan_token", "revision"}},
-                "enabled": bool(row["enabled"]), "email_enabled": bool(row["email_enabled"]), "baseline_complete": bool(row["baseline_complete"])}
+    def _distinct(items):
+        seen, result = set(), []
+        for item in items:
+            titles = item.get('title') if isinstance(item.get('title'), dict) else {}
+            title = item.get('japanese_title') or titles.get('japanese')
+            # Exact original titles fold language editions; unknown titles remain separate.
+            key = ' '.join(unicodedata.normalize('NFKC', title).split()) if isinstance(title, str) and title.strip() else item['id']
+            if key not in seen:
+                seen.add(key); result.append(item)
+        return result
+
+    @staticmethod
+    def _recent(row):
+        try:
+            value = json.loads(row.get('recent_json', '[]'))
+            return [item for item in value if isinstance(item, dict) and type(item.get('id')) is int and item['id'] > 0] if isinstance(value, list) else []
+        except (ValueError, TypeError):
+            return []
+
+    def _public(self, row, imported=None):
+        recent = self._recent(row)[:4]
+        if imported is None:
+            ids = [item['id'] for item in recent]
+            imported = {item['remote_gallery_id']: item['id'] for item in self.db.fetchall(
+                'SELECT id, remote_gallery_id FROM works WHERE remote_gallery_id IN (' + ','.join('?' for _ in ids) + ')', ids)} if ids else {}
+        return {**{key: value for key, value in row.items() if key not in {"claim_token", "check_lease_until", "scan_token", "revision", "recent_json"}},
+                "enabled": bool(row["enabled"]), "email_enabled": bool(row["email_enabled"]), "baseline_complete": bool(row["baseline_complete"]),
+                "recent_galleries": [self._summary(item, imported.get(item['id'])) for item in recent]}
 
     def start(self):
         if self._thread and self._thread.is_alive():

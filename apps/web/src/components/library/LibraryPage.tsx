@@ -37,8 +37,6 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
         onLanguage={library.setLanguage}
         readStatus={library.readStatus}
         onReadStatus={library.setReadStatus}
-        source={library.source}
-        onSource={library.setSource}
         libraryId={library.libraryId}
         onLibraryId={library.setLibraryId}
         mediaLibraries={library.mediaLibraries}

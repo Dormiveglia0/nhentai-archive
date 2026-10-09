@@ -47,9 +47,3 @@ export const READ_STATUS_OPTIONS = [
   { value: "reading", label: "阅读中" },
   { value: "completed", label: "已读" },
 ];
-
-export const SOURCE_OPTIONS = [
-  { value: "all", label: "全部来源" },
-  { value: "remote", label: "远端入库" },
-  { value: "local", label: "本地导入" },
-];

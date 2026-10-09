@@ -14,41 +14,13 @@ import { SmtpSection } from "./SmtpSection";
 import { useSettingsState } from "./useSettingsState";
 import "./SettingsPage.css";
 
-const SECTION_COPY: Record<SettingsSection, { title: string; copy: string }> = {
-  connection: {
-    title: "数据源与连接",
-    copy: "配置漫画来源与 API 密钥。",
-  },
-  translation: {
-    title: "机器翻译配置",
-    copy: "选择翻译服务、目标语言与批量数量。",
-  },
-  privacy: {
-    title: "访问与阅读偏好",
-    copy: "修改本地访问密码，并设置媒体封面的默认保护方式与阅读布局。",
-  },
-  export: {
-    title: "CBZ 导出默认值",
-    copy: "只定义导出中心的起始选项，单次下载仍可临时调整。",
-  },
-  data: {
-    title: "作品与阅读报表",
-    copy: "查看阅读时长、作品排行与作品分布。",
-  },
-  storage: {
-    title: "媒体库与存储",
-    copy: "管理媒体库、扫描与阅读缓存。",
-  },
-  notifications: { title: "邮件通知", copy: "配置邮件发送与接收。" },
-};
-
 export function SettingsPage({
   onBlurCoversChange,
 }: {
   onBlurCoversChange: (value: boolean) => void;
 }) {
   const vm = useSettingsState(onBlurCoversChange);
-  const current = SECTION_COPY[vm.section];
+  const current = SETTINGS_SECTIONS.find(section => section.id === vm.section)!;
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -103,13 +75,7 @@ export function SettingsPage({
         })}
       </nav>
 
-        <section className="folio-settings-stage">
-          <header className="folio-settings-head">
-            <div>
-              <h2>{current.title}</h2>
-            </div>
-          </header>
-
+        <section className="folio-settings-stage" aria-label={current.label}>
           {vm.section === "connection" ? <ConnectionSection vm={vm} /> : null}
           {vm.section === "translation" ? <TranslationSection vm={vm} /> : null}
           {vm.section === "privacy" ? <PreferencesSection vm={vm} /> : null}

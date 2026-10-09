@@ -54,8 +54,7 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
   ];
 
   return (
-    <section className="folio-settings-section" aria-label="媒体库与存储" aria-busy={loading}>
-      <div className="folio-settings-subhead"><h3><Folder size={16} />媒体库</h3><a className="folio-line-button" href={pageHref({ name: "files" })}>管理媒体库<ArrowUpRight size={15} /></a></div>
+    <section className="folio-settings-section folio-storage-groups" aria-label="媒体库与存储" aria-busy={loading}>
       <ReadingCacheSection />
       {error ? (
         <div className="folio-settings-fetch-error" role="alert">
@@ -64,14 +63,11 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
         </div>
       ) : null}
 
-      <div className="folio-settings-storage-head">
-        <div className="folio-settings-subhead"><h3><HardDrive size={16} />磁盘占用</h3></div>
-        <a className="folio-line-button" href={pageHref({ name: "files" })}>
-          打开文件管理
-          <ArrowUpRight size={15} />
-        </a>
-      </div>
+      <section className="folio-storage-group" aria-label="磁盘占用">
+        <div className="folio-settings-subhead"><h3><HardDrive size={16} />磁盘占用</h3><a className="folio-line-button" href={pageHref({ name: "files" }) + "?view=files"}>打开文件管理<ArrowUpRight size={15} /></a></div>
       <FolioMetricGrid ariaLabel="磁盘占用摘要" className="folio-settings-storage-grid" items={usage} />
+      </section>
+      <section className="folio-storage-group" aria-label="数据目录">
 
       <div className="folio-settings-subhead"><h3><Folder size={16} />数据目录</h3><span>只读</span></div>
       <div className="folio-field-matrix folio-settings-path-grid">
@@ -81,6 +77,7 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
             ))
           : <p className="folio-settings-data-empty">正在读取路径…</p>}
       </div>
+      </section>
     </section>
   );
 }

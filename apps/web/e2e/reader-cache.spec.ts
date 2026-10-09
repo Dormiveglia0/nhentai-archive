@@ -78,3 +78,27 @@ test("退出缓存阅读先保存最新页码，再释放缓存并允许重新�
     for (const lease of leases) await page.request.delete(`/api/works/${workId}/reading-source/${lease}`);
   }
 });
+
+test("实际图片完成加载后才显示，首次阅读不从小图突然展开", async ({ page, request }) => {
+  await request.patch(`/api/works/${workId}/reader-state`, { data: { page_index: 1, completed: false } });
+  let release: () => void = () => {};
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route(new RegExp(`/api/works/${workId}/pages/1(?:\\?|$)`), async route => {
+    const response = await route.fetch(); await held; await route.fulfill({ response });
+  });
+  try {
+    await page.goto(`/#reader/${workId}`);
+    await expect(page.locator('.reader-counter')).toContainText('/');
+    await page.getByRole('button', { name: '阅读设置', exact: true }).click();
+    await page.getByRole('button', { name: '单页', exact: true }).click();
+    await page.keyboard.press('Escape');
+    const image = page.locator('.reader-single img');
+    await expect(image).toHaveCSS('visibility', 'hidden');
+    release();
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0);
+    await page.evaluate(() => { window.location.hash = 'library'; });
+    await expect(page.locator('.reader-shell')).toHaveCount(0);
+    await expect.poll(async () => (await (await request.get('/api/library/cache')).json()).active_count).toBe(0);
+  } finally { release(); }
+});

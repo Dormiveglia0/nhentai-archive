@@ -56,7 +56,7 @@ test("全站同类控件的指示条连续滑动，跨项不加载中间页面",
   await page.goto('/#settings?section=notifications');
   await expect(page.locator('.folio-smtp')).toBeVisible();
   await page.goto('/#discover?view=subscriptions');
-  await expect(page.locator('.folio-notifications')).toBeVisible();
+  await expect(page.getByRole('region',{name:'订阅管理',exact:true})).toBeVisible();
   await page.goto('/#files?view=files');
   await slide(page, '.folio-files-primary-tabs', 2);
   await slide(page, '.folio-files-primary-tabs', 1);

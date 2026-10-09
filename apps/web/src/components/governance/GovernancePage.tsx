@@ -144,14 +144,14 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                     onReload={gov.reload}
                   />
                 ) : null}
-                {!gov.aggregateLoading && !gov.aggregate ? (
+                {!gov.aggregateLoading && !gov.aggregate && !gov.selectedId ? (
                   <FolioEmptyState icon={PenLine} title="选择一部作品" copy="从队列选择作品后，在这里核对来源、字段与词典映射。" />
                 ) : null}
               </>
             )}
           </section>
 
-          <GovernanceSourceRail aggregate={gov.bulkMode ? null : gov.aggregate} />
+          {!gov.bulkMode && !gov.aggregateLoading && gov.aggregate ? <GovernanceSourceRail aggregate={gov.aggregate} /> : null}
         </div>
       ) : null}
     </section>

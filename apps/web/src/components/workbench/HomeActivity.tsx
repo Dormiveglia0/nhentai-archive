@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { api, type Job, type MediaLibrary } from "../../lib/api";
 import { jobTypeLabel, statusLabel, targetLabel } from "../../lib/jobs";
 import { pageHref } from "../../lib/navigation";
+import { useSubscriptionUpdates } from "../subscriptions/useSubscriptionUpdates";
 import { AmbientCover } from "../folio/ui/AmbientCover";
 
 export function HomeActivity({ blurCovers }: { blurCovers: boolean }) {
-  const [updates, setUpdates] = useState<Awaited<ReturnType<typeof api.subscriptionUpdates>> | null>(null);
+  const { updates, error: updatesError } = useSubscriptionUpdates(1, true);
   const [libraries, setLibraries] = useState<MediaLibrary[] | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [error, setError] = useState("");
@@ -20,11 +21,10 @@ export function HomeActivity({ blurCovers }: { blurCovers: boolean }) {
         if (!stopped) timer = window.setTimeout(load, 15000);
         return;
       }
-      const results = await Promise.allSettled([api.subscriptionUpdates(1, true), api.mediaLibraries(), api.jobs()]);
+      const results = await Promise.allSettled([api.mediaLibraries(), api.jobs()]);
       if (stopped) return;
-      if (results[0].status === "fulfilled") setUpdates(results[0].value);
-      if (results[1].status === "fulfilled") setLibraries(results[1].value.result);
-      if (results[2].status === "fulfilled") setJobs(results[2].value.result.filter(job => ["running", "queued", "paused", "cancelling", "failed"].includes(job.status)));
+      if (results[0].status === "fulfilled") setLibraries(results[0].value.result);
+      if (results[1].status === "fulfilled") setJobs(results[1].value.result.filter(job => ["running", "queued", "paused", "cancelling", "failed"].includes(job.status)));
       setError(results.some(result => result.status === "rejected") ? "部分活动读取失败" : "");
       timer = window.setTimeout(load, 15000);
     }
@@ -54,6 +54,6 @@ export function HomeActivity({ blurCovers }: { blurCovers: boolean }) {
       <header><h2>队列{jobs?.length ? <span>{jobs.length}</span> : null}</h2><a href="#tasks">查看<ArrowUpRight size={15} /></a></header>
       {jobs?.length ? jobs.slice(0, 2).map(job => <a className={job.status === "failed" ? "folio-home-state-row has-issue" : "folio-home-state-row"} href="#tasks" key={job.id}><Workflow size={23} strokeWidth={1.25} /><span><strong>{jobTypeLabel(job.type)} · {statusLabel(job.status)}</strong><small>{job.meta?.title || String(job.target.library_name || job.target.title || targetLabel(job))}</small>{["running", "queued", "paused"].includes(job.status) ? <span className="folio-home-job-progress" role="progressbar" aria-label="任务进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={job.progress.percent}><i style={{ transform: `scaleX(${job.progress.percent / 100})` }} /></span> : null}</span><ArrowUpRight size={17} /></a>) : <div className="folio-home-quiet"><Workflow size={24} strokeWidth={1.25} /><span>{jobs ? "没有待处理任务" : "正在读取队列…"}</span></div>}
     </section>
-    {error ? <div className="folio-home-activity-error" role="alert"><span>{error}</span><button type="button" aria-label="刷新首页活动" onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /></button></div> : null}
+    {error || updatesError ? <div className="folio-home-activity-error" role="alert"><span>{error || updatesError}</span><button type="button" aria-label="刷新首页活动" onClick={() => setRevision(value => value + 1)}><RefreshCw size={15} /></button></div> : null}
   </div>;
 }

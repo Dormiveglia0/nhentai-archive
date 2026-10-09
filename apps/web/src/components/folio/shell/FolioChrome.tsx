@@ -6,11 +6,8 @@ import { duration, ease, usePrefersReducedMotion } from "../../../lib/motion";
 import { pageHref } from "../../../lib/navigation";
 import { FOLIO_PAGES, type FolioPageId } from "../config";
 import { ModuleBackdrop } from "./ModuleBackdrop";
-import { PageHeading } from "./PageHeading";
 import { PageNavigation } from "./PageNavigation";
 import "../Folio.css";
-
-export type FolioHeading = false | { title: string; description: string };
 
 export function FolioChrome({
   page,
@@ -18,8 +15,8 @@ export function FolioChrome({
   children,
   footer,
   overlay,
+  status,
   scrollKey,
-  heading,
   onLogout,
 }: {
   page: FolioPageId;
@@ -27,8 +24,8 @@ export function FolioChrome({
   children: ReactNode;
   footer?: ReactNode;
   overlay?: ReactNode;
+  status?: ReactNode;
   scrollKey?: string | number;
-  heading?: FolioHeading;
   onLogout?: () => void | Promise<void>;
 }) {
   const reduceMotion = usePrefersReducedMotion();
@@ -138,6 +135,7 @@ export function FolioChrome({
         </a>
         <PageNavigation className="folio-topnav" page={page} onNavigate={onNavigate} />
         <div className="folio-top-actions">
+          {status}
           {onLogout ? (
             <button className="folio-session-button" type="button" aria-label="登出并锁定本地作品" title="登出" onClick={() => void onLogout()}>
               <LogOut size={17} />
@@ -161,9 +159,8 @@ export function FolioChrome({
             </m.div>
           ) : null}
         </AnimatePresence>
-        <main ref={scrollRef} className="folio-scroll" tabIndex={-1} onScroll={handleScroll}>
+        <main ref={scrollRef} className="folio-scroll" aria-label={current.label} tabIndex={-1} onScroll={handleScroll}>
           <div key={routeKey} className="folio-page" ref={restoreRouteScroll}>
-            {heading === false || page === "workbench" ? null : <PageHeading page={current} title={heading?.title} />}
             {children}
           </div>
         </main>

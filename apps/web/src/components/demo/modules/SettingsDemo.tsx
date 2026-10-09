@@ -48,14 +48,7 @@ export function SettingsDemo({
         })}
       </nav>
 
-      <section className="folio-settings-stage">
-          <div className="folio-settings-head">
-            <div>
-              <h2>{current.label}</h2>
-            </div>
-            <div className="folio-settings-state"><i />演示配置</div>
-          </div>
-
+      <section className="folio-settings-stage" aria-label={current.label}>
           {section === "connection" ? (
             <>
               <div className="folio-field-matrix">

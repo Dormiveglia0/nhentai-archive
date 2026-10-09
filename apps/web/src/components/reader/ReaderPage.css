@@ -23,6 +23,7 @@
 .reader-viewport { position: absolute; z-index: 1; inset: 0; display: flex; align-items: flex-start; justify-content: center; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--reader-red) transparent; }
 .reader-single { width: max-content; min-width: 100%; min-height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
 .reader-single-img { display: block; flex-shrink: 0; transform-origin: center top; user-select: none; box-shadow: 0 12px 40px rgba(0, 0, 0, .3); animation: reader-page-reveal .24s ease both; }
+.reader-image-loading { visibility: hidden; animation: none; }
 .reader-shell .fit-height { max-height: 100dvh; max-width: 100vw; width: auto; height: auto; }
 .reader-shell .fit-width { width: 100vw; max-width: 100vw; height: auto; }
 .reader-shell .fit-original { max-width: none; max-height: none; }

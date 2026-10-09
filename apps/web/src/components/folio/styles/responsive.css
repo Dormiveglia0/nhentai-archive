@@ -104,11 +104,6 @@
     top: 68px;
   }
 
-  .folio-radar {
-    right: -18vw;
-    bottom: -18%;
-  }
-
   .folio-menu-button {
     width: 52px;
     min-height: 0;
@@ -166,15 +161,6 @@
 
   .folio-command-bar::before {
     left: 32px;
-  }
-
-  .folio-page-copy {
-    width: min(620px, 68%);
-  }
-
-  .folio-scene {
-    right: 20px;
-    opacity: 0.72;
   }
 
   .folio-workbench-grid,
@@ -309,35 +295,6 @@
 
   .folio-mobile-nav {
     padding: 12px 14px 16px 18px;
-  }
-
-  .folio-page-head {
-    min-height: 124px;
-    padding: 27px 20px 24px;
-    align-items: center;
-  }
-
-  .folio-page-head::before {
-    left: 20px;
-  }
-
-  .folio-page-copy {
-    width: 78%;
-  }
-
-  .folio-page-copy h1 {
-    font-size: 34px;
-  }
-
-
-  .folio-scene {
-    width: 72vw;
-    height: 100%;
-    right: -12px;
-    top: 0;
-    opacity: 0.36;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, 0.25) 25%, #000 56%);
-    mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, 0.25) 25%, #000 56%);
   }
 
   .folio-page-body {
@@ -557,13 +514,7 @@
     padding-top: 26px;
   }
 
-  .folio-settings-head {
-    align-items: flex-start;
-  }
 
-  .folio-settings-state {
-    white-space: nowrap;
-  }
 
   .folio-choice-row {
     grid-template-columns: minmax(0, 1fr);

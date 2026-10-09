@@ -3,9 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type GalleryDetail } from "../../../lib/api";
 import { galleryTitle } from "./galleryDetailModel";
 
-export function useGalleryDetail(galleryId: number) {
-  const [detail, setDetail] = useState<GalleryDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useGalleryDetail(galleryId: number, initialDetail?: GalleryDetail) {
+  const [detail, setDetail] = useState<GalleryDetail | null>(initialDetail ?? null);
+  const [loading, setLoading] = useState(!initialDetail);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
@@ -26,6 +26,10 @@ export function useGalleryDetail(galleryId: number) {
 
   useEffect(() => {
     const request = ++detailRequest.current;
+    if (revision === 0 && initialDetail?.gallery_id === galleryId) {
+      setDetail(initialDetail); setLoading(false); setError(null); setNotice(null); setQueued(false);
+      return;
+    }
     setDetail(null);
     setLoading(true);
     setError(null);
@@ -42,7 +46,7 @@ export function useGalleryDetail(galleryId: number) {
         if (request === detailRequest.current) setLoading(false);
       });
     return () => { detailRequest.current += 1; };
-  }, [galleryId, revision]);
+  }, [galleryId, revision, initialDetail]);
 
   useEffect(() => {
     if (!notice) return;
@@ -59,7 +63,7 @@ export function useGalleryDetail(galleryId: number) {
       await api.importGallery(detail.gallery_id);
       if (!mounted.current || request !== importRequest.current) return;
       setQueued(true);
-      setNotice("已加入真实导入队列，可在任务中心查看进度。");
+      setNotice("已加入导入队列。");
     } catch (reason) {
       if (mounted.current && request === importRequest.current) {
         setError(reason instanceof Error ? reason.message : String(reason));

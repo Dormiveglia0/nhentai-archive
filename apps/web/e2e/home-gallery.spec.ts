@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.skip(!process.env.E2E_STORAGE_STATE, "需要独立测试会话");
 
-test("首页只展示真实作品，优先继续阅读，无重复标题、拖动和统计面板", async ({ page, request }) => {
+test("首页只展示真实作品，优先继续阅读，无重复页头和统计面板", async ({ page, request }) => {
   const recent = await (await request.get("/api/library/search?per_page=1&sort=recent_added")).json();
   const continuing = await (await request.get("/api/library/continue-reading?limit=1")).json();
   const ids = [...new Set([...continuing.result, ...recent.result].map(work => work.id))].slice(0, 1);

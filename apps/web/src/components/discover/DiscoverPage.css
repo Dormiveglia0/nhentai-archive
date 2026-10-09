@@ -1428,3 +1428,16 @@
 .folio-discover-tabs button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; min-width: 110px; padding: 0 24px; border: 0; border-radius: 0; color: var(--folio-muted); background: transparent; overflow: visible; }
 .folio-discover-tabs button[aria-current] { color: var(--folio-red); }
 .folio-discover-tabs button > svg, .folio-discover-tabs button > span { position: relative; z-index: 1; }
+
+.folio-discover-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 290px); gap: 32px; align-items: start; }
+.folio-discover-layout.has-full-updates { grid-template-columns: minmax(0, 1fr); }
+.folio-discover-stage, .folio-discover-updates { min-width: 0; }
+.folio-discover-updates { position: sticky; top: 24px; padding-left: 24px; border-left: 1px solid var(--folio-line); }
+@media (max-width: 1100px) {
+  .folio-discover-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .folio-discover-updates { grid-row: 1; position: static; padding-left: 0; border-left: 0; }
+  .folio-discover-updates .folio-subscription-updates { display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x proximity; }
+  .folio-discover-updates .folio-subscription-updates > article { flex: 0 0 min(280px, 80%); scroll-snap-align: start; }
+  .folio-discover-updates .folio-updates-empty { min-height: 88px; flex-wrap: nowrap; padding-block: 12px; }
+  .folio-discover-updates .folio-updates-empty a { flex-basis: auto; margin-left: auto; }
+}

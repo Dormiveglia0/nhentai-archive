@@ -242,3 +242,63 @@ def test_mail_outbox_retries_same_message_and_never_resends_sent_updates(tmp_pat
     with pytest.raises(ValueError):
         restarted.retry(failed["id"])
     assert not db.fetchall("PRAGMA foreign_key_check")
+
+
+def test_recent_previews_fold_only_matching_original_titles_and_shared_updates_read_together(tmp_path):
+    db, client, notifications, service = _services(tmp_path)
+    artist = service.subscribe(10, "artist")
+    group = service.subscribe(20, "group")
+    service.tick(); service.tick()
+    assert service.updates()["total"] == 0
+    items = [
+        {"id": 4, "japanese_title": "作品 第二巻", "english_title": "Volume 2"},
+        {"id": 2, "japanese_title": "作品 第一巻", "english_title": "Volume 1"},
+        {"id": 3, "japanese_title": "作品　第一巻", "english_title": "Volume 1 English"},
+        {"id": 5, "english_title": "Unknown original A"},
+        {"id": 6, "english_title": "Unknown original B"},
+    ]
+    client.tagged = lambda *args, **kwargs: {"result": items, "num_pages": 1}
+    work_id = db.execute("INSERT INTO works(title, source, remote_gallery_id) VALUES ('Volume 1', 'remote', 2)").lastrowid
+    for subscription in (artist, group):
+        service.check_now(subscription["id"]); service.tick()
+        preview = service.get(subscription["id"])
+        assert [item["gallery_id"] for item in preview["recent_galleries"]] == [4, 2, 5, 6]
+        assert preview["recent_galleries"][1]["work_id"] == work_id
+        assert "recent_json" not in preview and "claim_token" not in preview
+    updates = service.updates()
+    assert updates["total"] == updates["unread_count"] == 5
+    update = next(item for item in updates["result"] if item["gallery_id"] == 2)
+    service.mark_read(update["id"])
+    assert service.updates(unread_only=True)["total"] == 4
+    assert not db.fetchone("SELECT COUNT(*) AS n FROM subscription_updates WHERE gallery_id = 2 AND read_at IS NULL")["n"]
+    db.execute("UPDATE creator_subscriptions SET recent_json = 'broken'")
+    assert all(not item["recent_galleries"] for item in service.list()["result"])
+    assert not db.fetchall("PRAGMA foreign_key_check")
+
+
+def test_subscription_preview_upgrade_is_idempotent_and_preserves_existing_state(tmp_path):
+    db, client, _notifications, service = _services(tmp_path)
+    artist = service.subscribe(10, "artist")
+    paused = service.subscribe(20, "group")
+    client.pages = {1: [1]}
+    service.tick(); service.tick()
+    service.update(paused["id"], {"enabled": False})
+    work_id = db.execute("INSERT INTO works(title, source, favorite) VALUES ('Archive', 'local', 1)").lastrowid
+    db.execute("INSERT INTO reader_progress(work_id, page_index, page_count, progress_percent) VALUES (?, 2, 4, 50)", (work_id,))
+    before_seen = db.fetchall("SELECT * FROM subscription_seen")
+    before_paused = db.fetchone("SELECT * FROM creator_subscriptions WHERE id = ?", (paused["id"],))
+    db.execute("ALTER TABLE creator_subscriptions DROP COLUMN recent_json")
+    db.init_schema()
+    upgraded = db.fetchone("SELECT * FROM creator_subscriptions WHERE id = ?", (artist["id"],))
+    assert upgraded["recent_json"] == "[]" and upgraded["baseline_complete"]
+    assert upgraded["scan_page"] == 1 and upgraded["next_check_at"] == 0 and upgraded["claim_token"] is None
+    db.init_schema()
+    assert db.fetchone("SELECT * FROM creator_subscriptions WHERE id = ?", (artist["id"],)) == upgraded
+    after_paused = db.fetchone("SELECT * FROM creator_subscriptions WHERE id = ?", (paused["id"],))
+    assert {key: value for key, value in after_paused.items() if key != "recent_json"} == {key: value for key, value in before_paused.items() if key != "recent_json"}
+    assert db.fetchall("SELECT * FROM subscription_seen") == before_seen
+    assert db.fetchone("SELECT favorite FROM works WHERE id = ?", (work_id,))["favorite"] == 1
+    assert db.fetchone("SELECT page_index FROM reader_progress WHERE work_id = ?", (work_id,))["page_index"] == 2
+    service.tick()
+    assert not service.updates()["result"]
+    assert not db.fetchall("PRAGMA foreign_key_check")

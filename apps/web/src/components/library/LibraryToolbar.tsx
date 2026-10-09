@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import type { LibrarySummary, MediaLibrary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { LibraryTagFilter } from "./LibraryTagFilter";
-import { READ_STATUS_OPTIONS, SORT_OPTIONS, SOURCE_OPTIONS } from "./libraryHelpers";
+import { READ_STATUS_OPTIONS, SORT_OPTIONS } from "./libraryHelpers";
 
 export type LibraryView = "grid" | "list";
 
@@ -15,8 +15,6 @@ type Props = {
   onLanguage: (value: string) => void;
   readStatus: string;
   onReadStatus: (value: string) => void;
-  source: string;
-  onSource: (value: string) => void;
   sort: string;
   onSort: (value: string) => void;
   tags: LibraryTagFilterItem[];
@@ -99,7 +97,6 @@ export function LibraryToolbar(props: Props) {
         ]} />
         <FolioSelect label="语言" value={props.language} options={languageOptions} onChange={props.onLanguage} />
         <FolioSelect label="阅读状态" value={props.readStatus} options={READ_STATUS_OPTIONS} onChange={props.onReadStatus} />
-        <FolioSelect label="来源" value={props.source} options={SOURCE_OPTIONS} onChange={props.onSource} />
         <FolioSelect label="排序" value={props.sort} options={SORT_OPTIONS} onChange={props.onSort} />
         <button
           type="button"
