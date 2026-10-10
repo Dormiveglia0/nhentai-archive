@@ -5,13 +5,14 @@ test.skip(process.env.E2E_LAYOUT_OWNED_ROOT !== '/tmp/nh-reader-media-update-202
 const cases = [
   ...[1440, 390].flatMap(width => ['original', 'width', 'height'].map(fit => ({ width, fit, workId: process.env.E2E_WORK_ID, target: 40 }))),
   ...[1440, 390].map(width => ({ width, fit: 'original', workId: process.env.E2E_LANDSCAPE_WORK_ID, target: 20 })),
+  ...[1440, 390].map(width => ({ width, fit: 'original', workId: process.env.E2E_LANDSCAPE_WORK_ID, target: 26 })),
 ];
 for (const { width, fit, workId, target } of cases) {
   test(`${width}px 连续${fit}恢复第${target}页，图片慢加载不遍历或覆盖原进度`, async ({ page, request }) => {
     test.skip(!workId, '需要实际作品 ID');
     const prior = await (await request.get(`/api/works/${workId}/reader-state`)).json();
     const work = await (await request.get(`/api/works/${workId}`)).json();
-    test.skip(work.page_count < target + 5, '实际作品页数不足');
+    test.skip(work.page_count < target || (target === 26 && work.page_count !== 26), '需要对应页数的实际作品');
     const requested = new Set<number>(), written: number[] = [], errors: string[] = [];
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await page.addInitScript(fit => {
@@ -86,7 +87,8 @@ test('恢复图片尚未加载时，主动滚动仍更新并保存页码', async
     await page.goto(`/#reader/${workId}`);
     const next = page.locator('.reader-webtoon img[data-page-index="22"]');
     await expect.poll(() => next.evaluate((node: HTMLImageElement) => node.naturalWidth > 0)).toBe(true);
-    await next.evaluate(node => node.scrollIntoView({ block: 'start' }));
+    await page.mouse.move(720, 500);
+    await page.mouse.wheel(0, (await next.boundingBox())!.y);
     await expect(page.locator('.reader-counter')).toHaveText(/^22\s*\//);
     release();
     await expect.poll(() => page.locator('.reader-webtoon img[data-page-index="20"]').evaluate((node: HTMLImageElement) => node.naturalWidth > 0)).toBe(true);

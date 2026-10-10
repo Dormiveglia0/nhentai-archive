@@ -20,6 +20,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   // -1 哨兵:确保进入 webtoon 时下方“外部跳页”effect 至少滚动一次到当前页,
   // 否则初值等于 pageIndex 会被提前 return,列表停在顶部并把进度回写成第 1 页。
   const lastReported = useRef<number>(-1);
+  const restoringPage = useRef<number | null>(pageIndex);
   // ponytail: unknown sizes reserve the first known page; per-page metadata supplies exact sizes when available.
   const fallbackSize = pages.find(page => page.width && page.height) ?? { width: 867, height: 1226 };
 
@@ -27,14 +28,19 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   useEffect(() => {
     if (pages.length === 0) return;
     const root = itemRefs.current.values().next().value?.closest<HTMLElement>(".reader-viewport") ?? null;
+    const stopRestoring = () => { restoringPage.current = null; };
+    const pointerScroll = (event: PointerEvent) => { if (event.target === root) stopRestoring(); };
+    const keyboardScroll = (event: KeyboardEvent) => {
+      if (!(event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable='true']"))) stopRestoring();
+    };
+    root?.addEventListener("wheel", stopRestoring, { passive: true });
+    root?.addEventListener("touchmove", stopRestoring, { passive: true });
+    root?.addEventListener("pointerdown", pointerScroll);
+    window.addEventListener("keydown", keyboardScroll);
     const observer = new IntersectionObserver(
       (entries) => {
-        // Protect the pending target while visible; scrolling away must still update progress.
-        const current = itemRefs.current.get(lastReported.current);
-        if (root && current?.matches(".reader-image-loading, .reader-image-pending")) {
-          const pageRect = current.getBoundingClientRect(), viewportRect = root.getBoundingClientRect();
-          if (pageRect.bottom > viewportRect.top && pageRect.top < viewportRect.bottom) return;
-        }
+        // Layout changes during restoration are not reading progress; user scrolling releases the anchor.
+        if (restoringPage.current !== null) return;
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -49,7 +55,13 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
     );
     observerRef.current = observer;
     itemRefs.current.forEach((node) => observer.observe(node));
-    return () => { observer.disconnect(); observerRef.current = null; };
+    return () => {
+      observer.disconnect(); observerRef.current = null;
+      root?.removeEventListener("wheel", stopRestoring);
+      root?.removeEventListener("touchmove", stopRestoring);
+      root?.removeEventListener("pointerdown", pointerScroll);
+      window.removeEventListener("keydown", keyboardScroll);
+    };
   }, [pages, onReachPage]);
 
   // 外部跳页（缩略图/键盘）→ 滚动到目标
@@ -57,6 +69,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
     if (pageIndex === lastReported.current) return;
     const target = itemRefs.current.get(pageIndex);
     if (target) {
+      restoringPage.current = pageIndex;
       lastReported.current = pageIndex;
       target.scrollIntoView({ block: "start", behavior: "auto" });
     }
@@ -76,6 +89,10 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
             if (previous) observerRef.current?.unobserve(previous);
             if (node) {
               itemRefs.current.set(page.pageIndex, node);
+              // At the end of the list, the initial scroll can be clamped before the image has its real height.
+              if (restoringPage.current === page.pageIndex && !node.matches(".reader-image-loading, .reader-image-pending, .reader-img-error")) {
+                node.scrollIntoView({ block: "start", behavior: "auto" });
+              }
               observerRef.current?.observe(node);
             }
             else itemRefs.current.delete(page.pageIndex);

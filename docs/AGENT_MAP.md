@@ -48,7 +48,7 @@
 - `folio/ui/`：控件、度量卡、封面、分页、标签滚动、继续阅读行与删除动作；优先复用。
 - `lib/navigation.ts`：原生 href 与 tag/本地标签范围；保留键盘、修饰键和新窗口行为。
 - `lib/format.ts` / `lib/jobs.ts`：格式化与任务规则，不把通用函数放到 feature 文件夹。`api.updateReaderState` 保存成功发出 `nh-reader-state-changed`，首页可见时更新真实进度。
-- `reader/WebtoonView.tsx`：连续阅读在布局阶段恢复保存页，原图的未加载/等待/失败页预留尺寸，避免页面高度为零导致全书请求及错误进度。优先用每页真实尺寸，缺失时暂用首个已知尺寸；解码后仍使用自然大小；恢复/跳页目标仍可见且在加载时，占位几何不回写进度；主动滚离后正常回写。`useReaderData.ts` 必须保留远端返回的页面尺寸。
+- `reader/WebtoonView.tsx`：连续阅读在布局阶段恢复保存页，原图的未加载/等待/失败页预留尺寸，避免页面高度为零导致全书请求及错误进度。优先用每页真实尺寸，缺失时暂用首个已知尺寸；解码后仍使用自然大小；恢复/跳页期间占位几何不回写进度，目标解码后再次校准位置以应对列表底部滚动限制；用户滚动、触摸、滚动条或键盘操作后解除固定，正常回写。`useReaderData.ts` 必须保留远端返回的页面尺寸。
 
 ## CSS 顺序
 
@@ -64,4 +64,4 @@ PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q
 
 前端使用隔离真实副本与 `E2E_BASE_URL` / `E2E_STORAGE_STATE`。1440×1000、1365×768、390×844 必验，320及横屏针对布局边界复验。核心用 `site-layout-refinement.spec.ts`、`home-gallery.spec.ts`；全站滑动用 `site-audit.spec.ts`；冷加载与快速打断用 `scene-motion.spec.ts`。截图必须等待真实图片解码，并检查动画中间帧、焦点、滚动、控制台与性能。
 
-连续阅读的已保存进度另用 `reader-scroll.spec.ts`：实际长作品从第40页进入，桌面/手机及原图/适宽/适高，延迟前一页图片响应；另用 `E2E_LANDSCAPE_WORK_ID` 检查横向封面作品第20页的原图恢复；全过程不得改写为其他页或请求全书。与 `reader.spec.ts`、`reader-bridge.spec.ts` 分组复验。
+连续阅读的已保存进度另用 `reader-scroll.spec.ts`：实际长作品从第40页进入，桌面/手机及原图/适宽/适高，延迟前一页图片响应；另用 `E2E_LANDSCAPE_WORK_ID` 检查实际26页横向封面作品第20页和末页的原图恢复，以及图片加载中主动滚动；全过程不得改写为其他页或请求全书。与 `reader.spec.ts`、`reader-bridge.spec.ts` 分组复验。
