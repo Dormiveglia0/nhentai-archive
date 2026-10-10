@@ -199,6 +199,7 @@ test("本地阅读器标签保持本地搜索和返回历史", async ({ page }) 
 });
 
 test("远端阅读器标签分页保留浏览器返回历史", async ({ page, request }) => {
+  test.setTimeout(60_000);
   const work = await (await request.get("/api/works/" + WORK_ID)).json();
   test.skip(!work.remote_gallery_id, "Needs an actual bound remote work");
   await page.goto("/#reader/remote/" + work.remote_gallery_id);
@@ -218,7 +219,7 @@ test("远端阅读器标签分页保留浏览器返回历史", async ({ page, re
   const pageOneUrl = page.url();
   await next.click();
   await expect(page).toHaveURL(/[#&?]page=2(?:&|$)/);
-  await expect(page.locator(".folio-discover-results")).not.toHaveClass(/is-loading/);
+  await expect(page.locator(".folio-discover-results")).not.toHaveClass(/is-loading/, { timeout: 20_000 });
   await expect.poll(() => page.evaluate(() => {
     const scroll = document.querySelector<HTMLElement>(".folio-scroll")!;
     const feed = document.querySelector<HTMLElement>(".folio-discover-feed")!;
@@ -228,6 +229,7 @@ test("远端阅读器标签分页保留浏览器返回历史", async ({ page, re
   await page.goBack();
   await expect(page).toHaveURL(pageOneUrl);
   await expect(page.locator(".folio-discover-page")).toBeVisible();
+  await expect(page.locator(".folio-discover-results")).not.toHaveClass(/is-loading/, { timeout: 20_000 });
   await expect(next).toBeInViewport();
 
   await page.goBack();

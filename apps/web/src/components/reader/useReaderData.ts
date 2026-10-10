@@ -228,6 +228,8 @@ export function useReaderData(source: ReaderSource) {
       key: `remote-${page.index ?? index + 1}`,
       pageIndex: index + 1,
       src: page.url!,
+      width: page.width,
+      height: page.height,
     }));
   }, [cacheLease, gallery?.pages, localPages, sourceRevision, stableSource, bridge, pageIndex, pageIdentity]);
 

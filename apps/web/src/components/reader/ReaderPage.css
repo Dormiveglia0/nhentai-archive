@@ -40,6 +40,7 @@
 .reader-webtoon-img { display: block; max-width: 100vw; aspect-ratio: auto 867 / 1226; box-shadow: 0 8px 32px rgba(0, 0, 0, .24); }
 .reader-webtoon-img.fit-width { width: min(100vw, 1180px); height: auto; }
 .reader-webtoon-img.fit-height { height: 100dvh; width: auto; object-fit: contain; }
+.reader-webtoon-img.fit-original:is(.reader-image-loading, .reader-image-pending, .reader-img-error) { width: var(--reader-page-width); height: var(--reader-page-height); }
 .reader-empty { max-width: 420px; margin: auto; padding: 28px; color: var(--reader-muted); font-size: 14px; text-align: center; line-height: 1.7; }
 .reader-loading { margin: auto; display: grid; place-items: center; gap: 20px; color: var(--reader-muted); }
 .reader-loading svg { width: 90px; height: 116px; fill: none; stroke: var(--reader-line-strong); stroke-width: 1; }

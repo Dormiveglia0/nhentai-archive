@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, type CSSProperties } from "react";
 
 import { ReaderImage } from "./ReaderImage";
 import type { Fit, ReaderPageItem } from "./readerHelpers";
@@ -20,6 +20,8 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   // -1 哨兵:确保进入 webtoon 时下方“外部跳页”effect 至少滚动一次到当前页,
   // 否则初值等于 pageIndex 会被提前 return,列表停在顶部并把进度回写成第 1 页。
   const lastReported = useRef<number>(-1);
+  // ponytail: unknown sizes reserve the first known page; per-page metadata supplies exact sizes when available.
+  const fallbackSize = pages.find(page => page.width && page.height) ?? { width: 867, height: 1226 };
 
   // 观测视口中部的页面，回写当前页
   useEffect(() => {
@@ -27,6 +29,12 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
     const root = itemRefs.current.values().next().value?.closest<HTMLElement>(".reader-viewport") ?? null;
     const observer = new IntersectionObserver(
       (entries) => {
+        // Protect the pending target while visible; scrolling away must still update progress.
+        const current = itemRefs.current.get(lastReported.current);
+        if (root && current?.matches(".reader-image-loading, .reader-image-pending")) {
+          const pageRect = current.getBoundingClientRect(), viewportRect = root.getBoundingClientRect();
+          if (pageRect.bottom > viewportRect.top && pageRect.top < viewportRect.bottom) return;
+        }
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -45,7 +53,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
   }, [pages, onReachPage]);
 
   // 外部跳页（缩略图/键盘）→ 滚动到目标
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (pageIndex === lastReported.current) return;
     const target = itemRefs.current.get(pageIndex);
     if (target) {
@@ -74,6 +82,7 @@ export function WebtoonView({ pages, pageIndex, fit, onReachPage, onToggleChrome
           }}
           pageIndex={page.pageIndex}
           className={`reader-webtoon-img fit-${fit}`}
+          style={{ "--reader-page-width": `${page.width || fallbackSize.width}px`, "--reader-page-height": `${page.height || fallbackSize.height}px` } as CSSProperties}
           src={page.src}
           width={page.width}
           height={page.height}
