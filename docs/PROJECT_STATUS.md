@@ -1,8 +1,8 @@
 # NH Archive Project Status
 
-当前修复分支：`codex/design-corrections`。实现已验收，待正式发布。上一轮 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留历史发布记录，其中常驻更新侧栏、顶部更新入口和视觉验收结论已撤回，不能作为当前设计依据。
+当前修复已验收并部署，分支 `codex/design-corrections`，实现提交 `8abe90ddea5e782ccaa6a6671a6f64aa01a05b86`。上一轮 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留历史发布记录，其中常驻更新侧栏、顶部更新入口和视觉验收结论已撤回，不能作为当前设计依据。
 
-正式服务目前仍为4349上的 `site-layout-20261010-published`（`c6df27a5c93e`），数据绑定 `/opt/nhentai/.local-data:/data`。本轮只修改前端和回归检查，没有API、数据库结构或依赖变更。
+正式服务为4349上的 `design-correction-20261010-published` / `latest`（`f2966162e990`），容器健康，数据绑定 `/opt/nhentai/.local-data:/data`。前一镜像 `c6df27a5c93e` 保留为 `rollback-design-correction-20261010`；更早的阅读与媒体库记录保持不变。本轮只修改前端和回归检查，没有API、数据库结构或依赖变更。
 
 ## 本轮修正
 
@@ -23,6 +23,8 @@
 人工复核实际解码后的桌面与窄屏排版、迁移选中状态、首页右下方位置、详情切换中间帧；动态检查覆盖冷加载、快速打断、跨项滑动、焦点返回、拖动单步与减少动态效果。本机Chromium、未限速且使用已预热的实际API副本，性能数字不代表外部网络或用户设备。
 
 上一轮339项API和生产镜像检查结果仅为历史证据。本轮后端未变，不将旧计数写成本轮新增验收。
+
+发布前停止旧服务并生成一致性SQLite备份，记录33张表和113部作品、113个受管源归档SHA。发布后18张核心表完全相同，全部33张表即时核对无变更，113个源文件SHA一致；数据库完整性和外键检查通过。80个镜像文件及正式服务静态资源与验收构建逐字节一致；健康、匿名认证保护和桌面/手机登录页检查通过。备份与发布证据保存在私有 `/tmp/nh-design-correction-20261010/deploy`。源码已推送，镜像仅在本机发布，未上传远端镜像仓库。
 
 ## 后续维护约束
 
