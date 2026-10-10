@@ -1,8 +1,8 @@
 # NH Archive Project Status
 
-当前工作为连续阅读进度恢复修复，分支 `codex/reader-scroll-restoration`，待正式发布。上一轮设计修正已部署，实现提交 `8abe90ddea5e782ccaa6a6671a6f64aa01a05b86`。更早的 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留历史发布记录，其中常驻更新侧栏、顶部更新入口和视觉验收结论已撤回，不能作为当前设计依据。
+连续阅读进度恢复和末页定位修复已验收部署，分支 `codex/reader-scroll-restoration`，实现提交 `b5b39602e51ad3009b0d9304ca0e1bf9a6707250`。上一轮设计修正已部署，实现提交 `8abe90ddea5e782ccaa6a6671a6f64aa01a05b86`。更早的 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留历史发布记录，其中常驻更新侧栏、顶部更新入口和视觉验收结论已撤回，不能作为当前设计依据。
 
-正式服务为4349上的 `design-correction-20261010-published` / `latest`（`f2966162e990`），容器健康，数据绑定 `/opt/nhentai/.local-data:/data`。前一镜像 `c6df27a5c93e` 保留为 `rollback-design-correction-20261010`；更早的阅读与媒体库记录保持不变。本轮只修改前端和回归检查，没有API、数据库结构或依赖变更。
+正式服务为4349上的 `reader-scroll-20261010-final-published` / `latest`（`207d79450a3c`），容器健康，数据绑定 `/opt/nhentai/.local-data:/data`。首版修复镜像 `71daf5326f00` 保留为 `rollback-reader-scroll-20261010-final`；本轮修改前的设计版本 `f2966162e990` 保留为 `rollback-reader-scroll-20261010`，更早的回滚镜像不变。本轮只修改前端、回归检查和维护记录，没有API、数据库结构或依赖变更。
 
 ## 连续阅读恢复修复
 
@@ -13,6 +13,8 @@
 最终编译版本27项阅读回归通过：`reader-scroll` 11项（1440×1000、390×844三种缩放从40页恢复，横向封面作品20页及末页原图恢复，目标页加载中主动滚至22页）；现有 `reader` 14项；独立 `reader-bridge` 2项。逐帧采样在慢加载恢复期间只出现保存页、不改写到其他页；61页作品原图探针从全书61次请求降为邻近6页。主动滚离未加载目标后保存22页，晚到图片不拉回原目标；双来源交接保持同一DOM、页码、位置和单个阅读会话。
 
 初次双来源等待远端页及远端标签分页曾超时；真实网络/滚动记录未发现最终恢复位置异常，分页测试现等待实际结果就绪再验收返回位置。最终整组25项、交接独立2项通过，失败记录保留。测试通过Node Playwright驱动编译版本；未改变API、数据库或依赖，不将历史全站/API测试计作本轮结果。原始记录保留在私有 `/tmp/nh-reader-scroll-20261010`。
+
+最终镜像及正式服务80个资源与验收构建逐字节一致，入口 `index-BOC_Ur15.js`；健康、匿名认证保护、桌面/手机登录页及控制台检查通过。发布前停止服务生成一致性SQLite备份，发布后18张核心表完全相同、113个受管源归档SHA一致，完整性和外键检查通过。33张表中4张扫描台账有正常后台更新：119个目录项无增删、仅113项last_seen_run_id更新；媒体库仅last_scan_at/next_scan_at更新；新增已完成扫描，按现有每库保留100次记录的规则清理旧记录，并更新自增序号。来源配置、目录项内容、作品和阅读数据均无修改。备份及最终发布记录位于私有 `/tmp/nh-reader-scroll-20261010/deploy-final`；原版本备份另保留在 `deploy`。源码已推送，镜像仅在本机发布。私有测试服务已关闭。
 
 ## 上一轮设计修正（已发布）
 
