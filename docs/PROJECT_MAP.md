@@ -6,9 +6,10 @@
 
 - React/TypeScript/Vite 前端：`apps/web/`；FastAPI/SQLite 后端：`apps/api/`。
 - 根目录 `npm run dev` 调用 `scripts/dev.py`，同时启动8001 API和5173 Web；端口可由 `NH_ARCHIVE_API_PORT` / `NH_ARCHIVE_WEB_PORT` 覆盖。
-- 运行数据位于根 `.local-data/`；不得提交源 CBZ、封面、缓存、密钥或数据库。
-- `Dockerfile` 构建前端并封装API；`compose.yaml` 保持 `.local-data:/data`。正式服务4349，健康检查 `/api/health`。
-- 部署必须从当前工作树构建。保存旧镜像与一致性 SQLite 备份，验证源文件、作品、进度、会话与认证保留；正式数据库不作为功能测试库。
+- 开发源码目录为 `nhentai-dev`，测试数据在独立 `.local-data/`；正式部署 `/opt/nhentai` 仅保存 Compose、`.env`、`data/` 和 `backups/`，不得提交源 CBZ、封面、缓存、密钥或数据库。
+- `.github/workflows/ci.yml` 每次推送/PR运行API测试、Web构建和 `scripts/smoke_image.py` 的隔离Compose检查；推送通过后发布GHCR分支/SHA标签，main同时发布latest，版本标签发布对应版本。
+- `Dockerfile` 构建前端并封装API运行模块；测试依赖独立在 `requirements-dev.txt`。`compose.yaml` 拉取已发布镜像，无本地build，默认 `data:/data`；镜像、宿主机目录、地址和端口可由 `.env` 配置。正式服务4349，健康检查 `/api/health`。
+- 正式部署使用注册表镜像并固定摘要。保存上一镜像与一致性 SQLite 备份，验证源文件、作品、进度、会话与认证保留；正式数据库不作为功能测试库。
 
 ## 后端所有者
 

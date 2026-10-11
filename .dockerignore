@@ -11,3 +11,13 @@
 **/test-results
 .env
 .env.*
+data
+backups
+backend
+.agents
+.aws
+.codex
+.superpowers
+.worktrees
+**/.local-data
+**/e2e

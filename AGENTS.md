@@ -22,6 +22,10 @@ For frontend work, read `docs/AGENT_MAP.md` first. It maps each demo module, sce
 - Web dev server: `cd apps/web && npm run dev`
 - Web build: `cd apps/web && npm run build`
 - Web preview: `cd apps/web && npm run preview`
+- Development dependencies: `.venv/bin/pip install -r apps/api/requirements-dev.txt`
+- Production image verification with disposable storage: `python3 scripts/smoke_image.py IMAGE`
+
+Development source lives in `nhentai-dev`, with isolated `.local-data/`. Production `/opt/nhentai` uses the published GHCR image through `compose.yaml`, with `data/` mounted at `/data`. Never point development or tests at production data. GitHub Actions runs tests/build/smoke checks before publishing; production updates pull the registry image instead of building an old checkout.
 
 Use `VITE_API_PROXY_TARGET=http://127.0.0.1:8001` when the frontend must proxy to a non-default backend port.
 

@@ -1,6 +1,6 @@
 # 下一阶段工作入口
 
-先读 [AGENT_MAP.md](AGENT_MAP.md)，然后按需读 [PROJECT_STATUS.md](PROJECT_STATUS.md)、[PROJECT_MAP.md](PROJECT_MAP.md)、[DEVELOPMENT_RULES.md](DEVELOPMENT_RULES.md)。当前修复为 `codex/reader-scroll-restoration`；[SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 是上一轮发布记录，其中已撤回的设计不能恢复。
+先读 [AGENT_MAP.md](AGENT_MAP.md)，然后按需读 [PROJECT_STATUS.md](PROJECT_STATUS.md)、[PROJECT_MAP.md](PROJECT_MAP.md)、[DEVELOPMENT_RULES.md](DEVELOPMENT_RULES.md)。源码与 CI 以主分支为准，开发目录 `nhentai-dev`，正式部署在 `/opt/nhentai`；[SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 是历史发布记录，其中已撤回的设计不能恢复。
 
 ## 保留约定
 
@@ -26,4 +26,4 @@
 
 连续进度恢复用 `reader-scroll`：实际61页作品从40页恢复，桌面/手机三种缩放；慢加载期间逐帧采样计数，不允许中间回到1/2页或一次请求全书。另测横向封面实际26页作品第20页及末页，不能让短占位或底部滚动限制把进度写成第21页或第24/25页；同时检查加载中主动滚动不会被固定目标拉回。不要只测作品默认第一页。
 
-部署从当前源码构建，保存旧镜像与一致性SQLite备份；核对静态资源、健康、认证和原有数据/源文件后再报告完成。
+正式部署从GHCR拉取已通过CI隔离检查的镜像，在 `/opt/nhentai/.env` 固定摘要；不得从开发目录构建替换正式镜像。保持正式 `data/` 与开发 `.local-data/` 隔离。保存上一镜像与一致性SQLite备份；核对静态资源、健康、认证和原有数据/源文件后再报告完成。

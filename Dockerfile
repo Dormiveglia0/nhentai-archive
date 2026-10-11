@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
     && mkdir -p /data \
     && chown app:app /data
-COPY apps/api/ ./apps/api/
+COPY apps/api/app/ ./apps/api/app/
 COPY --from=web-build /build/apps/web/dist/ ./apps/web/dist/
 COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint
 RUN chmod -R a+rX /app/apps

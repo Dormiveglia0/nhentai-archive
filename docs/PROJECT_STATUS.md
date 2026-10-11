@@ -1,5 +1,15 @@
 # NH Archive Project Status
 
+## CI/CD 与正式部署分离
+
+当前维护分支 `codex/ci-production-deploy`，延续已验收的阅读与设计修复。`.github/workflows/ci.yml` 接入每次推送/PR的API测试、Web编译、构建产物与隔离Compose镜像检查；推送检查通过后使用仓库GITHUB_TOKEN发布GHCR，main更新latest。正式Compose不再构建源码，数据默认位于 `data/`，镜像可固定摘要。测试依赖移至 `requirements-dev.txt`，运行镜像只包含API运行模块与Web产物。
+
+README重写为当前部署、数据迁移和开发指南。清理已无引用的导出草图、未接入的旧验证脚本、旧Vercel演示部署配置及根目录无用依赖锁；保留仍维护的演示基准和真实行为测试。Web构建、actionlint、339项API测试及新镜像的隔离Compose检查通过；沙箱中的旧API测试停滞后在正常网络/进程环境重跑，使用临时测试库。镜像检查校正了Docker重启时随机宿主机端口可能变化的问题，再次完整通过。
+
+GitHub发布与环境迁移验收完成后补充；下列发布记录均为历史记录，旧目录和仅本地镜像标签不再作为正式部署指南。
+
+## 历史：连续阅读修复发布
+
 连续阅读进度恢复和末页定位修复已验收部署，分支 `codex/reader-scroll-restoration`，实现提交 `b5b39602e51ad3009b0d9304ca0e1bf9a6707250`。上一轮设计修正已部署，实现提交 `8abe90ddea5e782ccaa6a6671a6f64aa01a05b86`。更早的 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留历史发布记录，其中常驻更新侧栏、顶部更新入口和视觉验收结论已撤回，不能作为当前设计依据。
 
 正式服务为4349上的 `reader-scroll-20261010-final-published` / `latest`（`207d79450a3c`），容器健康，数据绑定 `/opt/nhentai/.local-data:/data`。首版修复镜像 `71daf5326f00` 保留为 `rollback-reader-scroll-20261010-final`；本轮修改前的设计版本 `f2966162e990` 保留为 `rollback-reader-scroll-20261010`，更早的回滚镜像不变。本轮只修改前端、回归检查和维护记录，没有API、数据库结构或依赖变更。
