@@ -1,6 +1,6 @@
 # NH Archive Agent Map
 
-当前修复分支：`codex/reader-scroll-restoration`。正式发布与当前验收以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准；[SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留上一轮发布记录，其侧栏、顶部更新入口与视觉结论已撤回。上一版阅读与媒体库更新见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)。
+当前源码与自动发布以 `main` 为准，开发目录 `nhentai-dev`，正式 Compose 在 `/opt/nhentai` 使用发布镜像和独立数据卷。正式发布与当前验收以 [PROJECT_STATUS.md](PROJECT_STATUS.md) 为准；[SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 保留历史发布记录，其侧栏、顶部更新入口与视觉结论已撤回。上一版阅读与媒体库更新见 [READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)。
 
 前端修改先读本文件，再读对应组件；不要把历史原型当成当前设计。
 
