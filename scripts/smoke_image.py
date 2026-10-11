@@ -55,6 +55,13 @@ def main() -> None:
             status, html = request("/")
             assert status == 200 and b"/assets/" in html
             assert request("/icon.svg")[0] == 200
+            # CI downloads the separate web build; local Docker-only checkouts may have no dist.
+            dist = ROOT / "apps/web/dist"
+            if dist.is_dir():
+                assert (dist / "index.html").is_file()
+                for file in dist.rglob("*"):
+                    if file.is_file():
+                        assert request("/" + file.relative_to(dist).as_posix()) == (200, file.read_bytes()), file.name
             assert request("/api/works")[0] == 401
             assert request("/api/auth/setup", {"password": secrets.token_urlsafe(24)})[0] == 200
             assert json.loads(request("/api/works")[1]) == {"result": []}
@@ -77,7 +84,7 @@ def main() -> None:
             assert request("/api/works")[0] == 200
             assert request("/api/auth/logout", {})[0] == 200
             assert request("/api/works")[0] == 401
-            print("Compose smoke passed: web, authentication, SQLite persistence, restart and logout")
+            print("Compose smoke passed: web assets, authentication, SQLite persistence, restart and logout")
         except Exception:
             print(run("logs", "--tail", "40"), file=sys.stderr)
             raise

@@ -73,6 +73,8 @@ docker compose down
 
 开发环境使用独立 `.local-data/`，不挂载正式数据。备份应在停服后包含数据库和原归档；本机迁移备份仅是回滚副本，不替代定期离机备份。数据库包含私密配置，不能上传 GitHub。
 
+本机清理中恢复的独有临时下载保存在 `data/recovered-downloads/`，可以自行核对后导入；没有将旧测试库的修改记录合并进正式数据库。
+
 ## 开发
 
 需要 Python 3.11 和 Node.js 22。开发目录命名为 `nhentai-dev`，与 `/opt/nhentai` 正式部署分开。
@@ -104,7 +106,7 @@ python3 scripts/smoke_image.py nh-archive:dev
 
 1. 安装锁定依赖，运行 API 测试，检查 TypeScript 并编译前端。
 2. 保存 Web 构建产物，保留 7 天。
-3. 构建 Linux amd64 Docker 镜像，用正式 Compose 和空白临时库检查认证、持久化与重启。
+3. 构建 Linux amd64 Docker 镜像，用正式 Compose 和空白临时库逐一比对 Web 构建产物，检查认证、持久化与重启。
 4. 检查成功后，通过仓库的 `GITHUB_TOKEN` 自动发布到 GHCR，无需另存个人 token。
 
 每次推送发布 `sha-完整提交号` 和分支标签；`main` 同时更新 `latest`，`v1.2.3` 标签发布 `1.2.3`。Pull Request 只检查，不发布镜像。构建失败不会进入镜像发布阶段。本机正式服务通过 `compose pull` 和 `up` 更新；工作流不保存服务器 SSH 凭据或自动重启本机服务。
