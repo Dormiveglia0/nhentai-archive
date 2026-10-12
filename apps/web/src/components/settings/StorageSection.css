@@ -96,7 +96,8 @@
   .folio-library-issue-head { align-items: start; flex-direction: column; gap: 4px; }
   .folio-library-issue-head span { text-align: left; }
   .folio-library-issues dl div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .folio-library-directory .folio-media-actions { gap: 4px; }
+  .folio-library-directory .folio-media-actions { gap: 4px; flex-wrap: wrap; }
+  .folio-library-directory .folio-media-actions button { white-space: nowrap; }
   .folio-library-directory .folio-settings-mini-action { padding-inline: 6px; gap: 4px; }
   .folio-library-directory .folio-line-button { padding-inline: 10px; }
   .folio-cache-fields .folio-field-matrix { grid-template-columns: minmax(0, 1fr); }

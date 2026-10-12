@@ -97,6 +97,22 @@ for (const width of [1440, 390]) {
   });
 }
 
+test("320px 媒体库操作按钮不挤成竖排", async ({ page, request }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  const libraries = await (await request.get("/api/library/directories")).json();
+  const library = libraries.result.find((item: { kind: string }) => item.kind === "managed");
+  await page.goto("/#files");
+  const row = page.locator(".folio-library-directory").filter({ has: page.getByRole("heading", { name: library.name, exact: true }) });
+  const buttons = row.locator(".folio-media-actions button");
+  await expect(buttons).toHaveCount(4);
+  for (const button of await buttons.all()) {
+    const box = await button.boundingBox();
+    expect(box?.height).toBeLessThanOrEqual(48);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("已移除库的保留记录可以查看和移除", async ({ page, request }) => {
   const libraries = await (await request.get("/api/library/directories?include_removed=true")).json();
   const library = libraries.result.find((item: { removed_at: string | null; item_count: number }) => item.removed_at && item.item_count > 0);
