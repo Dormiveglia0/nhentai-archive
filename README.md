@@ -32,14 +32,7 @@ docker compose up -d --wait
 
 访问 **http://localhost:4349**。首次进入创建访问密码；没有默认密码或用户名。配置、密码验证值和设备会话持久保存在数据库中，重启不会清空。只应在可信网络直接开放 HTTP；公网访问请由反向代理提供 HTTPS。
 
-| 配置 | 默认值 | 用途 |
-| --- | --- | --- |
-| `NH_ARCHIVE_IMAGE` | `ghcr.io/dormiveglia0/nhentai-archive:latest` | 镜像标签或 `@sha256:…` 摘要 |
-| `NH_ARCHIVE_STORAGE` | `./data` | 宿主机数据目录，容器内固定为 `/data` |
-| `NH_ARCHIVE_BIND` | `0.0.0.0` | 监听地址；仅本机使用可设为 `127.0.0.1` |
-| `NH_ARCHIVE_PORT` | `4349` | 宿主机端口 |
-
-这些值可以写在 Compose 目录的 `.env` 中。固定摘要可保证部署可复现；GitHub Actions 每次发布会在运行摘要中给出完整镜像摘要。本机正式部署使用固定摘要，更新时先修改 `.env` 的 `NH_ARCHIVE_IMAGE`。
+Compose 没有应用环境变量：镜像、容器名、端口和数据路径直接写在 `compose.yaml` 中。需要修改时只改对应的 `image`、`container_name`、`ports` 或 `volumes` 行；其余字段用于只读根文件系统、进程降权和 Linux capability 收敛。正式部署可把镜像行改为工作流给出的 `@sha256:…` 摘要以固定版本。
 
 ```bash
 docker compose pull
@@ -48,14 +41,13 @@ docker compose logs --tail 100 app
 docker compose down
 ```
 
-`down` 停止服务，宿主机 `data/` 保留。容器根文件系统只读，临时文件在 `/tmp`；应用按宿主机数据目录的 UID/GID 运行。端口或存储目录已有自定义值时，更新需保留 `.env`。
+`down` 停止服务，宿主机 `data/` 保留。容器根文件系统只读，临时文件在 `/tmp`；应用按宿主机数据目录的 UID/GID 运行。更新 Compose 时保留自己改过的四个部署字段和额外卷映射。
 
 ## 数据与迁移
 
 ```text
 /opt/nhentai/                 正式部署
 ├── compose.yaml
-├── .env                     固定镜像摘要与部署配置
 ├── data/                    唯一正式数据根
 │   ├── archive.db           配置、作品、标签、进度、会话与任务
 │   ├── library/             下载和本地导入的 CBZ
@@ -67,7 +59,13 @@ docker compose down
 └── backups/                 私有迁移备份与核对记录
 ```
 
-把本地 CBZ 放入 `data/library/`，再在应用中扫描媒体库。额外媒体目录需要通过 Compose 挂载到容器，并在设置中使用容器内路径；只读来源使用 `:ro` 挂载。API key、SMTP 与阅读偏好在设置中配置，不必写入源码或镜像。
+把本地 CBZ 放入 `data/library/`，再在应用中扫描媒体库。额外媒体目录需要通过 Compose 挂载到容器，并在设置中使用容器内路径；只读来源使用 `:ro` 挂载。以本机 rclone 目录为例，在 `volumes` 下增加 `/opt/webdav/Google:/media/google`，再把 `/media/google` 注册为“挂载目录”；只有明确开启“允许存入下载作品”后，它才可被选为默认下载媒体库。这个开关只允许新增下载完成的 CBZ，不开放已有挂载文件的回写或删除。
+
+媒体库目录只保存用户原有文件和选择下载到该库的最终 CBZ。SQLite、封面、缩略图、阅读缓存、扫描元数据和下载临时文件始终保存在 `/data`，不会向媒体库写 sidecar 或缓存文件。API key、SMTP 与阅读偏好也在 `/data` 的数据库中，不必写入源码或镜像。
+
+默认下载媒体库在“文件 → 媒体库”中选择。选择会固定到新入队的任务；目标暂停、只读或移除时任务明确报错，不自动改存本地。先启动宿主机 rclone 再启动应用；rclone 重新挂载后重建应用容器，让绑定卷指向新的挂载。
+
+应用显示下载完成表示CBZ已写入目标文件系统；rclone随后异步上传，云端是否完成由rclone确认。VFS缓存按最后访问时间、配额和上传状态回收，本项目的阅读缓存另由“设置 → 存储”管理，两者独立。
 
 从旧开发环境迁移时，先停止开发 API 和旧容器，生成一致性 SQLite 备份，然后**移动整个数据目录**到正式 `data/`。例如旧 Compose 使用 `.local-data/` 时，在已停服且 `data/` 不存在的目录执行 `mv .local-data data`。不要只移动数据库、遗漏下载文件，也不要将两套已有数据库直接合并。受管路径在数据库中使用相对路径；已有 `/data/...` 媒体库路径保持有效，外部目录需要单独核对挂载。
 

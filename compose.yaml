@@ -2,14 +2,15 @@ name: nh-archive
 
 services:
   app:
-    image: ${NH_ARCHIVE_IMAGE:-ghcr.io/dormiveglia0/nhentai-archive:latest}
+    container_name: nh-archive
+    image: ghcr.io/dormiveglia0/nhentai-archive:latest
     init: true
     restart: unless-stopped
     user: "0:0"
     ports:
-      - "${NH_ARCHIVE_BIND:-0.0.0.0}:${NH_ARCHIVE_PORT:-4349}:8000"
+      - "4349:8000"
     volumes:
-      - ${NH_ARCHIVE_STORAGE:-./data}:/data
+      - ./data:/data
     read_only: true
     tmpfs:
       - /tmp

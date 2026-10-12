@@ -6,9 +6,9 @@
 
 - React/TypeScript/Vite 前端：`apps/web/`；FastAPI/SQLite 后端：`apps/api/`。
 - 根目录 `npm run dev` 调用 `scripts/dev.py`，同时启动8001 API和5173 Web；端口可由 `NH_ARCHIVE_API_PORT` / `NH_ARCHIVE_WEB_PORT` 覆盖。
-- 开发源码目录为 `nhentai-dev`，测试数据在独立 `.local-data/`；正式部署 `/opt/nhentai` 仅保存 Compose、`.env`、`data/` 和 `backups/`，不得提交源 CBZ、封面、缓存、密钥或数据库。
+- 开发源码目录为 `nhentai-dev`，测试数据在独立 `.local-data/`；正式部署 `/opt/nhentai` 仅保存 Compose、`data/` 和 `backups/`，不得提交源 CBZ、封面、缓存、密钥或数据库。
 - `.github/workflows/ci.yml` 每次推送/PR运行API测试、Web构建和 `scripts/smoke_image.py` 的隔离Compose检查；推送通过后发布GHCR分支/SHA标签，main同时发布latest，版本标签发布对应版本。
-- `Dockerfile` 构建前端并封装API运行模块；测试依赖独立在 `requirements-dev.txt`。`compose.yaml` 拉取已发布镜像，无本地build，默认 `data:/data`；镜像、宿主机目录、地址和端口可由 `.env` 配置。正式服务4349，健康检查 `/api/health`。
+- `Dockerfile` 构建前端并封装API运行模块；测试依赖独立在 `requirements-dev.txt`。`compose.yaml` 拉取已发布镜像，无本地build，固定列出容器名、`4349:8000` 和 `./data:/data`，自定义时直接编辑这几行。正式服务4349，健康检查 `/api/health`。
 - 正式部署使用注册表镜像并固定摘要。保存上一镜像与一致性 SQLite 备份，验证源文件、作品、进度、会话与认证保留；正式数据库不作为功能测试库。
 
 ## 后端所有者
@@ -30,11 +30,13 @@
 | 订阅与邮件 | `subscription_service.py`、`notification_service.py`；完整初始基线、增量更新、租约/CAS、近期预览、持久发件箱、私密SMTP配置 |
 | 认证 | `auth_service.py`；单密码、scrypt、90天 HttpOnly/SameSite 会话、变更撤销其他会话、限流 |
 
+媒体库文件状态API返回归档标题和已保留的ComicInfo/JSON；`DELETE /api/library/directories/{library_id}/items/{item_id}` 只移除缺失索引，不删除源文件或关联作品。`PATCH /api/settings` 的 `downloads.default_library_id` 只接受已启用且可接收下载的库；目标失效时下载明确失败。`MediaLibraryService._source_lock` 复用为扫描和归档发布的互斥锁，避免扫描抢先建立另一作品。
+
 文件名以 `rg --files apps/api/app/services` 为准；不要另造平行服务或在路由里写业务逻辑。
 
 ## 数据边界与兼容
 
-- `works` 为作品身份，`work_files` 指向来源；旧独立导入继续可读。媒体库增加 `media_libraries`、`library_items`、扫描/事件等表，并通过可空 `library_item_id` 关联旧来源。
+- `works` 为作品身份，`work_files` 指向来源；旧独立导入继续可读。媒体库增加 `media_libraries`、`library_items`、扫描/事件等表，并通过可空 `library_item_id` 关联旧来源。默认下载目标保存为设置；下载只把最终CBZ写入所选可写媒体库，派生数据仍在`/data`。
 - 受管源和封面在库内持久保存 `library/...` / `covers/...`；读取时按当前数据根解析。启动转换可识别的旧 `.local-data/...` 与 `/data/...` 绝对路径。外部媒体库的用户目录不随环境静默改写。
 - 缺失旧来源不能遮蔽仍有效的已索引来源。只读/离线来源不能被误删或回写；删除必须显示拒绝原因。
 - `reader_progress`、`reading_history`、本地/远端 `reading_sessions` 保留独立语义；远端普通阅读不写本地进度。来源版本变化后拒绝过期页、缩略图、会话与进度请求。
@@ -48,6 +50,7 @@
 - `App.tsx`：认证后的hash路由、懒加载、详情数据准备与阅读器隔离。
 - `components/layout/ArchiveShell.tsx`：正式 shell；`components/folio/`：8项导航、原标志、控件和共用CSS。额外顶部更新入口和边角装饰已退役。
 - 正式 feature、数据 hooks 与CSS精确定位见 AGENT_MAP 表；`lib/api.ts`统一DTO与缓存失效，`lib/navigation.ts`统一链接。
+- 媒体库缺失计数直接打开 `MediaLibrariesSection` 的状态列表；扫描历史在列表下方折叠。`useFilesState.ts` 接受 `#files?view=files&status=…`，设置中的问题指标直接跳入对应文件筛选，文件健康计数复用现有筛选状态。
 - 首页最多6部真实本地作品4秒轮播，后台/离屏/焦点/减少动态效果暂停；右下方显示4部最新远端作品，桌面一屏展示。阅读保存后刷新数据并保持当前作品ID。
 - 发现常驻作品、更新、订阅三个选项卡，更新项显示真实未读数；作品区域全宽，筛选不能覆盖其他视图的链接。订阅行附实际近期作品。
 - 本地原生详情弹窗保留自然比例封面。打开远端详情时先准备数据，再先出后入交接，避免两套标题重叠；只有目标页挂载。

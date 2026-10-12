@@ -126,6 +126,7 @@ function FileInventory({ blurCovers }: { blurCovers: boolean }) {
             onScanPreview={files.previewScan}
             onScanStart={files.startScan}
             onScanCancel={files.cancelScan}
+            onFilter={status => { files.setCategory("all"); files.setStatusFilter(status); }}
           />
         </div>
       </FadeIn>

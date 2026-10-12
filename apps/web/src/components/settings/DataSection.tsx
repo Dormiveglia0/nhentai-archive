@@ -15,6 +15,7 @@ type Metric = {
   icon: typeof Database;
   format?: (value: number) => string;
   warn?: boolean;
+  href?: string;
 };
 
 export function DataSection() {
@@ -81,13 +82,14 @@ export function DataSection() {
     { label: "未读", value: library?.unread ?? null, icon: Circle },
   ];
   const maintenanceMetrics: Metric[] = [
-    { label: "待补标签", value: library?.untagged ?? null, icon: Tags, warn: Boolean(library?.untagged) },
-    { label: "缺失源文件", value: files?.missing_source ?? null, icon: HardDrive, warn: Boolean(files?.missing_source) },
+    { label: "待补标签", value: library?.untagged ?? null, icon: Tags, warn: Boolean(library?.untagged), href: "#governance" },
+    { label: "缺失源文件", value: files?.missing_source ?? null, icon: HardDrive, warn: Boolean(files?.missing_source), href: "#files?view=files&status=missing_source" },
     {
       label: "孤立 / 残留",
       value: files ? files.orphan_count + files.stale_count : null,
       icon: Archive,
       warn: Boolean(files && files.orphan_count + files.stale_count),
+      href: "#files?view=files",
     },
     {
       label: "可回收空间",
@@ -95,6 +97,7 @@ export function DataSection() {
       icon: Recycle,
       format: formatBytes,
       warn: Boolean(files?.reclaimable_bytes),
+      href: "#files?view=files",
     },
   ];
   const readingTotal = library ? library.completed + library.reading + library.unread : 0;
@@ -104,7 +107,7 @@ export function DataSection() {
   const maintenanceItems: FolioMetricItem[] = maintenanceMetrics.map((metric) => ({
     label: metric.label,
     value: metric.value === null ? "—" : <NumberTicker value={metric.value} format={metric.format} />,
-    detail: metric.value === null ? "正在读取" : metric.warn ? "需要处理" : "状态正常",
+    detail: metric.value === null ? "正在读取" : <a href={metric.href}>{metric.warn ? "查看待处理项" : "查看详情"}</a>,
     icon: metric.icon,
     tone: metric.value === null ? "muted" : metric.warn ? "danger" : "good",
   }));

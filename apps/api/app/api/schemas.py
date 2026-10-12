@@ -34,6 +34,7 @@ class SettingsPatch(BaseModel):
     export: dict | None = None
     privacy: dict | None = None
     reader: dict | None = None
+    downloads: dict | None = None
     machine_translation: dict | None = None
 
 

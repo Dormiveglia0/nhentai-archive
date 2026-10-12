@@ -122,8 +122,8 @@ def scan(payload: LibraryScanRequest):
 
 
 @router.get("/directories")
-def directories():
-    return services.media_libraries.list()
+def directories(include_removed: bool = False):
+    return services.media_libraries.list(include_removed)
 
 
 @router.get("/browse")
@@ -172,6 +172,14 @@ def directory_items(library_id: int, status: str = "all", page: int = 1, per_pag
         return services.media_libraries.items(library_id, status, page, per_page)
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
+
+
+@router.delete("/directories/{library_id}/items/{item_id}")
+def forget_directory_item(library_id: int, item_id: int):
+    try:
+        return services.media_libraries.forget_missing_item(library_id, item_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/directories/{library_id}/runs")

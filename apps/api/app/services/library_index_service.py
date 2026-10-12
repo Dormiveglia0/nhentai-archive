@@ -7,7 +7,6 @@ import os
 import re
 import sqlite3
 import stat
-import threading
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -44,7 +43,7 @@ def _mount_walk(connection, root: str, config: dict[str, Any], paths: list[str] 
 class LibraryIndexService:
     def __init__(self, settings: Settings, db: Database, libraries: MediaLibraryService):
         self.settings, self.db, self.libraries = settings, db, libraries
-        self._scan_lock = threading.Lock()
+        self._scan_lock = libraries._source_lock
         self._mount_probe: MountedArchiveProbe | None = None
         self._walk_process = None
 

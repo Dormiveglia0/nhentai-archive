@@ -1,3 +1,5 @@
+import pytest
+
 from app.config import Settings
 from app.database import Database
 from app.services.discover_service import DiscoverService, build_search_query
@@ -99,6 +101,33 @@ def test_settings_service_persists_export_presets(tmp_path):
     assert payload["export"]["active_preset_id"] == "archive-light"
     assert payload["export"]["presets"][0]["name"] == "轻量导出 v1"
     assert service.get()["export"]["presets"][0]["naming_rule"] == "{title}"
+
+
+def test_settings_service_selects_only_enabled_writable_download_library(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
+    db = Database(settings.database_path)
+    db.init_schema()
+    client = NhentaiClient(settings.nhentai_base_url, settings.user_agent, None, settings.request_timeout)
+    service = SettingsService(db, settings, client)
+    root = tmp_path / "remote"
+    root.mkdir()
+    library = service.libraries.create({"name": "网盘", "root_path": str(root), "kind": "mounted", "read_only": False})
+
+    payload = service.patch({"downloads": {"default_library_id": library["id"]}})
+    assert payload["downloads"]["default_library_id"] == library["id"]
+
+    service.libraries.update(library["id"], {"read_only": True})
+    with pytest.raises(ValueError, match="已启用且可写"):
+        service.patch({"downloads": {"default_library_id": library["id"]}})
+    assert service.get()["downloads"]["default_library_id"] == library["id"]
+    with pytest.raises(PermissionError, match="只读"):
+        service.libraries.download_write_root()
+    service.libraries.update(library["id"], {"read_only": False, "enabled": False})
+    with pytest.raises(ValueError, match="已暂停"):
+        service.libraries.download_write_root()
+    service.libraries.remove(library["id"])
+    with pytest.raises(ValueError, match="已移除"):
+        service.libraries.download_write_root()
 
 
 def test_discover_search_query_adds_real_remote_filters():

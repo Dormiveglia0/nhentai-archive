@@ -8,6 +8,7 @@ apps/web/test-results/
 apps/web/playwright-report/
 test-results/
 playwright-report/
+.playwright-mcp/
 apps/web/tsconfig.tsbuildinfo
 .local-data/*
 !.local-data/.gitkeep

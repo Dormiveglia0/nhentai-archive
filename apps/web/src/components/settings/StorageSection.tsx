@@ -12,7 +12,7 @@ import "./StorageSection.css";
 
 const PATH_LABELS: Record<string, string> = {
   data_dir: "数据目录",
-  library_dir: "下载 / 本地导入目录",
+  library_dir: "本地导入目录",
   covers_dir: "封面目录",
   page_cache_dir: "页面缓存目录",
   export_dir: "兼容导出目录",
@@ -46,10 +46,10 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
 
   const usage: FolioMetricItem[] = [
     { label: "作品源文件", value: files ? `${files.work_count} 部` : "—", detail: files ? formatBytes(files.source_bytes) : "正在读取", icon: Archive, tone: "active", valueKind: "text" },
-    { label: "封面", value: files ? `${files.cover_ok} 张正常` : "—", detail: files ? `${files.missing_cover} 张缺失` : "正在读取", icon: Image, tone: files?.missing_cover ? "warning" : "good", valueKind: "text" },
-    { label: "缺失源文件", value: files ? String(files.missing_source) : "—", detail: files?.missing_source ? "需要修复索引" : "索引完整", icon: FileWarning, tone: files?.missing_source ? "danger" : "good" },
-    { label: "孤立文件", value: files ? `${files.orphan_count} 项` : "—", detail: files ? formatBytes(files.orphan_bytes) : "正在读取", icon: Unlink, tone: files?.orphan_count ? "warning" : "good", valueKind: "text" },
-    { label: "临时残留", value: files ? `${files.stale_count} 项` : "—", detail: files ? formatBytes(files.stale_bytes) : "正在读取", icon: Clock3, tone: files?.stale_count ? "warning" : "good", valueKind: "text" },
+    { label: "封面", value: files ? `${files.cover_ok} 张正常` : "—", detail: files ? <a href="#files?view=files&status=missing_cover">{files.missing_cover} 张缺失 · 查看</a> : "正在读取", icon: Image, tone: files?.missing_cover ? "warning" : "good", valueKind: "text" },
+    { label: "缺失源文件", value: files ? String(files.missing_source) : "—", detail: files ? <a href="#files?view=files&status=missing_source">查看具体文件</a> : "正在读取", icon: FileWarning, tone: files?.missing_source ? "danger" : "good" },
+    { label: "孤立文件", value: files ? `${files.orphan_count} 项` : "—", detail: files ? <a href="#files?view=files&status=orphan">{formatBytes(files.orphan_bytes)} · 查看</a> : "正在读取", icon: Unlink, tone: files?.orphan_count ? "warning" : "good", valueKind: "text" },
+    { label: "临时残留", value: files ? `${files.stale_count} 项` : "—", detail: files ? <a href="#files?view=files&status=stale">{formatBytes(files.stale_bytes)} · 查看</a> : "正在读取", icon: Clock3, tone: files?.stale_count ? "warning" : "good", valueKind: "text" },
     { label: "可回收合计", value: files ? formatBytes(files.reclaimable_bytes) : "—", detail: files?.reclaimable_bytes ? "清理前需预览" : "无需清理", icon: Recycle, tone: files?.reclaimable_bytes ? "warning" : "good", valueKind: "text" },
   ];
 

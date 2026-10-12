@@ -33,7 +33,7 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
     const fields = new FormData(event.currentTarget);
     const payload: MediaLibraryInput = {
       name: String(fields.get("name")).trim(), root_path: String(fields.get("root_path")).trim(),
-      kind, enabled, read_only: kind === "mounted" || readOnly,
+      kind, enabled, read_only: readOnly,
       config: { ...config,
         scan_interval_seconds: Number(fields.get("scan_interval_seconds")),
         stable_seconds: Number(fields.get("stable_seconds")), io_timeout_seconds: Number(fields.get("io_timeout_seconds")),
@@ -78,8 +78,9 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
           </div>
           <div className="folio-toggle-list">
             <FolioToggleRow label="启用此库" copy="暂停后保留作品信息，停止自动扫描与刮削。" checked={enabled} onChange={setEnabled} />
-            {kind === "mounted" ? <p className="folio-media-hint">挂载目录只读，源文件由网盘或存储服务管理。</p> :
-              <FolioToggleRow label="源文件只读" copy="关闭后允许文件管理删除与治理回写源文件。" checked={readOnly} onChange={setReadOnly} />}
+            {kind === "mounted"
+              ? <FolioToggleRow label="允许存入下载作品" copy="只会新增下载完成的 CBZ；不会回写或删除已有挂载源文件。请确认 rclone 挂载本身可写。" checked={!readOnly} onChange={allowed => setReadOnly(!allowed)} />
+              : <FolioToggleRow label="源文件只读" copy="关闭后允许文件管理删除与治理回写源文件。" checked={readOnly} onChange={setReadOnly} />}
           </div>
           <h3>扫描与监控</h3>
           <div className="folio-toggle-list">

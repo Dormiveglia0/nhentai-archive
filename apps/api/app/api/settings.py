@@ -53,7 +53,10 @@ def get_settings():
 
 @router.patch("")
 def patch_settings(patch: SettingsPatch):
-    return services.settings_service.patch(patch.model_dump(exclude_none=True))
+    try:
+        return services.settings_service.patch(patch.model_dump(exclude_none=True))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.post("/nhentai/verify")

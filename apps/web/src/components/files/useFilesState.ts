@@ -18,6 +18,11 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+function statusFromLocation() {
+  const status = new URLSearchParams(window.location.hash.split("?")[1]).get("status") ?? "";
+  return ["ok", "missing_source", "missing_cover", "size_mismatch", "orphan", "stale"].includes(status) ? status : "";
+}
+
 export function useFilesState() {
   const [overview, setOverview] = useState<FileOverview | null>(null);
   const [duplicates, setDuplicates] = useState<FileDuplicates | null>(null);
@@ -26,7 +31,7 @@ export function useFilesState() {
   const [error, setError] = useState<string | null>(null);
   const [category, setCategoryState] = useState("all");
   const [query, setQueryState] = useState("");
-  const [statusFilter, setStatusFilterState] = useState("");
+  const [statusFilter, setStatusFilterState] = useState(statusFromLocation);
   const [sort, setSortState] = useState("default");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -184,10 +189,22 @@ export function useFilesState() {
     (s: string) => {
       if (s === statusFilter) return;
       setStatusFilterState(s);
+      const [route, query] = window.location.hash.split("?");
+      if (route === "#files") {
+        const params = new URLSearchParams(query);
+        s ? params.set("status", s) : params.delete("status");
+        window.history.replaceState(null, "", `${route}?${params}`);
+      }
       resetFilterExtras();
     },
     [resetFilterExtras, statusFilter],
   );
+
+  useEffect(() => {
+    const sync = () => setStatusFilter(statusFromLocation());
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, [setStatusFilter]);
   const setSort = useCallback(
     (s: string) => {
       if (s === sort) return;

@@ -1,9 +1,11 @@
 import io
 import shutil
+import threading
 import zipfile
 from pathlib import Path
 
 from PIL import Image
+import pytest
 
 from app.config import Settings
 from app.database import Database
@@ -76,6 +78,78 @@ def test_archive_service_generates_and_caches_page_thumbnail(tmp_path):
     assert cache_file.exists()
     # Second call must hit the cache and return identical bytes.
     assert service.read_page_thumbnail(work_id, 1, width=64)[0] == body
+
+
+def test_download_target_never_overwrites_existing_external_file(tmp_path):
+    settings = Settings(data_dir=tmp_path / "data")
+    db = Database(settings.database_path)
+    db.init_schema()
+    service = ArchiveService(db, settings)
+    root = tmp_path / "media"
+    root.mkdir()
+    library = service.libraries.create({"name": "网盘", "root_path": str(root), "kind": "mounted", "read_only": False})
+    existing = root / "Book [42].cbz"
+    existing.write_bytes(b"original file")
+    source = tmp_path / "download.cbz"
+    make_color_cbz(source, (80, 80, 80))
+
+    with pytest.raises(ValueError, match="同名文件"):
+        service.ingest_cbz(source, "remote", "Book", 42, {}, library_id=library["id"])
+
+    assert existing.read_bytes() == b"original file"
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 0
+    assert list(root.iterdir()) == [existing]
+
+
+def test_scanner_waits_for_download_publication_and_keeps_one_work(tmp_path, monkeypatch):
+    from app.services.library_index_service import LibraryIndexService
+
+    settings = Settings(data_dir=tmp_path / "data")
+    db = Database(settings.database_path)
+    db.init_schema()
+    service = ArchiveService(db, settings)
+    root = tmp_path / "media"
+    root.mkdir()
+    library = service.libraries.create({"name": "目录", "root_path": str(root), "read_only": False, "config": {"stable_seconds": 0}})
+    source = tmp_path / "download.cbz"
+    make_color_cbz(source, (80, 80, 80))
+    index = LibraryIndexService(settings, db, service.libraries)
+    finished = threading.Event()
+    results = []
+    worker = threading.Thread(target=lambda: (results.append(index.scan(library["id"])), finished.set()))
+    store = service._store_archive
+
+    def publish(*args):
+        path = store(*args)
+        worker.start()
+        assert not finished.wait(.05)
+        return path
+
+    monkeypatch.setattr(service, "_store_archive", publish)
+    work_id = service.ingest_cbz(source, "remote", "Book", 42, {}, library_id=library["id"])
+    worker.join(5)
+
+    assert finished.is_set()
+    assert results[0]["counts"]["unchanged"] == 1
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 1
+    assert db.fetchone("SELECT work_id FROM library_items")["work_id"] == work_id
+
+
+def test_waiting_download_can_be_cancelled_before_reading_source(tmp_path):
+    from app.services.job_service import JobCancelled
+
+    settings = Settings(data_dir=tmp_path / "data")
+    db = Database(settings.database_path)
+    db.init_schema()
+    service = ArchiveService(db, settings)
+
+    def cancel():
+        raise JobCancelled()
+
+    with service.libraries._source_lock:
+        with pytest.raises(JobCancelled):
+            service.ingest_cbz(tmp_path / "unopened.cbz", "remote", "Book", 42, {}, checkpoint=cancel)
+    assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 0
 
 
 def test_reingest_invalidates_cached_page_thumbnail(tmp_path):

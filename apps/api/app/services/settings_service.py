@@ -6,6 +6,7 @@ from typing import Any
 
 from app.config import Settings
 from app.database import Database
+from app.services.media_library_service import MediaLibraryService
 from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 
 
@@ -20,11 +21,13 @@ DEFAULT_EXPORT_PRESET = {
 
 
 class SettingsService:
-    def __init__(self, db: Database, settings: Settings, client: NhentaiClient, translation: Any = None):
+    def __init__(self, db: Database, settings: Settings, client: NhentaiClient, translation: Any = None,
+                 libraries: MediaLibraryService | None = None):
         self.db = db
         self.settings = settings
         self.client = client
         self.translation = translation
+        self.libraries = libraries or MediaLibraryService(settings, db)
         self.apply_runtime_settings()
 
     def get(self) -> dict[str, Any]:
@@ -54,6 +57,9 @@ class SettingsService:
             "reader": {
                 "default_mode": reader_mode,
             },
+            "downloads": {
+                "default_library_id": self.libraries.default_download_library()["id"],
+            },
             "machine_translation": self.translation.public_config() if self.translation else None,
             "export": {**self._export_settings(), "default_options": self._export_default_options()},
         }
@@ -72,6 +78,18 @@ class SettingsService:
         reader = payload.get("reader") or {}
         if reader.get("default_mode") in {"single", "scroll"}:
             self._set("reader.default_mode", reader["default_mode"])
+
+        downloads = payload.get("downloads") or {}
+        if set(downloads) - {"default_library_id"}:
+            raise ValueError("下载设置包含未知选项")
+        if "default_library_id" in downloads:
+            library_id = downloads["default_library_id"]
+            if isinstance(library_id, bool) or not isinstance(library_id, int) or library_id < 1:
+                raise ValueError("默认下载媒体库无效")
+            library = self.libraries.get(library_id)
+            if not library["enabled"] or library["read_only"]:
+                raise ValueError("默认下载媒体库必须已启用且可写")
+            self._set("downloads.default_library_id", str(library_id))
 
         mt = payload.get("machine_translation") or {}
         if mt.get("clear_deepl_api_key"):

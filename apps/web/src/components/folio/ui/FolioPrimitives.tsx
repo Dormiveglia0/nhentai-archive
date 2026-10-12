@@ -85,11 +85,13 @@ export function FolioSelect<T extends string>({
   value,
   options,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: T;
   options: readonly { value: T; label: string }[];
   onChange: (value: T) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -121,6 +123,7 @@ export function FolioSelect<T extends string>({
       <span>{label}</span>
       <button
         type="button"
+        disabled={disabled}
         aria-label={`${label}：${selected.label}`}
         aria-expanded={open}
         aria-controls={listId}
@@ -165,6 +168,7 @@ export function FolioSelect<T extends string>({
               <button
                 key={option.value}
                 type="button"
+                disabled={disabled}
                 aria-pressed={option.value === value}
                 className={option.value === value ? "is-selected" : ""}
                 onClick={() => {

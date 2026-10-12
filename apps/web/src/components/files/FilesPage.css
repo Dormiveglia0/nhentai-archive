@@ -801,6 +801,9 @@
   border-bottom: 0;
 }
 
+.folio-files-health-list li > button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.folio-files-health-list li > button:hover { color: var(--folio-red); }
+
 .folio-files-health-list em {
   display: inline-flex;
   align-items: center;

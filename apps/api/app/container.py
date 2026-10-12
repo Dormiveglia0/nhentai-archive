@@ -88,7 +88,7 @@ def build_services() -> SimpleNamespace:
         media_libraries=media_libraries,
         library_index=library_index,
         library_monitor=LibraryMonitorService(library_index, media_libraries),
-        settings_service=SettingsService(db, settings, client, translation),
+        settings_service=SettingsService(db, settings, client, translation, media_libraries),
         workbench=WorkbenchService(library, governance, jobs, files, exports),
     )
 

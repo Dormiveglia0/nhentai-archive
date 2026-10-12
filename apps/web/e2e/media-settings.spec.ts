@@ -71,7 +71,7 @@ for (const width of [1440, 390]) {
       expect(job.target.library_id).toBe(addedId);
       await expect.poll(async () => (await (await request.get("/api/jobs/" + job.id)).json()).status).toBe("completed");
       await expect(row).toContainText("1 部作品", { timeout: 12_000 });
-      await row.getByRole("button", { name: "记录", exact: true }).click();
+      await row.getByRole("button", { name: "文件状态", exact: true }).click();
       await row.getByRole("button", { name: /^文件状态：/ }).click();
       await row.getByRole("group", { name: "文件状态选项" }).getByRole("button", { name: "全部文件", exact: true }).click();
       await expect(row.locator(".folio-library-issues")).toContainText("selected.cbz");

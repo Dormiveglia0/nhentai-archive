@@ -846,6 +846,7 @@ export type MediaLibrary = {
   error_count: number;
   pending_count: number;
   missing_count: number;
+  removed_at: string | null;
   scrape_review_count: number;
   scanning: boolean;
   active_scan_job_id: number | null;
@@ -877,6 +878,10 @@ export type LibraryItem = {
   status: string;
   size_bytes: number | null;
   last_error: string | null;
+  title: string;
+  metadata: Record<string, unknown>;
+  indexed_at: string | null;
+  missing_since: number | null;
 };
 
 export type ReadingCacheConfig = {
@@ -1072,6 +1077,9 @@ export type SettingsSummary = {
   };
   reader: {
     default_mode: "single" | "scroll";
+  };
+  downloads: {
+    default_library_id: number;
   };
   machine_translation: MachineTranslationSettings | null;
   export: {
@@ -1570,7 +1578,7 @@ export const api = {
   nhentaiRuntime: () => request<NhentaiRuntimeStats>("/api/settings/nhentai/runtime"),
   scanLibraryPreview: () =>
     request<LibraryScanPreview>("/api/library/scan/preview", { method: "POST", headers: JSON_HEADERS }),
-  mediaLibraries: () => request<{ result: MediaLibrary[]; defaults: MediaLibraryConfig }>("/api/library/directories"),
+  mediaLibraries: (includeRemoved = false) => request<{ result: MediaLibrary[]; defaults: MediaLibraryConfig; default_download_library_id: number }>("/api/library/directories" + (includeRemoved ? "?include_removed=true" : "")),
   migrationCandidates: (page = 1, q = "") => request<{ result: MigrationCandidate[]; total: number; page: number; per_page: number }>(`/api/library/migration/candidates?page=${page}&q=${encodeURIComponent(q)}`),
   migrationPreview: (options: MigrationOptions) => request<MigrationPreview>("/api/library/migration/preview", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(options) }),
   migrateLibrary: (options: MigrationOptions) => request<Job>("/api/library/migration", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(options) }),
@@ -1586,6 +1594,7 @@ export const api = {
   mediaLibraryRemovalPreview: (id: number) => request<{ exclusive_works: number; shared_works: number; purge_allowed: boolean; warnings: string[] }>(`/api/library/directories/${id}/remove-preview`),
   libraryScanRuns: (id: number, limit = 5) => request<{ result: LibraryScanRun[] }>(`/api/library/directories/${id}/runs?limit=${limit}`),
   libraryItems: (id: number, status = "error", page = 1) => request<{ result: LibraryItem[]; total: number; page: number; per_page: number }>(`/api/library/directories/${id}/items?status=${encodeURIComponent(status)}&page=${page}&per_page=20`),
+  forgetLibraryItem: (libraryId: number, itemId: number) => request<{ removed: number; source_file_deleted: boolean; work_id: number | null; work_metadata_preserved: boolean }>(`/api/library/directories/${libraryId}/items/${itemId}`, { method: "DELETE" }),
   readingCache: () => request<ReadingCacheSummary>("/api/library/cache"),
   configureReadingCache: (payload: ReadingCacheConfig) => request<ReadingCacheSummary>("/api/library/cache", {
     method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),

@@ -54,7 +54,8 @@ class ImportService:
             active = self._active_job(gallery_id)
             if active:
                 return active
-            job = self.jobs.create("remote_import", {"gallery_id": gallery_id})
+            library_id = int(self.archive.libraries.default_download_library()["id"])
+            job = self.jobs.create("remote_import", {"gallery_id": gallery_id, "library_id": library_id})
             self._start_remote_import(job["id"], gallery_id)
             return job
 
@@ -115,17 +116,18 @@ class ImportService:
 
     def _run_remote_import_worker(self, job_id: int, gallery_id: int) -> None:
         try:
-            self.run_remote_import(job_id, gallery_id)
+            library_id = self.jobs.get(job_id)["target"].get("library_id")
+            self.run_remote_import(job_id, gallery_id, library_id)
         finally:
             with self._worker_lock:
                 if self._workers.get(job_id) is threading.current_thread():
                     self._workers.pop(job_id, None)
 
-    def run_remote_import(self, job_id: int, gallery_id: int) -> None:
+    def run_remote_import(self, job_id: int, gallery_id: int, library_id: int | None = None) -> None:
         tmp_path: Path | None = None
         try:
             self.jobs.checkpoint(job_id)
-            self.archive.libraries.managed_write_root()
+            self.archive.libraries.download_write_root(library_id)
             self.jobs.mark_running(job_id, "fetching_gallery", 1, 5, 5)
             gallery = self.client.gallery(gallery_id, include="related")
             self.discover.cache_gallery(gallery)
@@ -165,6 +167,8 @@ class ImportService:
                     "title_japanese": gallery.get("title", {}).get("japanese"),
                     "pretty_title": gallery.get("title", {}).get("pretty"),
                 },
+                library_id=library_id,
+                checkpoint=lambda: self.jobs.checkpoint(job_id),
             )
             if self.dictionary:
                 self.dictionary.link_work_tags(work_id, gallery.get("tags", []))

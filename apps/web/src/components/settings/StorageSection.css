@@ -7,22 +7,39 @@
   border-bottom: 1px solid var(--folio-line);
 }
 
+.folio-download-library { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 16px 24px; align-items: end; padding: 18px 0 8px; border-bottom: 1px solid var(--folio-line); }
+.folio-download-library .folio-media-hint { margin: 0 0 2px; }
+
 .folio-library-directory-main { min-width: 0; }
 .folio-library-directory-main > div { display: flex; gap: 14px; align-items: baseline; }
 .folio-library-directory h4 { margin: 0; font-size: 16px; overflow-wrap: anywhere; }
 .folio-library-directory-main > div > span { flex-shrink: 0; font-size: 13px; color: var(--folio-muted); }
 .folio-library-directory-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 8px 0; font-size: 13px; }
-.folio-library-directory-stats { display: flex; gap: 8px 16px; flex-wrap: wrap; margin: 0; color: var(--folio-muted); font-size: 13px; }
+.folio-library-directory-stats { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0; color: var(--folio-muted); font-size: 13px; }
+.folio-library-directory-stats button { min-height: 24px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.folio-library-directory-stats button:hover { color: var(--folio-red); }
+.folio-library-directory-main > div > span.folio-media-error, .folio-library-directory-stats button.folio-media-error { color: var(--folio-red); }
 .folio-library-directory .folio-media-actions { gap: 6px; }
 .folio-library-directory .folio-settings-mini-action { padding-inline: 8px; }
 .folio-library-checks { grid-column: 1 / -1; padding: 18px 20px; border-left: 2px solid var(--folio-red); background: rgba(23, 24, 21, .025); min-width: 0; }
-.folio-library-checks > .folio-select { max-width: 300px; margin-top: 14px; }
+.folio-library-checks > .folio-select { max-width: 300px; }
+.folio-library-scan-history { margin-top: 20px; }
+.folio-library-scan-history > summary { color: var(--folio-muted); cursor: pointer; font-size: 13px; }
 .folio-library-runs > div { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 0; border-bottom: 1px solid var(--folio-line); font-size: 13px; }
 .folio-library-runs p { flex-basis: 100%; margin: 0; }
 .folio-library-issues { list-style: none; padding: 0; margin: 16px 0 0; }
 .folio-library-issues li { padding: 12px 0; border-bottom: 1px solid var(--folio-line); display: grid; gap: 6px; overflow-wrap: anywhere; font-size: 13px; }
 .folio-library-issues li strong { font-weight: 500; }
 .folio-library-issues li span { color: var(--folio-muted); }
+.folio-library-issue-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.folio-library-issue-head span { text-align: right; }
+.folio-library-issues details { margin-top: 4px; border-left: 1px solid var(--folio-line-strong); padding-left: 12px; }
+.folio-library-issues summary { width: fit-content; color: var(--folio-muted); cursor: pointer; }
+.folio-library-issues dl { display: grid; gap: 7px; margin: 10px 0 4px; max-height: 360px; overflow: auto; padding-right: 8px; }
+.folio-library-issues dl div { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr); gap: 12px; }
+.folio-library-issues dt { color: var(--folio-muted); }
+.folio-library-issues dd { margin: 0; white-space: pre-wrap; }
+.folio-library-issue-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .folio-cache-usage { padding: 24px 0 10px; }
 .folio-cache-usage > div { display: flex; gap: 14px; justify-content: space-between; flex-wrap: wrap; font-size: 14px; }
 .folio-cache-usage > div span { color: var(--folio-muted); }
@@ -74,7 +91,11 @@
   .folio-library-directory > .folio-media-actions { justify-content: flex-start; }
 }
 @media (max-width: 600px) {
+  .folio-download-library { grid-template-columns: minmax(0, 1fr); align-items: start; }
   .folio-library-checks { padding: 12px; }
+  .folio-library-issue-head { align-items: start; flex-direction: column; gap: 4px; }
+  .folio-library-issue-head span { text-align: left; }
+  .folio-library-issues dl div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .folio-library-directory .folio-media-actions { gap: 4px; }
   .folio-library-directory .folio-settings-mini-action { padding-inline: 6px; gap: 4px; }
   .folio-library-directory .folio-line-button { padding-inline: 10px; }

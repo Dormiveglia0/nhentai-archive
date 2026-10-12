@@ -18,7 +18,7 @@ def _service(tmp_path):
 
 
 def test_enqueue_remote_import_reuses_active_job(tmp_path, monkeypatch):
-    _settings, _db, _jobs, imports = _service(tmp_path)
+    _settings, db, _jobs, imports = _service(tmp_path)
     started: list[tuple[int, int]] = []
     monkeypatch.setattr(
         imports,
@@ -31,6 +31,7 @@ def test_enqueue_remote_import_reuses_active_job(tmp_path, monkeypatch):
 
     assert second["id"] == first["id"]
     assert started == [(first["id"], 42)]
+    assert _jobs.get(first["id"])["target"]["library_id"] == 1
 
 
 def test_enqueue_already_imported_gallery_returns_completed_job(tmp_path):
@@ -79,6 +80,58 @@ def test_failed_download_removes_partial_temp_file(tmp_path):
     assert jobs.get(job["id"])["status"] == "failed"
     assert jobs.get(job["id"])["progress"] == {"current": 5, "total": 10, "percent": 53}
     assert not (settings.tmp_dir / "nhentai-42.cbz").exists()
+
+
+def test_remote_import_writes_only_final_cbz_to_library_selected_when_enqueued(tmp_path, monkeypatch):
+    from test_library_index import create_archive
+
+    settings, db, jobs, imports = _service(tmp_path)
+    remote_root = tmp_path / "rclone"
+    remote_root.mkdir()
+    library = imports.archive.libraries.create({
+        "name": "网盘", "root_path": str(remote_root), "kind": "mounted", "read_only": False,
+    })
+
+    class Client:
+        def gallery(self, gallery_id, include=None):
+            return {"id": gallery_id, "media_id": "media", "title": {"english": "Downloaded book"}, "tags": []}
+
+        def download_url(self, gallery_id):
+            return {"url": f"https://example.invalid/{gallery_id}.cbz"}
+
+        def download_file(self, _url, destination, progress=None):
+            create_archive(Path(destination), title="Downloaded book")
+            if progress:
+                progress(Path(destination).stat().st_size, Path(destination).stat().st_size)
+
+    class Discover:
+        def cache_gallery(self, _gallery):
+            pass
+
+        def cache_tags(self, _tags):
+            pass
+
+    imports.client = Client()
+    imports.discover = Discover()
+    db.execute("INSERT INTO settings(key,value) VALUES ('downloads.default_library_id', ?)", (str(library["id"]),))
+    monkeypatch.setattr(imports, "_start_remote_import", lambda *_args: None)
+    job = imports.enqueue_remote_import(42)
+    db.execute("DELETE FROM settings WHERE key = 'downloads.default_library_id'")
+
+    imports._run_remote_import_worker(job["id"], 42)
+
+    assert jobs.get(job["id"])["status"] == "completed"
+    imports.archive.read_cover_thumbnail(jobs.get(job["id"])["target"]["work_id"], width=64)
+    assert [path.suffix for path in remote_root.iterdir()] == [".cbz"]
+    assert not list(settings.library_dir.glob("*.cbz"))
+    assert list(settings.covers_dir.iterdir())
+    assert list(settings.thumbs_dir.iterdir())
+    assert not (settings.tmp_dir / "nhentai-42.cbz").exists()
+    source = db.fetchone("SELECT f.*, i.status FROM work_files f JOIN library_items i ON i.id = f.library_item_id")
+    assert source["path"] == str(next(remote_root.iterdir()))
+    assert source["status"] == "ready"
+    assert imports.archive.source_file(source["work_id"])["read_only"]
+    assert imports.archive.libraries.files(source["work_id"])[0]["read_only"]
 
 
 def test_readonly_import_is_rejected_before_network_and_active_import_protects_existing_work(tmp_path):

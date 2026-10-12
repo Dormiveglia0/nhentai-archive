@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -30,6 +31,7 @@ class MediaLibraryService:
     def __init__(self, settings: Settings, db: Database):
         self.settings = settings
         self.db = db
+        self._source_lock = threading.Lock()
         self._ensure_managed_library()
 
     def _ensure_managed_library(self) -> None:
@@ -48,7 +50,7 @@ class MediaLibraryService:
                 ("本地导入", root, json.dumps({**LIBRARY_DEFAULTS, "scan_interval_seconds": 300})),
             )
 
-    def list(self) -> dict[str, Any]:
+    def list(self, include_removed: bool = False) -> dict[str, Any]:
         rows = self.db.fetchall(
             """WITH stats AS (
                 SELECT library_id, COUNT(*) AS item_count, COUNT(DISTINCT work_id) AS work_count,
@@ -73,9 +75,13 @@ class MediaLibraryService:
               EXISTS(SELECT 1 FROM library_scan_runs r WHERE r.library_id = l.id AND r.status = 'running') AS scanning
               FROM media_libraries l LEFT JOIN stats s ON s.library_id = l.id
               LEFT JOIN active_scans a ON a.library_id = l.id LEFT JOIN jobs j ON j.id = a.job_id
-              WHERE removed_at IS NULL ORDER BY kind <> 'managed', l.id"""
+              WHERE (? OR removed_at IS NULL) ORDER BY kind <> 'managed', l.id""", (include_removed,),
         )
-        return {"result": [self._public(row) for row in rows], "defaults": LIBRARY_DEFAULTS}
+        return {
+            "result": [self._public(row) for row in rows],
+            "defaults": LIBRARY_DEFAULTS,
+            "default_download_library_id": self.default_download_library()["id"],
+        }
 
     def get(self, library_id: int, include_removed: bool = False) -> dict[str, Any]:
         row = self.db.fetchone("SELECT * FROM media_libraries WHERE id = ?", (library_id,))
@@ -100,7 +106,7 @@ class MediaLibraryService:
                 config_json = excluded.config_json, removed_at = NULL, health = 'unknown', last_error = NULL,
                 updated_at = CURRENT_TIMESTAMP WHERE media_libraries.removed_at IS NOT NULL RETURNING id""",
                 (name, str(root), kind, int(bool(payload.get("enabled", True))),
-                 int(kind == "mounted" or bool(payload.get("read_only", True))), json.dumps(config, ensure_ascii=False)),
+                 int(bool(payload.get("read_only", True))), json.dumps(config, ensure_ascii=False)),
             ).fetchone()
             if not row:
                 raise ValueError("该目录库已经存在")
@@ -118,7 +124,7 @@ class MediaLibraryService:
         if current["kind"] != "managed" and kind not in {"local", "mounted"}:
             raise ValueError("访问方式必须是本地目录或挂载目录")
         config = self._config({**current["config"], **(payload.get("config") or {})})
-        read_only = kind == "mounted" or bool(payload.get("read_only", current["read_only"]))
+        read_only = bool(payload.get("read_only", current["read_only"]))
         rescan = str(root) != current["root_path"] or kind != current["kind"] or (
             bool(payload.get("enabled", current["enabled"])) and not current["enabled"]
         ) or any(config[key] != current["config"][key] for key in (
@@ -178,25 +184,57 @@ class MediaLibraryService:
             raise ValueError("请先取消该库正在进行的扫描")
 
     def runs(self, library_id: int, limit: int = 20) -> dict[str, Any]:
-        self.get(library_id)
+        self.get(library_id, include_removed=True)
         rows = self.db.fetchall("SELECT * FROM library_scan_runs WHERE library_id = ? ORDER BY id DESC LIMIT ?", (library_id, max(1, min(limit, 100))))
         return {"result": [{**{key: value for key, value in row.items() if key not in {"counts_json", "errors_json"}},
                             "counts": json.loads(row["counts_json"]), "errors": json.loads(row["errors_json"])} for row in rows]}
 
     def items(self, library_id: int, status: str = "all", page: int = 1, per_page: int = 50) -> dict[str, Any]:
-        self.get(library_id)
+        self.get(library_id, include_removed=True)
         page, per_page = max(1, page), max(1, min(100, per_page))
-        where, params = "library_id = ?", [library_id]
+        where, params = "i.library_id = ?", [library_id]
         if status != "all":
-            where += " AND status = ?"
+            where += " AND i.status = ?"
             params.append(status)
-        total = self.db.fetchone(f"SELECT COUNT(*) AS n FROM library_items WHERE {where}", params)["n"]
+        total = self.db.fetchone(f"SELECT COUNT(*) AS n FROM library_items i WHERE {where}", params)["n"]
         rows = self.db.fetchall(
-            f"""SELECT id, library_id, relative_path, work_id, size_bytes, status, last_error, retry_at, indexed_at
-            FROM library_items WHERE {where} ORDER BY relative_path LIMIT ? OFFSET ?""",
+            f"""SELECT i.id, i.library_id, i.relative_path, i.work_id, i.size_bytes, i.status,
+            i.last_error, i.retry_at, i.indexed_at, i.missing_since, i.metadata_json, i.archive_info_json,
+            COALESCE(w.pretty_title, w.title_japanese, w.title) AS work_title
+            FROM library_items i LEFT JOIN works w ON w.id = i.work_id
+            WHERE {where} ORDER BY i.relative_path LIMIT ? OFFSET ?""",
             [*params, per_page, (page - 1) * per_page],
         )
-        return {"result": rows, "total": total, "page": page, "per_page": per_page}
+        result = []
+        for row in rows:
+            archived = self.archive_info(row)
+            metadata = archived["comicinfo"]
+            if archived.get("json"):
+                metadata = {**metadata, "JSON": archived["json"]}
+            result.append({**{key: value for key, value in row.items() if key not in {"metadata_json", "archive_info_json", "work_title"}},
+                           "title": row["work_title"] or metadata.get("Title") or row["relative_path"],
+                           "metadata": metadata})
+        return {"result": result, "total": total, "page": page, "per_page": per_page}
+
+    def forget_missing_item(self, library_id: int, item_id: int) -> dict[str, Any]:
+        self.get(library_id, include_removed=True)
+        with self.db.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._require_idle(library_id)
+            item = conn.execute(
+                "SELECT id, relative_path, work_id, status FROM library_items WHERE id = ? AND library_id = ?",
+                (item_id, library_id),
+            ).fetchone()
+            if not item:
+                raise ValueError("缺失记录不存在")
+            if item["status"] not in {"missing", "detached"}:
+                raise ValueError("只能移除源文件已缺失或媒体库已移除的记录")
+            conn.execute("DELETE FROM work_files WHERE library_item_id = ?", (item_id,))
+            conn.execute("DELETE FROM library_changes WHERE library_id = ? AND relative_path = ?",
+                         (library_id, item["relative_path"]))
+            conn.execute("DELETE FROM library_items WHERE id = ?", (item_id,))
+        return {"removed": item_id, "source_file_deleted": False,
+                "work_id": item["work_id"], "work_metadata_preserved": item["work_id"] is not None}
 
     def resolve_item(self, item_id: int, for_write: bool = False) -> tuple[Path, dict[str, Any]]:
         row = self.db.fetchone(
@@ -219,7 +257,8 @@ class MediaLibraryService:
         rows = self.db.fetchall(
             f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
             i.mtime_ns, i.device, i.inode, i.relative_path, l.id AS library_id,
-            l.kind AS library_kind, l.root_path, l.resolved_root_path, l.read_only, l.config_json
+            l.kind AS library_kind, l.root_path, l.resolved_root_path,
+            CASE WHEN l.kind = 'mounted' THEN 1 ELSE l.read_only END AS read_only, l.config_json
             FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
             LEFT JOIN media_libraries l ON l.id = i.library_id
             WHERE f.work_id = ? AND f.kind = 'source_cbz'
@@ -235,8 +274,8 @@ class MediaLibraryService:
         rows = self.db.fetchall(
             "SELECT f.*," + (" i.metadata_json, i.archive_info_json," if metadata else "") + """ i.status AS source_status, i.mtime_ns, i.device, i.inode, i.fingerprint,
             l.id AS library_id, l.name AS library_name, l.kind AS library_kind,
-            l.root_path, COALESCE(l.read_only,
-              (SELECT read_only FROM media_libraries WHERE kind = 'managed'), 1) AS read_only,
+            l.root_path, CASE WHEN l.kind = 'mounted' THEN 1 ELSE COALESCE(l.read_only,
+              (SELECT read_only FROM media_libraries WHERE kind = 'managed'), 1) END AS read_only,
             l.removed_at
             FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
             LEFT JOIN media_libraries l ON l.id = i.library_id"""
@@ -308,6 +347,33 @@ class MediaLibraryService:
         if row["read_only"]:
             raise PermissionError("本地导入库只读，不能导入作品")
         return self.validate_root(self.settings.library_dir, self.root_boundaries(row["id"]))
+
+    def default_download_library(self) -> dict[str, Any]:
+        setting = self.db.fetchone("SELECT value FROM settings WHERE key = 'downloads.default_library_id'")
+        try:
+            selected = self.get(int(setting["value"]), include_removed=True) if setting else None
+        except (TypeError, ValueError):
+            selected = None
+        if selected:
+            return selected
+        managed = self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")
+        return self.get(int(managed["id"]))
+
+    def download_write_root(self, library_id: int | None = None) -> tuple[dict[str, Any], Path]:
+        library = self.get(library_id) if library_id is not None else self.default_download_library()
+        if library["removed_at"]:
+            raise ValueError("默认下载媒体库已移除，请重新选择")
+        if not library["enabled"]:
+            raise ValueError("默认下载媒体库已暂停")
+        if library["read_only"]:
+            raise PermissionError("默认下载媒体库只读，不能导入作品")
+        root = self.validate_root(Path(library["root_path"]), self.root_boundaries(library["id"]))
+        info = root.stat()
+        if library["resolved_root_path"] and str(root) != library["resolved_root_path"]:
+            raise ValueError("默认下载媒体库根目录已变化，请先扫描")
+        if library["root_device"] is not None and (info.st_dev, info.st_ino) != (library["root_device"], library["root_inode"]):
+            raise ValueError("默认下载媒体库版本已变化，请先扫描")
+        return library, root
 
     @staticmethod
     def source_path(root: Path, relative: str, follow_symlinks: bool = False) -> Path:

@@ -18,10 +18,12 @@ type Props = {
   onScanPreview: () => void;
   onScanStart: () => void;
   onScanCancel: () => void;
+  onFilter: (status: string) => void;
 };
 
-function HealthRow({ label, count }: { label: string; count: number }) {
-  return <li><span>{label}</span><em className={count > 0 ? "is-bad" : "is-ok"}><i aria-hidden="true" />{count}</em></li>;
+function HealthRow({ label, count, onClick }: { label: string; count: number; onClick?: () => void }) {
+  const content = <><span>{label}</span><em className={count > 0 ? "is-bad" : "is-ok"}><i aria-hidden="true" />{count}</em></>;
+  return <li>{onClick ? <button type="button" onClick={onClick} aria-label={`查看${label} ${count} 项`}>{content}</button> : content}</li>;
 }
 
 function RailSection({
@@ -53,6 +55,7 @@ export function FileHealthRail({
   onScanPreview,
   onScanStart,
   onScanCancel,
+  onFilter,
 }: Props) {
   const scanCount = scanPreview ? scanPreview.new_linked.length + scanPreview.new_local.length : 0;
 
@@ -65,10 +68,10 @@ export function FileHealthRail({
       <RailSection icon={ShieldCheck} title="索引健康">
         {overview ? (
           <ul className="folio-files-health-list">
-            <HealthRow label="缺失源文件" count={overview.missing_source} />
-            <HealthRow label="缺失封面" count={overview.missing_cover} />
-            <HealthRow label="孤立文件" count={overview.orphan_count} />
-            <HealthRow label="临时残留" count={overview.stale_count} />
+            <HealthRow label="缺失源文件" count={overview.missing_source} onClick={() => onFilter("missing_source")} />
+            <HealthRow label="缺失封面" count={overview.missing_cover} onClick={() => onFilter("missing_cover")} />
+            <HealthRow label="孤立文件" count={overview.orphan_count} onClick={() => onFilter("orphan")} />
+            <HealthRow label="临时残留" count={overview.stale_count} onClick={() => onFilter("stale")} />
           </ul>
         ) : <p className="folio-files-dim">正在读取索引…</p>}
       </RailSection>

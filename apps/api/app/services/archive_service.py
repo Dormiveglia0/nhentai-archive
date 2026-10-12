@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import mimetypes
 import re
 import shutil
+import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -36,10 +38,20 @@ class ArchiveService:
 
     def ingest_cbz(
         self, cbz_path: Path, source: str, title: str, remote_gallery_id: int | None, metadata: dict[str, Any],
+        library_id: int | None = None,
+        checkpoint: Callable[[], None] | None = None,
     ) -> int:
-        # ponytail: lifecycle lock serializes local publication; per-work locks if throughput requires it.
-        with self.cache._lock:
-            return self._ingest_cbz(cbz_path, source, title, remote_gallery_id, metadata)
+        # A scan must not create another work before the downloaded source is linked.
+        while not self.libraries._source_lock.acquire(timeout=.2):
+            if checkpoint:
+                checkpoint()
+        try:
+            if checkpoint:
+                checkpoint()
+            with self.cache._lock:
+                return self._ingest_cbz(cbz_path, source, title, remote_gallery_id, metadata, library_id)
+        finally:
+            self.libraries._source_lock.release()
 
     def _ingest_cbz(
         self,
@@ -48,11 +60,16 @@ class ArchiveService:
         title: str,
         remote_gallery_id: int | None,
         metadata: dict[str, Any],
+        library_id: int | None,
     ) -> int:
-        self.libraries.managed_write_root()
+        target_library, target_root = self.libraries.download_write_root(library_id)
         cbz_path = Path(cbz_path)
         if not zipfile.is_zipfile(cbz_path):
             raise ValueError(f"{cbz_path} is not a valid CBZ/ZIP archive")
+        indexed = None
+        if target_library["kind"] != "managed":
+            from app.services.archive_manifest import inspect_archive
+            indexed = inspect_archive(cbz_path)
 
         media_id = metadata.get("media_id")
         title_japanese = metadata.get("title_japanese")
@@ -96,22 +113,65 @@ class ArchiveService:
         stored_path: Path | None = None
         cover_path: Path | None = None
         try:
-            stored_path = self._store_archive(work_id, cbz_path, title, remote_gallery_id)
-            page_entries = self._image_entries(stored_path)
+            stored_path = self._store_archive(
+                work_id, cbz_path, title, remote_gallery_id, target_library, target_root,
+            )
+            read_path = cbz_path if indexed else stored_path
+            page_entries = self._image_entries(read_path)
             page_members = [member for member, _size in page_entries]
-            cover_path = self._extract_cover(work_id, stored_path, page_members[0]) if page_members else None
-            digest = self._sha256(stored_path)
+            cover_path = self._extract_cover(work_id, read_path, page_members[0]) if page_members else None
+            digest = self._sha256(read_path)
 
             with self.db.connect() as conn:
-                conn.execute("DELETE FROM work_files WHERE work_id = ? AND kind = 'source_cbz' AND library_item_id IS NULL", (work_id,))
+                if target_library["kind"] == "managed":
+                    conn.execute("DELETE FROM work_files WHERE work_id = ? AND kind = 'source_cbz' AND library_item_id IS NULL", (work_id,))
                 conn.execute("DELETE FROM work_pages WHERE work_id = ?", (work_id,))
-                conn.execute(
-                    """
-                    INSERT INTO work_files (work_id, kind, path, size_bytes, sha256)
-                    VALUES (?, 'source_cbz', ?, ?, ?)
-                    """,
-                    (work_id, self.db.managed_path(stored_path), stored_path.stat().st_size, digest),
-                )
+                if target_library["kind"] == "managed":
+                    conn.execute(
+                        """INSERT INTO work_files (work_id, kind, path, size_bytes, sha256)
+                        VALUES (?, 'source_cbz', ?, ?, ?)""",
+                        (work_id, self.db.managed_path(stored_path), stored_path.stat().st_size, digest),
+                    )
+                else:
+                    relative = stored_path.relative_to(target_root).as_posix()
+                    existing_item = conn.execute(
+                        "SELECT id, work_id FROM library_items WHERE library_id = ? AND relative_path = ?",
+                        (target_library["id"], relative),
+                    ).fetchone()
+                    if existing_item and existing_item["work_id"] not in {None, work_id}:
+                        raise ValueError("默认下载媒体库已有同名作品，未覆盖源文件")
+                    info = stored_path.stat()
+                    library_item_id = int(conn.execute(
+                        """INSERT INTO library_items(library_id, relative_path, work_id, size_bytes,
+                        mtime_ns, device, inode, stable_since, status, fingerprint, manifest, metadata_json,
+                        archive_info_json, indexed_at, scrape_status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?, ?, CURRENT_TIMESTAMP, 'done')
+                        ON CONFLICT(library_id, relative_path) DO UPDATE SET work_id=excluded.work_id,
+                        size_bytes=excluded.size_bytes, mtime_ns=excluded.mtime_ns, device=excluded.device,
+                        inode=excluded.inode, stable_since=excluded.stable_since, status='ready',
+                        fingerprint=excluded.fingerprint, manifest=excluded.manifest,
+                        metadata_json=excluded.metadata_json, archive_info_json=excluded.archive_info_json,
+                        last_error=NULL, missing_since=NULL, indexed_at=CURRENT_TIMESTAMP,
+                        scrape_status='done' RETURNING id""",
+                        (target_library["id"], relative, work_id, info.st_size, info.st_mtime_ns,
+                         info.st_dev, info.st_ino, time.time(), indexed["fingerprint"], indexed["manifest"],
+                         json.dumps(indexed["metadata"], ensure_ascii=False),
+                         json.dumps(indexed["archive_info"], ensure_ascii=False)),
+                    ).fetchone()["id"])
+                    conn.execute(
+                        """INSERT INTO work_files(work_id, kind, path, size_bytes, sha256, library_item_id)
+                        VALUES (?, 'source_cbz', ?, ?, ?, ?)
+                        ON CONFLICT(library_item_id) WHERE library_item_id IS NOT NULL DO UPDATE SET
+                        work_id=excluded.work_id, path=excluded.path, size_bytes=excluded.size_bytes,
+                        sha256=excluded.sha256""",
+                        (work_id, str(stored_path), info.st_size, digest, library_item_id),
+                    )
+                    root_info = target_root.stat()
+                    conn.execute(
+                        """UPDATE media_libraries SET health='online', last_error=NULL, root_device=?,
+                        root_inode=?, resolved_root_path=? WHERE id=?""",
+                        (root_info.st_dev, root_info.st_ino, str(target_root), target_library["id"]),
+                    )
                 for index, (member, size) in enumerate(page_entries, start=1):
                     media_type = mimetypes.guess_type(member)[0] or "application/octet-stream"
                     conn.execute(
@@ -147,7 +207,7 @@ class ArchiveService:
             raise
 
         self._clear_cached_media(work_id, cover_path)
-        if previous:
+        if previous and target_library["kind"] == "managed":
             stale = Path(previous["path"])
             inside_library = stale.parent.resolve() == self.settings.library_dir.resolve()
             if inside_library and stale.resolve() != stored_path.resolve():
@@ -296,16 +356,28 @@ class ArchiveService:
         cbz_path: Path,
         title: str,
         remote_gallery_id: int | None,
+        library: dict[str, Any],
+        root: Path,
     ) -> Path:
         # Name the stored archive after the work itself, not a bare sequence number.
         # A trailing gallery/work id keeps the name unique across same-titled works
         # (the common "Title [123456].cbz" convention).
         stem = _safe_filename(title) or f"work-{work_id}"
         marker = remote_gallery_id if remote_gallery_id else work_id
-        destination = self.settings.library_dir / f"{stem} [{marker}].cbz"
+        destination = root / f"{stem} [{marker}].cbz"
+        root_info = root.stat()
 
         cbz_path = Path(cbz_path)
         if cbz_path.resolve() != destination.resolve():
+            if destination.is_symlink():
+                raise ValueError("默认下载目标是符号链接，未覆盖源文件")
+            if library["kind"] != "managed":
+                item = self.db.fetchone(
+                    "SELECT work_id FROM library_items WHERE library_id = ? AND relative_path = ?",
+                    (library["id"], destination.relative_to(root).as_posix()),
+                )
+                if destination.exists() or item and item["work_id"] not in {None, work_id}:
+                    raise ValueError("默认下载媒体库已有同名文件，未覆盖源文件")
             with NamedTemporaryFile(
                 dir=destination.parent,
                 prefix=f".{destination.name}.",
@@ -315,7 +387,12 @@ class ArchiveService:
                 tmp_path = Path(tmp.name)
             try:
                 shutil.copy2(cbz_path, tmp_path)
-                self.libraries.managed_write_root()
+                _, current_root = self.libraries.download_write_root(library["id"])
+                current_info = current_root.stat()
+                if current_root != root or (current_info.st_dev, current_info.st_ino) != (root_info.st_dev, root_info.st_ino):
+                    raise ValueError("默认下载媒体库在写入期间发生变化")
+                if library["kind"] != "managed" and destination.exists():
+                    raise ValueError("默认下载媒体库已有同名文件，未覆盖源文件")
                 tmp_path.replace(destination)
             finally:
                 tmp_path.unlink(missing_ok=True)

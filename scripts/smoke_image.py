@@ -2,7 +2,6 @@
 
 import http.cookiejar
 import json
-import os
 from pathlib import Path
 import secrets
 import subprocess
@@ -23,16 +22,25 @@ def main() -> None:
     with TemporaryDirectory(prefix="nh-image-smoke-") as temporary:
         storage = Path(temporary) / "data"
         storage.mkdir(mode=0o700)
-        env = os.environ | {
-            "NH_ARCHIVE_IMAGE": sys.argv[1],
-            "NH_ARCHIVE_STORAGE": str(storage),
-            "NH_ARCHIVE_BIND": "127.0.0.1",
-            "NH_ARCHIVE_PORT": "0",
+        project = f"nh-smoke-{storage.parent.name}"
+        source = (ROOT / "compose.yaml").read_text()
+        replacements = {
+            "name: nh-archive": f"name: {project}",
+            "container_name: nh-archive": f"container_name: {project}",
+            "image: ghcr.io/dormiveglia0/nhentai-archive:latest": f"image: {json.dumps(sys.argv[1])}",
+            '      - "4349:8000"': '      - "127.0.0.1:0:8000"',
+            "      - ./data:/data": f"      - {storage}:/data",
         }
-        compose = ["docker", "compose", "-p", f"nh-smoke-{os.getpid()}", "-f", str(ROOT / "compose.yaml")]
+        for old, new in replacements.items():
+            if old not in source:
+                raise AssertionError(f"Compose smoke template changed: {old}")
+            source = source.replace(old, new, 1)
+        smoke_compose = Path(temporary) / "compose.yaml"
+        smoke_compose.write_text(source)
+        compose = ["docker", "compose", "-f", str(smoke_compose)]
 
         def run(*args: str) -> str:
-            return subprocess.check_output([*compose, *args], env=env, text=True).strip()
+            return subprocess.check_output([*compose, *args], text=True).strip()
 
         try:
             run("up", "-d", "--no-build", "--pull", "never", "--wait", "--wait-timeout", "90")
