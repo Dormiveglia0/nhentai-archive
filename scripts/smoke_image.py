@@ -71,8 +71,12 @@ def main() -> None:
                     if file.is_file():
                         assert request("/" + file.relative_to(dist).as_posix()) == (200, file.read_bytes()), file.name
             assert request("/api/works")[0] == 401
+            assert request("/api/files/metadata")[0] == 401
+            assert request("/api/files/derived")[0] == 401
             assert request("/api/auth/setup", {"password": secrets.token_urlsafe(24)})[0] == 200
             assert json.loads(request("/api/works")[1]) == {"result": []}
+            assert json.loads(request("/api/files/metadata")[1])["total"] == 0
+            assert json.loads(request("/api/files/derived")[1])["total"] == 0
             assert (storage / "archive.db").is_file()
 
             run("restart", "app")

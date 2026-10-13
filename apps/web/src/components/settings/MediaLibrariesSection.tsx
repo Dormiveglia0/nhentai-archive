@@ -15,16 +15,13 @@ const KINDS = { managed: "本地导入", local: "本地目录", mounted: "挂载
 const HEALTH: Record<string, string> = { unknown: "尚未检查", online: "正常", offline: "不可用", partial: "部分失败" };
 const ITEM_STATUS = { error: "读取失败", pending: "待稳定", missing: "源文件缺失", all: "全部文件" } as const;
 
-function LibraryChecks({ library, initialStatus, onChanged }: { library: MediaLibrary; initialStatus: keyof typeof ITEM_STATUS; onChanged: () => void }) {
+function LibraryChecks({ library, initialStatus }: { library: MediaLibrary; initialStatus: keyof typeof ITEM_STATUS }) {
   const [status, setStatus] = useState<keyof typeof ITEM_STATUS>(initialStatus);
   const [page, setPage] = useState(1);
   const [runs, setRuns] = useState<LibraryScanRun[]>([]);
   const [items, setItems] = useState<{ result: LibraryItem[]; total: number; per_page: number } | null>(null);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [forgetting, setForgetting] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [revision, setRevision] = useState(0);
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -38,25 +35,11 @@ function LibraryChecks({ library, initialStatus, onChanged }: { library: MediaLi
       .catch(exc => { if (alive) setError(exc.message); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [library.id, library.last_scan_at, library.scanning, library.active_scan_status, status, page, revision]);
-
-  async function forget(item: LibraryItem) {
-    const kept = item.work_id ? "作品本身的元数据、收藏和阅读记录会保留。" : "这条记录没有关联作品，移除后其归档元数据也会删除。";
-    if (!window.confirm(`只移除“${item.relative_path}”的索引记录，不会删除任何源文件。${kept}`)) return;
-    setForgetting(item.id); setError(""); setMessage("");
-    try {
-      await api.forgetLibraryItem(library.id, item.id);
-      setMessage(`${item.status === "missing" ? "缺失" : "保留"}记录已移除，未删除任何源文件`);
-      setRevision(value => value + 1);
-      onChanged();
-    } catch (exc) { setError(exc instanceof Error ? exc.message : String(exc)); }
-    finally { setForgetting(null); }
-  }
+  }, [library.id, library.last_scan_at, library.scanning, library.active_scan_status, status, page]);
 
   return <div className="folio-library-checks" aria-busy={loading}>
     <FolioSelect label="文件状态" value={status} options={Object.entries(ITEM_STATUS).map(([value, label]) => ({ value: value as keyof typeof ITEM_STATUS, label }))} onChange={value => { setStatus(value); setPage(1); }} />
     {error ? <p className="folio-media-error" role="alert">{error}</p> : null}
-    {message ? <p className="folio-media-feedback" role="status">{message}</p> : null}
     <ul className="folio-library-issues">
       {items?.result.map(item => <li key={item.id}>
         <div className="folio-library-issue-head"><strong>{item.title}</strong><span>{item.relative_path}{item.size_bytes ? ` · ${formatBytes(item.size_bytes)}` : ""}</span></div>
@@ -64,7 +47,7 @@ function LibraryChecks({ library, initialStatus, onChanged }: { library: MediaLi
         {Object.keys(item.metadata).length ? <details><summary>查看已保留元数据</summary><dl tabIndex={0} aria-label="已保留元数据">{Object.entries(item.metadata).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{typeof value === "string" ? value : JSON.stringify(value, null, 2)}</dd></div>)}</dl></details> : null}
         <div className="folio-library-issue-actions">
           {item.work_id ? <a className="folio-settings-mini-action" href={pageHref({ name: "governance", workId: item.work_id })}>查看作品信息<ArrowUpRight size={13} /></a> : null}
-          {item.status === "missing" || item.status === "detached" ? <button type="button" className="folio-settings-mini-action is-danger" disabled={forgetting !== null} onClick={() => void forget(item)}><Trash2 size={13} />{forgetting === item.id ? "正在移除" : item.status === "missing" ? "移除缺失记录" : "移除保留记录"}</button> : null}
+          <a className="folio-settings-mini-action" href={`#files?view=metadata&library_id=${library.id}${item.work_id ? `&work_id=${item.work_id}` : "&status=unlinked"}`}>管理本地元数据<ArrowUpRight size={13} /></a>
         </div>
       </li>)}
     </ul>
@@ -172,7 +155,7 @@ export function MediaLibrariesSection() {
         <div className="folio-library-directory-main">
           <div><h4>{library.name}</h4><span className={library.health === "offline" || library.health === "partial" || library.error_count || library.missing_count ? "folio-media-error" : ""}>{library.removed_at ? "已移除" : library.active_scan_status ? statusLabel(library.active_scan_status) : library.scanning ? "正在扫描" : !library.enabled ? "已暂停" : library.error_count || library.missing_count ? "需要检查" : HEALTH[library.health] ?? library.health}</span></div>
           <p className="folio-library-directory-path" title={library.root_path}>{library.root_path}</p>
-          <p className="folio-library-directory-stats"><span>{KINDS[library.kind]} · {library.read_only ? "只读" : library.kind === "mounted" ? "可接收下载" : "可写"}</span>{library.removed_at ? <button type="button" onClick={() => setChecking({ id: library.id, status: "all" })}>{library.item_count} 条保留记录</button> : <a href={pageHref({ name: "library" }) + "?library_id=" + library.id}>{library.work_count} 部作品<ArrowUpRight size={12} /></a>}{library.pending_count ? <button type="button" onClick={() => setChecking({ id: library.id, status: "pending" })}>{library.pending_count} 待稳定</button> : null}{library.error_count ? <button type="button" className="folio-media-error" onClick={() => setChecking({ id: library.id, status: "error" })}>{library.error_count} 读取失败</button> : null}{library.missing_count ? <button type="button" className="folio-media-error" onClick={() => setChecking({ id: library.id, status: "missing" })}>{library.missing_count} 缺失</button> : null}{library.scrape_review_count ? <span>{library.scrape_review_count} 刮削待确认</span> : null}</p>
+          <p className="folio-library-directory-stats"><span>{KINDS[library.kind]} · {library.read_only ? "只读" : library.kind === "mounted" ? "可接收下载" : "可写"}</span>{library.removed_at ? <a href={`#files?view=metadata&library_id=${library.id}&status=detached`}>{library.item_count} 条保留资料<ArrowUpRight size={12} /></a> : <a href={pageHref({ name: "library" }) + "?library_id=" + library.id}>{library.work_count} 部作品<ArrowUpRight size={12} /></a>}{library.pending_count ? <button type="button" onClick={() => setChecking({ id: library.id, status: "pending" })}>{library.pending_count} 待稳定</button> : null}{library.error_count ? <button type="button" className="folio-media-error" onClick={() => setChecking({ id: library.id, status: "error" })}>{library.error_count} 读取失败</button> : null}{library.missing_count ? <a className="folio-media-error" href={`#files?view=metadata&library_id=${library.id}&status=missing`}>{library.missing_count} 缺失 · 元数据<ArrowUpRight size={12} /></a> : null}{library.scrape_review_count ? <span>{library.scrape_review_count} 刮削待确认</span> : null}</p>
           {library.last_error || library.watch_error ? <p className="folio-media-error">{library.last_error ?? library.watch_error}</p> : null}
         </div>
         <div className="folio-media-actions">
@@ -184,7 +167,7 @@ export function MediaLibrariesSection() {
           </> : null}
           <button type="button" className="folio-settings-mini-action" aria-expanded={checking?.id === library.id} onClick={() => setChecking(value => value?.id === library.id ? null : { id: library.id, status: "all" })}><ChevronDown size={14} />{library.removed_at ? "保留记录" : "文件状态"}</button>
         </div>
-        {checking?.id === library.id ? <LibraryChecks key={`${library.id}-${checking.status}`} library={library} initialStatus={checking.status} onChanged={reload} /> : null}
+        {checking?.id === library.id ? <LibraryChecks key={`${library.id}-${checking.status}`} library={library} initialStatus={checking.status} /> : null}
       </article>)}
     </div>
     {editing && defaults ? <MediaLibraryEditor library={editing === "new" ? null : editing} defaults={defaults} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setMessage("媒体库设置已保存"); reload(); }} /> : null}

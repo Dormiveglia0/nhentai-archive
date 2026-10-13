@@ -678,7 +678,45 @@ export type FileOverview = {
 
 export type FileInventory = { result: FileEntry[]; total: number; page: number; per_page: number };
 
-export type FileDeleteTarget = { kind: "work" | "orphan" | "stale"; work_id?: number; path?: string };
+export type FileDeleteTarget = { kind: "work" | "orphan" | "stale" | "derived"; work_id?: number; path?: string };
+
+export type MetadataStatus = "ready" | "missing" | "offline" | "detached" | "pending";
+export type MetadataTarget = { kind: "work" | "item" | "source"; id: number };
+export type MetadataEntry = {
+  kind: "work" | "item"; id: number; work_id: number | null; title: string; status: MetadataStatus;
+  source_count: number; field_count: number; tag_count: number; page_count: number | null;
+  updated_at: string; library_ids: number[]; library_names: string[]; paths: string[]; partial_missing: boolean;
+};
+export type MetadataInventory = {
+  result: MetadataEntry[]; total: number; page: number; per_page: number; database_path: string;
+  summary: Record<"works" | "unlinked" | MetadataStatus, number>;
+};
+export type ArchiveMetadata = { comicinfo: Record<string, unknown>; json?: Record<string, unknown> };
+export type MetadataSource = {
+  id: number; library_item_id: number | null; path: string; status: MetadataStatus;
+  library_id: number | null; library_name: string | null; archive_metadata: ArchiveMetadata;
+};
+export type DerivedEntry = {
+  kind: "derived"; id: string; path: string; name: string; category: "cover" | "thumbnail" | "page" | "archive";
+  status: "linked" | "orphan" | "active"; work_id: number | null; title: string | null; cache_id: number | null;
+  size_bytes: number; updated_at: number;
+};
+export type DerivedInventory = {
+  result: DerivedEntry[]; total: number; page: number; per_page: number; data_dir: string;
+  summary: Record<"file_count" | "total_bytes" | "orphan_count" | "orphan_bytes" | DerivedEntry["category"], number>;
+};
+export type MetadataDetail = {
+  kind: "work" | "item"; id: number; database_path: string;
+  record: Record<string, unknown>;
+  sources: MetadataSource[]; archive_metadata?: ArchiveMetadata;
+  fields: { field: string; value: string | null; source: string; source_value: string | null; updated_at: string }[];
+  tags: { tag_type: string; remote_name: string | null; remote_slug: string | null; zh_name: string | null }[];
+  assets: DerivedEntry[]; assets_total?: number; progress: ReaderState | null; counts: Record<string, number>; manifest_errors?: string[];
+};
+export type MetadataDeletePreview = MetadataTarget & {
+  title?: string; allowed: boolean; files: string[]; counts: Record<string, number>; progress?: ReaderState | null;
+  work_preserved?: number | null; reclaim_bytes: number; source_files_deleted: false; scan_logs_deleted: false; warnings: string[];
+};
 
 export type FileDeletePreviewItem = {
   kind: string;
@@ -1460,6 +1498,31 @@ export const api = {
     }),
   bulkExportDownloadUrl: (jobId: number) => `/api/jobs/${jobId}/export/download`,
   filesOverview: () => request<FileOverview>("/api/files/overview"),
+  localMetadata: (params: { q?: string; status?: string; library_id?: string; page?: number; work_id?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.status) query.set("status", params.status);
+    if (params.library_id) query.set("library_id", params.library_id);
+    if (params.work_id) query.set("work_id", params.work_id);
+    query.set("page", String(params.page ?? 1));
+    return request<MetadataInventory>(`/api/files/metadata?${query}`);
+  },
+  localMetadataDetail: (kind: "work" | "item", id: number) => request<MetadataDetail>(`/api/files/metadata/${kind}/${id}`),
+  previewMetadataDelete: (target: MetadataTarget) => request<MetadataDeletePreview>("/api/files/metadata/preview-delete", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(target),
+  }),
+  deleteMetadata: (target: MetadataTarget) => request<{ removed: number; deleted_files: number; reclaimed_bytes: number }>("/api/files/metadata/delete", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify(target),
+  }).then(clearDiscoverCache),
+  derivedFiles: (params: { category?: string; q?: string; status?: string; page?: number; work_id?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.category) query.set("category", params.category);
+    if (params.q) query.set("q", params.q);
+    if (params.status) query.set("status", params.status);
+    if (params.work_id) query.set("work_id", params.work_id);
+    query.set("page", String(params.page ?? 1));
+    return request<DerivedInventory>(`/api/files/derived?${query}`);
+  },
   filesInventory: (params: FileInventoryParams = {}) => {
     const query = new URLSearchParams();
     query.set("category", params.category ?? "all");

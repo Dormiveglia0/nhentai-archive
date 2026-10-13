@@ -25,12 +25,14 @@
 | 阅读 | `reader_service.py`、`archive_cache_service.py`、`reader_bridge_service.py`；进度、可见时长、版本缓存/直接读取、逐页核验与双来源 |
 | 治理 | `governance_service.py`、元数据/翻译服务；字段、标签、人工核对、语言与置信度刮削，显式选择的 ComicInfo 原子回写 |
 | 词典 | `dictionary_service.py` 与翻译服务；候选、预览、映射及证据 |
-| 文件与导出 | `file_service.py`、`export_service.py`；所有权检查、删除预览、下载流；导出不改源文件 |
+| 文件与导出 | `file_service.py`、`local_metadata_service.py`、`export_service.py`；文件及派生数据清单、本地元数据与索引查看、所有权检查、清理预览、下载流；导出不改源文件 |
 | 任务 | `job_service.py` 与匹配的 job 服务；持久状态、检查点、暂停/恢复、取消、重试和日志 |
 | 订阅与邮件 | `subscription_service.py`、`notification_service.py`；完整初始基线、增量更新、租约/CAS、近期预览、持久发件箱、私密SMTP配置 |
 | 认证 | `auth_service.py`；单密码、scrypt、90天 HttpOnly/SameSite 会话、变更撤销其他会话、限流 |
 
-媒体库文件状态API返回归档标题和已保留的ComicInfo/JSON；`DELETE /api/library/directories/{library_id}/items/{item_id}` 只移除缺失索引，不删除源文件或关联作品。`PATCH /api/settings` 的 `downloads.default_library_id` 只接受已启用且可接收下载的库；目标失效时下载明确失败。`MediaLibraryService._source_lock` 复用为扫描和归档发布的互斥锁，避免扫描抢先建立另一作品。
+媒体库文件状态API返回归档标题和已保留的ComicInfo/JSON。`GET /api/files/metadata` 与 `metadata/{work|item}/{id}` 展示作品及未关联扫描资料；`metadata/preview-delete`、`metadata/delete` 分别预览并重新校验清理作品资料、扫描索引或失效旧文件关联。源文件和扫描日志不删除，离线/待检查/仍有可用来源拒绝整部清理；复用文件服务的阅读、租约、任务与共享路径保护。`GET /api/files/derived` 分页列出应用数据目录下的封面、缩略图、页面/归档缓存；缓存清理保留作品数据，当前封面与在用文件受保护。旧 `DELETE /api/library/directories/{library_id}/items/{item_id}` 保留兼容，但前端统一进入元数据页处理。
+
+`PATCH /api/settings` 的 `downloads.default_library_id` 只接受已启用且可接收下载的库；目标失效时下载明确失败。`MediaLibraryService._source_lock` 复用为扫描和归档发布的互斥锁，避免扫描抢先建立另一作品。
 
 文件名以 `rg --files apps/api/app/services` 为准；不要另造平行服务或在路由里写业务逻辑。
 
@@ -50,7 +52,7 @@
 - `App.tsx`：认证后的hash路由、懒加载、详情数据准备与阅读器隔离。
 - `components/layout/ArchiveShell.tsx`：正式 shell；`components/folio/`：8项导航、原标志、控件和共用CSS。额外顶部更新入口和边角装饰已退役。
 - 正式 feature、数据 hooks 与CSS精确定位见 AGENT_MAP 表；`lib/api.ts`统一DTO与缓存失效，`lib/navigation.ts`统一链接。
-- 媒体库缺失计数直接打开 `MediaLibrariesSection` 的状态列表；扫描历史在列表下方折叠。`useFilesState.ts` 接受 `#files?view=files&status=…`，设置中的问题指标直接跳入对应文件筛选，文件健康计数复用现有筛选状态。
+- 文件页五个子页为媒体库、文件、元数据、派生文件、迁移。媒体库缺失及保留资料计数直接进入 `#files?view=metadata&library_id=…&status=…`；扫描历史与文件异常仍在媒体库状态列表。元数据详情提供保存字段/标签/ComicInfo/归档JSON/页面目录/阅读状态与派生路径、JSON导出、编辑/恢复入口和清理预览；不是日志删除。`#files?view=derived&work_id=…` 展示该作品的实际派生文件；来源只读、离线和在用限制不绕过。`useFilesState.ts` 继续接受 `#files?view=files&status=…`。存储摘要统一数值字号与Folio链接样式。
 - 首页最多6部真实本地作品4秒轮播，后台/离屏/焦点/减少动态效果暂停；右下方显示4部最新远端作品，桌面一屏展示。阅读保存后刷新数据并保持当前作品ID。
 - 发现常驻作品、更新、订阅三个选项卡，更新项显示真实未读数；作品区域全宽，筛选不能覆盖其他视图的链接。订阅行附实际近期作品。
 - 本地原生详情弹窗保留自然比例封面。打开远端详情时先准备数据，再先出后入交接，避免两套标题重叠；只有目标页挂载。

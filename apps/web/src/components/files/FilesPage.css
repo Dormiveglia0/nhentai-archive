@@ -1330,9 +1330,12 @@
 }
 
 .folio-files-primary-tabs { margin-bottom: 30px; border-top: 1px solid var(--folio-line-strong); border-bottom: 1px solid var(--folio-line-strong); }
-.folio-files-primary-tabs button { min-width: 136px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.folio-files-primary-tabs button { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; white-space: nowrap; }
 .folio-files-stage { min-width: 0; }
-.folio-library-directory-stats a { display: inline-flex; align-items: center; gap: 5px; color: var(--folio-ink); text-decoration-color: var(--folio-line-strong); text-underline-offset: 4px; }
+@media (max-width: 600px) {
+  .folio-files-primary-tabs button { padding: 0 4px; font-size: 12px; gap: 5px; }
+  .folio-files-primary-tabs button > svg { display: none; }
+}
 .folio-migration-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 36px; padding-top: 24px; align-items: start; }
 .folio-migration-selection { min-width: 0; }
 .folio-migration-options { display: grid; gap: 24px; padding: 0 0 0 28px; border-left: 1px solid var(--folio-line); position: sticky; top: 24px; }

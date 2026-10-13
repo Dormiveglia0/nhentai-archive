@@ -45,12 +45,12 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
   }, []);
 
   const usage: FolioMetricItem[] = [
-    { label: "作品源文件", value: files ? `${files.work_count} 部` : "—", detail: files ? formatBytes(files.source_bytes) : "正在读取", icon: Archive, tone: "active", valueKind: "text" },
-    { label: "封面", value: files ? `${files.cover_ok} 张正常` : "—", detail: files ? <a href="#files?view=files&status=missing_cover">{files.missing_cover} 张缺失 · 查看</a> : "正在读取", icon: Image, tone: files?.missing_cover ? "warning" : "good", valueKind: "text" },
+    { label: "作品源文件", value: files ? String(files.work_count) : "—", detail: files ? `${formatBytes(files.source_bytes)} · 源归档` : "正在读取", icon: Archive, tone: "active" },
+    { label: "正常封面", value: files ? String(files.cover_ok) : "—", detail: files ? <a href="#files?view=files&status=missing_cover">{files.missing_cover} 张缺失<ArrowUpRight size={12} aria-hidden="true" /></a> : "正在读取", icon: Image, tone: files?.missing_cover ? "warning" : "good" },
     { label: "缺失源文件", value: files ? String(files.missing_source) : "—", detail: files ? <a href="#files?view=files&status=missing_source">查看具体文件</a> : "正在读取", icon: FileWarning, tone: files?.missing_source ? "danger" : "good" },
-    { label: "孤立文件", value: files ? `${files.orphan_count} 项` : "—", detail: files ? <a href="#files?view=files&status=orphan">{formatBytes(files.orphan_bytes)} · 查看</a> : "正在读取", icon: Unlink, tone: files?.orphan_count ? "warning" : "good", valueKind: "text" },
-    { label: "临时残留", value: files ? `${files.stale_count} 项` : "—", detail: files ? <a href="#files?view=files&status=stale">{formatBytes(files.stale_bytes)} · 查看</a> : "正在读取", icon: Clock3, tone: files?.stale_count ? "warning" : "good", valueKind: "text" },
-    { label: "可回收合计", value: files ? formatBytes(files.reclaimable_bytes) : "—", detail: files?.reclaimable_bytes ? "清理前需预览" : "无需清理", icon: Recycle, tone: files?.reclaimable_bytes ? "warning" : "good", valueKind: "text" },
+    { label: "孤立文件", value: files ? String(files.orphan_count) : "—", detail: files ? <a href="#files?view=files&status=orphan">{formatBytes(files.orphan_bytes)}<ArrowUpRight size={12} aria-hidden="true" /></a> : "正在读取", icon: Unlink, tone: files?.orphan_count ? "warning" : "good" },
+    { label: "临时残留", value: files ? String(files.stale_count) : "—", detail: files ? <a href="#files?view=files&status=stale">{formatBytes(files.stale_bytes)}<ArrowUpRight size={12} aria-hidden="true" /></a> : "正在读取", icon: Clock3, tone: files?.stale_count ? "warning" : "good" },
+    { label: "可回收合计", value: files ? formatBytes(files.reclaimable_bytes) : "—", detail: files?.reclaimable_bytes ? "清理前需预览" : "无需清理", icon: Recycle, tone: files?.reclaimable_bytes ? "warning" : "good" },
   ];
 
   return (
@@ -64,7 +64,7 @@ export function StorageSection({ vm }: { vm: SettingsVM }) {
       ) : null}
 
       <section className="folio-storage-group" aria-label="磁盘占用">
-        <div className="folio-settings-subhead"><h3><HardDrive size={16} />磁盘占用</h3><a className="folio-line-button" href={pageHref({ name: "files" }) + "?view=files"}>打开文件管理<ArrowUpRight size={15} /></a></div>
+        <div className="folio-settings-subhead"><h3><HardDrive size={16} />磁盘占用</h3><div className="folio-storage-head-actions"><a className="folio-line-button" href="#files?view=metadata">管理元数据<ArrowUpRight size={15} /></a><a className="folio-line-button" href={pageHref({ name: "files" }) + "?view=files"}>打开文件管理<ArrowUpRight size={15} /></a></div></div>
       <FolioMetricGrid ariaLabel="磁盘占用摘要" className="folio-settings-storage-grid" items={usage} />
       </section>
       <section className="folio-storage-group" aria-label="数据目录">

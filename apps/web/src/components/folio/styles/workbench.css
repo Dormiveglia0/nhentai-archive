@@ -97,6 +97,25 @@
   white-space: nowrap;
 }
 
+.folio-metric-card-copy > small a {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--folio-muted);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.folio-metric-card-copy > small a:hover {
+  color: var(--folio-red);
+}
+
+.folio-metric-card-copy > small a:focus-visible {
+  outline: 2px solid var(--folio-red);
+  outline-offset: 3px;
+}
+
 .folio-metric-card-copy > strong {
   margin-top: 7px;
   overflow: hidden;

@@ -515,6 +515,7 @@
   background: transparent;
   color: var(--folio-ink);
   font-size: 13px;
+  text-decoration: none;
   position: relative;
   overflow: hidden;
   transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;

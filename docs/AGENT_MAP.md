@@ -28,7 +28,7 @@
 | 整理 | `governance/GovernancePage.tsx`、`useGovernanceState.ts`、`Governance*Panel.tsx`、`GovernanceSourceRail.tsx` | `GovernancePage.css`、`GovernanceEditor.css`、共享治理规则；字段、标签、翻译、核对与源文件回写 |
 | 词典 | `dictionary/DictionaryPage.tsx`、`useDictionaryState.ts`、其子组件 | `DictionaryPage.css`、`DictionaryEditor.css` 与共享规则；搜索、候选、影响预览、应用、批量处理 |
 | 队列 | `tasks/TasksPage.tsx`、`useTasksState.ts`、其子组件 | `TasksPage.css`、共享任务规则；状态筛选、日志、暂停/恢复/取消/重试/删除 |
-| 文件 | `files/FilesPage.tsx`、`useFilesState.ts`、`FileList.tsx`、`FileDetailPanel.tsx`、`FileDeleteDialog.tsx`、`MigrationPanel.tsx` | `FilesPage.css`；媒体库/清单/迁移三个视图；选择与目标分区、复制/移动、冲突处理、预览和迁移任务 |
+| 文件 | `files/FilesPage.tsx`、`useFilesState.ts`、`FileList.tsx`、`FileDetailPanel.tsx`、`FileDeleteDialog.tsx`、`MetadataPanel.tsx`、`DerivedFilesPanel.tsx`、`MigrationPanel.tsx` | `FilesPage.css`、`MetadataPanel.css`；媒体库/文件/元数据/派生文件/迁移五个视图；本地资料查看与导出、恢复/清理预览、实际派生文件清单，以及复制/移动迁移 |
 | 设置 | `settings/SettingsPage.tsx`、`useSettingsState.ts`、对应 `*Section.tsx` | `SettingsPage.css`、`folio/styles/settings.css`；连接、翻译、访问/阅读、导出默认、统计、存储、邮件 |
 | 目录与缓存 | `settings/MediaLibrariesSection.tsx`、`MediaLibraryEditor.tsx`、`ReadingCacheSection.tsx`、`StorageSection.tsx` | `StorageSection.css`；实际目录选择、监控/补偿、扫描、阅读缓存与用量；目录配置在文件页 |
 | 阅读器 | `reader/ReaderPage.tsx`、`ReaderViewport.tsx`、`WebtoonView.tsx`、`ReaderToolbar.tsx`、`ReaderScrubber.tsx`、`ReaderInfoPanel.tsx`、其状态 hooks | `ReaderPage.css`、`ReaderToolbar.css`、`ReaderPanels.css`；本地/远端阅读、进度与会话、直接阅读、版本恢复、双来源交接；控件覆盖图片 |

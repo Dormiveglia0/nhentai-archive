@@ -1,4 +1,4 @@
-import { AlertCircle, CircleCheck, Files, Folder, ArrowRightLeft } from "lucide-react";
+import { AlertCircle, CircleCheck, Files, Folder, ArrowRightLeft, Database, Image } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { FadeIn, SlidingIndicator, transitionTabs, usePrefersReducedMotion } from "../../lib/motion";
@@ -12,13 +12,15 @@ import { FileToolbar } from "./FileToolbar";
 import { useFilesState } from "./useFilesState";
 import { MediaLibrariesSection } from "../settings/MediaLibrariesSection";
 import { MigrationPanel } from "./MigrationPanel";
+import { MetadataPanel } from "./MetadataPanel";
+import { DerivedFilesPanel } from "./DerivedFilesPanel";
 import "./FilesPage.css";
 
 export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
-  type View = "libraries" | "files" | "migration";
+  type View = "libraries" | "files" | "metadata" | "derived" | "migration";
   const readView = (): View => {
     const value = new URLSearchParams(window.location.hash.split("?")[1]).get("view");
-    return value === "files" || value === "migration" ? value : "libraries";
+    return value === "files" || value === "metadata" || value === "derived" || value === "migration" ? value : "libraries";
   };
   const [view, setView] = useState(readView);
   useEffect(() => {
@@ -27,17 +29,17 @@ export function FilesPage({ blurCovers }: { blurCovers: boolean }) {
     return () => window.removeEventListener("hashchange", update);
   }, []);
   function choose(next: View) {
-    transitionTabs(["libraries", "files", "migration"] as const, view, next, value => {
+    transitionTabs(["libraries", "files", "metadata", "derived", "migration"] as const, view, next, value => {
       setView(value); window.history.replaceState(null, "", value === "libraries" ? "#files" : "#files?view=" + value);
     }, "files");
   }
   return <section className="folio-page-body folio-files-page">
     <nav className="folio-files-tabs folio-files-primary-tabs" aria-label="文件内容">
-      {([{ id: "libraries", label: "媒体库", icon: Folder }, { id: "files", label: "文件", icon: Files }, { id: "migration", label: "迁移", icon: ArrowRightLeft }] as const).map(tab => <button type="button" key={tab.id} className={view === tab.id ? "is-active" : ""} aria-current={view === tab.id ? "page" : undefined} onClick={() => choose(tab.id)}>
+      {([{ id: "libraries", label: "媒体库", icon: Folder }, { id: "files", label: "文件", icon: Files }, { id: "metadata", label: "元数据", icon: Database }, { id: "derived", label: "派生文件", icon: Image }, { id: "migration", label: "迁移", icon: ArrowRightLeft }] as const).map(tab => <button type="button" key={tab.id} className={view === tab.id ? "is-active" : ""} aria-current={view === tab.id ? "page" : undefined} onClick={() => choose(tab.id)}>
         {view === tab.id ? <SlidingIndicator className="folio-files-tab-active" layoutId="files-views" /> : null}<tab.icon size={16} /><span>{tab.label}</span>
       </button>)}
     </nav>
-    <div className="folio-files-stage">{view === "libraries" ? <MediaLibrariesSection /> : view === "migration" ? <MigrationPanel onLibraries={() => choose("libraries")} /> : <FileInventory blurCovers={blurCovers} />}</div>
+    <div className="folio-files-stage">{view === "libraries" ? <MediaLibrariesSection /> : view === "migration" ? <MigrationPanel onLibraries={() => choose("libraries")} /> : view === "metadata" ? <MetadataPanel /> : view === "derived" ? <DerivedFilesPanel /> : <FileInventory blurCovers={blurCovers} />}</div>
   </section>;
 }
 

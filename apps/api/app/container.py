@@ -9,6 +9,7 @@ from app.services.discover_service import DiscoverService
 from app.services.export_job_service import ExportJobService
 from app.services.export_service import ExportService
 from app.services.file_service import FileMaintenanceService
+from app.services.local_metadata_service import LocalMetadataService
 from app.services.governance_service import GovernanceService
 from app.services.import_service import ImportService
 from app.services.job_service import JobService
@@ -81,6 +82,7 @@ def build_services() -> SimpleNamespace:
         governance=governance,
         exports=exports,
         files=files,
+        local_metadata=LocalMetadataService(files, media_libraries),
         imports=imports,
         export_jobs=export_jobs,
         library_scan=library_scan,

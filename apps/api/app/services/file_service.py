@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from contextlib import nullcontext
 from pathlib import Path
@@ -280,6 +281,98 @@ class FileMaintenanceService:
             "title_similar": None,
         }
 
+    def derived_inventory(self, category: str = "all", q: str = "", status: str = "all",
+                          page: int = 1, per_page: int = 50, work_id: int | None = None) -> dict[str, Any]:
+        works = {w["id"]: w for w in self.db.fetchall("SELECT id,title,pretty_title,cover_path FROM works")}
+        covers = {str(self._abs(w["cover_path"])): w["id"] for w in works.values() if w["cover_path"]}
+        caches = {r["id"]: r for r in self.db.fetchall("SELECT id,work_id,status,accessed_at FROM archive_cache")}
+        active = {r["work_id"] for r in self.db.fetchall("""SELECT work_id FROM reading_sessions
+            WHERE ended_at IS NULL AND updated_at > datetime('now','-2 minutes')
+            UNION SELECT c.work_id FROM archive_cache c WHERE c.status IN ('queued','downloading','blocked') OR EXISTS
+            (SELECT 1 FROM archive_cache_leases l WHERE l.cache_id=c.id AND l.expires_at>?)""", (time.time(),))}
+        if self.cache:
+            active.update(wid for wid in works if self.cache.direct_in_use(wid))
+        entries = []
+        directories = {"cover": self.settings.covers_dir, "thumbnail": self.settings.thumbs_dir,
+                       "page": self.settings.page_cache_dir, "archive": self.settings.archive_cache_dir}
+        for category_name, directory in directories.items():
+            for path in sorted(directory.iterdir()):
+                if path.is_symlink() or not path.is_file():
+                    continue
+                match = re.match(r"^(\d+)(?:[-.]|$)", path.name)
+                number = int(match[1]) if match else None
+                cache = caches.get(number) if category_name == "archive" else None
+                if category_name == "archive":
+                    owner, linked = (cache["work_id"], True) if cache else (None, False)
+                elif category_name == "cover":
+                    owner = covers.get(str(path.resolve()))
+                    linked = owner is not None
+                else:
+                    owner, linked = number, number in works
+                work = works.get(owner)
+                state = "active" if linked and owner in active else "linked" if linked else "orphan"
+                try:
+                    stat = path.stat()
+                except FileNotFoundError:
+                    continue
+                entries.append({"kind": "derived", "id": f"derived-{path}", "path": str(path), "name": path.name,
+                    "category": category_name, "status": state, "size_bytes": stat.st_size,
+                    "updated_at": stat.st_mtime, "work_id": owner if work else None,
+                    "title": (work["pretty_title"] or work["title"]) if work else None, "cache_id": cache["id"] if cache else None})
+        summary = {"file_count": len(entries), "total_bytes": sum(e["size_bytes"] for e in entries),
+                   "orphan_count": sum(e["status"] == "orphan" for e in entries),
+                   "orphan_bytes": sum(e["size_bytes"] for e in entries if e["status"] == "orphan"),
+                   **{key: sum(e["category"] == key for e in entries) for key in directories}}
+        if work_id is not None:
+            entries = [e for e in entries if e["work_id"] == work_id]
+        if category != "all":
+            entries = [e for e in entries if e["category"] == category]
+        if status != "all":
+            entries = [e for e in entries if e["status"] == status]
+        if q.strip():
+            query = q.strip().casefold()
+            entries = [e for e in entries if query in (e["path"] + " " + (e["title"] or "")).casefold()]
+        page, per_page = max(1, page), max(1, min(500, per_page))
+        return {"result": entries[(page-1)*per_page:page*per_page], "total": len(entries),
+                "page": page, "per_page": per_page, "summary": summary, "data_dir": str(self.settings.data_dir)}
+
+    def _preview_derived(self, path_str: str) -> dict[str, Any]:
+        path = self._abs(path_str)
+        roots = {p.resolve() for p in (self.settings.covers_dir, self.settings.thumbs_dir,
+                 self.settings.page_cache_dir, self.settings.archive_cache_dir)}
+        result = {"kind": "derived", "path": path_str, "exists": False, "reclaim_bytes": 0,
+                  "warnings": [], "status": "forbidden"}
+        if not path or path.parent not in roots or Path(path_str).is_symlink():
+            return {**result, "warnings": ["只能清理应用数据目录中的普通派生文件"]}
+        if not path.is_file():
+            return {**result, "status": "already_gone", "warnings": ["already_gone"]}
+        portable = self.db.managed_path(path)
+        if self.db.fetchone("""SELECT 1 FROM works WHERE cover_path IN (?,?) UNION ALL
+            SELECT 1 FROM work_files WHERE path IN (?,?) LIMIT 1""", (str(path), portable, str(path), portable)):
+            return {**result, "exists": True, "warnings": ["当前封面或文件仍被作品引用；请通过元数据页管理关联，不可单独删除"]}
+        if self.db.fetchone("SELECT 1 FROM jobs WHERE type IN ('library_scan','remote_import') AND status IN ('queued','running','paused','cancelling') LIMIT 1"):
+            return {**result, "exists": True, "warnings": ["扫描或导入正在进行，请结束后再清理"]}
+        match = re.match(r"^(\d+)(?:[-.]|$)", path.name)
+        owner = int(match[1]) if match else None
+        cache = self.db.fetchone("SELECT id,work_id FROM archive_cache WHERE id=?", (owner,)) if path.parent == self.settings.archive_cache_dir.resolve() else None
+        owner = cache["work_id"] if cache else owner
+        try:
+            if owner is not None:
+                self._work_files(owner, keep_sources=True)
+        except (OSError, ValueError) as exc:
+            return {**result, "exists": True, "warnings": [str(exc)]}
+        paths = [path]
+        if cache:
+            paths = [self.settings.archive_cache_dir / f"{cache['id']}.{suffix}" for suffix in ("cbz", "part")]
+            paths.extend(self.settings.thumbs_dir.glob(f"{owner}-c{cache['id']}-*.jpg"))
+        if any(not self._within_managed(p) for p in paths):
+            return {**result, "exists": True, "warnings": ["关联缓存路径已变化，不能清理"]}
+        existing = [p for p in paths if p.is_file()]
+        return {**result, "exists": True, "status": "ready", "reclaim_bytes": sum(p.stat().st_size for p in existing),
+                "files": [str(p) for p in existing],
+                "cache_id": cache["id"] if cache else None, "work_id": owner,
+                "warnings": ["只删除派生文件；源文件、作品元数据和阅读进度均保留"]}
+
     # --- preview_delete cascade analysis (read-only) ----------------------
     def _work_files(self, work_id: int, keep_sources: bool = False, except_job_id: int | None = None) -> list[tuple[Path, dict[str, Any] | None]]:
         if self.db.fetchone("SELECT 1 FROM reading_sessions WHERE work_id=? AND ended_at IS NULL AND updated_at > datetime('now', '-2 minutes')", (work_id,)):
@@ -425,7 +518,9 @@ class FileMaintenanceService:
                 items.append(self._preview_work(int(target.get("work_id") or 0)))
             elif kind in ("orphan", "stale"):
                 items.append(self._preview_loose(kind, target.get("path") or ""))
-        files_to_delete = sum(len(i.get("files", [])) if i["kind"] == "work" else (1 if i.get("status") == "ready" else 0) for i in items)
+            elif kind == "derived":
+                items.append(self._preview_derived(target.get("path") or ""))
+        files_to_delete = sum(len(i["files"]) if "files" in i else (1 if i.get("status") == "ready" else 0) for i in items)
         works_to_remove = sum(1 for i in items if i["kind"] == "work" and i.get("status") == "ready")
         reclaim_bytes = sum(i["reclaim_bytes"] for i in items)
         return {"items": items, "files_to_delete": files_to_delete, "works_to_remove": works_to_remove, "reclaim_bytes": reclaim_bytes}
@@ -537,19 +632,29 @@ class FileMaintenanceService:
                         continue
                     connection.execute("DELETE FROM works WHERE id=?", (work_id,))
                     removed_works += 1
-            elif kind in ("orphan", "stale"):
+            elif kind in ("orphan", "stale", "derived"):
                 with self.db.connect() as connection:
                     connection.execute("BEGIN IMMEDIATE")
-                    preview = self._preview_loose(kind, target.get("path") or "")
+                    preview = self._preview_derived(target.get("path") or "") if kind == "derived" else self._preview_loose(kind, target.get("path") or "")
                     if preview["status"] == "forbidden":
                         errors.append({"target": target, "code": "forbidden_path", "message": "；".join(preview["warnings"])})
                         continue
                     if not preview["exists"]:
                         continue
                     path = Path(preview["path"])
-                    freed = self._unlink(path, target, errors)
-                    if freed is not None:
-                        deleted_files += 1
-                        reclaimed_bytes += freed
+                    paths = [path]
+                    if preview.get("cache_id"):
+                        cache_id = preview["cache_id"]
+                        paths = [self.settings.archive_cache_dir / f"{cache_id}.{suffix}" for suffix in ("cbz", "part")]
+                        paths.extend(self.settings.thumbs_dir.glob(f"{preview['work_id']}-c{cache_id}-*.jpg"))
+                    target_errors = []
+                    for candidate in paths:
+                        freed = self._unlink(candidate, target, target_errors)
+                        if freed is not None:
+                            deleted_files += 1
+                            reclaimed_bytes += freed
+                    errors.extend(target_errors)
+                    if preview.get("cache_id") and not target_errors:
+                        connection.execute("DELETE FROM archive_cache WHERE id=?", (preview["cache_id"],))
 
         return {"deleted_files": deleted_files, "removed_works": removed_works, "reclaimed_bytes": reclaimed_bytes, "errors": errors}

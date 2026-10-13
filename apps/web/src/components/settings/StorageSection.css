@@ -16,9 +16,9 @@
 .folio-library-directory-main > div > span { flex-shrink: 0; font-size: 13px; color: var(--folio-muted); }
 .folio-library-directory-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 8px 0; font-size: 13px; }
 .folio-library-directory-stats { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0; color: var(--folio-muted); font-size: 13px; }
-.folio-library-directory-stats button { min-height: 24px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.folio-library-directory-stats :is(button,a) { min-height: 24px; display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: none; cursor: pointer; }
 .folio-library-directory-stats button:hover { color: var(--folio-red); }
-.folio-library-directory-main > div > span.folio-media-error, .folio-library-directory-stats button.folio-media-error { color: var(--folio-red); }
+.folio-library-directory-main > div > span.folio-media-error, .folio-library-directory-stats :is(button,a).folio-media-error { color: var(--folio-red); }
 .folio-library-directory .folio-media-actions { gap: 6px; }
 .folio-library-directory .folio-settings-mini-action { padding-inline: 8px; }
 .folio-library-checks { grid-column: 1 / -1; padding: 18px 20px; border-left: 2px solid var(--folio-red); background: rgba(23, 24, 21, .025); min-width: 0; }
