@@ -95,7 +95,7 @@
 
 .folio-toggle-row {
   min-height: 68px;
-  padding: 13px 2px;
+  padding: 13px clamp(12px, 1.5vw, 20px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;

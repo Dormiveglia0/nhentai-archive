@@ -1043,8 +1043,8 @@
 .folio-reading-recent ol,
 .folio-reading-distribution ol { margin: 0; padding: 0; list-style: none; }
 .folio-reading-work-ranking li { border-bottom: 1px solid var(--folio-line); }
-.folio-reading-work-ranking li > a { min-height: 72px; padding: 8px 3px; display: grid; grid-template-columns: 25px 38px minmax(0, 1fr) auto 14px; align-items: center; gap: 10px; color: var(--folio-ink); text-decoration: none; transition: padding 180ms ease, background-color 180ms ease; }
-.folio-reading-work-ranking li > a:hover { padding-right: 9px; padding-left: 9px; background: var(--folio-red-soft); }
+.folio-reading-work-ranking li > a { min-height: 72px; padding: 8px 12px; display: grid; grid-template-columns: 25px 38px minmax(0, 1fr) auto 14px; align-items: center; gap: 10px; color: var(--folio-ink); text-decoration: none; transition: background-color 180ms ease; }
+.folio-reading-work-ranking li > a:hover { background: var(--folio-red-soft); }
 .folio-reading-work-ranking li > a > svg { color: var(--folio-red); opacity: 0; transform: translate(-5px, 5px); transition: opacity 180ms ease, transform 180ms ease; }
 .folio-reading-work-ranking li > a:hover > svg { opacity: 1; transform: translate(0); }
 .folio-reading-work-ranking li em { color: var(--folio-red); font: 11px Georgia, "Times New Roman", serif; font-style: normal; }

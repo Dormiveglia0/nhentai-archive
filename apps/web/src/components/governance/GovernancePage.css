@@ -1342,12 +1342,12 @@
 
   .folio-governance-check-card {
     min-height: 0;
-    padding: 17px 0;
+    padding: 17px 12px;
   }
 
   .folio-governance-check-card::before {
-    right: 0;
-    left: 0;
+    right: 12px;
+    left: 12px;
   }
 
   .folio-governance-review-reopen {
