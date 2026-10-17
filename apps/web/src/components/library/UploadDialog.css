@@ -1,0 +1,26 @@
+.folio-library-toolbar-top { display: flex; align-items: center; gap: 16px; }
+.folio-library-toolbar-top > form { flex: 1; min-width: 0; }
+.folio-library-toolbar-top > button { flex-shrink: 0; }
+.folio-upload { width: min(880px, calc(100vw - 32px)); }
+.folio-upload-body { padding: 24px 28px; }
+.folio-upload .folio-upload-body fieldset { padding: 0; }
+.folio-upload-file { display: grid; justify-items: center; gap: 12px; padding: 24px 16px; border: 1px dashed var(--folio-line-strong); margin-bottom: 24px; text-align: center; }
+.folio-upload-file strong { font-weight: 500; }
+.folio-upload-file > span { font-size: 12px; color: var(--folio-muted); }
+.folio-upload-file input { width: 100%; max-width: 320px; font-size: 13px; }
+.folio-upload-file input::file-selector-button { padding: 10px 12px; margin-right: 12px; border: 1px solid var(--folio-line); border-radius: 0; background: transparent; color: var(--folio-ink); cursor: pointer; }
+.folio-upload-success { display: flex; gap: 12px; align-items: start; margin: 0 0 24px; font-size: 14px; overflow-wrap: anywhere; }
+.folio-upload-success svg { flex-shrink: 0; margin-top: 2px; color: var(--folio-red); }
+.folio-upload-success small { display: block; margin-top: 8px; font-size: 12px; color: var(--folio-muted); }
+.folio-upload-tabs { display: flex; gap: 24px; margin-bottom: 20px; border-bottom: 1px solid var(--folio-line); }
+.folio-upload-tabs button { min-height: 44px; padding: 8px 0; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--folio-muted); font-size: 14px; }
+.folio-upload-tabs button[aria-pressed="true"] { color: var(--folio-red); border-bottom-color: var(--folio-red); }
+.folio-upload .folio-scrape-embedded { width: auto; max-height: none; padding: 0; margin: 0; border: 0; overflow: visible; background: transparent; }
+.folio-upload .folio-scrape-embedded header { position: static; padding: 16px 0 0; background: transparent; border: 0; }
+.folio-upload .folio-scrape-embedded h3 { margin: 0; padding: 0; border: 0; }
+@media (max-width: 700px) {
+  .folio-library-toolbar-top { flex-wrap: wrap; gap: 8px; }
+  .folio-library-toolbar-top > form { flex-basis: 100%; }
+  .folio-library-toolbar-top > button { margin-left: auto; }
+  .folio-upload-body { padding: 20px 18px; }
+}

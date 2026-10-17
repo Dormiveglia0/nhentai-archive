@@ -40,6 +40,7 @@ class ArchiveService:
         self, cbz_path: Path, source: str, title: str, remote_gallery_id: int | None, metadata: dict[str, Any],
         library_id: int | None = None,
         checkpoint: Callable[[], None] | None = None,
+        index_source: bool = False,
     ) -> int:
         # A scan must not create another work before the downloaded source is linked.
         while not self.libraries._source_lock.acquire(timeout=.2):
@@ -49,7 +50,7 @@ class ArchiveService:
             if checkpoint:
                 checkpoint()
             with self.cache._lock:
-                return self._ingest_cbz(cbz_path, source, title, remote_gallery_id, metadata, library_id)
+                return self._ingest_cbz(cbz_path, source, title, remote_gallery_id, metadata, library_id, index_source)
         finally:
             self.libraries._source_lock.release()
 
@@ -61,13 +62,14 @@ class ArchiveService:
         remote_gallery_id: int | None,
         metadata: dict[str, Any],
         library_id: int | None,
+        index_source: bool = False,
     ) -> int:
         target_library, target_root = self.libraries.download_write_root(library_id)
         cbz_path = Path(cbz_path)
         if not zipfile.is_zipfile(cbz_path):
             raise ValueError(f"{cbz_path} is not a valid CBZ/ZIP archive")
         indexed = None
-        if target_library["kind"] != "managed":
+        if index_source or target_library["kind"] != "managed":
             from app.services.archive_manifest import inspect_archive
             indexed = inspect_archive(cbz_path)
 
@@ -126,7 +128,7 @@ class ArchiveService:
                 if target_library["kind"] == "managed":
                     conn.execute("DELETE FROM work_files WHERE work_id = ? AND kind = 'source_cbz' AND library_item_id IS NULL", (work_id,))
                 conn.execute("DELETE FROM work_pages WHERE work_id = ?", (work_id,))
-                if target_library["kind"] == "managed":
+                if indexed is None:
                     conn.execute(
                         """INSERT INTO work_files (work_id, kind, path, size_bytes, sha256)
                         VALUES (?, 'source_cbz', ?, ?, ?)""",
@@ -164,7 +166,7 @@ class ArchiveService:
                         ON CONFLICT(library_item_id) WHERE library_item_id IS NOT NULL DO UPDATE SET
                         work_id=excluded.work_id, path=excluded.path, size_bytes=excluded.size_bytes,
                         sha256=excluded.sha256""",
-                        (work_id, str(stored_path), info.st_size, digest, library_item_id),
+                        (work_id, self.db.managed_path(stored_path) if target_library["kind"] == "managed" else str(stored_path), info.st_size, digest, library_item_id),
                     )
                     root_info = target_root.stat()
                     conn.execute(

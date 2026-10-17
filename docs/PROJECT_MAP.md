@@ -1,5 +1,13 @@
 # NH Archive Project Map
 
+## 网页上传与文件权限（2026-10-17）
+
+- `library/UploadDialog.tsx` 与 `UploadDialog.css`：我的库上传入口，ZIP / CBZ 目标库选择、自动匹配与手动填写；复用 `MetadataScrapePanel` 的搜索、候选比较和确认。
+- `POST /api/library/upload` → `upload_service.py`：流式接收、2 GB 上限、归档校验与临时目录回收，通过 `ArchiveService.ingest_cbz(index_source=True)` 保存 CBZ 并建立来源索引。上传后的匹配始终需确认；上传索引不进入后台自动刮削队列。无数据库迁移。
+- 媒体库配置新增 `allow_writeback` / `allow_delete`，仅挂载模式使用，默认关闭；删除预览、执行和治理回写分别检查对应权限。原有来源版本、在用保护与路径校验保留。
+- 文件标题左侧显示数量状态，右侧固定短文案操作；派生文件用“批量”进入整行选择，受保护记录仅显示原因。
+
+
 当前模块定位先读 [AGENT_MAP.md](AGENT_MAP.md)。当前状态见 [PROJECT_STATUS.md](PROJECT_STATUS.md)，本次页面布局记录见 [SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md)。媒体库架构和上一版发布证据分别见 [MEDIA_LIBRARY_UPDATE.md](MEDIA_LIBRARY_UPDATE.md)、[READER_MEDIA_EXPERIENCE_UPDATE.md](READER_MEDIA_EXPERIENCE_UPDATE.md)。
 
 ## 运行与部署
@@ -9,7 +17,7 @@
 - 开发源码目录为 `nhentai-dev`，测试数据在独立 `.local-data/`；正式部署 `/opt/nhentai` 仅保存 Compose、`data/` 和 `backups/`，不得提交源 CBZ、封面、缓存、密钥或数据库。
 - `.github/workflows/ci.yml` 每次推送/PR运行API测试、Web构建和 `scripts/smoke_image.py` 的隔离Compose检查；推送通过后发布GHCR分支/SHA标签，main同时发布latest，版本标签发布对应版本。
 - `Dockerfile` 构建前端并封装API运行模块；测试依赖独立在 `requirements-dev.txt`。`compose.yaml` 拉取已发布镜像，无本地build，固定列出容器名、`4349:8000` 和 `./data:/data`，自定义时直接编辑这几行。正式服务4349，健康检查 `/api/health`。
-- 正式部署使用注册表镜像并固定摘要。保存上一镜像与一致性 SQLite 备份，验证源文件、作品、进度、会话与认证保留；正式数据库不作为功能测试库。
+- 正式部署使用注册表 `:latest` 镜像，发布记录保存实际摘要用于核对与回滚。保存上一镜像与一致性 SQLite 备份，验证源文件、作品、进度、会话与认证保留；正式数据库不作为功能测试库。
 
 ## 后端所有者
 

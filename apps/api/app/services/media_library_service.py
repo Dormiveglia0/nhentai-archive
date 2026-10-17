@@ -24,6 +24,8 @@ LIBRARY_DEFAULTS = {
     "language_mode": "any",
     "language": "chinese",
     "cache_mode": "auto",
+    "allow_writeback": False,
+    "allow_delete": False,
 }
 
 
@@ -236,14 +238,22 @@ class MediaLibraryService:
         return {"removed": item_id, "source_file_deleted": False,
                 "work_id": item["work_id"], "work_metadata_preserved": item["work_id"] is not None}
 
-    def resolve_item(self, item_id: int, for_write: bool = False) -> tuple[Path, dict[str, Any]]:
+    @staticmethod
+    def can_modify(row: dict[str, Any], action: str) -> bool:
+        if action not in {"writeback", "delete"}:
+            raise ValueError("未知源文件操作")
+        if (row.get("library_kind") or row.get("kind")) == "mounted":
+            return json.loads(row.get("config_json") or "{}").get("allow_" + action) is True
+        return not row["read_only"]
+
+    def resolve_item(self, item_id: int, for_write: bool = False, action: str = "writeback") -> tuple[Path, dict[str, Any]]:
         row = self.db.fetchone(
             """SELECT i.*, l.root_path, l.resolved_root_path, l.kind, l.read_only, l.removed_at, l.config_json
             FROM library_items i JOIN media_libraries l ON l.id = i.library_id WHERE i.id = ?""", (item_id,),
         )
         if not row or row["removed_at"]:
             raise FileNotFoundError("作品源库已移除")
-        if for_write and (row["read_only"] or row["kind"] == "mounted"):
+        if for_write and not self.can_modify(row, action):
             raise PermissionError("该目录库只读，不能修改源文件")
         root = self.validate_root(Path(row["root_path"]), self.root_boundaries(row["library_id"]))
         if row["resolved_root_path"] and str(root) != row["resolved_root_path"]:
@@ -258,7 +268,7 @@ class MediaLibraryService:
             f"""SELECT f.*, i.manifest, i.status AS source_status, i.fingerprint,
             i.mtime_ns, i.device, i.inode, i.relative_path, l.id AS library_id,
             l.kind AS library_kind, l.root_path, l.resolved_root_path,
-            CASE WHEN l.kind = 'mounted' THEN 1 ELSE l.read_only END AS read_only, l.config_json
+            CASE WHEN l.kind = 'mounted' THEN NOT (COALESCE(json_extract(l.config_json, '$.allow_writeback'), 0) OR COALESCE(json_extract(l.config_json, '$.allow_delete'), 0)) ELSE l.read_only END AS read_only, l.config_json
             FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
             LEFT JOIN media_libraries l ON l.id = i.library_id
             WHERE f.work_id = ? AND f.kind = 'source_cbz'
@@ -274,9 +284,9 @@ class MediaLibraryService:
         rows = self.db.fetchall(
             "SELECT f.*," + (" i.metadata_json, i.archive_info_json," if metadata else "") + """ i.status AS source_status, i.mtime_ns, i.device, i.inode, i.fingerprint,
             l.id AS library_id, l.name AS library_name, l.kind AS library_kind,
-            l.root_path, CASE WHEN l.kind = 'mounted' THEN 1 ELSE COALESCE(l.read_only,
+            l.root_path, CASE WHEN l.kind = 'mounted' THEN NOT (COALESCE(json_extract(l.config_json, '$.allow_writeback'), 0) OR COALESCE(json_extract(l.config_json, '$.allow_delete'), 0)) ELSE COALESCE(l.read_only,
               (SELECT read_only FROM media_libraries WHERE kind = 'managed'), 1) END AS read_only,
-            l.removed_at
+            l.removed_at, l.config_json
             FROM work_files f LEFT JOIN library_items i ON i.id = f.library_item_id
             LEFT JOIN media_libraries l ON l.id = i.library_id"""
             + (" WHERE f.work_id = ?" if work_id is not None else "")
@@ -330,9 +340,9 @@ class MediaLibraryService:
             raise ValueError("不能扫描系统目录")
         return canonical
 
-    def resolve_file(self, row: dict[str, Any], for_write: bool = False) -> Path:
+    def resolve_file(self, row: dict[str, Any], for_write: bool = False, action: str = "writeback") -> Path:
         if row["library_item_id"]:
-            return self.resolve_item(row["library_item_id"], for_write)[0]
+            return self.resolve_item(row["library_item_id"], for_write, action)[0]
         path = Path(row["path"]).resolve()
         if for_write:
             managed = self.db.fetchone("SELECT * FROM media_libraries WHERE kind = 'managed'")
@@ -432,7 +442,7 @@ class MediaLibraryService:
         if not isinstance(value, dict) or set(value) - set(LIBRARY_DEFAULTS):
             raise ValueError("目录库配置包含未知选项")
         result = {**LIBRARY_DEFAULTS, **value}
-        for key in ("recursive", "watch", "include_hidden", "follow_symlinks", "auto_scrape", "auto_bind"):
+        for key in ("recursive", "watch", "include_hidden", "follow_symlinks", "auto_scrape", "auto_bind", "allow_writeback", "allow_delete"):
             if not isinstance(result[key], bool):
                 raise ValueError(f"{key}必须是开关")
         for key, lower, upper in (("scan_interval_seconds", 10, 86400), ("stable_seconds", 0, 600), ("io_timeout_seconds", 5, 600)):

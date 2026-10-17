@@ -267,3 +267,19 @@ def test_source_change_during_auto_review_keeps_new_attempt_pending(tmp_path, mo
     row = db.fetchone("SELECT * FROM library_items WHERE id = ?", (item["id"],))
     assert row["scrape_status"] == "pending" and row["scrape_result_json"] is None
     assert json.loads(row["metadata_json"])["Title"] == "Changed Title"
+
+
+def test_upload_binding_choice_overrides_library_default_in_preview_and_apply(tmp_path):
+    db, _, _, _, _, item, _, service = _indexed_service(tmp_path, auto_bind=True)
+    owner = _work(db, "Already linked")
+    db.execute("UPDATE works SET remote_gallery_id=600 WHERE id=?", (owner,))
+    work_id = item["work_id"]
+    linked = service.preview([work_id], queries={work_id: "600"}, bind=True)["result"][0]
+    assert not linked["match"]["selectable"]
+    preview = service.preview([work_id], queries={work_id: "600"}, bind=False)["result"][0]
+    assert not preview["config"]["auto_bind"] and preview["match"]["selectable"]
+    assert db.fetchone("SELECT metadata_gallery_id FROM works WHERE id=?", (work_id,))["metadata_gallery_id"] is None
+    result = service.apply([{**preview["match"], "work_id": work_id, "version": preview["version"], "source": "manual_id", "bind": False}])
+    assert result["summary"]["updated"] == 1
+    work = db.fetchone("SELECT * FROM works WHERE id=?", (work_id,))
+    assert work["remote_gallery_id"] is None and work["metadata_gallery_id"] == 600

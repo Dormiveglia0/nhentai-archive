@@ -573,7 +573,7 @@ class GovernanceService:
         row = next((file for file in self.libraries.files(work_id) if file["kind"] == "source_cbz"), None)
         if not row:
             return False, ["源 CBZ 不存在或不是有效 ZIP"]
-        if row["read_only"] or row["library_kind"] == "mounted":
+        if not self.libraries.can_modify(row, "writeback"):
             return False, ["该目录库只读，不能修改源文件"]
         library_id = row["library_id"] or self.db.fetchone("SELECT id FROM media_libraries WHERE kind = 'managed'")["id"]
         if self.db.fetchone("""SELECT 1 FROM jobs WHERE type='reader_verify' AND status IN ('queued','running','paused','cancelling')
@@ -651,6 +651,7 @@ class GovernanceService:
                 if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
                     raise ValueError("源文件已变化，请重新扫描后重试")
                 os.replace(tmp_path, source_path)
+                info = source_path.stat()
                 connection.execute("UPDATE work_files SET sha256 = ?, size_bytes = ? WHERE id = ?", (new_sha256, info.st_size, row["id"]))
                 if row["library_item_id"]:
                     connection.execute("""UPDATE library_items SET size_bytes = ?, mtime_ns = ?, device = ?, inode = ?,
@@ -1223,7 +1224,7 @@ class GovernanceService:
             "sha256": row.get("sha256"),
             "created_at": row.get("created_at"),
             "exists": self.libraries.file_available(row),
-            "read_only": bool(row.get("read_only")),
+            "read_only": not self.libraries.can_modify(row, "writeback"),
             "library_name": row.get("library_name"),
         }
 

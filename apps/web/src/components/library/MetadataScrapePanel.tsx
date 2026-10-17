@@ -6,9 +6,9 @@ import { useNativeDialog } from "../../lib/useNativeDialog";
 import { ReaderBridgeControl } from "./ReaderBridgeControl";
 import "./MetadataScrapePanel.css";
 
-type Props = { workId: number; title: string; blurCovers: boolean; onApplied: () => void; onClose: () => void };
+type Props = { workId: number; title: string; blurCovers: boolean; onApplied: () => void; onClose: () => void; embedded?: boolean; autoSearch?: boolean; bind?: boolean; onBusyChange?: (busy: boolean) => void };
 
-export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onClose }: Props) {
+export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onClose, embedded = false, autoSearch = false, bind, onBusyChange }: Props) {
   const [query, setQuery] = useState(title);
   const [preview, setPreview] = useState<MetadataRefreshPreview["result"][number] | null>(null);
   const [chosen, setChosen] = useState<MetadataRefreshMatch | null>(null);
@@ -23,13 +23,13 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
   useEffect(() => {
     return () => { revision.current++; };
   }, []);
-  const dismiss = useNativeDialog(dialog, onClose, true, applying);
+  const dismiss = useNativeDialog(dialog, onClose, !embedded, applying);
 
   async function search() {
     const current = ++revision.current;
     setBusy(true); setError(""); setNotice(""); setPreview(null); setChosen(null);
     try {
-      const payload = await api.metadataRefreshPreview([workId], {}, { [workId]: query.trim() });
+      const payload = await api.metadataRefreshPreview([workId], {}, { [workId]: query.trim() }, bind);
       if (current !== revision.current) return;
       const row = payload.result[0];
       setPreview(row); setChosen(row.match);
@@ -38,23 +38,25 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
     } finally { if (current === revision.current) setBusy(false); }
   }
 
+  useEffect(() => { if (autoSearch) void search(); }, [autoSearch, workId, bind]);
+
   async function apply() {
     if (!chosen || !preview || chosen.selectable === false) return;
     const current = ++revision.current;
-    setBusy(true); setApplying(true); setError(""); setNotice("");
+    onBusyChange?.(true); setBusy(true); setApplying(true); setError(""); setNotice("");
     try {
-      const result = await api.metadataRefreshApply([{ ...chosen, source: "manual_id", work_id: workId, version: preview.version }]);
+      const result = await api.metadataRefreshApply([{ ...chosen, source: "manual_id", work_id: workId, version: preview.version, bind }]);
       if (current !== revision.current) return;
       const row = result.result[0];
       if (row?.status !== "updated") throw new Error(row?.reason || "更新失败，请重新搜索");
       setNotice("元数据已更新"); setPreview(null); setChosen(null); onApplied();
     } catch (exception) {
       if (current === revision.current) setError(exception instanceof Error ? exception.message : String(exception));
-    } finally { if (current === revision.current) { setBusy(false); setApplying(false); } }
+    } finally { if (current === revision.current) { setBusy(false); setApplying(false); onBusyChange?.(false); } }
   }
 
-  return createPortal(<dialog ref={dialog} className="folio-scrape" aria-label="刮削元数据" aria-busy={busy}>
-    <header><h3>刮削元数据</h3><button type="button" aria-label="关闭刮削" disabled={applying} onClick={dismiss}><X size={18} /></button></header>
+  const content = <>
+    <header><h3>{embedded ? "匹配远端作品" : "刮削元数据"}</h3>{!embedded ? <button type="button" aria-label="关闭刮削" disabled={applying} onClick={dismiss}><X size={18} /></button> : null}</header>
     <form onSubmit={event => { event.preventDefault(); event.stopPropagation(); void search(); }}>
       <input ref={input} data-dialog-focus autoFocus aria-label="作品名称或 ID" placeholder="作品名称或 ID" maxLength={240} value={query} disabled={busy}
         onChange={event => { revision.current++; setQuery(event.target.value); setPreview(null); setChosen(null); setError(""); setNotice(""); }} />
@@ -62,7 +64,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
     </form>
     {error ? <p className="folio-scrape-error" role="alert">{error}</p> : null}
     {notice ? <p role="status"><Check size={16} />{notice}</p> : null}
-    <ReaderBridgeControl key={notice} workId={workId} />
+    {!embedded ? <ReaderBridgeControl key={notice} workId={workId} /> : null}
     {preview ? <>
       {preview.candidates.length ? <div className="folio-scrape-results">
         <div className="folio-scrape-candidates" aria-label="匹配候选">
@@ -88,7 +90,8 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
         </div> : null}
       </div> : <p role="status">{preview.reason || "没有匹配的作品"}</p>}
     </> : null}
-  </dialog>, document.querySelector(".folio") ?? document.body);
+  </>;
+  return embedded ? <section className="folio-scrape folio-scrape-embedded" aria-busy={busy}>{content}</section> : createPortal(<dialog ref={dialog} className="folio-scrape" aria-label="刮削元数据" aria-busy={busy}>{content}</dialog>, document.querySelector(".folio") ?? document.body);
 }
 
 function DiffTable({ diffs }: { diffs: NonNullable<MetadataRefreshMatch["diffs"]> }) {

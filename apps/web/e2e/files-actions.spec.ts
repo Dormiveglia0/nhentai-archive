@@ -17,37 +17,46 @@ for (const width of [1440, 1365, 390, 320]) {
     const rows = page.locator(".folio-files-row");
     const count = await rows.count();
     if (count) {
-      await actions.getByRole("button", { name: "全选本页", exact: true }).click();
+      await actions.getByRole("button", { name: "全选", exact: true }).click();
       await expect(page.locator('.folio-files-select[aria-pressed="true"]')).toHaveCount(count);
-      await actions.getByRole("button", { name: "预览删除影响" }).click();
+      await actions.getByRole("button", { name: "删除" }).click();
       const dialog = page.getByRole("dialog", { name: "确认删除" });
       await expect(dialog).toBeVisible();
       await dialog.getByRole("button", { name: "取消" }).click();
-      await expect(actions.getByRole("button", { name: "预览删除影响" })).toBeFocused();
-      await actions.getByRole("button", { name: "取消本页全选" }).click();
+      await expect(actions.getByRole("button", { name: "删除" })).toBeFocused();
+      await actions.getByRole("button", { name: "全选" }).click();
       await expect(page.locator('.folio-files-select[aria-pressed="true"]')).toHaveCount(0);
     } else {
-      await expect(actions.getByRole("button", { name: "全选本页", exact: true })).toBeDisabled();
+      await expect(actions.getByRole("button", { name: "全选", exact: true })).toBeDisabled();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
     await page.goto("/#files?view=derived");
     await expect(page.locator(".folio-data-list")).toHaveAttribute("aria-busy", "false");
-    const checkboxes = page.locator('.folio-derived-record input[type="checkbox"]:enabled');
-    const selectable = await checkboxes.count();
+    await expect(page.locator('.folio-derived-files input[type="checkbox"]')).toHaveCount(0);
     const batch = page.getByRole("group", { name: "派生文件批量操作" });
+    const batchButton = batch.getByRole("button", { name: "批量", exact: true });
+    const hasSelectable = await batchButton.isEnabled();
+    if (hasSelectable) await batchButton.click();
+    const selectable = await page.locator('.folio-derived-row-select').count();
     if (selectable) {
-      await batch.getByRole("button", { name: "全选本页可清理项" }).click();
-      await expect(page.locator('.folio-derived-record input:checked')).toHaveCount(selectable);
-      await expect(page.locator('.folio-derived-record input:disabled:checked')).toHaveCount(0);
-      await batch.getByRole("button", { name: "预览批量清理" }).click();
-      const dialog = page.getByRole("dialog", { name: "确认删除" });
-      await expect(dialog).toBeVisible();
+      const selectAll = batch.getByRole("button", { name: "全选", exact: true });
+      const before = await selectAll.boundingBox();
+      await selectAll.click();
+      await expect(page.locator('.folio-derived-row-select[aria-pressed="true"]')).toHaveCount(selectable);
+      expect(await selectAll.boundingBox()).toEqual(before);
+      await batch.getByRole("button", { name: "清理", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "确认删除" })).toBeVisible();
       await page.keyboard.press("Escape");
-      await expect(batch.getByRole("button", { name: "预览批量清理" })).toBeFocused();
-      await page.getByRole("button", { name: "刷新派生文件列表" }).click();
-      await expect(page.locator('.folio-derived-record input:checked')).toHaveCount(0);
+      await expect(batch.getByRole("button", { name: "清理", exact: true })).toBeFocused();
+      await batch.getByRole("button", { name: "清空", exact: true }).click();
+      await expect(page.locator('.folio-derived-row-select[aria-pressed="true"]')).toHaveCount(0);
+      const first = page.locator('.folio-derived-row-select').first();
+      await first.focus();
+      await page.keyboard.press("Space");
+      await expect(first).toHaveAttribute("aria-pressed", "true");
     }
+    if (hasSelectable) await batch.getByRole("button", { name: "完成", exact: true }).click();
     const view = page.getByRole("button", { name: "查看文件", exact: true }).first();
     if (await view.count()) {
       await view.click();

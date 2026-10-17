@@ -1,6 +1,6 @@
 import { AlertTriangle, Clock3, Grid2X2, Info, Library, List } from "lucide-react";
 import { AnimatePresence, m } from "motion/react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { duration, ease, SlidingIndicator, Stagger, StaggerItem } from "../../lib/motion";
 import { pageHref } from "../../lib/navigation";
@@ -10,6 +10,7 @@ import { FolioEmptyState, FolioPanelHeading } from "../folio/ui/FolioPrimitives"
 import { ContinueReadingRow } from "../folio/ui/ContinueReadingRow";
 import { LibraryBatchTray } from "./LibraryBatchTray";
 import { LibrarySummaryStrip } from "./LibrarySummaryStrip";
+import { UploadDialog } from "./UploadDialog";
 import { LibraryToolbar } from "./LibraryToolbar";
 import { WorkCard } from "./WorkCard";
 import { WorkInspector } from "./WorkInspector";
@@ -17,6 +18,7 @@ import { useLibraryState } from "./useLibraryState";
 import "./LibraryPage.css";
 
 export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
+  const [uploading, setUploading] = useState(false);
   const [gridRef, gridColumns] = useGridColumns();
   const library = useLibraryState(completeGridRows(24, gridColumns));
   const closeInspector = useCallback(() => library.setSelected(null), [library.setSelected]);
@@ -29,6 +31,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
   return (
     <section className="folio-page-body folio-library-page">
       <LibraryToolbar
+        onUpload={() => setUploading(true)}
         q={library.q}
         onQ={library.setQ}
         language={library.language}
@@ -62,7 +65,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
           <FolioEmptyState
             icon={Library}
             title="库里还没有作品"
-            copy="添加媒体库，或从发现页导入漫画。"
+            copy="上传 ZIP / CBZ、添加媒体库，或从发现页导入漫画。"
             action="添加媒体库"
             actionHref="#files"
           />
@@ -181,6 +184,7 @@ export function LibraryPage({ blurCovers }: { blurCovers: boolean }) {
 
         </div>
       ) : null}
+      {uploading ? <UploadDialog blurCovers={blurCovers} onClose={() => setUploading(false)} onImported={library.reload} /> : null}
       <AnimatePresence>
         {library.selected ? <WorkInspector
             work={library.selected}

@@ -112,7 +112,7 @@ class FileMaintenanceService:
                     "source_status": frow.get("source_status") if frow else None,
                     "library_id": frow.get("library_id") if frow else None,
                     "library_name": frow.get("library_name") if frow else None,
-                    "read_only": bool(frow and frow.get("read_only")),
+                    "read_only": bool(frow and not self.libraries.can_modify(frow, "delete")),
                 }
             )
 
@@ -424,7 +424,7 @@ class FileMaintenanceService:
             if row["kind"] == "source_cbz" and (keep_sources or row.get("removed_at")):
                 continue
             source = row if row["kind"] == "source_cbz" else None
-            ap = self.libraries.resolve_file(row, for_write=True) if source else self._abs(row["path"])
+            ap = self.libraries.resolve_file(row, for_write=True, action="delete") if source else self._abs(row["path"])
             if ap is not None:
                 paths.append((ap, source))
         cover = self.db.fetchone("SELECT cover_path FROM works WHERE id=?", (work_id,))
@@ -549,7 +549,7 @@ class FileMaintenanceService:
     def _unlink(self, path: Path, target: dict[str, Any], errors: list[dict[str, Any]], source: dict[str, Any] | None = None) -> int | None:
         if source:
             try:
-                if self.libraries.resolve_file(source, for_write=True) != path:
+                if self.libraries.resolve_file(source, for_write=True, action="delete") != path:
                     raise PermissionError("源文件路径已变化")
             except (OSError, ValueError) as exc:
                 errors.append({"target": target, "code": "forbidden_path", "message": str(exc)})

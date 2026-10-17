@@ -56,13 +56,15 @@ class MetadataRefreshService:
         return {"work": work, "file": file, "decisions": decisions, "tags": tags, "config": config, "metadata": metadata, "version": version}
 
     def preview(self, work_ids: list[int], gallery_ids: dict[int, int] | None = None,
-                queries: dict[int, str] | None = None) -> dict[str, Any]:
+                queries: dict[int, str] | None = None, bind: bool | None = None) -> dict[str, Any]:
         ids = list(dict.fromkeys(int(value) for value in work_ids if int(value) > 0))
         if not ids or len(ids) > MAX_BATCH:
             raise ValueError(f"请选取1至{MAX_BATCH}部作品")
         result = []
         for work_id in ids:
             snapshot = self._snapshot(work_id)
+            if bind is not None:
+                snapshot["config"] = {**snapshot["config"], "auto_bind": bind}
             query = str((queries or {}).get(work_id) or "").strip()
             if len(query) > 240:
                 raise ValueError("搜索名称最多240字")

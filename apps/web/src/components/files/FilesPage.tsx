@@ -1,4 +1,4 @@
-import { AlertCircle, CircleCheck, Files, Folder, ArrowRightLeft, Database, Image, SearchCheck, X } from "lucide-react";
+import { AlertCircle, CircleCheck, Files, Folder, ArrowRightLeft, Database, Image } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { FadeIn, SlidingIndicator, transitionTabs, usePrefersReducedMotion } from "../../lib/motion";
@@ -90,13 +90,15 @@ function FileInventory({ blurCovers }: { blurCovers: boolean }) {
 
       <FadeIn className="folio-files-layout" y={8}>
         <section className="folio-files-main" aria-labelledby="folio-files-list-title">
-          <header className="folio-files-column-head">
-            <h2 id="folio-files-list-title">文件清单 <small>{total} 项</small></h2>
+          <header className="folio-files-column-head folio-files-list-headbar">
+            <div className="folio-files-list-heading">
+              <h2 id="folio-files-list-title">文件清单</h2>
+              <span aria-live="polite">{total} 项 · 已选 {files.selected.size}</span>
+            </div>
             <div className="folio-files-list-actions" role="group" aria-label="文件批量操作">
-              <button className="folio-line-button" type="button" disabled={files.loading || files.busy || !entries.length} onClick={files.selected.size === entries.length ? files.clearSelection : files.selectPage}>{entries.length > 0 && files.selected.size === entries.length ? "取消本页全选" : "全选本页"}</button>
-              <span aria-live="polite">已选 {files.selected.size} 项</span>
-              <button className="folio-line-button" type="button" onClick={files.previewSelected} disabled={files.loading || files.busy || !files.selected.size}><SearchCheck size={15} />预览删除影响</button>
-              <button className="folio-line-button" type="button" onClick={files.clearSelection} disabled={files.busy || !files.selected.size} aria-label="清空选择" title="清空选择"><X size={15} /></button>
+              <button className="folio-line-button" type="button" title="选择或取消选择本页全部文件" aria-pressed={entries.length > 0 && files.selected.size === entries.length} disabled={files.loading || files.busy || !entries.length} onClick={files.selected.size === entries.length ? files.clearSelection : files.selectPage}>全选</button>
+              <button className="folio-line-button" type="button" onClick={files.clearSelection} disabled={files.busy || !files.selected.size}>清空</button>
+              <button className="folio-line-button" type="button" title="预览删除影响" onClick={files.previewSelected} disabled={files.loading || files.busy || !files.selected.size}>删除</button>
             </div>
           </header>
           <FileList

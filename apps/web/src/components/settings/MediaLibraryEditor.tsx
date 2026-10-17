@@ -52,7 +52,7 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
     }
   }
 
-  function toggle(key: "recursive" | "watch" | "auto_scrape" | "auto_bind" | "include_hidden" | "follow_symlinks", checked: boolean) {
+  function toggle(key: "recursive" | "watch" | "auto_scrape" | "auto_bind" | "allow_writeback" | "allow_delete" | "include_hidden" | "follow_symlinks", checked: boolean) {
     setConfig(value => ({ ...value, [key]: checked }));
   }
 
@@ -79,7 +79,11 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
           <div className="folio-toggle-list">
             <FolioToggleRow label="启用此库" copy="暂停后保留作品信息，停止自动扫描与刮削。" checked={enabled} onChange={setEnabled} />
             {kind === "mounted"
-              ? <FolioToggleRow label="允许存入下载作品" copy="只会新增下载完成的 CBZ；不会回写或删除已有挂载源文件。请确认 rclone 挂载本身可写。" checked={!readOnly} onChange={allowed => setReadOnly(!allowed)} />
+              ? <>
+                  <FolioToggleRow label="允许存入下载作品" copy="将下载完成的 CBZ 存入此目录。" checked={!readOnly} onChange={allowed => setReadOnly(!allowed)} />
+                  <FolioToggleRow label="允许回写 CBZ" copy="将整理后的元数据写入已有 CBZ，需要挂载目录可写。" checked={config.allow_writeback} onChange={value => toggle("allow_writeback", value)} />
+                  <FolioToggleRow label="允许删除源文件" copy="允许确认删除时移除网盘中的原文件，不能通过清理缓存恢复。" checked={config.allow_delete} onChange={value => toggle("allow_delete", value)} />
+                </>
               : <FolioToggleRow label="源文件只读" copy="关闭后允许文件管理删除与治理回写源文件。" checked={readOnly} onChange={setReadOnly} />}
           </div>
           <h3>扫描与监控</h3>

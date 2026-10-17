@@ -84,14 +84,17 @@
   .folio-metadata-detail-actions .folio-data-status { width: fit-content; margin-right: 0; }
 }
 
-.folio-derived-files .folio-data-list-head { align-items: center; flex-wrap: wrap; }
-.folio-derived-files .folio-data-list-head h3 small { color: var(--folio-muted); font-size: 12px; font-weight: 400; }
-.folio-derived-record { position: relative; cursor: pointer; display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
-.folio-derived-record input[type="checkbox"] { position: absolute; width: 18px; height: 18px; left: 0; opacity: 0; }
-.folio-derived-record > .folio-files-check { flex-shrink: 0; margin-top: 2px; }
-.folio-derived-record input:checked + .folio-files-check { background: var(--folio-red); border-color: var(--folio-red); }
-.folio-derived-record input:focus-visible + .folio-files-check { outline: 2px solid var(--folio-red); outline-offset: 3px; }
-.folio-derived-record input:disabled + .folio-files-check { opacity: .4; }
+.folio-derived-selection-hint { margin: 12px 0; color: var(--folio-muted); font-size: 12px; line-height: 1.6; }
+.folio-derived-files .folio-data-list > li { position: relative; transition: background-color 180ms ease; }
+.folio-derived-files .folio-data-list > li:has(.folio-derived-row-select:hover) { background: var(--folio-paper-deep); }
+.folio-derived-files .folio-data-list > li.is-selected { background: var(--folio-red-soft); box-shadow: inset 2px 0 var(--folio-red); }
+.folio-derived-row-select { position: absolute; inset: 0; width: 100%; border: 0; background: transparent; }
+.folio-derived-selection-state { min-width: 88px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--folio-muted); font-size: 13px; white-space: nowrap; }
+.folio-derived-files .is-selected .folio-derived-selection-state { color: var(--folio-red); }
+.folio-derived-protected { align-self: center; color: var(--folio-muted); font-size: 12px; padding-inline: 4px; }
+@media (max-width: 600px) {
+  .folio-derived-selection-state { justify-content: flex-start; }
+}
 .folio-derived-viewer h2 { overflow-wrap: anywhere; }
 .folio-derived-preview { padding: 20px; }
 .folio-derived-preview > p { color: var(--folio-muted); font-size: 13px; }

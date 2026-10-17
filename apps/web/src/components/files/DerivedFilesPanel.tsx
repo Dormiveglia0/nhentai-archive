@@ -1,4 +1,4 @@
-import { Archive, ArrowUpRight, Image, RefreshCw, SearchCheck, Unlink, Eye, Download, X, Check } from "lucide-react";
+import { Archive, ArrowUpRight, Image, RefreshCw, Unlink, Eye, Download, X, Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { api, type DerivedEntry, type DerivedInventory, type FileDeletePreview } from "../../lib/api";
@@ -27,6 +27,7 @@ export function DerivedFilesPanel() {
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
   const [targets, setTargets] = useState<DerivedEntry[]>([]);
+  const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [viewing, setViewing] = useState<DerivedEntry | null>(null);
   const [preview, setPreview] = useState<FileDeletePreview | null>(null);
@@ -91,22 +92,37 @@ export function DerivedFilesPanel() {
     <div className="folio-data-filters"><FolioSearchField value={query} onChange={setQuery} placeholder="搜索派生文件路径或作品标题" /><FolioSelect label="派生文件类型" value={filter.category} options={CATEGORIES} onChange={category => changeFilter({ ...filter, category })} /><FolioSelect label="关联状态" value={filter.status} options={STATUSES} onChange={status => changeFilter({ ...filter, status })} /></div>
     {filter.work ? <p className="folio-data-footnote">正在查看作品 #{filter.work} 的派生文件。<button className="folio-line-button" type="button" onClick={() => changeFilter({ ...filter, work: "" })}>查看全部作品</button></p> : null}
     {(error || loadError) && !preview ? <p className="folio-media-error" role="alert">{error || loadError}</p> : null}{notice ? <p className="folio-data-notice" role="status">{notice}</p> : null}
-    <div className="folio-data-list-head"><h3>实际文件清单 <small>{loading ? "正在读取…" : `${inventory?.total ?? 0} 个文件`}</small></h3>
+    <div className="folio-data-list-head folio-files-list-headbar">
+      <div className="folio-files-list-heading">
+        <h3>文件清单</h3>
+        <span aria-live="polite">{loading ? "正在读取…" : `${inventory?.total ?? 0} 项`}{selecting ? ` · 已选 ${selected.size}` : ""}</span>
+      </div>
       <div className="folio-files-list-actions" role="group" aria-label="派生文件批量操作">
-        <button className="folio-line-button" type="button" disabled={loading || busy || !selectable.length} onClick={() => setSelected(allSelected ? new Set() : new Set(selectable.map(entry => entry.id)))}>{allSelected ? "取消本页全选" : "全选本页可清理项"}</button>
-        <span aria-live="polite">已选 {selected.size} 项</span>
-        <button className="folio-line-button" type="button" disabled={loading || busy || !selected.size} onClick={event => void prepare(selectable.filter(entry => selected.has(entry.id)), event.currentTarget)}><SearchCheck size={15} />预览批量清理</button>
-        <button className="folio-line-button" type="button" disabled={busy || !selected.size} aria-label="清空选择" title="清空选择" onClick={() => setSelected(new Set())}><X size={15} /></button>
+        {selecting ? <>
+          <button className="folio-line-button" type="button" title="选择或取消选择本页可清理文件" aria-pressed={allSelected} disabled={loading || busy || !selectable.length} onClick={() => setSelected(allSelected ? new Set() : new Set(selectable.map(entry => entry.id)))}>全选</button>
+          <button className="folio-line-button" type="button" disabled={busy || !selected.size} onClick={() => setSelected(new Set())}>清空</button>
+          <button className="folio-line-button" type="button" title="预览清理影响" disabled={loading || busy || !selected.size} onClick={event => void prepare(selectable.filter(entry => selected.has(entry.id)), event.currentTarget)}>清理</button>
+        </> : null}
+        <button className="folio-line-button" type="button" aria-pressed={selecting} disabled={busy || (!selecting && (loading || !selectable.length))} onClick={() => { setSelecting(value => !value); setSelected(new Set()); }}>{selecting ? "完成" : "批量"}</button>
       </div>
     </div>
-    <ul className="folio-data-list" aria-busy={loading}>{inventory?.result.map(entry => <li key={entry.id} data-path={entry.path}>
-      <label className="folio-derived-record">
-        <input type="checkbox" aria-label={`选择 ${entry.name}`} checked={selected.has(entry.id)} disabled={loading || busy || !selectable.includes(entry)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(entry.id)) next.delete(entry.id); else next.add(entry.id); return next; })} />
-        <span className="folio-files-check" aria-hidden="true">{selected.has(entry.id) ? <Check size={12} /> : null}</span>
-        <div className="folio-data-record"><span className="folio-data-record-kind">{CATEGORIES.find(item => item.value === entry.category)?.label}</span><strong>{entry.name}</strong><code className="folio-data-path">{entry.path}</code>{entry.title ? <span className="folio-data-title">{entry.title}</span> : null}</div></label>
-      <div className="folio-data-record-state"><span className={`folio-data-status is-${entry.status}`}>{STATUSES.find(item => item.value === entry.status)?.label}</span><span>{formatBytes(entry.size_bytes)}</span><small>{new Date(entry.updated_at * 1000).toLocaleString()}</small></div>
-      <div className="folio-data-row-actions"><button className="folio-line-button" type="button" onClick={() => setViewing(entry)}><Eye size={15} />查看文件</button>{entry.work_id ? <a className="folio-line-button" href={`#files?view=metadata&work_id=${entry.work_id}`}>查看所属资料<ArrowUpRight size={15} /></a> : null}<button className="folio-line-button" type="button" disabled={loading || busy || !selectable.includes(entry)} onClick={event => void prepare([entry], event.currentTarget)}><SearchCheck size={15} />预览清理</button></div>
-    </li>)}</ul>
+    {selecting ? <p className="folio-derived-selection-hint">点击文件行选择；全选仅作用于本页可清理文件。</p> : null}
+    <ul className="folio-data-list" aria-busy={loading}>{entries.map(entry => {
+      const canSelect = selectable.includes(entry);
+      const protectedReason = entry.status === "active" ? "正在使用" : "当前封面保留";
+      return <li key={entry.id} data-path={entry.path} className={selected.has(entry.id) ? "is-selected" : ""}>
+        <div className="folio-data-record"><span className="folio-data-record-kind">{CATEGORIES.find(item => item.value === entry.category)?.label}</span><strong>{entry.name}</strong><code className="folio-data-path">{entry.path}</code>{entry.title ? <span className="folio-data-title">{entry.title}</span> : null}</div>
+        <div className="folio-data-record-state"><span className={`folio-data-status is-${entry.status}`}>{STATUSES.find(item => item.value === entry.status)?.label}</span><span>{formatBytes(entry.size_bytes)}</span><small>{new Date(entry.updated_at * 1000).toLocaleString()}</small></div>
+        {selecting ? <>
+          <span className="folio-derived-selection-state">{canSelect ? selected.has(entry.id) ? <><Check size={16} />已选</> : "点击选择" : protectedReason}</span>
+          {canSelect ? <button type="button" className="folio-derived-row-select" aria-label={`选择 ${entry.name}`} aria-pressed={selected.has(entry.id)} disabled={loading || busy} onClick={() => setSelected(current => { const next = new Set(current); if (next.has(entry.id)) next.delete(entry.id); else next.add(entry.id); return next; })} /> : null}
+        </> : <div className="folio-data-row-actions">
+          <button className="folio-line-button" type="button" onClick={() => setViewing(entry)}><Eye size={15} />查看文件</button>
+          {entry.work_id ? <a className="folio-line-button" href={`#files?view=metadata&work_id=${entry.work_id}`}>查看所属资料<ArrowUpRight size={15} /></a> : null}
+          {canSelect ? <button className="folio-line-button" type="button" disabled={loading || busy} onClick={event => void prepare([entry], event.currentTarget)}>清理</button> : <span className="folio-derived-protected">{protectedReason}</span>}
+        </div>}
+      </li>;
+    })}</ul>
     {!loading && !inventory?.result.length ? <p className="folio-data-empty">没有符合筛选条件的派生文件。</p> : null}
     <IconPager className="folio-files-pager" page={page} totalPages={Math.max(1, Math.ceil((inventory?.total ?? 0) / (inventory?.per_page ?? 50)))} loading={loading} onPage={setPage} />
     <p className="folio-data-footnote">实际存储：<code>{inventory?.data_dir ?? "正在读取…"}</code>。在用文件和当前封面受保护。清理缓存不清除作品元数据，所需缩略图会在再次读取时生成。</p>

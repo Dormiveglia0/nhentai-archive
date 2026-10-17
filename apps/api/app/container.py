@@ -12,6 +12,7 @@ from app.services.file_service import FileMaintenanceService
 from app.services.local_metadata_service import LocalMetadataService
 from app.services.governance_service import GovernanceService
 from app.services.import_service import ImportService
+from app.services.upload_service import UploadService
 from app.services.job_service import JobService
 from app.services.library_scan_job_service import LibraryScanJobService
 from app.services.library_scan_service import LibraryScanService
@@ -84,6 +85,7 @@ def build_services() -> SimpleNamespace:
         files=files,
         local_metadata=LocalMetadataService(files, media_libraries),
         imports=imports,
+        uploads=UploadService(archive),
         export_jobs=export_jobs,
         library_scan=library_scan,
         library_scan_jobs=library_scan_jobs,

@@ -861,6 +861,8 @@ export type MediaLibraryConfig = {
   follow_symlinks: boolean;
   exclude_patterns: string[];
   auto_scrape: boolean;
+  allow_writeback: boolean;
+  allow_delete: boolean;
   auto_bind: boolean;
   language_mode: "any" | "strict" | "prefer";
   language: "chinese" | "japanese" | "english";
@@ -1447,11 +1449,11 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ work_ids, actions })
     }).then(clearDiscoverCache),
-  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}) =>
+  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}, bind?: boolean) =>
     request<MetadataRefreshPreview>("/api/governance/metadata-refresh/preview", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ work_ids, gallery_ids, queries })
+      body: JSON.stringify({ work_ids, gallery_ids, queries, bind })
     }),
   metadataRefreshApply: (matches: Array<{ work_id: number; version?: string; query?: string; bind?: boolean } & MetadataRefreshMatch>) =>
     request<MetadataRefreshResult>("/api/governance/metadata-refresh/apply", {
@@ -1524,6 +1526,12 @@ export const api = {
     query.set("page", String(params.page ?? 1));
     return request<DerivedInventory>(`/api/files/derived?${query}`);
   },
+  uploadArchive: (file: File, libraryId: string) => request<{
+    work_id: number; title: string; filename: string; page_count: number; warnings: string[];
+    metadata: Record<string, string>;
+  }>(`/api/library/upload?${new URLSearchParams({ filename: file.name, library_id: libraryId })}`, {
+    method: "POST", headers: { "Content-Type": "application/zip" }, body: file,
+  }),
   filesInventory: (params: FileInventoryParams = {}) => {
     const query = new URLSearchParams();
     query.set("category", params.category ?? "all");

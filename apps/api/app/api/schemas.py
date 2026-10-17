@@ -100,6 +100,7 @@ class GovernanceBulkRequest(BaseModel):
 
 
 class MetadataRefreshPreviewRequest(BaseModel):
+    bind: bool | None = None
     work_ids: list[int] = Field(default_factory=list, max_length=50)
     gallery_ids: dict[int, int] = Field(default_factory=dict, max_length=50)
     queries: dict[int, str] = Field(default_factory=dict, max_length=50)

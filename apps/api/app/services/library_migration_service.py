@@ -115,7 +115,7 @@ class LibraryMigrationService:
 
     def _move_allowed(self, work_id, source, path, job_id=None):
         self.files._work_files(work_id, keep_sources=True, except_job_id=job_id)
-        self.libraries.resolve_file(source, for_write=True)
+        self.libraries.resolve_file(source, for_write=True, action="delete")
         if self.db.fetchone("SELECT 1 FROM work_files WHERE kind='source_cbz' AND work_id <> ? AND path IN (?, ?)",
                             (work_id, str(path), self.db.managed_path(path))):
             raise ValueError("源文件被其他作品引用，不能移动")

@@ -65,3 +65,5 @@ PYTHONPATH=apps/api .venv/bin/pytest apps/api/tests -q
 前端使用隔离真实副本与 `E2E_BASE_URL` / `E2E_STORAGE_STATE`。1440×1000、1365×768、390×844 必验，320及横屏针对布局边界复验。核心用 `site-layout-refinement.spec.ts`、`home-gallery.spec.ts`；全站滑动用 `site-audit.spec.ts`；冷加载与快速打断用 `scene-motion.spec.ts`。截图必须等待真实图片解码，并检查动画中间帧、焦点、滚动、控制台与性能。
 
 连续阅读的已保存进度另用 `reader-scroll.spec.ts`：实际长作品从第40页进入，桌面/手机及原图/适宽/适高，延迟前一页图片响应；另用 `E2E_LANDSCAPE_WORK_ID` 检查实际26页横向封面作品第20页和末页的原图恢复，以及图片加载中主动滚动；全过程不得改写为其他页或请求全书。与 `reader.spec.ts`、`reader-bridge.spec.ts` 分组复验。
+
+- 网页上传：`library/UploadDialog.tsx` / `UploadDialog.css`，复用 `MetadataScrapePanel` 的嵌入模式；服务入口 `POST /api/library/upload` → `services/upload_service.py`。

@@ -1,4 +1,4 @@
-import { ChevronDown, Heart, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, Heart, RotateCcw, Search, SlidersHorizontal, Upload, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { LibrarySummary, MediaLibrary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
@@ -9,6 +9,7 @@ import { READ_STATUS_OPTIONS, SORT_OPTIONS } from "./libraryHelpers";
 export type LibraryView = "grid" | "list";
 
 type Props = {
+  onUpload: () => void;
   q: string;
   onQ: (value: string) => void;
   language: string;
@@ -69,6 +70,7 @@ export function LibraryToolbar(props: Props) {
 
   return (
     <section className="folio-library-toolbar" aria-label="作品搜索与筛选">
+      <div className="folio-library-toolbar-top">
       <form className="folio-library-query folio-library-search" onSubmit={submit}>
           <div className="folio-library-search-field">
             <Search size={17} />
@@ -85,6 +87,8 @@ export function LibraryToolbar(props: Props) {
         <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
         <button type="submit"><Search size={15} />搜索</button>
       </form>
+      <button className="folio-line-button" type="button" onClick={props.onUpload}><Upload size={16} />上传</button>
+      </div>
 
       <details className="folio-library-filters" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
       <summary><SlidersHorizontal size={16} />筛选与排序<ChevronDown size={16} /></summary>

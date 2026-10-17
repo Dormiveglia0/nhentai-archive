@@ -1,11 +1,20 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.api.schemas import LibraryScanRequest, LibraryMigrationRequest, MediaLibraryCreate, MediaLibraryPatch
 from app.container import services
 from app.services.directory_browser import browse_directories
+import zipfile
 
 
 router = APIRouter(prefix="/library")
+
+
+@router.post("/upload", status_code=201)
+async def upload(request: Request, filename: str = Query(min_length=1, max_length=255), library_id: int | None = Query(default=None, gt=0)):
+    try:
+        return await services.uploads.upload(request.stream(), filename, library_id)
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/migration/candidates")
