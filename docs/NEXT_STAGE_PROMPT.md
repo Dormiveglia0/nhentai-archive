@@ -1,6 +1,6 @@
 # 下一阶段工作入口
 
-本轮新增我的库 ZIP / CBZ 网页上传，上传完成后可确认远端匹配（可选绑定）或手动编辑；不要把网页上传改成后台自动确认。挂载模式因轮询、超时与缓存差异继续保留；回写和源文件删除使用独立开关。文件页状态文字放在标题旁，派生页不使用复选框。README 面向使用者，生产 Compose 使用 latest。
+本轮新增我的库 ZIP / CBZ 网页上传，上传完成后可确认远端匹配（可选绑定）或手动编辑；不要把网页上传改成后台自动确认。挂载模式因轮询、超时与缓存差异继续保留；回写和源文件删除使用独立开关。文件页状态文字放在标题旁，派生页不使用复选框；批量退出为“取消”，无可选项/加载失败时不展示全选状态与清理操作。README 面向使用者，生产 Compose 使用 latest。
 
 
 先读 [AGENT_MAP.md](AGENT_MAP.md)，然后按需读 [PROJECT_STATUS.md](PROJECT_STATUS.md)、[PROJECT_MAP.md](PROJECT_MAP.md)、[DEVELOPMENT_RULES.md](DEVELOPMENT_RULES.md)。源码与 CI 以主分支为准，开发目录 `nhentai-dev`，正式部署在 `/opt/nhentai`；[SITE_LAYOUT_REFINEMENT.md](SITE_LAYOUT_REFINEMENT.md) 是历史发布记录，其中已撤回的设计不能恢复。

@@ -9,7 +9,7 @@
 .folio-data-list-head h3 { margin: 0; font-size: 15px; font-weight: 500; }
 .folio-data-list-head > span { color: var(--folio-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .folio-data-list { list-style: none; margin: 0; padding: 0; }
-.folio-data-list > li { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 210px auto; align-items: center; gap: 24px; padding: 20px 0; border-bottom: 1px solid var(--folio-line); }
+.folio-data-list > li { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 210px auto; align-items: center; gap: 24px; padding: 20px clamp(12px, 1.5vw, 20px); border-bottom: 1px solid var(--folio-line); }
 .folio-data-record { min-width: 0; display: grid; gap: 6px; }
 .folio-data-record > strong { overflow-wrap: anywhere; }
 .folio-data-record-kind { font-size: 12px; color: var(--folio-muted); }
@@ -84,7 +84,6 @@
   .folio-metadata-detail-actions .folio-data-status { width: fit-content; margin-right: 0; }
 }
 
-.folio-derived-selection-hint { margin: 12px 0; color: var(--folio-muted); font-size: 12px; line-height: 1.6; }
 .folio-derived-files .folio-data-list > li { position: relative; transition: background-color 180ms ease; }
 .folio-derived-files .folio-data-list > li:has(.folio-derived-row-select:hover) { background: var(--folio-paper-deep); }
 .folio-derived-files .folio-data-list > li.is-selected { background: var(--folio-red-soft); box-shadow: inset 2px 0 var(--folio-red); }

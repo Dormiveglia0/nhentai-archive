@@ -13,6 +13,10 @@ import "./MetadataPanel.css";
 const CATEGORIES = [{ value: "all", label: "全部派生文件" }, { value: "cover", label: "封面" }, { value: "thumbnail", label: "缩略图" }, { value: "page", label: "页面缓存" }, { value: "archive", label: "阅读归档缓存" }];
 const STATUSES = [{ value: "all", label: "全部状态" }, { value: "linked", label: "已关联作品" }, { value: "active", label: "在用 · 受保护" }, { value: "orphan", label: "无关联 · 残留" }];
 
+function canSelectEntry(entry: DerivedEntry) {
+  return entry.status !== "active" && !(entry.category === "cover" && entry.status === "linked");
+}
+
 export function DerivedFilesPanel() {
   const readFilter = () => {
     const params = new URLSearchParams(window.location.hash.split("?")[1]);
@@ -42,11 +46,12 @@ export function DerivedFilesPanel() {
   }, []);
   useEffect(() => { const timer = window.setTimeout(() => { setQ(query.trim()); setPage(1); }, 250); return () => window.clearTimeout(timer); }, [query]);
   useEffect(() => {
-    let alive = true; setLoading(true); setSelected(new Set()); setLoadError(null);
+    let alive = true; setLoading(true); setInventory(null); setSelected(new Set()); setLoadError(null);
     api.derivedFiles({ category: filter.category, status: filter.status, work_id: filter.work, q, page }).then(data => { if (alive) {
       const lastPage = Math.max(1, Math.ceil(data.total / data.per_page));
       if (page > lastPage) { setPage(lastPage); return; }
       setInventory(data);
+      if (!data.result.some(canSelectEntry)) setSelecting(false);
     } })
       .catch(exc => { if (alive) setLoadError(exc.message); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -79,8 +84,10 @@ export function DerivedFilesPanel() {
   }
   const summary = inventory?.summary;
   const entries = inventory?.result ?? [];
-  const selectable = entries.filter(entry => entry.status !== "active" && !(entry.category === "cover" && entry.status === "linked"));
-  const allSelected = selectable.length > 0 && selectable.every(entry => selected.has(entry.id));
+  const selectable = entries.filter(canSelectEntry);
+  const canSelectPage = !loading && !loadError && selectable.length > 0;
+  const selectionMode = selecting && canSelectPage;
+  const allSelected = selectionMode && selectable.every(entry => selected.has(entry.id));
   return <section className="folio-derived-files" aria-label="派生文件管理">
     <header className="folio-data-heading"><div><h2>派生文件</h2><p>封面、缩略图、页面与阅读归档缓存只存于应用数据目录，不写入媒体库。</p></div><button className="folio-line-button" type="button" aria-label="刷新派生文件列表" disabled={loading || busy} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />刷新</button></header>
     <FolioMetricGrid ariaLabel="派生文件概览" className="folio-files-summary" items={[
@@ -95,25 +102,24 @@ export function DerivedFilesPanel() {
     <div className="folio-data-list-head folio-files-list-headbar">
       <div className="folio-files-list-heading">
         <h3>文件清单</h3>
-        <span aria-live="polite">{loading ? "正在读取…" : `${inventory?.total ?? 0} 项`}{selecting ? ` · 已选 ${selected.size}` : ""}</span>
+        <span aria-live="polite">{loading ? "正在读取…" : `${inventory?.total ?? 0} 项`}{selectionMode ? ` · 已选 ${selected.size}` : ""}</span>
       </div>
       <div className="folio-files-list-actions" role="group" aria-label="派生文件批量操作">
-        {selecting ? <>
-          <button className="folio-line-button" type="button" title="选择或取消选择本页可清理文件" aria-pressed={allSelected} disabled={loading || busy || !selectable.length} onClick={() => setSelected(allSelected ? new Set() : new Set(selectable.map(entry => entry.id)))}>全选</button>
+        {selectionMode ? <>
+          <button className="folio-line-button" type="button" title="选择或取消选择本页可清理文件" aria-pressed={allSelected} disabled={busy || !canSelectPage} onClick={() => { if (canSelectPage) setSelected(allSelected ? new Set() : new Set(selectable.map(entry => entry.id))); }}>全选</button>
           <button className="folio-line-button" type="button" disabled={busy || !selected.size} onClick={() => setSelected(new Set())}>清空</button>
           <button className="folio-line-button" type="button" title="预览清理影响" disabled={loading || busy || !selected.size} onClick={event => void prepare(selectable.filter(entry => selected.has(entry.id)), event.currentTarget)}>清理</button>
         </> : null}
-        <button className="folio-line-button" type="button" aria-pressed={selecting} disabled={busy || (!selecting && (loading || !selectable.length))} onClick={() => { setSelecting(value => !value); setSelected(new Set()); }}>{selecting ? "完成" : "批量"}</button>
+        <button className="folio-line-button" type="button" aria-pressed={selectionMode} disabled={busy || !canSelectPage} onClick={() => { if (!canSelectPage) return; setSelecting(!selectionMode); setSelected(new Set()); }}>{selectionMode ? "取消" : "批量"}</button>
       </div>
     </div>
-    {selecting ? <p className="folio-derived-selection-hint">点击文件行选择；全选仅作用于本页可清理文件。</p> : null}
     <ul className="folio-data-list" aria-busy={loading}>{entries.map(entry => {
       const canSelect = selectable.includes(entry);
       const protectedReason = entry.status === "active" ? "正在使用" : "当前封面保留";
       return <li key={entry.id} data-path={entry.path} className={selected.has(entry.id) ? "is-selected" : ""}>
         <div className="folio-data-record"><span className="folio-data-record-kind">{CATEGORIES.find(item => item.value === entry.category)?.label}</span><strong>{entry.name}</strong><code className="folio-data-path">{entry.path}</code>{entry.title ? <span className="folio-data-title">{entry.title}</span> : null}</div>
         <div className="folio-data-record-state"><span className={`folio-data-status is-${entry.status}`}>{STATUSES.find(item => item.value === entry.status)?.label}</span><span>{formatBytes(entry.size_bytes)}</span><small>{new Date(entry.updated_at * 1000).toLocaleString()}</small></div>
-        {selecting ? <>
+        {selectionMode ? <>
           <span className="folio-derived-selection-state">{canSelect ? selected.has(entry.id) ? <><Check size={16} />已选</> : "点击选择" : protectedReason}</span>
           {canSelect ? <button type="button" className="folio-derived-row-select" aria-label={`选择 ${entry.name}`} aria-pressed={selected.has(entry.id)} disabled={loading || busy} onClick={() => setSelected(current => { const next = new Set(current); if (next.has(entry.id)) next.delete(entry.id); else next.add(entry.id); return next; })} /> : null}
         </> : <div className="folio-data-row-actions">
