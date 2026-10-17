@@ -1514,6 +1514,7 @@ export const api = {
   deleteMetadata: (target: MetadataTarget) => request<{ removed: number; deleted_files: number; reclaimed_bytes: number }>("/api/files/metadata/delete", {
     method: "POST", headers: JSON_HEADERS, body: JSON.stringify(target),
   }).then(clearDiscoverCache),
+  derivedFileUrl: (path: string, download = false) => `/api/files/derived/content?${new URLSearchParams({ path, download: String(download) })}`,
   derivedFiles: (params: { category?: string; q?: string; status?: string; page?: number; work_id?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.category) query.set("category", params.category);

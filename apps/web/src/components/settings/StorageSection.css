@@ -7,8 +7,11 @@
   border-bottom: 1px solid var(--folio-line);
 }
 
-.folio-download-library { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 16px 24px; align-items: end; padding: 18px 0 8px; border-bottom: 1px solid var(--folio-line); }
-.folio-download-library .folio-media-hint { margin: 0 0 2px; }
+.folio-media-libraries > .folio-settings-subhead { flex-wrap: wrap; }
+.folio-download-library { min-width: 0; width: 280px; margin-left: auto; }
+.folio-download-library .folio-select { display: flex; align-items: center; gap: 12px; }
+.folio-download-library .folio-select > span { flex-shrink: 0; margin: 0; }
+.folio-download-library .folio-select > button { min-width: 0; flex: 1; }
 
 .folio-library-directory-main { min-width: 0; }
 .folio-library-directory-main > div { display: flex; gap: 14px; align-items: baseline; }
@@ -91,7 +94,8 @@
   .folio-library-directory > .folio-media-actions { justify-content: flex-start; }
 }
 @media (max-width: 600px) {
-  .folio-download-library { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .folio-download-library { order: 3; width: 100%; }
+  .folio-media-libraries > .folio-settings-subhead > .folio-media-actions { margin-left: auto; }
   .folio-library-checks { padding: 12px; }
   .folio-library-issue-head { align-items: start; flex-direction: column; gap: 4px; }
   .folio-library-issue-head span { text-align: left; }

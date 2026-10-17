@@ -1,5 +1,4 @@
 import { SlidingIndicator } from "../../lib/motion";
-import { SearchCheck, X } from "lucide-react";
 
 import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
 
@@ -35,11 +34,6 @@ type Props = {
   onStatus: (status: string) => void;
   sort: string;
   onSort: (sort: string) => void;
-  total: number;
-  selectedCount: number;
-  onPreviewSelected: () => void;
-  onClearSelection: () => void;
-  busy: boolean;
 };
 
 export function FileToolbar({
@@ -51,14 +45,9 @@ export function FileToolbar({
   onStatus,
   sort,
   onSort,
-  total,
-  selectedCount,
-  onPreviewSelected,
-  onClearSelection,
-  busy,
 }: Props) {
   return (
-    <section className="folio-files-toolbar" aria-label="文件筛选与批量操作" aria-busy={busy}>
+    <section className="folio-files-toolbar" aria-label="文件筛选">
       <div className="folio-files-tabs" role="group" aria-label="文件类型">
         {CATEGORIES.map((item) => (
           <button
@@ -83,20 +72,6 @@ export function FileToolbar({
         <FolioSelect label="排序方式" value={sort} options={SORTS} onChange={onSort} />
       </div>
 
-      <div className={"folio-files-batch" + (selectedCount ? " is-active" : "")}>
-        <p>
-          <strong>{selectedCount || total}</strong>
-          <span>{selectedCount ? "项已选择" : "项文件"}</span>
-        </p>
-        <div>
-          <button type="button" onClick={onPreviewSelected} disabled={busy || selectedCount === 0}>
-            <SearchCheck size={15} />预览删除影响
-          </button>
-          <button type="button" onClick={onClearSelection} disabled={busy || selectedCount === 0}>
-            <X size={15} />清空选择
-          </button>
-        </div>
-      </div>
     </section>
   );
 }

@@ -254,6 +254,7 @@
 }
 
 .folio-settings-mini-action {
+  text-decoration: none;
   min-height: 44px;
   min-width: 44px;
   padding: 0 10px;

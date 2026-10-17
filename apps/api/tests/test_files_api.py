@@ -57,3 +57,31 @@ def test_files_duplicates_route(monkeypatch):
     body = client.get("/api/files/duplicates").json()
     assert body["hash"]["files"] == 2
     assert body["title_similar"] is None
+
+
+def test_derived_content_serves_actual_file_and_rejects_unmanaged_paths(tmp_path, monkeypatch):
+    from test_file_service import _setup, _png
+
+    settings, db, archive, files = _setup(tmp_path)
+    monkeypatch.setattr(main.services, "files", files)
+    client = TestClient(main.app)
+    image = settings.covers_dir / "preview.png"
+    image.write_bytes(_png())
+    response = client.get("/api/files/derived/content", params={"path": str(image)})
+    assert response.status_code == 200
+    assert response.content == image.read_bytes()
+    assert response.headers["content-type"] == "image/png"
+    assert response.headers["content-disposition"].startswith("inline;")
+    assert client.get("/api/files/derived/content", params={"path": str(image), "download": True}).headers["content-disposition"].startswith("attachment;")
+    unsafe = settings.thumbs_dir / "document.html"
+    unsafe.write_text("<html>local file</html>")
+    response = client.get("/api/files/derived/content", params={"path": str(unsafe)})
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.headers["content-disposition"].startswith("attachment;")
+    link = settings.thumbs_dir / "link.png"
+    link.symlink_to(image)
+    for path in (link, settings.database_path, settings.covers_dir / ".." / "archive.db", settings.covers_dir):
+        assert client.get("/api/files/derived/content", params={"path": str(path)}).status_code == 403
+    image.unlink()
+    assert client.get("/api/files/derived/content", params={"path": str(image)}).status_code == 404
+    archive.cache.close()

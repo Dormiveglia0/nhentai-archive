@@ -1,6 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.api.schemas import FileDeleteRequest
@@ -46,6 +47,21 @@ def metadata_delete(payload: MetadataTarget):
 def derived_inventory(category: str = "all", q: str = "", status: str = "all",
                       page: int = Query(1, ge=1), per_page: int = Query(50, ge=1, le=500), work_id: int | None = None):
     return services.files.derived_inventory(category, q, status, page, per_page, work_id)
+
+
+@router.get("/derived/content")
+def derived_content(path: str, download: bool = False):
+    try:
+        file = services.files.derived_file(path)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(404, str(exc)) from exc
+    image_type = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+                  ".webp": "image/webp", ".gif": "image/gif", ".avif": "image/avif"}.get(file.suffix.lower())
+    return FileResponse(file, media_type=image_type or "application/octet-stream", filename=file.name,
+                        content_disposition_type="inline" if image_type and not download else "attachment",
+                        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
 
 
 @router.get("/overview")

@@ -25,7 +25,7 @@
 | 阅读 | `reader_service.py`、`archive_cache_service.py`、`reader_bridge_service.py`；进度、可见时长、版本缓存/直接读取、逐页核验与双来源 |
 | 治理 | `governance_service.py`、元数据/翻译服务；字段、标签、人工核对、语言与置信度刮削，显式选择的 ComicInfo 原子回写 |
 | 词典 | `dictionary_service.py` 与翻译服务；候选、预览、映射及证据 |
-| 文件与导出 | `file_service.py`、`local_metadata_service.py`、`export_service.py`；文件及派生数据清单、本地元数据与索引查看、所有权检查、清理预览、下载流；导出不改源文件 |
+| 文件与导出 | `file_service.py`、`local_metadata_service.py`、`export_service.py`；文件及派生数据清单、受限派生文件查看/下载、本地元数据与索引查看、所有权检查、批量清理预览、下载流；导出不改源文件 |
 | 任务 | `job_service.py` 与匹配的 job 服务；持久状态、检查点、暂停/恢复、取消、重试和日志 |
 | 订阅与邮件 | `subscription_service.py`、`notification_service.py`；完整初始基线、增量更新、租约/CAS、近期预览、持久发件箱、私密SMTP配置 |
 | 认证 | `auth_service.py`；单密码、scrypt、90天 HttpOnly/SameSite 会话、变更撤销其他会话、限流 |

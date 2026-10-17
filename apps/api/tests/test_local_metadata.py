@@ -173,7 +173,10 @@ def test_derived_cache_preview_covers_archive_and_thumbnails_and_rechecks_lease(
         archive.cache.release(work_id, opened["lease"])
         preview = files.preview_delete(target)
         assert preview["files_to_delete"] == 2 and len(preview["items"][0]["files"]) == 2
-        result = files.delete(target)
+        targets = target + [{"kind": "derived", "path": file} for file in preview["items"][0]["files"]]
+        batch = files.preview_delete(targets)
+        assert batch["files_to_delete"] == 2 and batch["reclaim_bytes"] == preview["reclaim_bytes"]
+        result = files.delete(targets)
         assert result["deleted_files"] == 2 and not path.exists()
         assert db.fetchone("SELECT id FROM works WHERE id=?", (work_id,))
         assert (root / "one.cbz").is_file() and archive.cache.summary()["ready_count"] == 0

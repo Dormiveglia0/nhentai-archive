@@ -1,7 +1,8 @@
-import { Archive, ArrowUpRight, Image, RefreshCw, SearchCheck, Unlink } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Archive, ArrowUpRight, Image, RefreshCw, SearchCheck, Unlink, Eye, Download, X, Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { api, type DerivedEntry, type DerivedInventory, type FileDeletePreview } from "../../lib/api";
+import { useNativeDialog } from "../../lib/useNativeDialog";
 import { formatBytes } from "../../lib/format";
 import { FolioMetricGrid } from "../folio/ui/FolioMetricGrid";
 import { FolioSearchField, FolioSelect } from "../folio/ui/FolioPrimitives";
@@ -25,10 +26,13 @@ export function DerivedFilesPanel() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
-  const [target, setTarget] = useState<DerivedEntry | null>(null);
+  const [targets, setTargets] = useState<DerivedEntry[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [viewing, setViewing] = useState<DerivedEntry | null>(null);
   const [preview, setPreview] = useState<FileDeletePreview | null>(null);
   const [trigger, setTrigger] = useState<HTMLElement | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   useEffect(() => {
     const update = () => { setFilter(readFilter()); setPage(1); };
@@ -37,13 +41,13 @@ export function DerivedFilesPanel() {
   }, []);
   useEffect(() => { const timer = window.setTimeout(() => { setQ(query.trim()); setPage(1); }, 250); return () => window.clearTimeout(timer); }, [query]);
   useEffect(() => {
-    let alive = true; setLoading(true); setError(null);
+    let alive = true; setLoading(true); setSelected(new Set()); setLoadError(null);
     api.derivedFiles({ category: filter.category, status: filter.status, work_id: filter.work, q, page }).then(data => { if (alive) {
       const lastPage = Math.max(1, Math.ceil(data.total / data.per_page));
       if (page > lastPage) { setPage(lastPage); return; }
       setInventory(data);
     } })
-      .catch(exc => { if (alive) setError(exc.message); }).finally(() => { if (alive) setLoading(false); });
+      .catch(exc => { if (alive) setLoadError(exc.message); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [filter, q, page, revision]);
   function changeFilter(next: typeof filter) {
@@ -54,24 +58,28 @@ export function DerivedFilesPanel() {
     if (next.work) params.set("work_id", next.work);
     window.history.replaceState(null, "", "#files?" + params);
   }
-  async function prepare(entry: DerivedEntry, button: HTMLElement) {
-    setBusy(true); setError(null); setTarget(entry); setTrigger(button);
-    try { setPreview(await api.previewFileDelete([{ kind: "derived", path: entry.path }])); }
+  async function prepare(entries: DerivedEntry[], button: HTMLElement) {
+    if (busy || !entries.length) return;
+    setBusy(true); setError(null); setTargets(entries); setTrigger(button);
+    try { setPreview(await api.previewFileDelete(entries.map(entry => ({ kind: "derived", path: entry.path })))); }
     catch (exc) { setError(exc instanceof Error ? exc.message : String(exc)); }
     finally { setBusy(false); }
   }
   async function remove() {
-    if (!target) return;
+    if (busy || !targets.length) return;
     setBusy(true); setError(null);
     try {
-      const result = await api.deleteFiles([{ kind: "derived", path: target.path }]);
-      if (result.errors.length) { setError(result.errors.map(error => error.message).join("；")); return; }
+      const result = await api.deleteFiles(targets.map(entry => ({ kind: "derived", path: entry.path })));
+      setError(result.errors.length ? result.errors.map(error => error.message).join("；") : null);
       setNotice(`已清理 ${result.deleted_files} 个派生文件，释放 ${formatBytes(result.reclaimed_bytes)}。作品资料和源文件保留。`);
       setPreview(null); setRevision(value => value + 1);
     } catch (exc) { setError(exc instanceof Error ? exc.message : String(exc)); }
     finally { setBusy(false); }
   }
   const summary = inventory?.summary;
+  const entries = inventory?.result ?? [];
+  const selectable = entries.filter(entry => entry.status !== "active" && !(entry.category === "cover" && entry.status === "linked"));
+  const allSelected = selectable.length > 0 && selectable.every(entry => selected.has(entry.id));
   return <section className="folio-derived-files" aria-label="派生文件管理">
     <header className="folio-data-heading"><div><h2>派生文件</h2><p>封面、缩略图、页面与阅读归档缓存只存于应用数据目录，不写入媒体库。</p></div><button className="folio-line-button" type="button" aria-label="刷新派生文件列表" disabled={loading || busy} onClick={() => setRevision(value => value + 1)}><RefreshCw size={16} />刷新</button></header>
     <FolioMetricGrid ariaLabel="派生文件概览" className="folio-files-summary" items={[
@@ -82,16 +90,42 @@ export function DerivedFilesPanel() {
     ]} />
     <div className="folio-data-filters"><FolioSearchField value={query} onChange={setQuery} placeholder="搜索派生文件路径或作品标题" /><FolioSelect label="派生文件类型" value={filter.category} options={CATEGORIES} onChange={category => changeFilter({ ...filter, category })} /><FolioSelect label="关联状态" value={filter.status} options={STATUSES} onChange={status => changeFilter({ ...filter, status })} /></div>
     {filter.work ? <p className="folio-data-footnote">正在查看作品 #{filter.work} 的派生文件。<button className="folio-line-button" type="button" onClick={() => changeFilter({ ...filter, work: "" })}>查看全部作品</button></p> : null}
-    {error && !preview ? <p className="folio-media-error" role="alert">{error}</p> : null}{notice ? <p className="folio-data-notice" role="status">{notice}</p> : null}
-    <div className="folio-data-list-head"><h3>实际文件清单</h3><span>{loading ? "正在读取…" : `${inventory?.total ?? 0} 个文件`}</span></div>
+    {(error || loadError) && !preview ? <p className="folio-media-error" role="alert">{error || loadError}</p> : null}{notice ? <p className="folio-data-notice" role="status">{notice}</p> : null}
+    <div className="folio-data-list-head"><h3>实际文件清单 <small>{loading ? "正在读取…" : `${inventory?.total ?? 0} 个文件`}</small></h3>
+      <div className="folio-files-list-actions" role="group" aria-label="派生文件批量操作">
+        <button className="folio-line-button" type="button" disabled={loading || busy || !selectable.length} onClick={() => setSelected(allSelected ? new Set() : new Set(selectable.map(entry => entry.id)))}>{allSelected ? "取消本页全选" : "全选本页可清理项"}</button>
+        <span aria-live="polite">已选 {selected.size} 项</span>
+        <button className="folio-line-button" type="button" disabled={loading || busy || !selected.size} onClick={event => void prepare(selectable.filter(entry => selected.has(entry.id)), event.currentTarget)}><SearchCheck size={15} />预览批量清理</button>
+        <button className="folio-line-button" type="button" disabled={busy || !selected.size} aria-label="清空选择" title="清空选择" onClick={() => setSelected(new Set())}><X size={15} /></button>
+      </div>
+    </div>
     <ul className="folio-data-list" aria-busy={loading}>{inventory?.result.map(entry => <li key={entry.id} data-path={entry.path}>
-      <div className="folio-data-record"><span className="folio-data-record-kind">{CATEGORIES.find(item => item.value === entry.category)?.label}</span><strong>{entry.name}</strong><code className="folio-data-path">{entry.path}</code>{entry.title ? <span className="folio-data-title">{entry.title}</span> : null}</div>
+      <label className="folio-derived-record">
+        <input type="checkbox" aria-label={`选择 ${entry.name}`} checked={selected.has(entry.id)} disabled={loading || busy || !selectable.includes(entry)} onChange={() => setSelected(current => { const next = new Set(current); if (next.has(entry.id)) next.delete(entry.id); else next.add(entry.id); return next; })} />
+        <span className="folio-files-check" aria-hidden="true">{selected.has(entry.id) ? <Check size={12} /> : null}</span>
+        <div className="folio-data-record"><span className="folio-data-record-kind">{CATEGORIES.find(item => item.value === entry.category)?.label}</span><strong>{entry.name}</strong><code className="folio-data-path">{entry.path}</code>{entry.title ? <span className="folio-data-title">{entry.title}</span> : null}</div></label>
       <div className="folio-data-record-state"><span className={`folio-data-status is-${entry.status}`}>{STATUSES.find(item => item.value === entry.status)?.label}</span><span>{formatBytes(entry.size_bytes)}</span><small>{new Date(entry.updated_at * 1000).toLocaleString()}</small></div>
-      <div className="folio-data-row-actions">{entry.work_id ? <a className="folio-line-button" href={`#files?view=metadata&work_id=${entry.work_id}`}>查看所属资料<ArrowUpRight size={15} /></a> : null}<button className="folio-line-button" type="button" disabled={busy || entry.status === "active" || (entry.category === "cover" && entry.status === "linked")} onClick={event => void prepare(entry, event.currentTarget)}><SearchCheck size={15} />预览清理</button></div>
+      <div className="folio-data-row-actions"><button className="folio-line-button" type="button" onClick={() => setViewing(entry)}><Eye size={15} />查看文件</button>{entry.work_id ? <a className="folio-line-button" href={`#files?view=metadata&work_id=${entry.work_id}`}>查看所属资料<ArrowUpRight size={15} /></a> : null}<button className="folio-line-button" type="button" disabled={loading || busy || !selectable.includes(entry)} onClick={event => void prepare([entry], event.currentTarget)}><SearchCheck size={15} />预览清理</button></div>
     </li>)}</ul>
     {!loading && !inventory?.result.length ? <p className="folio-data-empty">没有符合筛选条件的派生文件。</p> : null}
     <IconPager className="folio-files-pager" page={page} totalPages={Math.max(1, Math.ceil((inventory?.total ?? 0) / (inventory?.per_page ?? 50)))} loading={loading} onPage={setPage} />
     <p className="folio-data-footnote">实际存储：<code>{inventory?.data_dir ?? "正在读取…"}</code>。在用文件和当前封面受保护。清理缓存不清除作品元数据，所需缩略图会在再次读取时生成。</p>
-    <FileDeleteDialog preview={preview} label={target?.name ?? null} returnFocus={trigger} error={error} busy={busy} onConfirm={() => void remove()} onCancel={() => setPreview(null)} />
+    {viewing ? <DerivedFileViewer entry={viewing} onClose={() => setViewing(null)} /> : null}
+    <FileDeleteDialog preview={preview} label={targets.length === 1 ? targets[0].name : `已选 ${targets.length} 个派生文件`} returnFocus={trigger} error={error} busy={busy} onConfirm={() => void remove()} onCancel={() => setPreview(null)} />
   </section>;
+}
+
+function DerivedFileViewer({ entry, onClose }: { entry: DerivedEntry; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [failed, setFailed] = useState(false);
+  const dismiss = useNativeDialog(dialog, onClose, true);
+  const isImage = /\.(jpe?g|png|webp|gif|avif)$/i.test(entry.name);
+  return <dialog ref={dialog} className="folio-media-editor folio-derived-viewer" aria-label="查看派生文件">
+    <header><h2>{entry.name}</h2><button type="button" className="folio-media-icon-button" aria-label="关闭文件预览" onClick={dismiss} data-dialog-focus autoFocus><X size={18} /></button></header>
+    <div className="folio-derived-preview">
+      <code className="folio-data-path">{entry.path}</code><p>{formatBytes(entry.size_bytes)}</p>
+      {isImage ? failed ? <p role="alert">图片无法读取，文件可能已被清理，请刷新列表。</p> : <img src={api.derivedFileUrl(entry.path)} alt={entry.name} onError={() => setFailed(true)} /> : <p>此文件无法直接预览，可下载后查看。</p>}
+    </div>
+    <footer><a className="folio-line-button" href={api.derivedFileUrl(entry.path, true)}><Download size={15} />下载文件</a><button className="folio-line-button" type="button" onClick={dismiss}>关闭</button></footer>
+  </dialog>;
 }

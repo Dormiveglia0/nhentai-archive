@@ -336,6 +336,16 @@ class FileMaintenanceService:
         return {"result": entries[(page-1)*per_page:page*per_page], "total": len(entries),
                 "page": page, "per_page": per_page, "summary": summary, "data_dir": str(self.settings.data_dir)}
 
+    def derived_file(self, path_str: str) -> Path:
+        path = self._abs(path_str)
+        roots = {p.resolve() for p in (self.settings.covers_dir, self.settings.thumbs_dir,
+                 self.settings.page_cache_dir, self.settings.archive_cache_dir)}
+        if not path or path.parent not in roots or Path(path_str).is_symlink():
+            raise PermissionError("只能查看应用数据目录中的普通派生文件")
+        if not path.is_file():
+            raise FileNotFoundError("派生文件已不存在，请刷新列表")
+        return path
+
     def _preview_derived(self, path_str: str) -> dict[str, Any]:
         path = self._abs(path_str)
         roots = {p.resolve() for p in (self.settings.covers_dir, self.settings.thumbs_dir,
@@ -523,6 +533,16 @@ class FileMaintenanceService:
         files_to_delete = sum(len(i["files"]) if "files" in i else (1 if i.get("status") == "ready" else 0) for i in items)
         works_to_remove = sum(1 for i in items if i["kind"] == "work" and i.get("status") == "ready")
         reclaim_bytes = sum(i["reclaim_bytes"] for i in items)
+        # Archive cleanup includes its thumbnails; count overlapping derived targets once.
+        seen_derived: set[str] = set()
+        for item in items:
+            if item["kind"] != "derived":
+                continue
+            for path in item.get("files", []):
+                if path in seen_derived:
+                    files_to_delete -= 1
+                    reclaim_bytes -= Path(path).stat().st_size if Path(path).is_file() else 0
+                seen_derived.add(path)
         return {"items": items, "files_to_delete": files_to_delete, "works_to_remove": works_to_remove, "reclaim_bytes": reclaim_bytes}
 
     # --- deletion -------------------------------------------------------

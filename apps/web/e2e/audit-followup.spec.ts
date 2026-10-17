@@ -82,7 +82,7 @@ test("手机文件可连续多选，详情和删除预览均可取消且恢复�
   await page.locator(".folio-files-select").nth(1).click();
   await expect(page.locator(".folio-files-select[aria-pressed='true']")).toHaveCount(2);
   await expect(page.locator("dialog[open]")).toHaveCount(0);
-  await page.locator(".folio-files-batch").getByRole("button", { name: "预览删除影响", exact: true }).click();
+  await page.getByRole("group", { name: "文件批量操作", exact: true }).getByRole("button", { name: "预览删除影响", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "确认删除", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   const entry = page.locator(".folio-files-row-main").first();

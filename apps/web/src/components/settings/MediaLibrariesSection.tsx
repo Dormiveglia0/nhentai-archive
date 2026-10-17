@@ -138,6 +138,9 @@ export function MediaLibrariesSection() {
   return <section className="folio-media-libraries" aria-label="媒体库">
     <div className="folio-settings-subhead">
       <h3><Folder size={16} />媒体库</h3>
+      {defaults && downloadOptions.length ? <div className="folio-download-library">
+        <FolioSelect label="默认下载到" value={downloadLibraryId} disabled={savingDownload} options={downloadOptions} onChange={value => void selectDownloadLibrary(value)} />
+      </div> : null}
       <div className="folio-media-actions">
         <button type="button" className="folio-settings-mini-action" onClick={reload} aria-label="刷新媒体库"><RefreshCw size={15} /></button>
         <button type="button" className="folio-line-button" disabled={!defaults} onClick={() => setEditing("new")}><Plus size={15} />添加库</button>
@@ -146,10 +149,7 @@ export function MediaLibrariesSection() {
     {error || loadError ? <p className="folio-media-error" role="alert">{error || loadError}</p> : null}
     {message ? <p className="folio-media-feedback" role="status">{message}{message === "扫描已加入队列" ? <a href={pageHref({ name: "tasks" })}>打开队列<ArrowUpRight size={13} /></a> : null}</p> : null}
     {!defaults && !loadError ? <p className="folio-media-hint">正在读取媒体库…</p> : null}
-    {defaults ? <div className="folio-download-library">
-      {downloadOptions.length ? <FolioSelect label="默认下载到" value={downloadLibraryId} disabled={savingDownload} options={downloadOptions} onChange={value => void selectDownloadLibrary(value)} /> : null}
-      <p className={downloadAvailable ? "folio-media-hint" : "folio-media-error"}>{downloadAvailable ? "这里只写入下载完成的 CBZ；数据库、封面、缩略图、临时文件和阅读缓存仍保存在 /data。" : "当前下载库已暂停、只读、离线或已移除，请检查或重新选择。下载会报错，不会自动改存本地。"}</p>
-    </div> : null}
+    {defaults && !downloadAvailable ? <p className="folio-media-error" role="alert">当前下载库已暂停、只读、离线或已移除，请检查或重新选择。下载会报错，不会自动改存本地。</p> : null}
     <div className="folio-library-directory-list">
       {libraries.map(library => <article className="folio-library-directory" key={library.id}>
         <div className="folio-library-directory-main">

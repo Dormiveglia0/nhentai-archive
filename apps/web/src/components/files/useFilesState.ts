@@ -251,6 +251,11 @@ export function useFilesState() {
     clearPending();
   }, [clearPending]);
 
+  const selectPage = useCallback(() => {
+    setSelected(new Set((inventory?.result ?? []).map(entry => entry.id)));
+    clearPending();
+  }, [inventory, clearPending]);
+
   const targetsFromIds = useCallback(
     (ids: Set<string>): FileDeleteTarget[] => {
       const entries = inventory?.result ?? [];
@@ -432,6 +437,7 @@ export function useFilesState() {
     closeFocus,
     toggleSelected,
     clearSelection,
+    selectPage,
     focusId,
     preview,
     pendingLabel,

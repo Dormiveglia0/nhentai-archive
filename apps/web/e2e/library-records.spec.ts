@@ -81,7 +81,7 @@ for (const width of [1440, 390]) {
       await page.getByRole("group", { name: "默认下载到选项" }).getByRole("button", { name, exact: true }).click();
       await expect.poll(async () => (await (await request.get("/api/settings")).json()).downloads.default_library_id).toBe(id);
       await row.getByRole("button", { name: "暂停", exact: true }).click();
-      await expect(page.locator(".folio-download-library")).toContainText("不会自动改存本地");
+      await expect(page.locator(".folio-media-libraries").getByRole("alert")).toContainText("不会自动改存本地");
       expect((await (await request.get("/api/settings")).json()).downloads.default_library_id).toBe(id);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     } finally {
