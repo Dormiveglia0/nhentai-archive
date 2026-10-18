@@ -174,7 +174,16 @@ export type LibraryWork = Work & {
   size_bytes?: number;
   tag_count?: number;
   tags?: LibraryTag[];
+  group?: LibraryWorkGroup;
 };
+
+export type LibraryGrouping = "none" | "manual" | "author";
+export type LibraryWorkGroup = {
+  key: string; id?: number; version?: number; kind: "manual" | "author"; name: string;
+  count: number; total_count?: number; member_ids: number[];
+  covers: Array<Pick<LibraryWork, "id" | "title" | "cover_path" | "updated_at">>;
+};
+export type SavedWorkGroup = { id: number; key: string; kind: "manual"; name: string; version: number; member_ids: number[]; count: number };
 
 export type LibrarySummary = {
   total: number;
@@ -304,6 +313,8 @@ export type LibraryTagFilter = {
 };
 
 export type LibrarySearchParams = {
+  group_by?: LibraryGrouping;
+  group_key?: string;
   library_id?: number;
   q?: string;
   page?: number;
@@ -320,6 +331,7 @@ export type LibrarySearchParams = {
 export type LibrarySearchResult = {
   result: LibraryWork[];
   total: number;
+  work_total?: number;
   page: number;
   per_page: number;
   num_pages: number;
@@ -395,6 +407,7 @@ export type GovernanceFile = {
   created_at?: string | null;
   exists: boolean;
   read_only?: boolean;
+  rename_allowed?: boolean;
   library_name?: string | null;
 };
 
@@ -440,6 +453,8 @@ export type GovernanceApplyPayload = {
   metadata: Array<{ field: string; value: string | null; source: "manual" | "remote" | "comicinfo" | "current" }>;
   dictionary_apply?: DictionaryApplyPayload[];
   write_back?: boolean;
+  review_item_id?: number;
+  review_version?: string;
 };
 
 export type GovernanceApplyResult = {
@@ -560,6 +575,20 @@ export type MetadataRefreshPreview = {
     review: number;
     unmatched: number;
   };
+};
+
+export type ScrapeQueueItem = {
+  id: number; work_id: number; library_id: number; library_name: string; relative_path: string;
+  title: string; title_japanese: string | null; pretty_title: string | null; page_count: number;
+  scrape_status: string; scrape_retry_at: number; scrape_attempts: number; enabled: boolean;
+  auto_scrape: boolean; auto_bind: boolean; version: string;
+  source: string; remote_gallery_id: number | null;
+  config: MetadataRefreshPreview["result"][number]["config"];
+  result: { reason?: string; candidates?: MetadataRefreshMatch[]; gallery_id?: number };
+};
+export type ScrapeQueue = {
+  result: ScrapeQueueItem[]; total: number; page: number; per_page: number; counts: Record<string, number>;
+  remote: { cooldown_active: boolean; cooldown_remaining_seconds: number };
 };
 
 export type MetadataRefreshResult = {
@@ -888,6 +917,16 @@ export type MediaLibrary = {
   missing_count: number;
   removed_at: string | null;
   scrape_review_count: number;
+  scrape_pending_count: number;
+  scrape_running_count: number;
+  scrape_error_count: number;
+  scrape_completed_count: number;
+  scrape_retry_at: number | null;
+  scan_run_id: number | null;
+  scan_status: string | null;
+  scan_started_at: string | null;
+  scan_counts: Record<string, number>;
+  scan_progress: ScanProgress;
   scanning: boolean;
   active_scan_job_id: number | null;
   active_scan_status: Job["status"] | null;
@@ -907,8 +946,15 @@ export type LibraryScanRun = {
   status: string;
   counts: Record<string, number>;
   errors: { path: string; reason: string }[];
+  job_id: number | null;
+  progress: ScanProgress;
   started_at: string;
   completed_at: string | null;
+};
+
+export type ScanProgress = {
+  stage?: string; path?: string;
+  events?: Array<{ path: string; status: string; reason?: string; at: number }>;
 };
 
 export type LibraryItem = {
@@ -1393,6 +1439,8 @@ export const api = {
   libraryRevision: () => request<{ revision: number }>("/api/library/revision"),
   librarySearch: (params: LibrarySearchParams = {}) => {
     const query = new URLSearchParams();
+    if (params.group_by) query.set("group_by", params.group_by);
+    if (params.group_key) query.set("group_key", params.group_key);
     query.set("q", params.q ?? "");
     query.set("page", String(params.page ?? 1));
     query.set("per_page", String(params.per_page ?? 24));
@@ -1406,6 +1454,14 @@ export const api = {
     query.set("favorite_only", String(Boolean(params.favorite_only)));
     return request<LibrarySearchResult>(`/api/library/search?${query.toString()}`);
   },
+  createWorkGroup: (name: string, work_ids: number[]) => request<SavedWorkGroup>("/api/library/groups", {
+    method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ name, work_ids }),
+  }),
+  workGroup: (id: number, page = 1) => request<LibrarySearchResult & { group: SavedWorkGroup }>(`/api/library/groups/${id}?page=${page}`),
+  updateWorkGroup: (id: number, payload: { version: number; name?: string; add_ids?: number[]; remove_ids?: number[] }) => request<SavedWorkGroup>(`/api/library/groups/${id}`, {
+    method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(payload),
+  }),
+  dissolveWorkGroup: (id: number, version: number) => request<{ dissolved: boolean }>(`/api/library/groups/${id}?version=${version}`, { method: "DELETE" }),
   libraryRecentAdded: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-added?limit=${limit}`),
   libraryRecentRead: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/recent-read?limit=${limit}`),
   libraryReadingHistory: (page = 1, per_page = 30) =>
@@ -1425,6 +1481,10 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify(payload)
     }).then(clearDiscoverCache),
+  renameWorkSource: (id: number, file_id: number, filename: string, expected_path: string) =>
+    request<{ renamed: boolean; path: string }>(`/api/works/${id}/source-rename`, {
+      method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ file_id, filename, expected_path }),
+    }),
   translateWorkGovernance: (id: number, fields?: string[]) =>
     request<GovernanceTranslateResult>(`/api/works/${id}/governance/translate`, {
       method: "POST",
@@ -1449,19 +1509,20 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ work_ids, actions })
     }).then(clearDiscoverCache),
-  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}, bind?: boolean) =>
+  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}, bind?: boolean, item_ids: Record<number, number> = {}) =>
     request<MetadataRefreshPreview>("/api/governance/metadata-refresh/preview", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ work_ids, gallery_ids, queries, bind })
+      body: JSON.stringify({ work_ids, gallery_ids, queries, bind, item_ids })
     }),
-  metadataRefreshApply: (matches: Array<{ work_id: number; version?: string; query?: string; bind?: boolean } & MetadataRefreshMatch>) =>
+  metadataRefreshApply: (matches: Array<{ work_id: number; item_id?: number; version?: string; query?: string; bind?: boolean } & MetadataRefreshMatch>) =>
     request<MetadataRefreshResult>("/api/governance/metadata-refresh/apply", {
       method: "POST",
       headers: JSON_HEADERS,
       body: JSON.stringify({
-        matches: matches.map(({ work_id, gallery_id, source, version, query, bind }) => ({
+        matches: matches.map(({ work_id, item_id, gallery_id, source, version, query, bind }) => ({
           work_id,
+          item_id,
           gallery_id,
           source, version, query, bind
         }))
@@ -1665,6 +1726,16 @@ export const api = {
   removeMediaLibrary: (id: number, purge = false) => request<{ removed: number; source_files_deleted: boolean; metadata_preserved: boolean; removed_works: number }>(`/api/library/directories/${id}?purge=${purge}`, { method: "DELETE" }),
   mediaLibraryRemovalPreview: (id: number) => request<{ exclusive_works: number; shared_works: number; purge_allowed: boolean; warnings: string[] }>(`/api/library/directories/${id}/remove-preview`),
   libraryScanRuns: (id: number, limit = 5) => request<{ result: LibraryScanRun[] }>(`/api/library/directories/${id}/runs?limit=${limit}`),
+  scrapeQueue: (status = "review", libraryId = "all", q = "", page = 1) => {
+    const params = new URLSearchParams({ status, q, page: String(page) });
+    if (libraryId !== "all") params.set("library_id", libraryId);
+    return request<ScrapeQueue>(`/api/library/scrape-queue?${params}`);
+  },
+  scrapeDecision: (id: number, action: "retry" | "dismiss" | "complete", version: string) =>
+    request<{ status: string }>(`/api/library/scrape-queue/${id}/decision`, {
+      method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ action, version }),
+    }),
+  scrapeContext: (id: number) => request<{ version: string }>(`/api/library/scrape-queue/${id}`),
   libraryItems: (id: number, status = "error", page = 1) => request<{ result: LibraryItem[]; total: number; page: number; per_page: number }>(`/api/library/directories/${id}/items?status=${encodeURIComponent(status)}&page=${page}&per_page=20`),
   forgetLibraryItem: (libraryId: number, itemId: number) => request<{ removed: number; source_file_deleted: boolean; work_id: number | null; work_metadata_preserved: boolean }>(`/api/library/directories/${libraryId}/items/${itemId}`, { method: "DELETE" }),
   readingCache: () => request<ReadingCacheSummary>("/api/library/cache"),

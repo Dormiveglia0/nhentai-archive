@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { MetadataScrapePanel } from "../library/MetadataScrapePanel";
 import { AlertTriangle, PenLine } from "lucide-react";
 
 import { FadeIn, usePrefersReducedMotion } from "../../lib/motion";
@@ -21,6 +23,7 @@ type Props = {
 
 export function GovernancePage({ initialWorkId, blurCovers }: Props) {
   const gov = useGovernanceState(initialWorkId);
+  const [scrapeBusy, setScrapeBusy] = useState(false);
   const reduced = usePrefersReducedMotion();
   function selectWork(id: number) {
     gov.selectWork(id);
@@ -103,6 +106,10 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <FadeIn key={gov.aggregate.work.id} className="folio-governance-document" y={10}>
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
+                    <details className="folio-governance-scrape">
+                      <summary>刮削元数据</summary>
+                      {gov.changedFields.length ? <p>请先保存字段修改，再应用远端元数据。</p> : <MetadataScrapePanel embedded showBridge workId={gov.aggregate.work.id} title={gov.aggregate.work.title} blurCovers={blurCovers} onBusyChange={setScrapeBusy} onClose={() => {}} onApplied={() => void gov.reload()} />}
+                    </details>
                     <MetadataEditor
                       aggregate={gov.aggregate}
                       edits={gov.edits}
@@ -151,7 +158,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
             )}
           </section>
 
-          {!gov.bulkMode && !gov.aggregateLoading && gov.aggregate ? <GovernanceSourceRail aggregate={gov.aggregate} /> : null}
+          {!gov.bulkMode && !gov.aggregateLoading && gov.aggregate ? <GovernanceSourceRail aggregate={gov.aggregate} disabled={gov.changedFields.length > 0 || gov.saving || scrapeBusy} onReload={() => void gov.reload()} /> : null}
         </div>
       ) : null}
     </section>

@@ -415,3 +415,64 @@ def test_recorded_directory_identity_rejects_bind_alias_without_probing_other_mo
         MediaLibraryService.validate_root(root, [boundary])
     boundary["inode"] += 1
     assert MediaLibraryService.validate_root(root, [boundary]) == root
+
+
+def test_unsigned_inode_is_indexed_losslessly_and_remains_readable(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    create_archive(root / "book.zip")
+    original = Path.stat
+    def unsigned(path, *args, **kwargs):
+        info = original(path, *args, **kwargs)
+        values = {name: getattr(info, name) for name in dir(info) if name.startswith('st_')}
+        values['st_ino'] |= 1 << 63
+        return SimpleNamespace(**values)
+    monkeypatch.setattr(Path, "stat", unsigned)
+    # scandir returns os.stat_result directly, so expose the same mount identity there.
+    walk = index._walk
+    monkeypatch.setattr(index, "_walk", lambda *args: ((path, unsigned(path), error) for path, _, error in walk(*args)))
+    assert index.scan(library['id'])['counts']['indexed'] == 1
+    item = db.fetchone('SELECT * FROM library_items')
+    assert item['inode'] < 0
+    assert index.scan(library['id'])['counts']['unchanged'] == 1
+    assert ArchiveService(db, settings).read_page(item['work_id'], 1)[1] == 'image/jpeg'
+
+
+def test_large_jpeg_uses_decoder_reduction_before_pixel_guard(tmp_path):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    image = io.BytesIO()
+    Image.new('L', (6000, 6000), 'gray').save(image, format='JPEG')
+    with zipfile.ZipFile(root / 'large.cbz', 'w') as archive:
+        archive.writestr('001.jpg', image.getvalue())
+    assert index.scan(library['id'])['counts']['indexed'] == 1
+    work = db.fetchone('SELECT * FROM works')
+    with Image.open(work['cover_path']) as cover:
+        assert cover.width <= 512 and cover.height <= 768
+
+
+def test_cover_decode_limit_preserves_archive_import_and_warning(tmp_path):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    image = io.BytesIO()
+    Image.new('L', (6000, 6000), 'gray').save(image, format='PNG')
+    with zipfile.ZipFile(root / 'large.cbz', 'w') as archive:
+        archive.writestr('001.png', image.getvalue())
+    assert index.scan(library['id'])['counts']['indexed'] == 1
+    item = db.fetchone('SELECT * FROM library_items')
+    assert item['status'] == 'ready' and '无法安全生成封面' in item['last_error']
+    assert db.fetchone('SELECT * FROM works')['cover_path'] is None
+    assert ArchiveService(db, settings).read_page(item['work_id'], 1)[1] == 'image/png'
+
+
+def test_scan_activity_is_persisted_before_archive_read_and_after_completion(tmp_path, monkeypatch):
+    settings, db, libraries, index, root, library = setup_index(tmp_path)
+    create_archive(root / 'book.cbz')
+    original = index._index_file
+    def inspect(*args):
+        row = libraries.runs(library['id'])['result'][0]
+        assert row['status'] == 'running' and row['counts']['files'] == 1
+        return original(*args)
+    monkeypatch.setattr(index, '_index_file', inspect)
+    result = index.scan(library['id'])
+    row = libraries.runs(library['id'])['result'][0]
+    assert row['counts'] == result['counts']
+    assert row['progress']['events'][0]['path'] == 'book.cbz'

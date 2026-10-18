@@ -1,5 +1,6 @@
 .folio-scrape { width: min(1000px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 24px clamp(20px, 3vw, 36px); overflow: auto; border: 1px solid var(--folio-line-strong); border-radius: 0; background: var(--folio-paper-bright); color: var(--folio-ink); }
 .folio-scrape::backdrop { background: rgba(23, 24, 21, .5); }
+.folio-scrape-embedded { width: 100%; min-width: 0; max-height: none; margin: 0; overflow: visible; }
 .folio-scrape header { display: flex; align-items: center; justify-content: space-between; gap: 16px; position: sticky; top: -24px; z-index: 1; padding-block: 8px; background: var(--folio-paper-bright); }
 .folio-scrape h3 { margin: 0; font-size: 16px; font-weight: 500; }
 .folio-scrape button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--folio-line); border-radius: 0; background: transparent; color: var(--folio-ink); }

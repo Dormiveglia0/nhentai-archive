@@ -3,59 +3,39 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   type LibrarySummary,
+  type LibraryGrouping,
   type LibraryTag,
   type LibraryTagFilter,
   type LibraryWork,
   type MediaLibrary,
 } from "../../lib/api";
 import type { LibraryView } from "./LibraryToolbar";
+import { readLibraryLocation, libraryLocationHash, type LibraryLocation } from "./libraryLocation";
 import { libraryTagKey } from "../../lib/navigation";
 
-function initialLocationFilters() {
-  const [route, rawQuery = ""] = window.location.hash.replace(/^#/, "").split("?");
-  if (route !== "library") return { q: "", tags: [] as LibraryTagFilter[] };
-  const query = new URLSearchParams(rawQuery);
-  const id = Number(query.get("tag_id"));
-  const key = query.get("tag_key") || undefined;
-  if (!key && (!Number.isFinite(id) || id <= 0)) return { q: query.get("q") || "", tags: [] as LibraryTagFilter[] };
-  return {
-    q: query.get("q") || "",
-    tags: [{
-      id: id > 0 ? id : null,
-      key,
-      type: query.get("tag_type") || undefined,
-      name: query.get("tag_name") || undefined,
-      slug: query.get("tag_slug") || undefined,
-      display: query.get("tag_display") || query.get("tag_name") || query.get("tag_slug") || String(id),
-      count: 0,
-    }],
-  };
-}
-
 export function useLibraryState(perPage: number) {
-  const initialFilters = useRef<ReturnType<typeof initialLocationFilters> | null>(null);
-  if (initialFilters.current === null) initialFilters.current = initialLocationFilters();
+  const initialFilters = useRef<LibraryLocation | null>(null);
+  if (initialFilters.current === null) initialFilters.current = readLibraryLocation();
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [continueReading, setContinueReading] = useState<LibraryWork[]>([]);
   const [recentAdded, setRecentAdded] = useState<LibraryWork[]>([]);
   const [works, setWorks] = useState<LibraryWork[]>([]);
   const [total, setTotal] = useState(0);
+  const [workTotal, setWorkTotal] = useState(0);
   const [numPages, setNumPages] = useState(1);
   const [selected, setSelected] = useState<LibraryWork | null>(null);
 
   const [q, setQ] = useState(() => initialFilters.current?.q ?? "");
-  const [language, setLanguage] = useState("all");
-  const [readStatus, setReadStatus] = useState("all");
-  const [libraryId, setLibraryId] = useState(() => {
-    const value = Number(new URLSearchParams(window.location.hash.split("?")[1]).get("library_id"));
-    return Number.isInteger(value) && (value > 0 || value === -1) ? String(value) : "all";
-  });
+  const [language, setLanguage] = useState(initialFilters.current.language);
+  const [readStatus, setReadStatus] = useState(initialFilters.current.readStatus);
+  const [libraryId, setLibraryId] = useState(initialFilters.current.libraryId);
   const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
-  const [sort, setSort] = useState("recent_updated");
+  const [sort, setSort] = useState(initialFilters.current.sort);
   const [tags, setTags] = useState<LibraryTagFilter[]>(() => initialFilters.current?.tags ?? []);
-  const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [view, setView] = useState<LibraryView>("grid");
-  const [page, setPage] = useState(1);
+  const [favoriteOnly, setFavoriteOnly] = useState(initialFilters.current.favoriteOnly);
+  const [view, setView] = useState<LibraryView>(initialFilters.current.view);
+  const [page, setPage] = useState(initialFilters.current.page);
+  const [groupBy, setGroupBy] = useState<LibraryGrouping>(initialFilters.current.groupBy);
   const [reloadKey, setReloadKey] = useState(0);
 
   const [multiSelect, setMultiSelect] = useState(false);
@@ -68,21 +48,76 @@ export function useLibraryState(perPage: number) {
   const libraryHash = useRef(window.location.hash);
   const libraryRevision = useRef<number | null>(null);
   const searching = useRef(false);
+  const restoreScroll = useRef<number | null>(window.history.state?.libraryScroll ?? null);
 
   useEffect(() => {
     function syncLocation() {
       const hash = window.location.hash;
       if (!/^#library(?:\?|$)/.test(hash) || hash === libraryHash.current) return;
       libraryHash.current = hash;
-      const filters = initialLocationFilters();
-      const value = Number(new URLSearchParams(hash.split("?")[1]).get("library_id"));
-      setQ(filters.q); setTags(filters.tags);
-      setLibraryId(Number.isInteger(value) && (value > 0 || value === -1) ? String(value) : "all");
-      setPage(1);
+      const filters = readLibraryLocation();
+      setQ(filters.q); setTags(filters.tags); setLibraryId(filters.libraryId);
+      setLanguage(filters.language); setReadStatus(filters.readStatus); setSort(filters.sort);
+      setFavoriteOnly(filters.favoriteOnly); setView(filters.view); setPage(filters.page);
+      setGroupBy(filters.groupBy);
+      restoreScroll.current = window.history.state?.libraryScroll ?? 0;
     }
     window.addEventListener("hashchange", syncLocation);
-    return () => window.removeEventListener("hashchange", syncLocation);
+    window.addEventListener("popstate", syncLocation);
+    return () => {
+      window.removeEventListener("hashchange", syncLocation);
+      window.removeEventListener("popstate", syncLocation);
+    };
   }, []);
+
+  function snapshot(): LibraryLocation {
+    return { q, tags, language, readStatus, libraryId, sort, favoriteOnly, view, page, groupBy };
+  }
+
+  useEffect(() => {
+    if (!/^#library(?:\?|$)/.test(window.location.hash)) return;
+    const hash = libraryLocationHash(snapshot());
+    libraryHash.current = hash;
+    window.history.replaceState({ ...window.history.state }, "", hash);
+  }, [q, tags, language, readStatus, libraryId, sort, favoriteOnly, view, page, groupBy]);
+
+  useEffect(() => {
+    const scroll = document.querySelector<HTMLElement>(".folio-scroll");
+    if (!scroll) return;
+    let timer = 0;
+    const save = () => {
+      timer = 0;
+      if (/^#library(?:\?|$)/.test(window.location.hash) && restoreScroll.current === null)
+        window.history.replaceState({ ...window.history.state, libraryScroll: scroll.scrollTop }, "");
+    };
+    const onScroll = () => { if (!timer) timer = window.setTimeout(save, 250); };
+    scroll.addEventListener("scroll", onScroll, { passive: true });
+    return () => { scroll.removeEventListener("scroll", onScroll); window.clearTimeout(timer); };
+  }, []);
+
+  useEffect(() => {
+    if (loading || restoreScroll.current === null) return;
+    const frame = requestAnimationFrame(() => {
+      const scroll = document.querySelector<HTMLElement>(".folio-scroll");
+      if (scroll) scroll.scrollTop = restoreScroll.current ?? 0;
+      restoreScroll.current = null;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [loading, page]);
+
+  function loadPage(next: number) {
+    if (next === page) return;
+    const scroll = document.querySelector<HTMLElement>(".folio-scroll");
+    const head = document.querySelector<HTMLElement>(".folio-library-results-head");
+    window.history.replaceState({ ...window.history.state, libraryScroll: scroll?.scrollTop ?? 0 }, "");
+    const top = scroll && head ? Math.max(0, scroll.scrollTop + head.getBoundingClientRect().top - scroll.getBoundingClientRect().top - 16) : 0;
+    const hash = libraryLocationHash({ ...snapshot(), page: next });
+    window.history.pushState({ ...window.history.state, libraryScroll: top }, "", hash);
+    libraryHash.current = hash;
+    restoreScroll.current = top;
+    setPage(next);
+    if (scroll) scroll.scrollTop = top;
+  }
 
   const filtersActive =
     Boolean(q) || libraryId !== "all" || language !== "all" || readStatus !== "all" || sort !== "recent_updated" || tags.length > 0 || favoriteOnly;
@@ -116,7 +151,7 @@ export function useLibraryState(perPage: number) {
 
   useEffect(() => {
     if (perPage < 1) return;
-    const query = JSON.stringify([q, page, perPage, sort, readStatus, language, tags, favoriteOnly, libraryId]);
+    const query = JSON.stringify([q, page, perPage, sort, readStatus, language, tags, favoriteOnly, libraryId, groupBy]);
     const background = lastQuery.current === query;
     lastQuery.current = query;
     const current = ++requestToken.current;
@@ -130,6 +165,7 @@ export function useLibraryState(perPage: number) {
       q,
       page,
       per_page: perPage,
+      group_by: groupBy,
       sort,
       read_status: readStatus,
       language,
@@ -143,6 +179,7 @@ export function useLibraryState(perPage: number) {
         setError(null);
         setWorks(payload.result);
         setTotal(payload.total);
+        setWorkTotal(payload.work_total ?? payload.total);
         setNumPages(payload.num_pages);
         setSelected((previous) => {
           if (!previous) return null;
@@ -156,6 +193,7 @@ export function useLibraryState(perPage: number) {
         if (background) return;
         setWorks([]);
         setTotal(0);
+        setWorkTotal(0);
         setNumPages(1);
         setSelected(null);
       })
@@ -169,7 +207,7 @@ export function useLibraryState(perPage: number) {
     return () => {
       if (requestToken.current === current) requestToken.current += 1;
     };
-  }, [q, page, perPage, sort, readStatus, language, tags, favoriteOnly, libraryId, reloadKey]);
+  }, [q, page, perPage, sort, readStatus, language, tags, favoriteOnly, libraryId, groupBy, reloadKey]);
 
   useEffect(() => {
     let stopped = false;
@@ -238,10 +276,14 @@ export function useLibraryState(perPage: number) {
   }
 
   function toggleSelectedId(id: number) {
+    toggleSelectedWorks([id]);
+  }
+
+  function toggleSelectedWorks(ids: number[]) {
     setSelectedIds((current) => {
       const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const remove = ids.every(id => next.has(id));
+      ids.forEach(id => remove ? next.delete(id) : next.add(id));
       return next;
     });
   }
@@ -249,7 +291,7 @@ export function useLibraryState(perPage: number) {
   function selectAllOnPage() {
     setSelectedIds((current) => {
       const next = new Set(current);
-      works.forEach((work) => next.add(work.id));
+      works.forEach(work => (work.group?.member_ids ?? [work.id]).forEach(id => next.add(id)));
       return next;
     });
   }
@@ -276,6 +318,7 @@ export function useLibraryState(perPage: number) {
     recentAdded,
     works,
     total,
+    workTotal,
     numPages,
     selected,
     setSelected,
@@ -296,12 +339,15 @@ export function useLibraryState(perPage: number) {
     setFavoriteOnly: (value: boolean) => resetPage(() => setFavoriteOnly(value)),
     view,
     setView,
+    groupBy,
+    setGroupBy: (value: LibraryGrouping) => { resetPage(() => setGroupBy(value)); setSelectedIds(new Set()); },
     page,
-    setPage,
+    setPage: loadPage,
     multiSelect,
     toggleMultiSelect,
     selectedIds,
     toggleSelectedId,
+    toggleSelectedWorks,
     selectAllOnPage,
     clearSelectedIds: () => setSelectedIds(new Set()),
     afterBulkAction,

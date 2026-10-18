@@ -1,5 +1,17 @@
 # NH Archive Project Map
 
+## 导入、整理与分组（2026-10-18）
+
+- 需求及验收顺序见 [CURRENT_REQUIREMENTS.md](CURRENT_REQUIREMENTS.md)。
+- `nhentai_client.py` 统一缓存外请求节流，后台刮削使用低优先级上下文，遵守冷却与取消；`file_identity.py` 将文件系统无符号64位标识无损映射为SQLite有符号整数。归档可读但无法生成安全封面时保留作品和提示。
+- `library_scan_runs.progress_json` 保存阶段、当前路径、真实计数及最近20条操作；`MediaLibraryActivity` 展示进度、控制与历史。`metadata_refresh_service.py` 提供保存候选的审批清单、指定来源、版本校验与决定；手动审批在同一事务中保存元数据和完成状态。
+- `libraryLocation.ts` / `useLibraryState.ts` 负责库内筛选、分页、视图和滚动历史；翻页使用 pushState，滚动保存节流。
+- `GovernancePage` 集中刮削、双来源控制、词典建议和语言多选。人工作者/社团/标签/语言同时写入元数据和标签关联，后台同步及重扫保留人工值。
+- `source_rename_service.py` / `source_renames`：同目录、保留扩展名、Linux原子无覆盖重命名，复用来源锁、缓存锁和在用检查；执行前持有数据库写锁复查。持久化准备记录先于文件变更，失败回滚，启动恢复后才启动扫描。更新原有索引与文件关联，保留身份和阅读状态；不支持安全重命名的文件系统拒绝操作。
+- `library_group_service.py` / `work_groups` / `work_group_members`：一个作品最多属于一个手动组，成员外键随作品删除清理；分组变更参与库版本通知，并校验组版本。聚合匹配作品的轻量索引后分页，批量选择仅包括当前筛选匹配的成员。作者身份结合远端ID、词典和别名，按完整作者集合归组，手动组优先。
+- 新增 `/api/library/groups` 创建与组详情/修改/解散接口；`/api/library/search` 可选 `group_by` / `group_key`，默认保持旧的逐部返回。`WorkGroupCard` 提供封面轮播，`WorkGroupDialog` 管理组内作品。
+- `/api/works/{id}/source-rename`、`/api/library/scrape-queue` 及决定接口均沿用应用认证。`#scrape` 是我的库下的独立审批页。
+
 ## 网页上传与文件权限（2026-10-17）
 
 - `library/UploadDialog.tsx` 与 `UploadDialog.css`：我的库上传入口，ZIP / CBZ 目标库选择、自动匹配与手动填写；复用 `MetadataScrapePanel` 的搜索、候选比较和确认。

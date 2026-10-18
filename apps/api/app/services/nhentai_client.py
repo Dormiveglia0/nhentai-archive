@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import re
 import time
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from copy import deepcopy
+from contextlib import contextmanager
 from typing import Any, Callable
 
 
@@ -88,6 +90,53 @@ class NhentaiClient:
         self._cdn: dict[str, Any] | None = None
         self._cache: dict[tuple[str, str, str, str], tuple[float, Any]] = {}
         self._rate_limited_until = 0.0
+        self._request_condition = threading.Condition()
+        self._next_request_at = 0.0
+        self._next_background_at = 0.0
+        self._foreground_waiters = 0
+        self._last_foreground_at = 0.0
+        self._request_context = threading.local()
+
+    @contextmanager
+    def background_requests(self, cancelled: Callable[[], bool]):
+        previous = getattr(self._request_context, "cancelled", None)
+        self._request_context.cancelled = cancelled
+        try:
+            yield
+        finally:
+            self._request_context.cancelled = previous
+
+    def _wait_for_slot(self) -> None:
+        cancelled = getattr(self._request_context, "cancelled", None)
+        with self._request_condition:
+            if cancelled is None:
+                self._foreground_waiters += 1
+            try:
+                while True:
+                    now = time.monotonic()
+                    if cancelled is not None and cancelled():
+                        raise InterruptedError("后台远端请求已停止")
+                    if cancelled is None and self._rate_limited_until > now:
+                        raise NhentaiApiError(429, "rate_limited", "远端请求正在冷却，请稍后重试", max(1, int(self._rate_limited_until - now)))
+                    ready_at = self._next_request_at
+                    if cancelled is not None:
+                        ready_at = max(ready_at, self._next_background_at, self._last_foreground_at + 2, self._rate_limited_until)
+                        if self._foreground_waiters:
+                            ready_at = max(ready_at, now + .2)
+                    delay = ready_at - now
+                    if delay <= 0:
+                        # Pace every uncached API request; background work leaves room for browsing.
+                        self._next_request_at = now + 1
+                        if cancelled is not None:
+                            self._next_background_at = now + 3
+                        else:
+                            self._last_foreground_at = now
+                        return
+                    self._request_condition.wait(min(delay, .2))
+            finally:
+                if cancelled is None:
+                    self._foreground_waiters -= 1
+                self._request_condition.notify_all()
 
     def latest(self, page: int = 1, per_page: int = 25) -> dict[str, Any]:
         return self._get("/api/v2/galleries", {"page": page, "per_page": per_page})
@@ -225,7 +274,7 @@ class NhentaiClient:
         cached = None if fresh else self._cache.get(cache_key)
         if ttl and cached and cached[0] > now:
             return deepcopy(cached[1])
-        if self._rate_limited_until > now:
+        if self._rate_limited_until > now and getattr(self._request_context, "cancelled", None) is None:
             if not fresh and ttl and cached:
                 return deepcopy(cached[1])
             retry_after = max(1, int(self._rate_limited_until - now))
@@ -250,11 +299,12 @@ class NhentaiClient:
             headers=headers,
             method=method,
         )
+        self._wait_for_slot()
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 payload = json.loads(response.read().decode("utf-8"))
                 if ttl:
-                    self._cache[cache_key] = (now + ttl, deepcopy(payload))
+                    self._cache[cache_key] = (time.monotonic() + ttl, deepcopy(payload))
                 return payload
         except urllib.error.HTTPError as exc:
             body_text = exc.read().decode("utf-8", "replace")
@@ -262,6 +312,8 @@ class NhentaiClient:
             if error.status_code == 429:
                 cooldown = error.retry_after or 60
                 self._rate_limited_until = max(self._rate_limited_until, time.monotonic() + cooldown)
+                with self._request_condition:
+                    self._request_condition.notify_all()
                 if not fresh and ttl and cached:
                     return deepcopy(cached[1])
             raise error from exc
@@ -282,10 +334,11 @@ class NhentaiClient:
 
     def runtime_stats(self) -> dict[str, Any]:
         now = time.monotonic()
-        active = sum(1 for expiry, _ in self._cache.values() if expiry > now)
+        cache = self._cache.copy()
+        active = sum(1 for expiry, _ in cache.values() if expiry > now)
         remaining = round(self._rate_limited_until - now) if self._rate_limited_until > now else 0
         return {
-            "cache_entries": len(self._cache),
+            "cache_entries": len(cache),
             "cache_active_entries": active,
             "cooldown_active": remaining > 0,
             "cooldown_remaining_seconds": max(0, remaining),

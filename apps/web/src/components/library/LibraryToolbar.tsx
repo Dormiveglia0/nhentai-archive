@@ -1,7 +1,7 @@
 import { ChevronDown, Heart, RotateCcw, Search, SlidersHorizontal, Upload, X } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
-import type { LibrarySummary, MediaLibrary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
+import type { LibrarySummary, LibraryGrouping, MediaLibrary, LibraryTagFilter as LibraryTagFilterItem } from "../../lib/api";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
 import { LibraryTagFilter } from "./LibraryTagFilter";
 import { READ_STATUS_OPTIONS, SORT_OPTIONS } from "./libraryHelpers";
@@ -28,6 +28,8 @@ type Props = {
   libraryId: string;
   onLibraryId: (value: string) => void;
   mediaLibraries: MediaLibrary[];
+  groupBy: LibraryGrouping;
+  onGroupBy: (value: LibraryGrouping) => void;
 };
 
 export function LibraryToolbar(props: Props) {
@@ -87,12 +89,16 @@ export function LibraryToolbar(props: Props) {
         <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
         <button type="submit"><Search size={15} />搜索</button>
       </form>
+      <a className="folio-line-button" href="#scrape">刮削审批</a>
       <button className="folio-line-button" type="button" onClick={props.onUpload}><Upload size={16} />上传</button>
       </div>
 
       <details className="folio-library-filters" open={filtersOpen} onToggle={event => setFiltersOpen(event.currentTarget.open)}>
       <summary><SlidersHorizontal size={16} />筛选与排序<ChevronDown size={16} /></summary>
       <div className="folio-library-filter-row">
+        <FolioSelect label="作品展示" value={props.groupBy} onChange={props.onGroupBy} options={[
+          { value: 'manual', label: '按分组展示' }, { value: 'author', label: '按作者合并' }, { value: 'none', label: '逐部展示' },
+        ]} />
         <FolioSelect label="媒体库" value={props.libraryId} onChange={props.onLibraryId} options={[
           { value: "all", label: "全部媒体库" },
           ...props.mediaLibraries.map(library => ({ value: String(library.id), label: library.name })),

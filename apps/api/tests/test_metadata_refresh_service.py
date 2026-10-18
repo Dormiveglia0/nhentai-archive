@@ -8,12 +8,12 @@ from app.services.dictionary_service import DictionaryService
 from app.services.discover_service import DiscoverService
 from app.services.metadata_refresh_service import MetadataRefreshService
 from app.services.library_service import LibraryService
-from app.services.nhentai_client import NhentaiApiError
+from app.services.nhentai_client import NhentaiApiError, NhentaiClient
 
 
-class FakeClient:
+class FakeClient(NhentaiClient):
     def __init__(self, galleries, search_results=None):
-        self.api_key = "test"
+        super().__init__("https://api.example", "tests", "test")
         self.galleries = galleries
         self.search_results = search_results or []
         self.calls = []
@@ -283,3 +283,70 @@ def test_upload_binding_choice_overrides_library_default_in_preview_and_apply(tm
     assert result["summary"]["updated"] == 1
     work = db.fetchone("SELECT * FROM works WHERE id=?", (work_id,))
     assert work["remote_gallery_id"] is None and work["metadata_gallery_id"] == 600
+
+
+def test_scrape_queue_reads_saved_candidates_without_remote_requests(tmp_path):
+    db, _, _, _, library, item, gallery, service = _indexed_service(tmp_path, auto_scrape=True)
+    service.client.search_results = [gallery, {**gallery, 'id': 602}]
+    service.tick()
+    before = len(service.client.calls)
+    payload = service.queue(library_id=library['id'], status='review', q='Crystal')
+    assert payload['total'] == 1 and payload['counts']['review'] == 1
+    assert payload['result'][0]['result']['candidates']
+    assert payload['result'][0]['version'] == service.queue_context(item['id'])['version']
+    assert len(service.client.calls) == before
+    assert service.queue(library_id=library['id'] + 100)['total'] == 0
+
+
+def test_scrape_decisions_guard_versions_and_never_bind_a_work(tmp_path):
+    import pytest
+    db, _, _, _, library, item, gallery, service = _indexed_service(tmp_path, auto_scrape=True)
+    version = service.queue_context(item['id'])['version']
+    db.execute("UPDATE works SET title='Manually changed' WHERE id=?", (item['work_id'],))
+    with pytest.raises(ValueError, match='变化'):
+        service.decide(item['id'], 'dismiss', version)
+    version = service.queue_context(item['id'])['version']
+    assert service.decide(item['id'], 'dismiss', version)['status'] == 'ignored'
+    assert service.decide(item['id'], 'retry', version)['status'] == 'pending'
+    assert service.decide(item['id'], 'complete', version)['status'] == 'completed'
+    assert db.fetchone('SELECT remote_gallery_id FROM works')['remote_gallery_id'] is None
+    db.execute("UPDATE library_items SET scrape_status='running' WHERE id=?", (item['id'],))
+    with pytest.raises(ValueError, match='正在刮削'):
+        service.decide(item['id'], 'dismiss', version)
+
+
+def test_review_apply_targets_the_selected_library_item(tmp_path):
+    import pytest
+    from app.services.media_library_service import MediaLibraryService
+    db, libraries, index, root, library, item, gallery, service = _indexed_service(tmp_path, auto_scrape=True, auto_bind=False)
+    second_root = root.parent / 'second'
+    second_root.mkdir()
+    second = libraries.create({'name': '第二来源', 'root_path': str(second_root)})
+    with db.connect() as conn:
+        cursor = conn.execute("INSERT INTO library_items(library_id,relative_path,work_id,status,scrape_status) VALUES (?,'another.cbz',?,'ready','review')", (second['id'], item['work_id']))
+        other_id = cursor.lastrowid
+        conn.execute("INSERT INTO work_files(work_id,kind,path,library_item_id) VALUES (?,'source_cbz',?,?)", (item['work_id'], str(second_root / 'another.cbz'), other_id))
+        conn.execute("UPDATE library_items SET scrape_status='review' WHERE id=?", (item['id'],))
+    preview = service.preview([item['work_id']], item_ids={item['work_id']: item['id']})['result'][0]
+    result = service.apply([{**preview['match'], 'source': 'manual_id', 'work_id': item['work_id'], 'item_id': item['id'], 'version': preview['version']}])
+    assert result['summary']['updated'] == 1
+    assert db.fetchone('SELECT scrape_status FROM library_items WHERE id=?', (item['id'],))['scrape_status'] == 'completed'
+    assert db.fetchone('SELECT scrape_status FROM library_items WHERE id=?', (other_id,))['scrape_status'] == 'review'
+    with pytest.raises(ValueError, match='不匹配'):
+        service.preview([item['work_id']], item_ids={item['work_id']: 999999})
+
+
+def test_manual_review_saves_metadata_and_status_together_and_rejects_stale_version(tmp_path):
+    import pytest
+    from app.services.governance_service import GovernanceService
+    db, libraries, index, root, library, item, gallery, service = _indexed_service(tmp_path, auto_scrape=True)
+    governance = GovernanceService(db, service.dictionary, libraries.settings, metadata_refresh=service)
+    payload = {'review_item_id': item['id'], 'review_version': service.queue_context(item['id'])['version'],
+               'metadata': [{'field': 'summary', 'value': 'Manually reviewed', 'source': 'manual'}]}
+    governance.apply(item['work_id'], payload)
+    assert db.fetchone("SELECT value FROM work_metadata WHERE field='summary'")['value'] == 'Manually reviewed'
+    assert db.fetchone('SELECT scrape_status FROM library_items')['scrape_status'] == 'completed'
+    with pytest.raises(ValueError, match='变化'):
+        governance.apply(item['work_id'], {**payload, 'metadata': [{'field': 'summary', 'value': 'Stale overwrite'}]})
+    assert db.fetchone("SELECT value FROM work_metadata WHERE field='summary'")['value'] == 'Manually reviewed'
+    assert db.fetchone('SELECT remote_gallery_id FROM works')['remote_gallery_id'] is None

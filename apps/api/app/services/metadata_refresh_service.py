@@ -47,6 +47,8 @@ class MetadataRefreshService:
             + """ ORDER BY (f.library_item_id IS NULL OR i.status = 'ready') DESC,
                 f.library_item_id IS NULL DESC, l.kind = 'managed' DESC, l.kind = 'local' DESC, f.id DESC LIMIT 1""",
             (work_id, item_id) if item_id is not None else (work_id,))
+        if item_id is not None and not file:
+            raise ValueError("扫描记录与作品不匹配或媒体库已移除")
         decisions = fetchall("SELECT field, value, source FROM work_metadata WHERE work_id = ? ORDER BY field", (work_id,))
         tags = fetchall("SELECT tag_type, remote_tag_id, remote_name, remote_slug, source FROM work_tags WHERE work_id = ? ORDER BY id", (work_id,))
         config = {**LIBRARY_DEFAULTS, **json.loads(file["config_json"] or "{}")} if file else LIBRARY_DEFAULTS.copy()
@@ -56,13 +58,14 @@ class MetadataRefreshService:
         return {"work": work, "file": file, "decisions": decisions, "tags": tags, "config": config, "metadata": metadata, "version": version}
 
     def preview(self, work_ids: list[int], gallery_ids: dict[int, int] | None = None,
-                queries: dict[int, str] | None = None, bind: bool | None = None) -> dict[str, Any]:
+                queries: dict[int, str] | None = None, bind: bool | None = None,
+                item_ids: dict[int, int] | None = None) -> dict[str, Any]:
         ids = list(dict.fromkeys(int(value) for value in work_ids if int(value) > 0))
         if not ids or len(ids) > MAX_BATCH:
             raise ValueError(f"请选取1至{MAX_BATCH}部作品")
         result = []
         for work_id in ids:
-            snapshot = self._snapshot(work_id)
+            snapshot = self._snapshot(work_id, (item_ids or {}).get(work_id))
             if bind is not None:
                 snapshot["config"] = {**snapshot["config"], "auto_bind": bind}
             query = str((queries or {}).get(work_id) or "").strip()
@@ -107,8 +110,8 @@ class MetadataRefreshService:
 
     def _candidates(self, snapshot, query="", gallery_id=None, fresh=False, bind=None):
         if gallery_id is not None:
-            if isinstance(gallery_id, bool) or not isinstance(gallery_id, int) or gallery_id <= 0:
-                raise ValueError("作品ID必须为正整数")
+            if isinstance(gallery_id, bool) or not isinstance(gallery_id, int) or not 0 < gallery_id <= 9223372036854775807:
+                raise ValueError("作品ID必须为有效的正整数")
             source = "manual_id"
         elif not query:
             gallery_id, source = self._reference(snapshot)
@@ -218,7 +221,7 @@ class MetadataRefreshService:
                 continue
             seen.add(work_id)
             try:
-                synced = self._apply_one(match)
+                synced = self._apply_one(match, match.get("item_id"))
                 result.append({**row, "status": "updated", **synced})
             except ValueError as exc:
                 result.append({**row, "status": "skipped", "reason": str(exc)})
@@ -315,6 +318,67 @@ class MetadataRefreshService:
         title = str(snapshot["metadata"].get("Title") or work.get("title") or work.get("title_japanese") or "").strip()
         return re.sub(r"\s*\[\d+\]\s*$", "", title).strip()
 
+    def queue(self, library_id=None, status="review", q="", page=1, per_page=20):
+        states = {"review", "pending", "running", "error", "completed", "ignored", "all"}
+        if status not in states:
+            raise ValueError("无效的刮削状态")
+        page, per_page = max(1, page), max(1, min(50, per_page))
+        where = "i.work_id IS NOT NULL AND i.status='ready' AND l.removed_at IS NULL"
+        params = []
+        if library_id is not None:
+            where += " AND i.library_id=?"
+            params.append(library_id)
+        if q.strip():
+            where += " AND (instr(lower(w.title), lower(?)) OR instr(lower(i.relative_path), lower(?)))"
+            params.extend([q.strip(), q.strip()])
+        source = "FROM library_items i JOIN works w ON w.id=i.work_id JOIN media_libraries l ON l.id=i.library_id"
+        counts = {row["status"]: row["n"] for row in self.db.fetchall(
+            f"SELECT i.scrape_status AS status, COUNT(*) AS n {source} WHERE {where} GROUP BY i.scrape_status", params)}
+        if status != "all":
+            where += " AND i.scrape_status=?"
+            params.append(status)
+        total = self.db.fetchone(f"SELECT COUNT(*) AS n {source} WHERE {where}", params)["n"]
+        rows = self.db.fetchall(f"""SELECT i.id, i.work_id, i.library_id, i.relative_path, i.scrape_status,
+            i.scrape_retry_at, i.scrape_attempts, i.scrape_result_json, w.title, w.title_japanese, w.pretty_title,
+            w.page_count, w.source, w.remote_gallery_id, l.name AS library_name, l.enabled, l.config_json {source} WHERE {where}
+            ORDER BY i.id DESC LIMIT ? OFFSET ?""", [*params, per_page, (page - 1) * per_page])
+        result = []
+        for row in rows:
+            snapshot = self._snapshot(row["work_id"], row["id"])
+            result.append({**{key: value for key, value in row.items() if key not in {"scrape_result_json", "config_json"}},
+                           "result": json.loads(row["scrape_result_json"] or "{}"), "version": snapshot["version"],
+                           "config": {key: snapshot["config"][key] for key in ("auto_bind", "language_mode", "language")},
+                           "auto_scrape": bool(snapshot["config"]["auto_scrape"]), "auto_bind": bool(snapshot["config"]["auto_bind"])})
+        return {"result": result, "total": total, "page": page, "per_page": per_page, "counts": counts,
+                "remote": self.client.runtime_stats()}
+
+    def queue_context(self, item_id):
+        item = self.db.fetchone("SELECT work_id FROM library_items WHERE id=?", (item_id,))
+        if not item or not item["work_id"]:
+            raise ValueError("扫描记录不存在")
+        snapshot = self._snapshot(item["work_id"], item_id)
+        return {"version": snapshot["version"]}
+
+    def decide(self, item_id, action, version):
+        if action not in {"retry", "dismiss", "complete"}:
+            raise ValueError("无效的审批操作")
+        with self.db.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            item = conn.execute("SELECT work_id, scrape_status, status FROM library_items WHERE id=?", (item_id,)).fetchone()
+            if not item or not item["work_id"] or item["status"] != "ready":
+                raise ValueError("扫描记录不可用")
+            snapshot = self._snapshot(item["work_id"], item_id, conn)
+            if snapshot["version"] != version:
+                raise ValueError("作品或设置已变化，请刷新后再操作")
+            if item["scrape_status"] == "running":
+                raise ValueError("当前作品正在刮削，请等待本次完成")
+            if action == "retry" and (not snapshot["file"]["enabled"] or not snapshot["config"]["auto_scrape"]):
+                raise ValueError("请先在媒体库设置中启用自动刮削，或直接手动搜索")
+            status = {"retry": "pending", "dismiss": "ignored", "complete": "completed"}[action]
+            conn.execute("UPDATE library_items SET scrape_status=?, scrape_retry_at=0, scrape_attempts=0, scrape_result_json=? WHERE id=?",
+                         (status, json.dumps({"reason": {"retry": "等待重新刮削", "dismiss": "已跳过自动匹配", "complete": "已手动确认元数据"}[action]}, ensure_ascii=False), item_id))
+        return {"status": status}
+
     def tick(self):
         if self._retry_at > time.time() or not self.client.api_key:
             return
@@ -333,12 +397,13 @@ class MetadataRefreshService:
                                 (row["id"],)).rowcount:
                 return
         try:
-            candidates, reason = self._candidates(snapshot)
-            match = candidates[0] if candidates else None
-            if match and match["automatic_eligible"]:
-                self._apply_one({**match, "work_id": row["work_id"], "version": snapshot["version"]}, row["id"], True)
-            else:
-                self._finish_attempt(snapshot, "review", {"candidates": candidates, "reason": match["reason"] if match else reason})
+            with self.client.background_requests(self._closing.is_set):
+                candidates, reason = self._candidates(snapshot)
+                match = candidates[0] if candidates else None
+                if match and match["automatic_eligible"]:
+                    self._apply_one({**match, "work_id": row["work_id"], "version": snapshot["version"]}, row["id"], True)
+                else:
+                    self._finish_attempt(snapshot, "review", {"candidates": candidates, "reason": match["reason"] if match else reason})
         except Exception as exc:
             delay = max(30, exc.retry_after or 60) if isinstance(exc, NhentaiApiError) else 60
             if isinstance(exc, NhentaiApiError) and exc.status_code == 429:

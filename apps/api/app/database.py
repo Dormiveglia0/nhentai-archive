@@ -35,6 +35,24 @@ CREATE TABLE IF NOT EXISTS work_files (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS work_groups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS work_group_members (
+  work_id INTEGER PRIMARY KEY REFERENCES works(id) ON DELETE CASCADE,
+  group_id INTEGER NOT NULL REFERENCES work_groups(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_work_group_members_group ON work_group_members(group_id);
+CREATE TRIGGER IF NOT EXISTS work_group_member_removed AFTER DELETE ON work_group_members BEGIN
+  UPDATE work_groups SET version=version+1 WHERE id=OLD.group_id;
+  DELETE FROM work_groups WHERE id=OLD.group_id AND NOT EXISTS (
+    SELECT 1 FROM work_group_members WHERE group_id=OLD.group_id);
+END;
+
 CREATE TABLE IF NOT EXISTS reader_bridges (
   work_id INTEGER PRIMARY KEY REFERENCES works(id) ON DELETE CASCADE,
   remote_gallery_id INTEGER NOT NULL,
@@ -315,6 +333,7 @@ CREATE TABLE IF NOT EXISTS library_scan_runs (
   status TEXT NOT NULL DEFAULT 'running',
   counts_json TEXT NOT NULL DEFAULT '{}',
   errors_json TEXT NOT NULL DEFAULT '[]',
+  progress_json TEXT NOT NULL DEFAULT '{}',
   started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completed_at TEXT
 );
@@ -325,6 +344,22 @@ CREATE TABLE IF NOT EXISTS library_changes (
   due_at REAL NOT NULL,
   PRIMARY KEY(library_id, relative_path)
 );
+
+CREATE TABLE IF NOT EXISTS source_renames (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  work_id INTEGER NOT NULL,
+  file_id INTEGER NOT NULL,
+  item_id INTEGER,
+  library_id INTEGER NOT NULL,
+  old_path TEXT NOT NULL,
+  new_path TEXT NOT NULL,
+  version_json TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'prepared',
+  error TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  completed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_source_renames_pending ON source_renames(library_id, state);
 
 CREATE TABLE IF NOT EXISTS library_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -461,7 +496,7 @@ class Database:
             conn.execute("UPDATE creator_subscriptions SET interval_seconds = 86400 WHERE interval_seconds NOT IN (86400, 259200, 604800)")
             conn.executescript(INDEXES)
             conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES ('library.revision', '0')")
-            for table in ("works", "work_files", "work_metadata", "work_tags", "reader_progress", "local_tag_dictionary"):
+            for table in ("works", "work_files", "work_metadata", "work_tags", "reader_progress", "local_tag_dictionary", "work_groups", "work_group_members"):
                 for event in ("INSERT", "UPDATE", "DELETE"):
                     conn.execute(f"""CREATE TRIGGER IF NOT EXISTS library_revision_{table}_{event.lower()}
                         AFTER {event} ON {table} BEGIN
@@ -521,6 +556,8 @@ class Database:
                                   ("scrape_attempts", "INTEGER NOT NULL DEFAULT 0"), ("scrape_result_json", "TEXT")):
             _add_column_if_missing(conn, "library_items", _table_columns(conn, "library_items"), name, declaration)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_library_items_scrape ON library_items(scrape_status, scrape_retry_at)")
+        _add_column_if_missing(conn, "library_scan_runs", _table_columns(conn, "library_scan_runs"),
+                               "progress_json", "TEXT NOT NULL DEFAULT '{}'")
 
         dictionary_columns = _table_columns(conn, "local_tag_dictionary")
         if dictionary_columns and "zh_name" not in dictionary_columns:

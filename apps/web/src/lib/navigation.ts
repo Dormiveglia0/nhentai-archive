@@ -4,6 +4,7 @@ export type Page =
   | { name: "workbench" }
   | { name: "discover"; tag?: RemoteTag & { excluded?: boolean } }
   | { name: "library" }
+  | { name: "scrape" }
   | { name: "reader"; workId: number }
   | { name: "readerRemote"; galleryId: number }
   | { name: "gallery"; galleryId: number; returnTo?: string }
@@ -31,6 +32,7 @@ export function pageFromLocation(): Page {
   if (exportMatch) return { name: "export", workId: Number(exportMatch[1]) };
   if (route === "workbench") return { name: "workbench" };
   if (route === "library") return { name: "library" };
+  if (route === "scrape") return { name: "scrape" };
   if (route === "governance") return { name: "governance" };
   if (route === "dictionary") return { name: "dictionary" };
   if (route === "tasks") return { name: "tasks" };

@@ -1,0 +1,38 @@
+.folio-scrape-review-head, .folio-scrape-review-head > div { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.folio-scrape-review-head { justify-content: space-between; margin-bottom: 22px; }
+.folio-scrape-review-head h1 { margin: 0; font: 700 26px "Noto Serif SC", serif; }
+.folio-scrape-review-page .folio-line-button { text-decoration: none; }
+.folio-scrape-review-filters { display: grid; grid-template-columns: minmax(180px, 1fr) 240px 190px; gap: 16px; align-items: end; }
+.folio-scrape-review-filters > form { min-width: 0; display: flex; gap: 8px; }
+.folio-scrape-review-filters > form > button { flex-shrink: 0; white-space: nowrap; }
+.folio-scrape-review-filters input { min-width: 0; width: 100%; padding: 10px 12px; background: transparent; border: 1px solid var(--folio-line-strong); font: inherit; color: var(--folio-ink); }
+.folio-scrape-review-counts { display: flex; flex-wrap: wrap; margin: 22px 0; border-block: 1px solid var(--folio-line); }
+.folio-scrape-review-counts button { flex: 1; min-width: 90px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 12px; border: 0; background: transparent; color: var(--folio-muted); font: inherit; font-size: 13px; cursor: pointer; }
+.folio-scrape-review-counts button:is(:hover,.is-active) { background: var(--folio-red-soft); color: var(--folio-ink); }
+.folio-scrape-review-counts strong { color: var(--folio-red); font-size: 18px; font-variant-numeric: tabular-nums; }
+.folio-scrape-review-layout { display: grid; grid-template-columns: minmax(240px, .8fr) minmax(0, 1.5fr); border-top: 1px solid var(--folio-line-strong); }
+.folio-scrape-review-list, .folio-scrape-review-detail { min-width: 0; }
+.folio-scrape-review-list { border-right: 1px solid var(--folio-line); }
+.folio-scrape-review-list > header { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 18px 12px; }
+.folio-scrape-review-list h2 { margin: 0; font-size: 17px; }
+.folio-scrape-review-list > header > span { color: var(--folio-muted); font-size: 12px; }
+.folio-scrape-review-list > button { display: grid; gap: 8px; width: 100%; padding: 16px 14px; border: 0; border-top: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); text-align: left; font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.folio-scrape-review-list > button:is(:hover,:focus-visible,.is-selected) { background: var(--folio-red-soft); }
+.folio-scrape-review-list > button.is-selected { box-shadow: inset 2px 0 var(--folio-red); }
+.folio-scrape-review-list > button strong { font-size: 14px; line-height: 1.65; }
+.folio-scrape-review-list > button :is(span,small,p) { margin: 0; color: var(--folio-muted); font-size: 12px; line-height: 1.6; }
+.folio-scrape-review-list > .folio-media-hint { margin-inline: 14px; }
+.folio-scrape-review-detail { padding: 20px clamp(12px, 2vw, 28px); scroll-margin-top: 20px; }
+.folio-scrape-review-detail > header h2 { margin: 0; font-size: 19px; line-height: 1.6; overflow-wrap: anywhere; }
+.folio-scrape-review-detail > header p { color: var(--folio-muted); font-size: 12px; overflow-wrap: anywhere; }
+.folio-scrape-review-detail .folio-choice-row { margin-block: 20px; }
+.folio-scrape-review-detail .folio-choice-row { display: flex; }
+.folio-scrape-review-detail .folio-choice-row button { flex: 1; min-width: 0; padding: 12px; }
+.folio-scrape-review-detail .folio-choice-row button[aria-pressed="true"] { background: var(--folio-red-soft); }
+.folio-scrape-review-bind { border: 0; margin: 0; padding: 0; min-width: 0; }
+.folio-scrape-review-detail .folio-scrape-embedded { border: 0; padding: 20px 0; }
+.folio-scrape-review-detail .folio-scrape-results { grid-template-columns: minmax(0, 1fr); }
+.folio-scrape-review-detail > footer { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-top: 20px; border-top: 1px solid var(--folio-line); }
+.folio-scrape-review-detail > form > .folio-line-button { margin-block: 20px; }
+@media (max-width: 1100px) { .folio-scrape-review-filters { grid-template-columns: 1fr 1fr; } .folio-scrape-review-filters > form { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .folio-scrape-review-layout { grid-template-columns: minmax(0, 1fr); } .folio-scrape-review-list { border-right: 0; } .folio-scrape-review-detail { border-top: 1px solid var(--folio-line-strong); padding-inline: 12px; } .folio-scrape-review-filters { gap: 12px; } .folio-scrape-review-head h1 { font-size: 23px; } }

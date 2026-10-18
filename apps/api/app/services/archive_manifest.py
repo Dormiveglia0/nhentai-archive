@@ -17,6 +17,7 @@ from xml.etree import ElementTree
 
 from PIL import Image, ImageOps
 
+from app.services.file_identity import sqlite_file_id
 from app.services.archive_service import IMAGE_EXTENSIONS, _natural_key
 from app.services.comicinfo import MAX_XML_BYTES, gallery_id_from_xml
 from app.services.media_library_service import MediaLibraryService
@@ -65,8 +66,8 @@ def _probe_archive(connection, root: str, follow_symlinks: bool) -> None:
                 before = path.stat()
                 result = inspect_archive(path)
                 after = path.stat()
-                result["before"] = (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino)
-                result["after"] = (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino)
+                result["before"] = (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino))
+                result["after"] = (after.st_size, after.st_mtime_ns, sqlite_file_id(after.st_dev), sqlite_file_id(after.st_ino))
                 connection.send((True, result))
             except Exception as exc:
                 connection.send((False, str(exc)[:500] or type(exc).__name__))
@@ -198,27 +199,29 @@ def inspect_archive(path: Path) -> dict[str, Any]:
             raise ValueError("归档中没有可阅读图片")
         images.sort(key=lambda item: _natural_key(item[1].filename))
         dimensions = {}
-        # ponytail: try at most three covers to bound remote reads; more failures remain a reported error.
+        cover_bytes = None
+        # Try at most three covers to bound mount reads; keep readable archives when covers fail.
         for cover_index, (_, cover) in enumerate(images[:3], 1):
             try:
                 if cover.file_size > MAX_COVER_BYTES:
                     raise ValueError("封面图片超过64MB")
                 with Image.open(BytesIO(archive.read(cover))) as image:
                     width, height = image.size
-                    if width * height > 30000000:
-                        raise ValueError("封面图片像素超过3000万")
                     image.draft("RGB", (512, 768))
+                    if image.width * image.height > 30000000:
+                        raise ValueError("封面解码像素超过3000万，已保留原图供阅读")
                     image = ImageOps.exif_transpose(image)
                     image.thumbnail((512, 768), Image.Resampling.LANCZOS)
                     image = image.convert("RGB")
                     output = BytesIO()
                     image.save(output, format="JPEG", quality=78, optimize=True)
+                    cover_bytes = output.getvalue()
                 dimensions[cover_index] = (width, height)
                 break
             except (OSError, ValueError, Image.DecompressionBombError, zipfile.BadZipFile) as exc:
                 warnings.append(f"第{cover_index}页封面不可用：{str(exc)[:100]}")
         else:
-            raise ValueError("前几页均无法生成封面：" + "; ".join(warnings[-3:]))
+            warnings.append("已导入归档，前几页无法安全生成封面")
         pages = [
             {"page_index": index, "archive_member": info.filename, "archive_position": position,
              "media_type": mimetypes.guess_type(info.filename)[0] or "application/octet-stream",
@@ -232,4 +235,4 @@ def inspect_archive(path: Path) -> dict[str, Any]:
         identity = [(info.filename, info.file_size, info.CRC) for _, info in images]
         fingerprint = hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
         return {"manifest": zlib.compress(encoded), "page_count": len(pages),
-                "metadata": metadata, "archive_info": archive_info, "cover": output.getvalue(), "fingerprint": fingerprint, "warnings": warnings}
+                "metadata": metadata, "archive_info": archive_info, "cover": cover_bytes, "fingerprint": fingerprint, "warnings": warnings}

@@ -7,12 +7,21 @@ from app.api.schemas import (
     GovernanceTranslateRequest,
     MetadataRefreshApplyRequest,
     MetadataRefreshPreviewRequest,
+    SourceRenameRequest,
 )
 from app.container import services
 from app.services.translation_service import TranslationError
 
 
 router = APIRouter()
+
+
+@router.post("/works/{work_id}/source-rename")
+def rename_source(work_id: int, payload: SourceRenameRequest):
+    try:
+        return services.source_renames.rename(work_id, payload.file_id, payload.filename, payload.expected_path)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @router.get("/governance/queue")
@@ -77,7 +86,7 @@ def bulk_apply(payload: GovernanceBulkRequest):
 @router.post("/governance/metadata-refresh/preview")
 def metadata_refresh_preview(payload: MetadataRefreshPreviewRequest):
     try:
-        return services.metadata_refresh.preview(payload.work_ids, payload.gallery_ids, payload.queries, payload.bind)
+        return services.metadata_refresh.preview(payload.work_ids, payload.gallery_ids, payload.queries, payload.bind, payload.item_ids)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

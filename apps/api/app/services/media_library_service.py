@@ -6,6 +6,7 @@ import threading
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from app.services.file_identity import sqlite_file_id
 from app.config import Settings
 from app.database import Database
 
@@ -58,7 +59,13 @@ class MediaLibraryService:
                 SELECT library_id, COUNT(*) AS item_count, COUNT(DISTINCT work_id) AS work_count,
                   SUM(status = 'error') AS error_count, SUM(status = 'pending') AS pending_count,
                   SUM(status = 'missing') AS missing_count,
-                  SUM(scrape_status = 'review') AS scrape_review_count FROM library_items GROUP BY library_id
+                  SUM(scrape_status = 'review') AS scrape_review_count,
+                  SUM(status='ready' AND scrape_status='pending') AS scrape_pending_count,
+                  SUM(scrape_status='running') AS scrape_running_count,
+                  SUM(scrape_status='error') AS scrape_error_count,
+                  SUM(scrape_status IN ('completed', 'done')) AS scrape_completed_count,
+                  MIN(CASE WHEN scrape_retry_at > 0 THEN scrape_retry_at END) AS scrape_retry_at
+                  FROM library_items GROUP BY library_id
               ), active_scans AS (
                 SELECT json_extract(target_json, '$.library_id') AS library_id, MAX(id) AS job_id
                 FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
@@ -74,9 +81,16 @@ class MediaLibraryService:
               COALESCE(s.error_count, 0) AS error_count, COALESCE(s.pending_count, 0) AS pending_count,
               COALESCE(s.missing_count, 0) AS missing_count, COALESCE(s.scrape_review_count, 0) AS scrape_review_count,
               j.id AS active_scan_job_id, j.status AS active_scan_status,
+              COALESCE(s.scrape_pending_count, 0) AS scrape_pending_count,
+              COALESCE(s.scrape_running_count, 0) AS scrape_running_count,
+              COALESCE(s.scrape_error_count, 0) AS scrape_error_count,
+              COALESCE(s.scrape_completed_count, 0) AS scrape_completed_count, s.scrape_retry_at,
+              r.id AS scan_run_id, r.status AS scan_status, r.counts_json AS scan_counts_json,
+              r.progress_json AS scan_progress_json, r.started_at AS scan_started_at,
               EXISTS(SELECT 1 FROM library_scan_runs r WHERE r.library_id = l.id AND r.status = 'running') AS scanning
               FROM media_libraries l LEFT JOIN stats s ON s.library_id = l.id
               LEFT JOIN active_scans a ON a.library_id = l.id LEFT JOIN jobs j ON j.id = a.job_id
+              LEFT JOIN library_scan_runs r ON r.id=(SELECT MAX(id) FROM library_scan_runs WHERE library_id=l.id)
               WHERE (? OR removed_at IS NULL) ORDER BY kind <> 'managed', l.id""", (include_removed,),
         )
         return {
@@ -172,6 +186,8 @@ class MediaLibraryService:
         return {"removed": library_id, "source_files_deleted": False, "metadata_preserved": True}
 
     def _require_idle(self, library_id: int) -> None:
+        if self.db.fetchone("SELECT 1 FROM source_renames WHERE library_id=? AND state IN ('prepared','blocked')", (library_id,)):
+            raise ValueError("媒体库有未完成的重命名，请先恢复记录")
         if self.db.fetchone("""SELECT 1 FROM jobs WHERE type='reader_verify' AND status IN ('queued','running','paused','cancelling')
             AND json_extract(target_json,'$.source_library_id')=? LIMIT 1""", (library_id,)):
             raise ValueError("媒体库有作品正在核验，请结束后再修改")
@@ -188,8 +204,9 @@ class MediaLibraryService:
     def runs(self, library_id: int, limit: int = 20) -> dict[str, Any]:
         self.get(library_id, include_removed=True)
         rows = self.db.fetchall("SELECT * FROM library_scan_runs WHERE library_id = ? ORDER BY id DESC LIMIT ?", (library_id, max(1, min(limit, 100))))
-        return {"result": [{**{key: value for key, value in row.items() if key not in {"counts_json", "errors_json"}},
-                            "counts": json.loads(row["counts_json"]), "errors": json.loads(row["errors_json"])} for row in rows]}
+        return {"result": [{**{key: value for key, value in row.items() if key not in {"counts_json", "errors_json", "progress_json"}},
+                            "counts": json.loads(row["counts_json"]), "errors": json.loads(row["errors_json"]),
+                            "progress": json.loads(row["progress_json"])} for row in rows]}
 
     def items(self, library_id: int, status: str = "all", page: int = 1, per_page: int = 50) -> dict[str, Any]:
         self.get(library_id, include_removed=True)
@@ -240,9 +257,12 @@ class MediaLibraryService:
 
     @staticmethod
     def can_modify(row: dict[str, Any], action: str) -> bool:
-        if action not in {"writeback", "delete"}:
+        if action not in {"writeback", "delete", "rename"}:
             raise ValueError("未知源文件操作")
         if (row.get("library_kind") or row.get("kind")) == "mounted":
+            if action == "rename":
+                config = json.loads(row.get("config_json") or "{}")
+                return config.get("allow_writeback") is True and config.get("allow_delete") is True
             return json.loads(row.get("config_json") or "{}").get("allow_" + action) is True
         return not row["read_only"]
 
@@ -324,7 +344,7 @@ class MediaLibraryService:
         for path in (self.settings.covers_dir, self.settings.thumbs_dir, self.settings.page_cache_dir,
                      self.settings.tmp_dir, self.settings.data_dir / "cache", self.settings.export_dir):
             info = path.stat()
-            roots.append({"path": str(path.resolve()), "device": info.st_dev, "inode": info.st_ino})
+            roots.append({"path": str(path.resolve()), "device": sqlite_file_id(info.st_dev), "inode": sqlite_file_id(info.st_ino)})
         return roots
 
     @staticmethod
@@ -333,7 +353,7 @@ class MediaLibraryService:
         info = canonical.stat()
         for value in boundaries:
             boundary = Path(value["path"])
-            same_directory = info.st_ino and (info.st_dev, info.st_ino) == (value["device"], value["inode"])
+            same_directory = sqlite_file_id(info.st_ino) and (sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)) == (value["device"], value["inode"])
             if same_directory or canonical == boundary or canonical in boundary.parents or boundary in canonical.parents:
                 raise ValueError("库目录别名与已有媒体库或应用缓存重叠")
         if any(canonical == Path(value) or Path(value) in canonical.parents for value in ("/proc", "/sys", "/dev")):
@@ -381,7 +401,7 @@ class MediaLibraryService:
         info = root.stat()
         if library["resolved_root_path"] and str(root) != library["resolved_root_path"]:
             raise ValueError("默认下载媒体库根目录已变化，请先扫描")
-        if library["root_device"] is not None and (info.st_dev, info.st_ino) != (library["root_device"], library["root_inode"]):
+        if library["root_device"] is not None and (sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)) != (library["root_device"], library["root_inode"]):
             raise ValueError("默认下载媒体库版本已变化，请先扫描")
         return library, root
 
@@ -457,7 +477,10 @@ class MediaLibraryService:
         return result
 
     def _public(self, row: dict[str, Any]) -> dict[str, Any]:
-        return {**{key: value for key, value in row.items() if key != "config_json"},
+        return {**{key: value for key, value in row.items() if key not in {"config_json", "scan_counts_json", "scan_progress_json"}},
+                **({"scan_counts": json.loads(row["scan_counts_json"] or "{}"),
+                    "scan_progress": json.loads(row["scan_progress_json"] or "{}")}
+                   if "scan_run_id" in row else {}),
                 **({"scanning": bool(row["scanning"])} if "scanning" in row else {}),
                 "enabled": bool(row["enabled"]), "read_only": bool(row["read_only"]),
                 "config": self._config(json.loads(row["config_json"]))}

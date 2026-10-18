@@ -89,7 +89,7 @@ export function WorkCard({
 
       <div className="folio-library-card-body">
         <div className="folio-library-card-meta">
-          <span>{work.source === "remote" ? "远端入库" : "本地导入"}</span>
+          <span>{work.remote_gallery_id ? "远端绑定" : "本地作品"}</span>
           <em title={languageLabel(work)}>{languageLabel(work)}</em>
         </div>
 

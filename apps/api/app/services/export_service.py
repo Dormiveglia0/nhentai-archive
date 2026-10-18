@@ -11,6 +11,7 @@ from pathlib import Path
 from tempfile import TemporaryFile
 from typing import Any, BinaryIO, Callable
 
+from app.services.file_identity import sqlite_file_id
 from app.config import Settings
 from app.database import Database
 from app.services import comicinfo
@@ -247,12 +248,12 @@ class ExportService:
                     origin = self.cache.direct_source(work_id, self.cache.revision(origin))
                     path = self.libraries.resolve_file(origin)
                     before = path.stat()
-                    if origin["library_item_id"] and (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (
+                    if origin["library_item_id"] and (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino)) != (
                         origin["size_bytes"], origin["mtime_ns"], origin["device"], origin["inode"]):
                         raise ValueError("源归档已变化，请重新扫描后导出")
                     yield path
                     after = path.stat()
-                    if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
+                    if (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino)) != (after.st_size, after.st_mtime_ns, sqlite_file_id(after.st_dev), sqlite_file_id(after.st_ino)):
                         raise ValueError("源文件在导出时发生变化，请重新扫描后重试")
                 except (OSError, zipfile.BadZipFile) as exc:
                     raise ValueError(str(exc)) from exc

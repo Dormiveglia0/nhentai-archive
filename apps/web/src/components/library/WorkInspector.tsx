@@ -1,11 +1,10 @@
-import { ArrowUpRight, BookOpen, Heart, PenTool, Wand2, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, Heart, PenTool, X } from "lucide-react";
 import { m } from "motion/react";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 
 import { api, type LibraryTag, type LibraryWork } from "../../lib/api";
 import { usePrefersReducedMotion } from "../../lib/motion";
 import { libraryTagHref, libraryTagKey, pageFromLocation, pageHref } from "../../lib/navigation";
-import { MetadataScrapePanel } from "./MetadataScrapePanel";
 import { ExportAction } from "../export/ExportAction";
 import { CreatorSubscribeButton, isCreatorTag, useCreatorSubscriptions } from "../subscriptions/CreatorSubscribeButton";
 import { AmbientCover } from "../folio/ui/AmbientCover";
@@ -31,7 +30,7 @@ const TAG_GROUPS = [
   { label: "分类 / 语言", types: ["category", "language"] },
 ];
 
-export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted, onUpdated }: Props) {
+export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFavorite, onDeleted }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const reduced = usePrefersReducedMotion();
@@ -40,7 +39,6 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
   const [retry, setRetry] = useState(0);
   const [coverRatio, setCoverRatio] = useState(.75);
   const [coverFailed, setCoverFailed] = useState(false);
-  const [scraping, setScraping] = useState(false);
   const title = workTitle(work);
   const progress = work.completed ? 100 : work.progress_percent ?? 0;
   const tags = detail?.id === work.id ? detail.tags ?? [] : work.tags ?? [];
@@ -102,7 +100,7 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
           <dl className="folio-work-detail-facts">
             <div><dt>页数 / 文件</dt><dd>{work.page_count} 页 · {formatBytes(work.size_bytes)}</dd></div>
             <div><dt>语言</dt><dd>{languageLabel(work)}</dd></div>
-            <div><dt>来源</dt><dd>{work.source === "remote" ? "远端导入" : "本地导入"}{work.remote_gallery_id ? ` · #${work.remote_gallery_id}` : ""}</dd></div>
+            <div><dt>来源</dt><dd>{work.remote_gallery_id ? "远端绑定" : "本地作品"}{work.remote_gallery_id ? ` · #${work.remote_gallery_id}` : ""}</dd></div>
             <div><dt>阅读进度</dt><dd>{Math.round(progress)}% · 第 {work.reader_page_index || 1} 页</dd></div>
           </dl>
           <div className="folio-work-detail-progress" role="progressbar" aria-label="阅读进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><i style={{ transform: `scaleX(${progress / 100})` }} /></div>
@@ -117,14 +115,11 @@ export function WorkInspector({ work, blurCovers, onClose, onPickTag, onToggleFa
               <WorkDeleteAction workId={work.id} title={title} onDeleted={() => { onClose(); onDeleted(); }} />
             </div>
             <div className="folio-work-detail-main-actions folio-work-detail-source-actions">
-              <button type="button" aria-expanded={scraping} onClick={() => setScraping(value => !value)}><Wand2 size={16} />刮削元数据</button>
               {work.remote_gallery_id ? <a href={pageHref({ name: "gallery", galleryId: work.remote_gallery_id, returnTo: window.location.hash })}><ArrowUpRight size={16} />远端详情</a> : null}
             </div>
           </div>
         </div>
       </div>
-      {scraping ? <MetadataScrapePanel key={work.id} workId={work.id} title={work.title} blurCovers={blurCovers}
-        onClose={() => setScraping(false)} onApplied={() => { setRetry(value => value + 1); onUpdated(); }} /> : null}
       {tags.length ? <div className="folio-work-detail-tags">
         {TAG_GROUPS.map(group => {
           const items = tags.filter(tag => group.types.includes(tag.type ?? ""));

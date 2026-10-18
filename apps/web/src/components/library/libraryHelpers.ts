@@ -12,14 +12,14 @@ export function authorLine(work: LibraryWork): string {
   const group = tagOfType(tags, "group");
   const parts = [artist?.display, group?.display ? "社团 " + group.display : null].filter(Boolean) as string[];
   if (parts.length) return parts.join(" / ");
-  return work.source === "remote" ? "未知作者" : "本地导入";
+  return "未知作者";
 }
 
 export function languageLabel(work: LibraryWork): string {
-  const language = work.tags?.find((tag) => tag.type === "language" && !isTranslationMarker(tag));
-  const label = language?.display || work.language;
-  if (label && !label.toLowerCase().includes("translat")) return ({ chinese: "中文", zh: "中文", "zh-cn": "中文", "zh-tw": "中文", cn: "中文", chi: "中文", japanese: "日文", ja: "日文", jp: "日文", jpn: "日文", english: "英文", en: "英文", eng: "英文" } as Record<string, string>)[label.toLowerCase()] || label;
-  return "语言未标注";
+  const values = (work.tags ?? []).filter(tag => tag.type === "language" && !isTranslationMarker(tag)).map(tag => tag.display);
+  if (!values.length && work.language) values.push(...work.language.split(/[,，;/]+/));
+  const labels: Record<string, string> = { chinese: "中文", zh: "中文", "zh-cn": "中文", "zh-tw": "中文", cn: "中文", chi: "中文", japanese: "日文", ja: "日文", jp: "日文", jpn: "日文", english: "英文", en: "英文", eng: "英文" };
+  return [...new Set(values.filter(value => !value.toLowerCase().includes("translat")).map(value => labels[value.trim().toLowerCase()] || value.trim()))].join(" / ") || "语言未标注";
 }
 
 function isTranslationMarker(tag: LibraryTag): boolean {

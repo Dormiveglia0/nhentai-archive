@@ -384,7 +384,9 @@ class FileMaintenanceService:
                 "warnings": ["只删除派生文件；源文件、作品元数据和阅读进度均保留"]}
 
     # --- preview_delete cascade analysis (read-only) ----------------------
-    def _work_files(self, work_id: int, keep_sources: bool = False, except_job_id: int | None = None) -> list[tuple[Path, dict[str, Any] | None]]:
+    def _work_files(self, work_id: int, keep_sources: bool = False, except_job_id: int | None = None, except_rename_id: int | None = None) -> list[tuple[Path, dict[str, Any] | None]]:
+        if self.db.fetchone("SELECT 1 FROM source_renames WHERE work_id=? AND state IN ('prepared','blocked') AND id<>COALESCE(?,-1)", (work_id, except_rename_id)):
+            raise PermissionError("作品有未完成的源文件重命名，请先恢复后再修改")
         if self.db.fetchone("SELECT 1 FROM reading_sessions WHERE work_id=? AND ended_at IS NULL AND updated_at > datetime('now', '-2 minutes')", (work_id,)):
             raise PermissionError("作品正在阅读，请结束后再修改")
         if self.db.fetchone("""SELECT 1 FROM jobs WHERE type='reader_verify' AND status IN ('queued','running','paused','cancelling')

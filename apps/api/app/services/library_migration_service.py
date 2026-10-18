@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from app.services.file_identity import sqlite_file_id
 from app.services.archive_manifest import inspect_archive, open_archive
 from app.services.job_service import JobCancelled
 
@@ -44,7 +45,7 @@ class LibraryMigrationService:
         info = root.stat()
         if library["resolved_root_path"] and str(root) != library["resolved_root_path"]:
             raise ValueError("目标根目录已变化，请先扫描")
-        if library["root_device"] is not None and (info.st_dev, info.st_ino) != (library["root_device"], library["root_inode"]):
+        if library["root_device"] is not None and (sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)) != (library["root_device"], library["root_inode"]):
             raise ValueError("目标根目录版本已变化，请先扫描")
         return library, root
 
@@ -66,7 +67,7 @@ class LibraryMigrationService:
 
     @staticmethod
     def _stamp(info):
-        return [info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino]
+        return [info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)]
 
     def preview(self, work_ids, library_id, move=False, conflict="rename"):
         ids = list(dict.fromkeys(work_ids))
@@ -152,14 +153,14 @@ class LibraryMigrationService:
                 mtime_ns=excluded.mtime_ns, device=excluded.device, inode=excluded.inode, status='ready', fingerprint=excluded.fingerprint,
                 manifest=excluded.manifest, metadata_json=excluded.metadata_json, archive_info_json=excluded.archive_info_json,
                 last_error=NULL, indexed_at=CURRENT_TIMESTAMP RETURNING id""",
-                (library["id"], entry["name"], entry["work_id"], info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino, time.time(),
+                (library["id"], entry["name"], entry["work_id"], info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), time.time(),
                  data["fingerprint"], data["manifest"], json.dumps(data["metadata"], ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False))).fetchone()["id"]
             conn.execute("""INSERT INTO work_files(work_id, kind, path, size_bytes, sha256, library_item_id)
                 VALUES (?, 'source_cbz', ?, ?, ?, ?) ON CONFLICT(library_item_id) WHERE library_item_id IS NOT NULL
                 DO UPDATE SET size_bytes=excluded.size_bytes, sha256=excluded.sha256""",
                 (entry["work_id"], str(destination), info.st_size, digest, item_id))
             conn.execute("UPDATE media_libraries SET health='online', root_device=?, root_inode=?, resolved_root_path=? WHERE id=?",
-                         (destination.parent.stat().st_dev, destination.parent.stat().st_ino, str(destination.parent), library["id"]))
+                         (sqlite_file_id(destination.parent.stat().st_dev), sqlite_file_id(destination.parent.stat().st_ino), str(destination.parent), library["id"]))
         # Work metadata, tags, cover, favorite, governance and progress are deliberately untouched.
 
     def run(self, job_id, checkpoint):

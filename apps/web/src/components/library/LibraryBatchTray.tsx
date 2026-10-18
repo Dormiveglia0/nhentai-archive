@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RefreshCw, Trash2, Wand2, X } from "lucide-react";
+import { FolderPlus, RefreshCw, Trash2, Wand2, X } from "lucide-react";
 
 import {
   api,
@@ -15,6 +15,7 @@ type Props = {
   selectedIds: number[];
   onClear: () => void;
   onDone: () => void;
+  onGroup: () => void;
 };
 
 /**
@@ -22,7 +23,7 @@ type Props = {
  * endpoints: export, governance fill-missing, remote metadata refresh, and
  * the file-delete preview/confirm cascade.
  */
-export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
+export function LibraryBatchTray({ selectedIds, onClear, onDone, onGroup }: Props) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +182,7 @@ export function LibraryBatchTray({ selectedIds, onClear, onDone }: Props) {
         />
       ) : (
         <div className="folio-library-batch-actions">
+          <button type="button" onClick={onGroup} disabled={busy || count < 2}><FolderPlus size={15} />创建分组</button>
           <ExportAction workIds={selectedIds} label="导出下载" disabled={busy || count === 0} />
           <button type="button" onClick={fillMissing} disabled={busy || count === 0}>
             <Wand2 size={15} /> 补全缺失元数据

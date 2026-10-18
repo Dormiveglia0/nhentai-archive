@@ -2,12 +2,15 @@ import { ArrowRight, CheckCircle2, Database, FileArchive, Tags } from "lucide-re
 
 import type { GovernanceAggregate } from "../../lib/api";
 import { goBack, navigate, pageHref } from "../../lib/navigation";
+import { SourceRenameControl } from "./SourceRenameControl";
 import { formatBytes } from "../../lib/format";
 
 export function GovernanceSourceRail({
-  aggregate,
+  aggregate, onReload, disabled,
 }: {
   aggregate: GovernanceAggregate;
+  onReload: () => void;
+  disabled: boolean;
 }) {
   const sourceFile = aggregate.files.find((file) => file.kind === "source_cbz");
 
@@ -42,11 +45,13 @@ export function GovernanceSourceRail({
           </section>
 
           <dl className="folio-governance-source-facts">
-            <div><dt><Database size={14} />来源</dt><dd>{aggregate.work.source === "remote" ? "远端入库" : "本地导入"}</dd></div>
+            <div><dt><Database size={14} />来源</dt><dd>{aggregate.work.remote_gallery_id ? "远端绑定" : "本地作品"}</dd></div>
             <div><dt>Gallery ID</dt><dd>{aggregate.work.remote_gallery_id || "—"}</dd></div>
             <div><dt>页数</dt><dd>{aggregate.work.page_count}P</dd></div>
             <div><dt><FileArchive size={14} />源文件</dt><dd>{sourceFile?.exists ? formatBytes(sourceFile.size_bytes) : "不可用"}</dd></div>
           </dl>
+
+          {aggregate.files.filter(file => file.kind === "source_cbz").map(file => <SourceRenameControl key={`${file.id}:${file.path}`} file={file} workId={aggregate.work.id} disabled={disabled} onRenamed={onReload} />)}
 
           <section className="folio-governance-source-tags">
             <div><Tags size={15} /><strong>词典状态</strong></div>

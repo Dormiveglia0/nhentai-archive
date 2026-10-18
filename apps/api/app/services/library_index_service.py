@@ -13,6 +13,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 
+from app.services.file_identity import sqlite_file_id
 from app.config import Settings
 from app.database import Database
 from app.services.archive_manifest import inspect_archive, MountedArchiveProbe, MountUnavailable
@@ -71,6 +72,8 @@ class LibraryIndexService:
     def _scan(self, library_id: int, checkpoint: Callable[[], None], progress: Callable[[dict[str, int]], None],
               job_id: int | None, paths: list[str] | None) -> dict[str, Any]:
         library = self.libraries.get(library_id)
+        if self.db.fetchone("SELECT 1 FROM source_renames WHERE library_id=? AND state IN ('prepared','blocked')", (library_id,)):
+            raise MountUnavailable("此库有未完成的源文件重命名，保留现有索引，请先恢复重命名记录")
         root, config = Path(library["root_path"]), library["config"]
         config["_root_boundaries"] = self.libraries.root_boundaries(library_id)
         counts = dict.fromkeys(("files", "indexed", "unchanged", "pending", "errors", "unsupported", "ignored", "missing"), 0)
@@ -82,7 +85,21 @@ class LibraryIndexService:
         lookup = self.db.connect()
         seen: list[int] = []
         consecutive_timeouts = 0
+        reported_at = 0.0
+        events = []
+        activity = {"stage": "walking", "path": "", "events": events}
+
+        def report(stage, path="", force=False):
+            nonlocal reported_at
+            activity.update(stage=stage, path=path)
+            if force or time.monotonic() - reported_at >= .5:
+                self.db.execute("UPDATE library_scan_runs SET counts_json=?, errors_json=?, progress_json=? WHERE id=?",
+                                (json.dumps(counts), json.dumps(errors, ensure_ascii=False), json.dumps(activity, ensure_ascii=False), run_id))
+                progress(dict(counts))
+                reported_at = time.monotonic()
+
         try:
+            report("walking", force=True)
             checkpoint()
             if library["kind"] == "mounted":
                 if self._mount_probe is not None and not self._mount_probe.close():
@@ -97,7 +114,7 @@ class LibraryIndexService:
             if not stat.S_ISDIR(root_stat.st_mode):
                 raise OSError("库根路径不是目录")
             root_changed = library["root_device"] is not None and (
-                library["root_device"] != root_stat.st_dev or library["root_inode"] != root_stat.st_ino
+                library["root_device"] != sqlite_file_id(root_stat.st_dev) or library["root_inode"] != sqlite_file_id(root_stat.st_ino)
             )
             entries = walker if walker is not None else self._walk(root, config, paths)
             selected = set(paths) if paths is not None else None
@@ -119,9 +136,12 @@ class LibraryIndexService:
                 if suffix not in ARCHIVES | UNSUPPORTED:
                     counts["ignored"] += 1
                     continue
+                relative = path.relative_to(root).as_posix()
+                report("reading", relative, force=not events)
                 try:
                     status = self._index_file(library, path, info, int(run_id), checkpoint, lookup, seen, probe)
                     counts[status] += 1
+                    events.append({"path": relative, "status": status, "at": time.time()})
                     consecutive_timeouts = 0
                     if len(seen) >= 500:
                         self._mark_seen(seen, int(run_id))
@@ -132,13 +152,15 @@ class LibraryIndexService:
                         raise
                     counts["errors"] += 1
                     reason = str(exc)[:500]
+                    events.append({"path": relative, "status": "error", "reason": reason, "at": time.time()})
                     self._error_item(library_id, path.relative_to(root).as_posix(), reason)
                     if len(errors) < 30:
                         errors.append({"path": str(path.relative_to(root)), "reason": reason})
                     consecutive_timeouts = consecutive_timeouts + 1 if isinstance(exc, TimeoutError) else 0
                     if consecutive_timeouts >= 3:
                         raise TimeoutError("挂载源连续三次读取超时，已停止本轮扫描并保留索引") from exc
-                progress(dict(counts))
+                del events[:-20]
+                report("walking", relative)
             self._mark_seen(seen, int(run_id))
             previous_count = self.db.fetchone("SELECT COUNT(*) AS n FROM library_items WHERE library_id = ? AND work_id IS NOT NULL", (library_id,))["n"]
             # A vanished mount often looks like a valid empty directory. Never purge it.
@@ -157,7 +179,7 @@ class LibraryIndexService:
             self.db.execute(
                 """UPDATE media_libraries SET health = ?, last_error = ?, root_device = ?, root_inode = ?, resolved_root_path = ?,
                 last_scan_at = CURRENT_TIMESTAMP WHERE id = ?""",
-                (health, errors[0]["reason"] if errors else None, root_stat.st_dev, root_stat.st_ino, canonical_root, library_id),
+                (health, errors[0]["reason"] if errors else None, sqlite_file_id(root_stat.st_dev), sqlite_file_id(root_stat.st_ino), canonical_root, library_id),
             )
             status = "completed" if completed_walk else "partial"
         except Exception as exc:
@@ -169,15 +191,16 @@ class LibraryIndexService:
                             ("unknown" if status == "cancelled" else "offline", str(exc)[:500], library_id))
             raise
         finally:
+            activity["stage"] = status
             lookup.close()
             if probe is not None:
                 probe.close()
             if walker is not None:
                 walker.close()
             self.db.execute(
-                """UPDATE library_scan_runs SET status = ?, counts_json = ?, errors_json = ?,
+                """UPDATE library_scan_runs SET status = ?, counts_json = ?, errors_json = ?, progress_json = ?,
                 completed_at = CURRENT_TIMESTAMP WHERE id = ?""",
-                (status, json.dumps(counts), json.dumps(errors, ensure_ascii=False), run_id),
+                (status, json.dumps(counts), json.dumps(errors, ensure_ascii=False), json.dumps(activity, ensure_ascii=False), run_id),
             )
         return {"run_id": run_id, "library_id": library_id, "status": status, "counts": counts, "errors": errors}
 
@@ -248,7 +271,7 @@ class LibraryIndexService:
             directory = directories.pop()
             try:
                 info = directory.stat()
-                canonical = (info.st_dev, info.st_ino) if info.st_ino else str(directory.resolve())
+                canonical = (sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)) if sqlite_file_id(info.st_ino) else str(directory.resolve())
                 if canonical in visited:
                     continue
                 visited.add(canonical)
@@ -284,11 +307,11 @@ class LibraryIndexService:
         row = lookup.execute("""SELECT id, work_id, size_bytes, mtime_ns, device, inode, stable_since, status, retry_at
                               FROM library_items WHERE library_id = ? AND relative_path = ?""", (library["id"], relative)).fetchone()
         existing = dict(row) if row else None
-        if existing is None and info.st_ino and library["kind"] != "mounted":
+        if existing is None and sqlite_file_id(info.st_ino) and library["kind"] != "mounted":
             previous = lookup.execute(
                 """SELECT * FROM library_items WHERE library_id = ? AND device = ? AND inode = ?
                 AND size_bytes = ? AND mtime_ns = ? AND status = 'ready' AND work_id IS NOT NULL LIMIT 1""",
-                (library["id"], info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns),
+                (library["id"], sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), info.st_size, info.st_mtime_ns),
             ).fetchone()
             if previous:
                 previous = dict(previous)
@@ -301,7 +324,7 @@ class LibraryIndexService:
                         conn.execute("UPDATE work_files SET path = ? WHERE library_item_id = ?", (location, previous["id"]))
                     existing = previous
         now = time.time()
-        same = existing and (existing["size_bytes"], existing["mtime_ns"], existing["device"], existing["inode"]) == (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino)
+        same = existing and (existing["size_bytes"], existing["mtime_ns"], existing["device"], existing["inode"]) == (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino))
         if same and (existing["status"] == "ready" and existing["work_id"] is not None or existing["status"] == "unsupported" or
                      existing["status"] == "error" and (existing["retry_at"] or 0) > now):
             seen.append(existing["id"])
@@ -314,7 +337,7 @@ class LibraryIndexService:
                 size_bytes = excluded.size_bytes, mtime_ns = excluded.mtime_ns, device = excluded.device, inode = excluded.inode,
                 stable_since = excluded.stable_since, last_seen_run_id = excluded.last_seen_run_id, status = 'pending',
                 missing_since = NULL, updated_at = CURRENT_TIMESTAMP RETURNING id""",
-                (library["id"], relative, info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino, stable_since, run_id),
+                (library["id"], relative, info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), stable_since, run_id),
             ).fetchone()
             item_id = int(row["id"])
         if path.suffix.lower() in UNSUPPORTED:
@@ -324,7 +347,7 @@ class LibraryIndexService:
         if now - stable_since < library["config"]["stable_seconds"]:
             return "pending"
         checkpoint()
-        expected = (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino)
+        expected = (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino))
         if library["kind"] == "mounted":
             source = path
             data = probe.inspect(relative, checkpoint)
@@ -335,7 +358,7 @@ class LibraryIndexService:
             before_version = expected
             data = inspect_archive(source)
             after = source.stat()
-            after_version = (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino)
+            after_version = (after.st_size, after.st_mtime_ns, sqlite_file_id(after.st_dev), sqlite_file_id(after.st_ino))
         checkpoint()
         if before_version != expected or after_version != expected:
             self.db.execute("UPDATE library_items SET status = 'pending', stable_since = ? WHERE id = ?", (time.time(), item_id))
@@ -378,13 +401,14 @@ class LibraryIndexService:
                 work_id = int(matches[0]["id"])
         cover_tmp = None
         try:
-            with NamedTemporaryFile(dir=self.settings.covers_dir, prefix=".index-", suffix=".jpg", delete=False) as temporary:
-                temporary.write(data["cover"])
-                cover_tmp = Path(temporary.name)
+            if data["cover"]:
+                with NamedTemporaryFile(dir=self.settings.covers_dir, prefix=".index-", suffix=".jpg", delete=False) as temporary:
+                    temporary.write(data["cover"])
+                    cover_tmp = Path(temporary.name)
             with self.db.connect() as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 current = conn.execute("SELECT size_bytes, mtime_ns, device, inode FROM library_items WHERE id = ?", (item_id,)).fetchone()
-                if not current or tuple(current) != (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino):
+                if not current or tuple(current) != (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)):
                     raise ValueError("源文件版本在索引写入前变化，将稍后重试")
                 if not work_id:
                     work_id = int(conn.execute(
@@ -394,7 +418,8 @@ class LibraryIndexService:
                          "nhentai" if gallery_id else None, gallery_id, language, data["page_count"]),
                     ).fetchone()["id"])
                 destination = self.settings.covers_dir / f"{work_id}-indexed.jpg"
-                cover_tmp.replace(destination)
+                if cover_tmp:
+                    cover_tmp.replace(destination)
                 conn.execute(
                     """UPDATE library_items SET work_id = ?, status = 'ready', fingerprint = ?, manifest = ?, metadata_json = ?, archive_info_json = ?,
                     retry_count = 0, retry_at = NULL, last_error = ?, indexed_at = CURRENT_TIMESTAMP,
@@ -412,8 +437,8 @@ class LibraryIndexService:
                         (work_id, owned, info.st_size, item_id),
                     )
                 conn.execute(
-                    "UPDATE works SET cover_path = ?, page_count = ?, language = COALESCE(language, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (self.db.managed_path(destination), data["page_count"], language, work_id),
+                    "UPDATE works SET cover_path = COALESCE(?, cover_path), page_count = ?, language = COALESCE(language, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (self.db.managed_path(destination) if cover_tmp else None, data["page_count"], language, work_id),
                 )
                 for field, key in (("title", "Title"), ("artist", "Writer"), ("group", "Publisher"), ("language", "LanguageISO"), ("summary", "Summary")):
                     if metadata.get(key):
@@ -436,6 +461,8 @@ class LibraryIndexService:
                 )
                 conn.execute("DELETE FROM work_tags WHERE work_id = ? AND source = 'comicinfo'", (work_id,))
                 for tag_type, key in (("artist", "Writer"), ("group", "Publisher"), ("tag", "Tags")):
+                    if conn.execute("SELECT 1 FROM work_metadata WHERE work_id=? AND field=? AND source IN ('manual','current')", (work_id, "tags" if tag_type == "tag" else tag_type)).fetchone():
+                        continue
                     names = list(dict.fromkeys(value.strip() for value in re.split(r"[,，;；]", metadata.get(key) or "") if value.strip()))[:200]
                     for name in names:
                         mapped = conn.execute(

@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from PIL import Image
 
+from app.services.file_identity import sqlite_file_id
 from app.config import Settings
 from app.database import Database
 from app.services.media_library_service import MediaLibraryService
@@ -156,7 +157,7 @@ class ArchiveService:
                         last_error=NULL, missing_since=NULL, indexed_at=CURRENT_TIMESTAMP,
                         scrape_status='done' RETURNING id""",
                         (target_library["id"], relative, work_id, info.st_size, info.st_mtime_ns,
-                         info.st_dev, info.st_ino, time.time(), indexed["fingerprint"], indexed["manifest"],
+                         sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), time.time(), indexed["fingerprint"], indexed["manifest"],
                          json.dumps(indexed["metadata"], ensure_ascii=False),
                          json.dumps(indexed["archive_info"], ensure_ascii=False)),
                     ).fetchone()["id"])
@@ -172,7 +173,7 @@ class ArchiveService:
                     conn.execute(
                         """UPDATE media_libraries SET health='online', last_error=NULL, root_device=?,
                         root_inode=?, resolved_root_path=? WHERE id=?""",
-                        (root_info.st_dev, root_info.st_ino, str(target_root), target_library["id"]),
+                        (sqlite_file_id(root_info.st_dev), sqlite_file_id(root_info.st_ino), str(target_root), target_library["id"]),
                     )
                 for index, (member, size) in enumerate(page_entries, start=1):
                     media_type = mimetypes.guess_type(member)[0] or "application/octet-stream"
@@ -272,12 +273,12 @@ class ArchiveService:
             if archive_file["library_kind"] != "mounted":
                 path = self.libraries.resolve_file(archive_file)
                 before = path.stat()
-                if archive_file["library_item_id"] and (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (
+                if archive_file["library_item_id"] and (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino)) != (
                     archive_file["size_bytes"], archive_file["mtime_ns"], archive_file["device"], archive_file["inode"]):
                     raise FileNotFoundError("源归档已变化，请重新扫描后打开作品")
                 result = self._read_archive_page(path, [page], page_index)
                 after = path.stat()
-                if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
+                if (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino)) != (after.st_size, after.st_mtime_ns, sqlite_file_id(after.st_dev), sqlite_file_id(after.st_ino)):
                     raise ValueError("源归档在阅读时发生变化，请重新打开作品")
                 return result
         with self.cache.mounted_read(archive_file, page) as (path, media_type):
@@ -391,7 +392,7 @@ class ArchiveService:
                 shutil.copy2(cbz_path, tmp_path)
                 _, current_root = self.libraries.download_write_root(library["id"])
                 current_info = current_root.stat()
-                if current_root != root or (current_info.st_dev, current_info.st_ino) != (root_info.st_dev, root_info.st_ino):
+                if current_root != root or (sqlite_file_id(current_info.st_dev), sqlite_file_id(current_info.st_ino)) != (sqlite_file_id(root_info.st_dev), sqlite_file_id(root_info.st_ino)):
                     raise ValueError("默认下载媒体库在写入期间发生变化")
                 if library["kind"] != "managed" and destination.exists():
                     raise ValueError("默认下载媒体库已有同名文件，未覆盖源文件")
@@ -453,9 +454,9 @@ def clear_direct_thumbnails(settings: Settings, work_id: int) -> None:
 
 def _make_thumbnail(body: bytes, width: int) -> bytes:
     with Image.open(BytesIO(body)) as image:
+        image.draft("RGB", (width, max(1, round(image.height * min(1, width / image.width)))))
         if image.width * image.height > 30000000:
             raise ValueError("页面图片像素超过3000万，无法生成缩略图")
-        image.draft("RGB", (width, max(1, round(image.height * min(1, width / image.width)))))
         image = image.convert("RGB")
         if image.width > width:
             height = round(image.height * (width / image.width))

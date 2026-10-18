@@ -21,17 +21,18 @@
 | 页面 | 正式组件与状态 | 样式与实际数据 |
 | --- | --- | --- |
 | 首页 `#workbench` | `workbench/WorkbenchPage.tsx`、`HomeActivity.tsx`、`folio/ui/HomeHero.tsx` | 对应 CSS；最多6部真实本地作品，4秒单步轮播；右下方4部实际最新作品。封面直接阅读，返回刷新进度并保持作品ID |
-| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`LibraryToolbar.tsx`、`LibraryBatchTray.tsx` | `LibraryPage.css`、`folio/styles/library-discover.css`；库摘要、筛选、标签、收藏、导入；范围按媒体库，旧 source API 保留兼容 |
-| 本地详情 | `library/WorkInspector.tsx`、`MetadataScrapePanel.tsx`、`ReaderBridgeControl.tsx` | `folio/ui/WorkDetail.css`、`MetadataScrapePanel.css`；原生悬浮弹窗、自然封面、阅读/编辑/导出/删除、刮削与双来源 |
+| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`libraryLocation.ts`、`WorkGroupCard.tsx`、`WorkGroupDialog.tsx` | `LibraryPage.css`、`WorkGroupDialog.css`；分页历史、真实筛选、手动分组与作者合并；组内作品保持独立，批量计数按实际作品计算 |
+| 本地详情 | `library/WorkInspector.tsx` | `folio/ui/WorkDetail.css`；原生悬浮弹窗、自然封面、阅读/编辑/导出/删除；标识使用本地作品/远端绑定 |
+| 刮削审批 `#scrape` | `library/ScrapeReviewPage.tsx`、`MetadataScrapePanel.tsx`、`ManualMetadataFields.tsx` | `ScrapeReviewPage.css`、`MetadataScrapePanel.css`；保存的候选、状态/媒体库筛选、手动搜索与编辑、来源版本校验；主导航归属我的库 |
 | 发现 | `discover/DiscoverPage.tsx`、`useDiscoverState.ts`、`discoverState.ts`、`DiscoverToolbar.tsx`、`DiscoverFeed.tsx`、`PopularFan.tsx` | `DiscoverPage.css` 与共享发现规则；作品/更新/订阅三项常驻；作品全宽展示，无更新侧栏。筛选保存不能覆盖更新或订阅链接 |
 | 远端详情 `#gallery/{id}` | `discover/GalleryDetailPage.tsx`、`gallery/useGalleryDetail.ts`、`gallery/*` | `gallery/*.css`；作品信息、标签、预览和相关推荐；保留独立详情构图 |
 | 订阅与更新 | `subscriptions/CreatorSubscribeButton.tsx`、`SubscriptionsPanel.tsx`、`SubscriptionUpdates.tsx`、`useSubscriptionUpdates.ts` | `settings/NotificationSection.css`；作者/社团订阅、4部近期作品、未读、已读；发现页更新标签附未读数量，顶部无额外入口。保留原始日文标题精确匹配的语言预览折叠 |
-| 整理 | `governance/GovernancePage.tsx`、`useGovernanceState.ts`、`Governance*Panel.tsx`、`GovernanceSourceRail.tsx` | `GovernancePage.css`、`GovernanceEditor.css`、共享治理规则；字段、标签、翻译、核对与源文件回写 |
+| 整理 | `governance/GovernancePage.tsx`、`useGovernanceState.ts`、`DictionaryFieldInput.tsx`、`SourceRenameControl.tsx` | `GovernancePage.css`、`GovernanceEditor.css`；刮削与双来源、词典补全、多语言、核对、源文件回写及安全重命名 |
 | 词典 | `dictionary/DictionaryPage.tsx`、`useDictionaryState.ts`、其子组件 | `DictionaryPage.css`、`DictionaryEditor.css` 与共享规则；搜索、候选、影响预览、应用、批量处理 |
 | 队列 | `tasks/TasksPage.tsx`、`useTasksState.ts`、其子组件 | `TasksPage.css`、共享任务规则；状态筛选、日志、暂停/恢复/取消/重试/删除 |
 | 文件 | `files/FilesPage.tsx`、`useFilesState.ts`、`FileList.tsx`、`FileDetailPanel.tsx`、`FileDeleteDialog.tsx`、`MetadataPanel.tsx`、`DerivedFilesPanel.tsx`、`MigrationPanel.tsx` | `FilesPage.css`、`MetadataPanel.css`；媒体库/文件/元数据/派生文件/迁移五个视图；本地资料查看与导出、恢复/清理预览、实际派生文件查看/下载、本页全选与批量清理，以及复制/移动迁移 |
 | 设置 | `settings/SettingsPage.tsx`、`useSettingsState.ts`、对应 `*Section.tsx` | `SettingsPage.css`、`folio/styles/settings.css`；连接、翻译、访问/阅读、导出默认、统计、存储、邮件 |
-| 目录与缓存 | `settings/MediaLibrariesSection.tsx`、`MediaLibraryEditor.tsx`、`ReadingCacheSection.tsx`、`StorageSection.tsx` | `StorageSection.css`；实际目录选择、监控/补偿、扫描、阅读缓存与用量；目录配置在文件页 |
+| 目录与缓存 | `settings/MediaLibrariesSection.tsx`、`MediaLibraryActivity.tsx`、`MediaLibraryEditor.tsx`、`ReadingCacheSection.tsx` | `StorageSection.css`；目录选择、扫描阶段/当前文件/计数、暂停继续取消、操作记录与刮削队列；目录配置在文件页 |
 | 阅读器 | `reader/ReaderPage.tsx`、`ReaderViewport.tsx`、`WebtoonView.tsx`、`ReaderToolbar.tsx`、`ReaderScrubber.tsx`、`ReaderInfoPanel.tsx`、其状态 hooks | `ReaderPage.css`、`ReaderToolbar.css`、`ReaderPanels.css`；本地/远端阅读、进度与会话、直接阅读、版本恢复、双来源交接；控件覆盖图片 |
 | 阅读历史 | `history/HistoryPage.tsx`、`useHistoryState.ts`、`historyHelpers.ts` | `HistoryPage.css`；阅读记录、日期与真实会话 |
 | 导出 | `export/ExportAction.tsx`、`ExportDialog.tsx`、`useExportState.ts`、`LegacyExportEntry.tsx` | `ExportDialog.css`；预览后下载，保留旧 `#export` 链接兼容 |

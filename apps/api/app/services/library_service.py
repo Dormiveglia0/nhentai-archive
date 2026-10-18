@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.database import Database
+from app.services.library_group_service import LibraryGroupService
+import json
 
 
 # Whitelisted sort keys -> SQL ORDER BY fragments. Anything else falls back to recent_updated.
@@ -63,6 +65,7 @@ class LibraryService:
 
     def __init__(self, db: Database):
         self.db = db
+        self.groups = LibraryGroupService(db)
 
     def summary(self) -> dict[str, Any]:
         totals = self.db.fetchone(
@@ -154,6 +157,8 @@ class LibraryService:
         favorite_only: bool = False,
         tag_keys: list[str] | None = None,
         library_id: int | None = None,
+        group_by: str = "none",
+        group_key: str | None = None,
     ) -> dict[str, Any]:
         revision = self.revision()
         page = max(1, int(page))
@@ -164,6 +169,16 @@ class LibraryService:
         tag_ids = [int(tid) for tid in (tag_ids or []) if tid is not None]
 
         where, params = self._build_filters(q, read_status, source, language, tag_ids, favorite_only)
+        if group_by not in {"none", "manual", "author"}:
+            raise ValueError("分组方式无效")
+        if group_key:
+            if group_key.startswith("manual:") and group_key[7:].isdecimal() and 0 < int(group_key[7:]) < 2**63:
+                self.groups.get(int(group_key[7:]))
+                where.append("EXISTS (SELECT 1 FROM work_group_members gm WHERE gm.work_id=w.id AND gm.group_id=?)")
+                params.append(int(group_key[7:]))
+                group_by = "none"
+            elif not (group_by == "author" and group_key.startswith("author:") and len(group_key) == 71):
+                raise ValueError("分组筛选无效")
         if library_id is not None:
             if library_id != -1 and library_id < 1:
                 raise ValueError("媒体库筛选无效")
@@ -191,6 +206,9 @@ class LibraryService:
                 params.append(key)
         where_sql = " AND ".join(where) if where else "1 = 1"
 
+        if group_by != "none":
+            return self._grouped_search(where_sql, params, order_by, page, per_page, group_by, group_key, revision)
+
         total = int(
             self.db.fetchone(f"SELECT COUNT(*) AS value {WORK_JOINS} WHERE {where_sql}", params)["value"]
         )
@@ -216,6 +234,30 @@ class LibraryService:
             "num_pages": num_pages,
             "revision": revision,
         }
+
+    def _grouped_search(self, where, params, order, page, per_page, mode, group_key, revision):
+        rows = self.db.fetchall(f"SELECT w.id {WORK_JOINS} WHERE {where} ORDER BY {order}", params)
+        buckets = self.groups.buckets(rows, mode)
+        if group_key:
+            ids = next((bucket['ids'] for bucket in buckets if bucket['key'] == group_key), [])
+            total, page_ids = len(ids), ids[(page - 1) * per_page:page * per_page]
+            selected = []
+        else:
+            total = len(buckets)
+            selected = buckets[(page - 1) * per_page:page * per_page]
+            page_ids = [bucket['ids'][0] for bucket in selected]
+        works = {row['id']: row for row in self._finalize(self.db.fetchall(
+            f"SELECT {WORK_COLUMNS} {WORK_JOINS} WHERE w.id IN (SELECT value FROM json_each(?))", (json.dumps(page_ids),)))}
+        cover_ids = list(dict.fromkeys(work_id for bucket in selected if bucket['group'] for work_id in bucket['ids'][:6]))
+        covers = {row['id']: row for row in self.db.fetchall("SELECT id,title,cover_path,updated_at FROM works WHERE id IN (SELECT value FROM json_each(?))", (json.dumps(cover_ids),))}
+        for bucket in selected:
+            if bucket['ids'][0] not in works or not bucket['group'] or (bucket['group']['kind'] == 'author' and len(bucket['ids']) < 2):
+                continue
+            works[bucket['ids'][0]]['group'] = {**bucket['group'], 'key': bucket['key'], 'count': len(bucket['ids']),
+                'member_ids': bucket['ids'], 'covers': [covers[work_id] for work_id in bucket['ids'][:6] if work_id in covers]}
+        return {'result': [works[work_id] for work_id in page_ids if work_id in works], 'total': total,
+                'work_total': len(rows) if not group_key else total, 'page': page, 'per_page': per_page,
+                'num_pages': max(1, (total + per_page - 1) // per_page), 'revision': revision}
 
     def work(self, work_id: int) -> dict[str, Any] | None:
         rows = self.db.fetchall(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import os
 import zipfile
 from contextlib import nullcontext
@@ -11,6 +12,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any
 from xml.etree import ElementTree
 
+from app.services.file_identity import sqlite_file_id
 from app.database import Database
 from app.config import Settings
 from app.services import comicinfo
@@ -77,12 +79,13 @@ CHECK_DEFINITIONS = {
 class GovernanceService:
     """Local-only metadata/tag governance aggregate backed by SQLite and stored CBZ files."""
 
-    def __init__(self, db: Database, dictionary_service: Any | None = None, settings: Any | None = None, cache: Any | None = None):
+    def __init__(self, db: Database, dictionary_service: Any | None = None, settings: Any | None = None, cache: Any | None = None, metadata_refresh: Any | None = None):
         self.db = db
         self.dictionary_service = dictionary_service
         self.settings = settings
         self.libraries = MediaLibraryService(settings or Settings(data_dir=db.path.parent), db)
         self.cache = cache
+        self.metadata_refresh = metadata_refresh
 
     def queue(self) -> dict[str, Any]:
         rows = self.db.fetchall(
@@ -244,7 +247,18 @@ class GovernanceService:
         aggregate = self.work_governance(work_id)
         source_values = {field["field"]: field.get("source_value") for field in aggregate["metadata"]["fields"]}
         saved = 0
+        review_item, review_version = payload.get("review_item_id"), payload.get("review_version")
         with self.db.connect() as conn:
+            if review_item is not None or review_version is not None:
+                if not review_item or not review_version or self.metadata_refresh is None:
+                    raise ValueError("审批保存需要有效的来源和版本")
+                conn.execute("BEGIN IMMEDIATE")
+                item = conn.execute("SELECT status,scrape_status FROM library_items WHERE id=?", (review_item,)).fetchone()
+                snapshot = self.metadata_refresh._snapshot(work_id, review_item, conn)
+                if not item or item['status'] != 'ready' or snapshot['version'] != review_version:
+                    raise ValueError("作品或设置已变化，请刷新后重新编辑")
+                if item['scrape_status'] == 'running':
+                    raise ValueError("当前作品正在刮削，请等待本次完成")
             for row in metadata_rows:
                 if not isinstance(row, dict):
                     raise ValueError("metadata entries must be objects")
@@ -269,7 +283,13 @@ class GovernanceService:
                     """,
                     (work_id, field, value, source, source_values.get(field)),
                 )
+                if field in {"artist", "group", "language", "tags"}:
+                    self._save_field_tags(conn, work_id, field, value, source)
                 saved += 1
+            conn.execute("UPDATE works SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (work_id,))
+            if review_item is not None:
+                conn.execute("""UPDATE library_items SET scrape_status='completed',scrape_retry_at=0,scrape_attempts=0,
+                    scrape_result_json=? WHERE id=?""", (json.dumps({'reason': '已手动确认元数据'}, ensure_ascii=False), review_item))
 
         dictionary_results = []
         for dictionary_payload in payload.get("dictionary_apply") or []:
@@ -288,6 +308,28 @@ class GovernanceService:
                 response["write_back"] = {"error": str(exc)}
         response["governance"] = self.work_governance(work_id)
         return response
+
+    def _save_field_tags(self, conn, work_id, field, value, source):
+        from app.services.dictionary_service import normalize_key
+        parts = list(dict.fromkeys(part.strip() for part in re.split(r"\s+/\s+|[,，;；\n]", value or "") if part.strip()))
+        if len(parts) > 200:
+            raise ValueError("单项不能超过200个词条")
+        kind = "tag" if field == "tags" else field
+        if kind == "language":
+            aliases = {"zh": "chinese", "zh-cn": "chinese", "zh-tw": "chinese", "中文": "chinese",
+                       "ja": "japanese", "jp": "japanese", "日文": "japanese", "日语": "japanese",
+                       "en": "english", "英文": "english", "英语": "english"}
+            parts = list(dict.fromkeys(aliases.get(part.lower(), part.lower()) for part in parts))
+            conn.execute("UPDATE works SET language=? WHERE id=?", (parts[0] if parts else None, work_id))
+        conn.execute("DELETE FROM work_tags WHERE work_id=? AND tag_type=?", (work_id, kind))
+        for part in parts:
+            matches = conn.execute("""SELECT id,remote_tag_id,original_text FROM local_tag_dictionary
+                WHERE tag_type=? AND ignored=0 AND (normalized_key=? OR zh_name=?) LIMIT 2""", (kind, normalize_key(part), part)).fetchall()
+            match = matches[0] if len(matches) == 1 else None
+            name = match["original_text"] if match else part
+            conn.execute("""INSERT OR IGNORE INTO work_tags(work_id,remote_tag_id,dictionary_id,tag_type,remote_name,remote_slug,source)
+                VALUES (?,?,?,?,?,?,?)""", (work_id, match["remote_tag_id"] if match else None, match["id"] if match else None,
+                                           kind, name, normalize_key(name), "manual" if source == "current" else source))
 
     def translate_metadata(self, work_id: int, fields: list[str] | None = None) -> dict[str, Any]:
         """机翻自由文本元数据字段为中文，返回可复核建议。
@@ -621,7 +663,7 @@ class GovernanceService:
             before = source_path.stat()
         except (OSError, ValueError) as exc:
             raise ValueError(str(exc)) from exc
-        if row["library_item_id"] and (row["size_bytes"], row["mtime_ns"], row["device"], row["inode"]) != (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino):
+        if row["library_item_id"] and (row["size_bytes"], row["mtime_ns"], row["device"], row["inode"]) != (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino)):
             raise ValueError("源文件已变化，请重新扫描后重试")
         aggregate = self.work_governance(work_id)
         fields = comicinfo.build_fields(aggregate)
@@ -648,7 +690,7 @@ class GovernanceService:
                 if self.libraries.resolve_file(row, for_write=True) != source_path:
                     raise ValueError("源文件路径已变化")
                 after = source_path.stat()
-                if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino):
+                if (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino)) != (after.st_size, after.st_mtime_ns, sqlite_file_id(after.st_dev), sqlite_file_id(after.st_ino)):
                     raise ValueError("源文件已变化，请重新扫描后重试")
                 os.replace(tmp_path, source_path)
                 info = source_path.stat()
@@ -657,7 +699,7 @@ class GovernanceService:
                     connection.execute("""UPDATE library_items SET size_bytes = ?, mtime_ns = ?, device = ?, inode = ?,
                         fingerprint = ?, manifest = ?, metadata_json = ?, archive_info_json = ?, status = 'ready',
                         last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
-                        (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino, data["fingerprint"], data["manifest"],
+                        (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), data["fingerprint"], data["manifest"],
                          json.dumps(data["metadata"], ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False), row["library_item_id"]))
                 connection.execute("UPDATE works SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (work_id,))
             clear_direct_thumbnails(self.settings, work_id)
@@ -1225,6 +1267,7 @@ class GovernanceService:
             "created_at": row.get("created_at"),
             "exists": self.libraries.file_available(row),
             "read_only": not self.libraries.can_modify(row, "writeback"),
+            "rename_allowed": row["kind"] == "source_cbz" and self.libraries.can_modify(row, "rename"),
             "library_name": row.get("library_name"),
         }
 

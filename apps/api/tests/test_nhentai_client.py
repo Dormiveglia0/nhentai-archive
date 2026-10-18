@@ -201,3 +201,62 @@ def test_media_proxy_url_is_same_origin_and_rejects_absolute_fetch_paths():
     with pytest.raises(NhentaiApiError) as error:
         client.open_media("https://private.example/secret.png")
     assert error.value.code == "invalid_media_path"
+
+
+def test_uncached_requests_are_paced_and_background_leaves_browsing_room(monkeypatch):
+    clock = [100.0]
+    starts = []
+    client = NhentaiClient("https://api.example", "tests")
+    monkeypatch.setattr("app.services.nhentai_client.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(client._request_condition, "wait", lambda delay: clock.__setitem__(0, clock[0] + delay + .0001))
+    def request(*args, **kwargs):
+        starts.append(clock[0])
+        return FakeHttpResponse(b'{"result": []}')
+    monkeypatch.setattr("urllib.request.urlopen", request)
+    client.latest(page=1)
+    client.latest(page=1)  # Cache hits consume no request slot.
+    client.latest(page=2)
+    with client.background_requests(lambda: False):
+        client.latest(page=3)
+        client.latest(page=4)
+    assert len(starts) == 4
+    assert starts[1] - starts[0] >= 1
+    assert starts[2] - starts[1] >= 2
+    assert starts[3] - starts[2] >= 3
+
+
+def test_background_waits_out_cooldown_and_can_cancel_without_network(monkeypatch):
+    clock = [100.0]
+    client = NhentaiClient("https://api.example", "tests")
+    monkeypatch.setattr("app.services.nhentai_client.time.monotonic", lambda: clock[0])
+    monkeypatch.setattr(client._request_condition, "wait", lambda delay: clock.__setitem__(0, clock[0] + delay + .0001))
+    calls = []
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **k: calls.append(clock[0]) or FakeHttpResponse(b'{}'))
+    client._rate_limited_until = 103
+    with client.background_requests(lambda: False):
+        client.latest()
+    assert calls[0] >= 103
+    with client.background_requests(lambda: True), pytest.raises(InterruptedError):
+        client.latest(page=2)
+    assert len(calls) == 1
+
+
+def test_foreground_request_preempts_queued_background_work(monkeypatch):
+    import threading
+    client = NhentaiClient('https://api.example', 'tests')
+    client._next_request_at = time.monotonic() + .15
+    calls, errors = [], []
+    monkeypatch.setattr('urllib.request.urlopen', lambda request, **kwargs: calls.append((request.full_url, time.monotonic())) or FakeHttpResponse(b'{}'))
+    def background():
+        try:
+            with client.background_requests(lambda: False):
+                client.latest(page=2)
+        except Exception as exc:
+            errors.append(exc)
+    worker = threading.Thread(target=background, daemon=True)
+    worker.start()
+    client.latest(page=1)
+    worker.join(4)
+    assert not worker.is_alive() and not errors
+    assert 'page=1' in calls[0][0] and 'page=2' in calls[1][0]
+    assert calls[1][1] - calls[0][1] >= 1.9

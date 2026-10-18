@@ -6,36 +6,39 @@ import { useNativeDialog } from "../../lib/useNativeDialog";
 import { ReaderBridgeControl } from "./ReaderBridgeControl";
 import "./MetadataScrapePanel.css";
 
-type Props = { workId: number; title: string; blurCovers: boolean; onApplied: () => void; onClose: () => void; embedded?: boolean; autoSearch?: boolean; bind?: boolean; onBusyChange?: (busy: boolean) => void };
+type Props = { workId: number; itemId?: number; title: string; blurCovers: boolean; onApplied: () => void; onClose: () => void; embedded?: boolean; showBridge?: boolean; autoSearch?: boolean; bind?: boolean; onBusyChange?: (busy: boolean) => void; initialPreview?: MetadataRefreshPreview["result"][number] };
 
-export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onClose, embedded = false, autoSearch = false, bind, onBusyChange }: Props) {
+export function MetadataScrapePanel({ workId, itemId, title, blurCovers, onApplied, onClose, embedded = false, showBridge = !embedded, autoSearch = false, bind, onBusyChange, initialPreview }: Props) {
   const [query, setQuery] = useState(title);
-  const [preview, setPreview] = useState<MetadataRefreshPreview["result"][number] | null>(null);
-  const [chosen, setChosen] = useState<MetadataRefreshMatch | null>(null);
+  const [preview, setPreview] = useState<MetadataRefreshPreview["result"][number] | null>(initialPreview ?? null);
+  const [chosen, setChosen] = useState<MetadataRefreshMatch | null>(initialPreview?.match ?? null);
   const [busy, setBusy] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const revision = useRef(0);
+  const busyCallback = useRef(onBusyChange);
+  busyCallback.current = onBusyChange;
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    return () => { revision.current++; };
+    return () => { revision.current++; busyCallback.current?.(false); };
   }, []);
   const dismiss = useNativeDialog(dialog, onClose, !embedded, applying);
 
   async function search() {
     const current = ++revision.current;
+    onBusyChange?.(true);
     setBusy(true); setError(""); setNotice(""); setPreview(null); setChosen(null);
     try {
-      const payload = await api.metadataRefreshPreview([workId], {}, { [workId]: query.trim() }, bind);
+      const payload = await api.metadataRefreshPreview([workId], {}, { [workId]: query.trim() }, bind, itemId ? { [workId]: itemId } : {});
       if (current !== revision.current) return;
       const row = payload.result[0];
       setPreview(row); setChosen(row.match);
     } catch (exception) {
       if (current === revision.current) setError(exception instanceof Error ? exception.message : String(exception));
-    } finally { if (current === revision.current) setBusy(false); }
+    } finally { if (current === revision.current) { setBusy(false); onBusyChange?.(false); } }
   }
 
   useEffect(() => { if (autoSearch) void search(); }, [autoSearch, workId, bind]);
@@ -45,7 +48,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
     const current = ++revision.current;
     onBusyChange?.(true); setBusy(true); setApplying(true); setError(""); setNotice("");
     try {
-      const result = await api.metadataRefreshApply([{ ...chosen, source: "manual_id", work_id: workId, version: preview.version, bind }]);
+      const result = await api.metadataRefreshApply([{ ...chosen, source: "manual_id", work_id: workId, item_id: itemId, version: preview.version, bind }]);
       if (current !== revision.current) return;
       const row = result.result[0];
       if (row?.status !== "updated") throw new Error(row?.reason || "更新失败，请重新搜索");
@@ -64,7 +67,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
     </form>
     {error ? <p className="folio-scrape-error" role="alert">{error}</p> : null}
     {notice ? <p role="status"><Check size={16} />{notice}</p> : null}
-    {!embedded ? <ReaderBridgeControl key={notice} workId={workId} /> : null}
+    {showBridge ? <ReaderBridgeControl key={notice} workId={workId} /> : null}
     {preview ? <>
       {preview.candidates.length ? <div className="folio-scrape-results">
         <div className="folio-scrape-candidates" aria-label="匹配候选">
@@ -85,7 +88,7 @@ export function MetadataScrapePanel({ workId, title, blurCovers, onApplied, onCl
           {chosen.reason ? <p>{chosen.reason}</p> : null}
           {chosen.diffs?.some(diff => diff.field === "pages" && diff.changed) ? <p>页数不一致，将保留本地阅读并停用远端过渡。</p> : null}
           <button className="is-primary" type="button" disabled={busy || chosen.selectable === false} onClick={() => void apply()}>
-            <Check size={16} />{preview.config.auto_bind ? "确认应用并绑定" : "确认应用元数据"}
+            <Check size={16} />{(bind ?? preview.config.auto_bind) ? "确认应用并绑定" : "确认应用元数据"}
           </button>
         </div> : null}
       </div> : <p role="status">{preview.reason || "没有匹配的作品"}</p>}

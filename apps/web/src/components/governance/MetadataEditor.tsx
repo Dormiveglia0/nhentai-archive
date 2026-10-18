@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import type { GovernanceAggregate, GovernanceTranslateSuggestion, MetadataFieldDiff } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
+import { DictionaryFieldInput, LanguageFieldInput } from "./DictionaryFieldInput";
 import { GovernanceTranslationPanel } from "./GovernanceTranslationPanel";
 import { normalize, type FieldEdit, sourceLabel, splitValues, toEditableSource } from "./governanceHelpers";
 
@@ -129,12 +130,10 @@ function MetadataCard({
       </div>
       <div className="folio-governance-field-final">
         <span className="folio-governance-field-label">本地最终值</span>
-        <AutoGrowTextarea
-          label={`本地最终值：${field.label}`}
-          value={edit?.value ?? ""}
-          onChange={(value) => onChange({ value, source: "manual" })}
-          placeholder="未设置"
-        />
+        {field.field === 'language' ? <LanguageFieldInput value={edit?.value ?? ''} onChange={value => onChange({ value, source: 'manual' })} />
+          : ['artist', 'group', 'tags'].includes(field.field) ? <DictionaryFieldInput kind={field.field === 'tags' ? 'tag' : field.field} label={`本地最终值：${field.label}`} value={edit?.value ?? ''} onChange={value => onChange({ value, source: 'manual' })} />
+          : <AutoGrowTextarea label={`本地最终值：${field.label}`} value={edit?.value ?? ''} onChange={value => onChange({ value, source: 'manual' })} placeholder="未设置" />}
+
       </div>
       <div className="folio-governance-field-actions">
         <button

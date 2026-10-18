@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from app.services.file_identity import sqlite_file_id
 from app.config import Settings
 from app.database import Database
 from app.services.archive_manifest import inspect_archive, open_archive, unpack_manifest
@@ -46,7 +47,7 @@ def _copy_source(connection, source: dict[str, Any], destination: str) -> None:
         target = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
         with os.fdopen(fd, "rb") as origin, os.fdopen(target, "wb") as local:
             before = os.fstat(origin.fileno())
-            actual = (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino)
+            actual = (before.st_size, before.st_mtime_ns, sqlite_file_id(before.st_dev), sqlite_file_id(before.st_ino))
             if not stat.S_ISREG(before.st_mode) or actual != expected:
                 raise ValueError("源文件已变化，请重新扫描后重试")
             copied = 0
@@ -62,7 +63,7 @@ def _copy_source(connection, source: dict[str, Any], destination: str) -> None:
             after = os.fstat(origin.fileno())
         current = path.stat()
         if copied != source["size_bytes"] or any(
-            (s.st_size, s.st_mtime_ns, s.st_dev, s.st_ino) != expected for s in (after, current)
+            (s.st_size, s.st_mtime_ns, sqlite_file_id(s.st_dev), sqlite_file_id(s.st_ino)) != expected for s in (after, current)
         ):
             raise ValueError("源文件在下载期间变化，请重新扫描")
         if inspect_archive(Path(destination))["fingerprint"] != source["fingerprint"]:
@@ -99,7 +100,7 @@ def _read_mounted(connection, source: dict[str, Any], destination: str, page: di
         expected = (source["size_bytes"], source["mtime_ns"], source["device"], source["inode"])
         def check_version():
             info = path.stat()
-            if (info.st_size, info.st_mtime_ns, info.st_dev, info.st_ino) != expected:
+            if (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino)) != expected:
                 raise ValueError("源归档已变化，请重新扫描后打开作品")
         check_version()
         media_type = "application/zip"

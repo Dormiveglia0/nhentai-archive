@@ -378,3 +378,35 @@ def test_review_api_records_explicit_approval(tmp_path, monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["review"]["state"] == "approved"
+
+
+def test_manual_language_multiselect_updates_library_filters_and_export(tmp_path):
+    from app.services.library_service import LibraryService
+    from app.services.comicinfo import build_fields
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    service.apply(work_id, {'metadata': [{'field': 'language', 'value': 'chinese / japanese', 'source': 'manual'}]})
+    tags = db.fetchall("SELECT remote_name FROM work_tags WHERE work_id=? AND tag_type='language' ORDER BY remote_name", (work_id,))
+    assert [row['remote_name'] for row in tags] == ['chinese', 'japanese']
+    library = LibraryService(db)
+    assert library.search(language='chinese')['total'] == 1
+    assert library.search(language='japanese')['total'] == 1
+    assert library.search(language='english')['total'] == 0
+    assert {row['value'] for row in library.summary()['languages']} == {'chinese', 'japanese'}
+    exported = build_fields(service.work_governance(work_id))
+    assert 'chinese' in exported['LanguageISO'] and 'japanese' in exported['LanguageISO']
+
+
+def test_manual_dictionary_choices_are_reflected_in_library_tags(tmp_path):
+    from app.services.library_service import LibraryService
+    from app.services.dictionary_service import DictionaryService
+    from app.services.nhentai_client import NhentaiClient
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    dictionary = DictionaryService(db, NhentaiClient('https://api.example', 'tests'))
+    dictionary.apply({'original_text': 'Writer', 'zh_name': '作者译名', 'tag_type': 'artist'})
+    service.apply(work_id, {'metadata': [{'field': 'artist', 'value': '作者译名', 'source': 'manual'}]})
+    artist = next(tag for tag in LibraryService(db).work(work_id)['tags'] if tag['type'] == 'artist')
+    assert artist['name'] == 'Writer' and artist['display'] == '作者译名'
+    dictionary.sync_work_tags(work_id, [{'id': 555, 'type': 'artist', 'name': 'Other writer'}])
+    assert [tag['name'] for tag in LibraryService(db).work(work_id)['tags'] if tag['type'] == 'artist'] == ['Writer']

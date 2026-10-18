@@ -2,11 +2,12 @@ import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Folder, Pause, Pe
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { api, type LibraryItem, type LibraryScanRun, type MediaLibrary, type MediaLibraryConfig } from "../../lib/api";
-import { formatBytes, parseUtcTimestamp } from "../../lib/format";
+import { api, type LibraryItem, type MediaLibrary, type MediaLibraryConfig } from "../../lib/api";
+import { formatBytes } from "../../lib/format";
 import { statusLabel } from "../../lib/jobs";
 import { pageHref } from "../../lib/navigation";
 import { FolioSelect } from "../folio/ui/FolioPrimitives";
+import { MediaLibraryActivity } from "./MediaLibraryActivity";
 import { MediaLibraryEditor } from "./MediaLibraryEditor";
 import { useNativeDialog } from "../../lib/useNativeDialog";
 import "./StorageSection.css";
@@ -18,7 +19,6 @@ const ITEM_STATUS = { error: "读取失败", pending: "待稳定", missing: "源
 function LibraryChecks({ library, initialStatus }: { library: MediaLibrary; initialStatus: keyof typeof ITEM_STATUS }) {
   const [status, setStatus] = useState<keyof typeof ITEM_STATUS>(initialStatus);
   const [page, setPage] = useState(1);
-  const [runs, setRuns] = useState<LibraryScanRun[]>([]);
   const [items, setItems] = useState<{ result: LibraryItem[]; total: number; per_page: number } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -26,11 +26,11 @@ function LibraryChecks({ library, initialStatus }: { library: MediaLibrary; init
     let alive = true;
     setLoading(true);
     setError("");
-    Promise.all([api.libraryScanRuns(library.id), api.libraryItems(library.id, status, page)])
-      .then(([history, files]) => { if (alive) {
+    api.libraryItems(library.id, status, page)
+      .then(files => { if (alive) {
         const lastPage = Math.max(1, Math.ceil(files.total / files.per_page));
         if (page > lastPage) { setPage(lastPage); return; }
-        setRuns(history.result); setItems(files);
+        setItems(files);
       } })
       .catch(exc => { if (alive) setError(exc.message); })
       .finally(() => { if (alive) setLoading(false); });
@@ -57,16 +57,6 @@ function LibraryChecks({ library, initialStatus }: { library: MediaLibrary; init
       <span>{page} / {Math.ceil(items.total / items.per_page)}</span>
       <button type="button" aria-label="下一页文件" disabled={loading || page * items.per_page >= items.total} onClick={() => setPage(value => value + 1)}><ChevronRight size={17} /></button>
     </div> : null}
-    <details className="folio-library-scan-history"><summary>扫描历史{runs.length ? ` · 最近 ${runs.length} 次` : ""}</summary>
-      {runs.length ? <div className="folio-library-runs">
-        {runs.map(run => <div key={run.id}>
-          <time>{parseUtcTimestamp(run.started_at)?.toLocaleString() ?? "—"}</time>
-          <span>{({ running: "正在扫描", completed: "已完成", cancelled: "已取消", failed: "失败", partial: "部分失败" } as Record<string, string>)[run.status] ?? run.status}</span>
-          <span>{run.counts.indexed ?? 0} 新增或更新 · {run.counts.errors ?? 0} 失败</span>
-          {run.errors[0] ? <p className="folio-media-error">{run.errors[0].path}：{run.errors[0].reason}</p> : null}
-        </div>)}
-      </div> : <p className="folio-media-hint">{loading ? "正在读取扫描记录…" : "尚无扫描记录"}</p>}
-    </details>
   </div>;
 }
 
@@ -100,7 +90,7 @@ export function MediaLibrariesSection() {
           setLoadError("");
         } catch (exc) { if (alive) setLoadError(exc instanceof Error ? exc.message : String(exc)); }
       }
-      if (alive) timer = window.setTimeout(load, 5000);
+      if (alive) timer = window.setTimeout(load, 2000);
     }
     void load();
     return () => { alive = false; window.clearTimeout(timer); };
@@ -155,7 +145,7 @@ export function MediaLibrariesSection() {
         <div className="folio-library-directory-main">
           <div><h4>{library.name}</h4><span className={library.health === "offline" || library.health === "partial" || library.error_count || library.missing_count ? "folio-media-error" : ""}>{library.removed_at ? "已移除" : library.active_scan_status ? statusLabel(library.active_scan_status) : library.scanning ? "正在扫描" : !library.enabled ? "已暂停" : library.error_count || library.missing_count ? "需要检查" : HEALTH[library.health] ?? library.health}</span></div>
           <p className="folio-library-directory-path" title={library.root_path}>{library.root_path}</p>
-          <p className="folio-library-directory-stats"><span>{KINDS[library.kind]} · {library.kind === "mounted" ? [!library.read_only && "可存入", library.config.allow_writeback && "可回写", library.config.allow_delete && "可删除"].filter(Boolean).join(" / ") || "只读" : library.read_only ? "只读" : "可写"}</span>{library.removed_at ? <a href={`#files?view=metadata&library_id=${library.id}&status=detached`}>{library.item_count} 条保留资料<ArrowUpRight size={12} /></a> : <a href={pageHref({ name: "library" }) + "?library_id=" + library.id}>{library.work_count} 部作品<ArrowUpRight size={12} /></a>}{library.pending_count ? <button type="button" onClick={() => setChecking({ id: library.id, status: "pending" })}>{library.pending_count} 待稳定</button> : null}{library.error_count ? <button type="button" className="folio-media-error" onClick={() => setChecking({ id: library.id, status: "error" })}>{library.error_count} 读取失败</button> : null}{library.missing_count ? <a className="folio-media-error" href={`#files?view=metadata&library_id=${library.id}&status=missing`}>{library.missing_count} 缺失 · 元数据<ArrowUpRight size={12} /></a> : null}{library.scrape_review_count ? <span>{library.scrape_review_count} 刮削待确认</span> : null}</p>
+          <p className="folio-library-directory-stats"><span>{KINDS[library.kind]} · {library.kind === "mounted" ? [!library.read_only && "可存入", library.config.allow_writeback && "可回写", library.config.allow_delete && "可删除"].filter(Boolean).join(" / ") || "只读" : library.read_only ? "只读" : "可写"}</span>{library.removed_at ? <a href={`#files?view=metadata&library_id=${library.id}&status=detached`}>{library.item_count} 条保留资料<ArrowUpRight size={12} /></a> : <a href={pageHref({ name: "library" }) + "?library_id=" + library.id}>{library.work_count} 部作品<ArrowUpRight size={12} /></a>}{library.pending_count ? <button type="button" onClick={() => setChecking({ id: library.id, status: "pending" })}>{library.pending_count} 待稳定</button> : null}{library.error_count ? <button type="button" className="folio-media-error" onClick={() => setChecking({ id: library.id, status: "error" })}>{library.error_count} 读取失败</button> : null}{library.missing_count ? <a className="folio-media-error" href={`#files?view=metadata&library_id=${library.id}&status=missing`}>{library.missing_count} 缺失 · 元数据<ArrowUpRight size={12} /></a> : null}{library.scrape_review_count ? <a href={`#scrape?library_id=${library.id}`}>{library.scrape_review_count} 刮削待确认</a> : null}</p>
           {library.last_error || library.watch_error ? <p className="folio-media-error">{library.last_error ?? library.watch_error}</p> : null}
         </div>
         <div className="folio-media-actions">
@@ -167,6 +157,7 @@ export function MediaLibrariesSection() {
           </> : null}
           <button type="button" className="folio-settings-mini-action" aria-expanded={checking?.id === library.id} onClick={() => setChecking(value => value?.id === library.id ? null : { id: library.id, status: "all" })}><ChevronDown size={14} />{library.removed_at ? "保留记录" : "文件状态"}</button>
         </div>
+        {!library.removed_at ? <MediaLibraryActivity library={library} onChange={reload} /> : null}
         {checking?.id === library.id ? <LibraryChecks key={`${library.id}-${checking.status}`} library={library} initialStatus={checking.status} /> : null}
       </article>)}
     </div>

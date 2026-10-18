@@ -27,6 +27,18 @@ class FavoritePatch(BaseModel):
     favorite: bool
 
 
+class WorkGroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    work_ids: list[int] = Field(min_length=2, max_length=5000)
+
+
+class WorkGroupPatch(BaseModel):
+    version: int = Field(gt=0)
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    add_ids: list[int] = Field(default_factory=list, max_length=5000)
+    remove_ids: list[int] = Field(default_factory=list, max_length=5000)
+
+
 class SettingsPatch(BaseModel):
     nhentai_api_key: str | None = None
     clear_nhentai_api_key: bool = False
@@ -86,6 +98,8 @@ class GovernanceApplyRequest(BaseModel):
     metadata: list[GovernanceMetadataPatch] = Field(default_factory=list)
     dictionary_apply: list[DictionaryApplyRequest] = Field(default_factory=list)
     write_back: bool = False
+    review_item_id: int | None = Field(default=None, gt=0)
+    review_version: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 class GovernanceBulkActions(BaseModel):
@@ -104,10 +118,12 @@ class MetadataRefreshPreviewRequest(BaseModel):
     work_ids: list[int] = Field(default_factory=list, max_length=50)
     gallery_ids: dict[int, int] = Field(default_factory=dict, max_length=50)
     queries: dict[int, str] = Field(default_factory=dict, max_length=50)
+    item_ids: dict[int, int] = Field(default_factory=dict, max_length=50)
 
 
 class MetadataRefreshMatchRequest(BaseModel):
     work_id: int = Field(gt=0)
+    item_id: int | None = Field(default=None, gt=0)
     gallery_id: int = Field(gt=0)
     source: str
     version: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
@@ -119,6 +135,11 @@ class MetadataRefreshApplyRequest(BaseModel):
     matches: list[MetadataRefreshMatchRequest] = Field(default_factory=list, max_length=50)
 
 
+class ScrapeDecisionRequest(BaseModel):
+    action: Literal["retry", "dismiss", "complete"]
+    version: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
 class GovernanceTranslateRequest(BaseModel):
     fields: list[str] | None = None
 
@@ -126,6 +147,12 @@ class GovernanceTranslateRequest(BaseModel):
 class GovernanceReviewRequest(BaseModel):
     action: str
     note: str | None = None
+
+
+class SourceRenameRequest(BaseModel):
+    file_id: int = Field(gt=0)
+    filename: str = Field(min_length=1, max_length=255)
+    expected_path: str = Field(min_length=1, max_length=4096)
 
 
 class ExportItemRequest(BaseModel):

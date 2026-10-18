@@ -20,6 +20,9 @@ const WorkbenchPage = lazy(() =>
 const LibraryPage = lazy(() =>
   import("./components/library/LibraryPage").then((module) => ({ default: module.LibraryPage })),
 );
+const ScrapeReviewPage = lazy(() =>
+  import("./components/library/ScrapeReviewPage").then(module => ({ default: module.ScrapeReviewPage })),
+);
 const HistoryPage = lazy(() =>
   import("./components/history/HistoryPage").then((module) => ({ default: module.HistoryPage })),
 );
@@ -195,6 +198,7 @@ function ArchiveApp({ onLogout }: { onLogout: () => Promise<void> }) {
               {archivePage.name === "discover" ? <DiscoverPage blurCovers={blurCovers} initialTag={archivePage.tag} /> : null}
               {archivePage.name === "gallery" ? <GalleryPage initialDetail={preparedGallery?.gallery_id === archivePage.galleryId ? preparedGallery : undefined} galleryId={archivePage.galleryId} returnTo={archivePage.returnTo} blurCovers={blurCovers} /> : null}
               {archivePage.name === "library" ? <LibraryPage blurCovers={blurCovers} /> : null}
+              {archivePage.name === "scrape" ? <ScrapeReviewPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "history" ? <HistoryPage blurCovers={blurCovers} /> : null}
               {archivePage.name === "governance" ? <GovernancePage initialWorkId={archivePage.workId} blurCovers={blurCovers} /> : null}
               {archivePage.name === "dictionary" ? <DictionaryPage blurCovers={blurCovers} /> : null}

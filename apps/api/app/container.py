@@ -29,6 +29,7 @@ from app.services.settings_service import SettingsService
 from app.services.subscription_service import SubscriptionService
 from app.services.translation_service import TranslationService
 from app.services.workbench_service import WorkbenchService
+from app.services.source_rename_service import SourceRenameService
 
 
 def build_services() -> SimpleNamespace:
@@ -54,7 +55,7 @@ def build_services() -> SimpleNamespace:
     translation = TranslationService(db)
     dictionary = DictionaryService(db, client, translation)
     metadata_refresh = MetadataRefreshService(db, client, discover, dictionary, media_libraries)
-    governance = GovernanceService(db, dictionary, settings, archive.cache)
+    governance = GovernanceService(db, dictionary, settings, archive.cache, metadata_refresh)
     exports = ExportService(db, settings, archive.cache)
     files = FileMaintenanceService(db, settings, archive.cache)
     imports = ImportService(settings, client, jobs, archive, discover, dictionary)
@@ -83,6 +84,7 @@ def build_services() -> SimpleNamespace:
         governance=governance,
         exports=exports,
         files=files,
+        source_renames=SourceRenameService(db, media_libraries, files, archive.cache),
         local_metadata=LocalMetadataService(files, media_libraries),
         imports=imports,
         uploads=UploadService(archive),

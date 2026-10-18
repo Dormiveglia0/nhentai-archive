@@ -18,7 +18,7 @@ type Props = {
 const FOLIO_PAGE_IDS = new Set<FolioPageId>(FOLIO_PAGES.map((page) => page.id));
 
 function chromeRoute(activePage: ShelledPageName): FolioPageId {
-  if (activePage === "history" || activePage === "export") return "library";
+  if (activePage === "history" || activePage === "export" || activePage === "scrape") return "library";
   if (activePage === "gallery") return "discover";
   return FOLIO_PAGE_IDS.has(activePage as FolioPageId) ? activePage as FolioPageId : "workbench";
 }

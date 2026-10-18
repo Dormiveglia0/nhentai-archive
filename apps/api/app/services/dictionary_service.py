@@ -607,6 +607,10 @@ class DictionaryService:
             )
 
     def sync_work_tags(self, work_id: int, tags: list[dict[str, Any]], conn=None) -> dict[str, int]:
+        fetch = conn.execute if conn is not None else self.db.execute
+        protected = {"tag" if row["field"] == "tags" else row["field"] for row in fetch(
+            "SELECT field FROM work_metadata WHERE work_id=? AND source IN ('manual','current') AND field IN ('artist','group','language','tags')", (work_id,)).fetchall()}
+        tags = [tag for tag in tags if tag.get("type") not in protected]
         self.link_work_tags(work_id, tags, conn)
         execute = conn.execute if conn is not None else self.db.execute
         remote_ids = list(dict.fromkeys(int(tag["id"]) for tag in tags if tag.get("id") is not None))

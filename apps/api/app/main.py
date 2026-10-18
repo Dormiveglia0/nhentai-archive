@@ -15,6 +15,7 @@ from app.container import services
 async def lifespan(_app: FastAPI):
     services.jobs.recover_interrupted()
     services.library_index.recover_interrupted()
+    services.source_renames.recover()
     services.archive.cache.recover_interrupted()
     services.archive.cache.start()
     services.export_jobs.sweep_exports()

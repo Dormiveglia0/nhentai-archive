@@ -8,7 +8,7 @@ import { MetadataScrapePanel } from "./MetadataScrapePanel";
 import "../settings/StorageSection.css";
 import "./UploadDialog.css";
 
-const fields = [["title", "标题"], ["title_japanese", "原文标题"], ["artist", "作者"], ["group", "社团"], ["language", "语言"], ["tags", "标签"], ["summary", "简介"]] as const;
+import { METADATA_FIELDS as fields, ManualMetadataFields } from "./ManualMetadataFields";
 type Imported = Awaited<ReturnType<typeof api.uploadArchive>>;
 
 export function UploadDialog({ blurCovers, onClose, onImported }: { blurCovers: boolean; onClose: () => void; onImported: () => void }) {
@@ -72,7 +72,10 @@ export function UploadDialog({ blurCovers, onClose, onImported }: { blurCovers: 
     <header><h2>{imported ? "整理作品" : "上传作品"}</h2><button className="folio-media-icon-button" type="button" aria-label="关闭上传" disabled={busy} onClick={dismiss}><X size={19} /></button></header>
     <div className="folio-upload-body">
       {!imported ? <fieldset disabled={busy}>
-        <label className="folio-upload-file"><Upload size={24} /><strong>选择 ZIP 或 CBZ</strong><span>ZIP 会自动保存为 CBZ · 最大 2 GB</span><input type="file" accept=".zip,.cbz" data-dialog-focus aria-label="选择归档文件" onChange={event => { setFile(event.target.files?.[0] ?? null); setError(""); }} /></label>
+        <label className="folio-upload-file"><Upload size={24} /><strong>选择 ZIP 或 CBZ</strong><span>ZIP 会自动保存为 CBZ · 最大 2 GB</span>
+          <input type="file" accept=".zip,.cbz" data-dialog-focus aria-label="选择归档文件" onChange={event => { setFile(event.target.files?.[0] ?? null); setError(""); }} />
+          <span className="folio-upload-picker" aria-hidden="true"><span>选择文件</span><span title={file?.name}>{file?.name ?? '未选择文件'}</span></span>
+        </label>
         <FolioSelect label="存入媒体库" value={libraryId} onChange={setLibraryId} options={libraries.length ? libraries.map(row => ({ value: String(row.id), label: row.name })) : [{ value: "", label: "暂无可用媒体库" }]} />
         <div className="folio-toggle-list">
           <FolioToggleRow label="自动刮削" copy="上传后搜索匹配作品，确认后应用元数据。" checked={autoScrape} onChange={setAutoScrape} />
@@ -90,9 +93,7 @@ export function UploadDialog({ blurCovers, onClose, onImported }: { blurCovers: 
           <MetadataScrapePanel embedded workId={imported.work_id} title={imported.title} blurCovers={blurCovers} bind={bind} autoSearch={autoScrape} onBusyChange={setBusy} onApplied={() => void applied()} onClose={dismiss} />
         </div>
         {tab === "manual" ? <form id="upload-metadata" onSubmit={event => { event.preventDefault(); void save(); }}>
-          <fieldset disabled={busy} className="folio-field-matrix">
-            {fields.map(([field, label]) => <label key={field} className={`folio-field${field === "summary" ? " folio-field-wide" : ""}`}><span>{label}</span>{field === "summary" ? <textarea value={metadata[field] ?? ""} onChange={event => setMetadata(value => ({ ...value, [field]: event.target.value }))} maxLength={10000} /> : <><input value={metadata[field] ?? ""} required={field === "title"} maxLength={2000} onChange={event => setMetadata(value => ({ ...value, [field]: event.target.value }))} /><i /></>}</label>)}
-          </fieldset>
+          <ManualMetadataFields values={metadata} onChange={setMetadata} disabled={busy} />
         </form> : null}
       </>}
       {error ? <p className="folio-media-error" role="alert">{error}</p> : null}
