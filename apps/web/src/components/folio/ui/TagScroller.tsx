@@ -1,4 +1,4 @@
-import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent } from "react";
+import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from "react";
 
 import type { RemoteTag } from "../../../lib/api";
 import { tagSearchHref } from "../../../lib/navigation";
@@ -7,7 +7,7 @@ type ScrollTag = Omit<RemoteTag, "id"> & { id: number | null; key?: string };
 type Props<T extends ScrollTag> = {
   tags: T[];
   onPickTag?: (tag: T) => void;
-  displayTag?: (tag: T) => string;
+  displayTag?: (tag: T) => ReactNode;
   hrefForTag?: (tag: T) => string;
   className: string;
   emptyLabel?: string;

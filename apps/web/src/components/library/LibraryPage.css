@@ -950,7 +950,7 @@
   font-style: normal;
 }
 
-.folio-library-card-title {
+.folio .folio-library-card-title {
   min-height: 42px;
   padding: 0;
   display: -webkit-box;
@@ -1038,7 +1038,7 @@
   color: var(--folio-red);
 }
 
-.folio-library-read-action {
+.folio .folio-library-read-action {
   min-height: 38px;
   margin-top: auto;
   padding: 0 10px;
@@ -1197,7 +1197,7 @@
   .folio-library-result-controls button,
   .folio-library-pager button,
   .folio-library-pager input,
-  .folio-library-read-action {
+  .folio .folio-library-read-action {
     min-height: 44px;
   }
 
@@ -1218,7 +1218,7 @@
     padding: 10px;
   }
 
-  .folio-library-card-title {
+  .folio .folio-library-card-title {
     min-height: 39px;
     font-size: 13px;
   }
@@ -1251,7 +1251,7 @@
     line-height: 1.2;
   }
 
-  .folio-library-read-action {
+  .folio .folio-library-read-action {
     min-height: 44px;
   }
 

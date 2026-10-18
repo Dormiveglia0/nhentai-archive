@@ -3,60 +3,60 @@ import type { LibraryWork, LibraryWorkGroup } from '../src/lib/api';
 
 test.skip(!process.env.E2E_LIBRARY_GROUP_COVERS, 'Requires an isolated real library with author groups');
 
-for (const scenario of ['slow', 'failed'] as const) {
-  test(`group cover ${scenario} preload preserves the decoded current image`, async ({ page, request }) => {
-    test.setTimeout(45_000);
-    await page.setViewportSize({ width: 1440, height: 1000 });
+for (const [width, height] of [[1440, 1000], [1365, 768], [390, 844], [320, 844]]) {
+  test(`${width}px group cards use one stable random cover and the shared card layout`, async ({ page, request }) => {
+    await page.setViewportSize({ width, height });
     const payload = await (await request.get('/api/library/search?group_by=author&per_page=24')).json();
     const group: LibraryWorkGroup | undefined = payload.result.map((work: LibraryWork) => work.group)
       .find((value?: LibraryWorkGroup) => value?.covers.filter(cover => cover.cover_path).length === 2);
-    expect(group, 'Use actual works with two available covers').toBeTruthy();
+    expect(group).toBeTruthy();
     const covers = group!.covers.filter(cover => cover.cover_path);
-    let release = () => {};
-    const gate = new Promise<void>(resolve => { release = resolve; });
-    let requested = 0;
-    await page.route(url => url.pathname === `/api/works/${covers[1].id}/cover` && url.searchParams.get('w') === '512', async route => {
-      requested++;
-      if (scenario === 'failed') await route.abort('failed');
-      else { await gate; await route.continue().catch(() => {}); }
-    });
+    await page.addInitScript(() => { Math.random = () => .99; });
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
-    try {
-      await page.goto('/#library?group_by=author');
-      const card = page.locator('.folio-library-group-card').filter({ has: page.getByRole('button', { name: `打开分组${group!.name}`, exact: true }) });
-      await expect(card).toBeVisible();
-      await card.scrollIntoViewIfNeeded();
-      await page.mouse.move(0, 0);
-      const active = card.locator('.folio-library-group-cover.is-active .folio-ambient-cover-artwork');
-      await expect.poll(() => active.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
-      await expect.poll(() => requested).toBeGreaterThan(0);
-      const before = await active.getAttribute('src');
-      await page.waitForTimeout(4400);
-      expect(await active.getAttribute('src')).toBe(before);
-      await expect(card.getByRole('button', { name: /上一张封面|下一张封面/ })).toHaveCount(0);
-      for (const tag of group!.tags) {
-        await expect(card.locator('.folio-library-group-tags > span').filter({ has: page.locator(`sup:text-is("${tag.count}")`) }).filter({ hasText: tag.display }).first()).toBeAttached();
-      }
-      if (scenario === 'slow') {
-        release();
-        await expect.poll(() => active.getAttribute('src'), { timeout: 6000, intervals: [50] }).not.toBe(before);
-        await expect.poll(() => card.locator('.folio-library-group-cover.is-active').evaluate(node => Number(getComputedStyle(node).opacity)), { intervals: [20] }).toBeGreaterThan(0);
-        const opacity = await card.locator('.folio-library-group-cover.is-active').evaluate(node => Number(getComputedStyle(node).opacity));
-        expect(opacity).toBeLessThan(1);
-        expect(await active.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
-        await card.hover();
-        const paused = await active.getAttribute('src');
-        await page.waitForTimeout(4300);
-        expect(await active.getAttribute('src')).toBe(paused);
-        await page.emulateMedia({ reducedMotion: 'reduce' });
-        await page.mouse.move(0, 0);
-        await page.waitForTimeout(4300);
-        expect(await active.getAttribute('src')).toBe(paused);
-      }
-      await card.getByRole('button', { name: '打开分组', exact: true }).click();
-      await expect(page.locator('.folio-work-group-dialog')).toBeVisible();
-      expect(errors).toEqual([]);
-    } finally { release(); }
+    await page.goto('/#library?group_by=author');
+    const card = page.locator('.folio-library-group-card').filter({ has: page.getByRole('button', { name: group!.name, exact: true }) });
+    await expect(card).toBeVisible();
+    await card.scrollIntoViewIfNeeded();
+    const image = card.locator('.folio-ambient-cover-artwork');
+    await expect(image).toHaveCount(1);
+    await expect(image).toHaveAttribute('src', new RegExp(`/api/works/${covers.at(-1)!.id}/cover\\?`));
+    await expect.poll(() => image.evaluate((node: HTMLImageElement) => node.complete && node.naturalWidth > 0)).toBe(true);
+    await expect(card.locator('.folio-library-card-body > p')).toContainText(`共 ${group!.total_count ?? group!.count} 部作品`);
+    const tags = card.locator('.folio-library-card-tags');
+    expect(await tags.evaluate(node => getComputedStyle(node).flexWrap)).toBe('nowrap');
+    expect(await tags.evaluate(node => node.clientHeight)).toBeLessThanOrEqual(30);
+    expect(await tags.evaluate(node => node.scrollHeight <= node.clientHeight + 1)).toBe(true);
+    await expect(tags).toHaveCSS('scrollbar-width', 'none');
+    const positions = await tags.locator('a').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().top)));
+    expect(new Set(positions).size).toBeLessThanOrEqual(1);
+    if (group!.tags.length) {
+      const count = tags.locator('.folio-library-group-tag-count').first();
+      await expect(count).toHaveText(String(group!.tags[0].count));
+      expect(await count.evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(12);
+    }
+    const action = card.getByRole('button', { name: '打开分组', exact: true });
+    const regular = page.locator('.folio-library-card:not(.folio-library-group-card) .folio-library-read-action').first();
+    const styles = (node: Element) => {
+      const style = getComputedStyle(node);
+      return ['font-size', 'font-family', 'font-weight', 'min-height', 'padding', 'border', 'background-color', 'color', 'justify-content'].map(key => style.getPropertyValue(key));
+    };
+    expect(await action.evaluate(styles)).toEqual(await regular.evaluate(styles));
+    const before = await image.getAttribute('src');
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(4600);
+    expect(await image.getAttribute('src')).toBe(before);
+    await action.focus();
+    expect(await image.getAttribute('src')).toBe(before);
+    await page.getByRole('button', { name: '批量选择', exact: true }).click();
+    await expect(card.locator('.folio-library-cover')).toHaveAttribute('aria-pressed', 'false');
+    expect(await image.getAttribute('src')).toBe(before);
+    await card.locator('.folio-library-cover').click();
+    await expect(card.locator('.folio-library-cover')).toHaveAttribute('aria-pressed', 'true');
+    expect(await image.getAttribute('src')).toBe(before);
+    await action.click();
+    await expect(page.locator('.folio-work-group-dialog')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(errors).toEqual([]);
   });
 }

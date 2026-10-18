@@ -21,7 +21,7 @@
 | 页面 | 正式组件与状态 | 样式与实际数据 |
 | --- | --- | --- |
 | 首页 `#workbench` | `workbench/WorkbenchPage.tsx`、`HomeActivity.tsx`、`folio/ui/HomeHero.tsx` | 对应 CSS；最多6部真实本地作品，4秒单步轮播；右下方4部实际最新作品。封面直接阅读，返回刷新进度并保持作品ID |
-| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`libraryLocation.ts`、`WorkGroupCard.tsx`、`WorkGroupDialog.tsx` | `LibraryPage.css`、`WorkGroupDialog.css`；分页历史、真实筛选、手动分组与作者合并；封面解码后淡入，失败不切换；标签按组内实际作品去重计数，底部打开分组 |
+| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`libraryLocation.ts`、`WorkGroupCard.tsx`、`WorkGroupDialog.tsx` | `LibraryPage.css`、`WorkGroupDialog.css`；分页历史、真实筛选、手动分组与作者合并；首次随机选择固定封面，不轮播或预载；共享普通卡片按钮和单行标签，显示作品总数及清晰的标签数量 |
 | 本地详情 | `library/WorkInspector.tsx` | `folio/ui/WorkDetail.css`；原生悬浮弹窗、自然封面、阅读/编辑/导出/删除；标识使用本地作品/远端绑定 |
 | 刮削审批 `#scrape` | `library/ScrapeReviewPage.tsx`、`MetadataScrapePanel.tsx`、`ManualMetadataFields.tsx` | `ScrapeReviewPage.css`、`MetadataScrapePanel.css`；保存的候选、状态/媒体库筛选、手动搜索与编辑、来源版本校验；主导航归属我的库 |
 | 发现 | `discover/DiscoverPage.tsx`、`useDiscoverState.ts`、`discoverState.ts`、`DiscoverToolbar.tsx`、`DiscoverFeed.tsx`、`PopularFan.tsx` | `DiscoverPage.css` 与共享发现规则；作品/更新/订阅三项常驻；作品全宽展示，无更新侧栏。筛选保存不能覆盖更新或订阅链接 |
