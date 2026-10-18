@@ -89,7 +89,7 @@ export function LibraryToolbar(props: Props) {
         <LibraryTagFilter selected={props.tags} onChange={props.onTags} />
         <button type="submit"><Search size={15} />搜索</button>
       </form>
-      <a className="folio-line-button" href="#scrape">刮削审批</a>
+      <a className="folio-line-button" href="#governance?view=scrape">刮削审批</a>
       <button className="folio-line-button" type="button" onClick={props.onUpload}><Upload size={16} />上传</button>
       </div>
 

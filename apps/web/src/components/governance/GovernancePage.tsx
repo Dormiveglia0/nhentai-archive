@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { MetadataScrapePanel } from "../library/MetadataScrapePanel";
-import { AlertTriangle, PenLine } from "lucide-react";
+import { AlertTriangle, ListChecks, PenLine } from "lucide-react";
 
-import { FadeIn, usePrefersReducedMotion } from "../../lib/motion";
+import { FadeIn, SlidingIndicator, usePrefersReducedMotion } from "../../lib/motion";
 import { FolioEmptyState } from "../folio/ui/FolioPrimitives";
 import { GovernanceActionBar } from "./GovernanceActionBar";
 import { GovernanceBulkBar } from "./GovernanceBulkBar";
@@ -19,9 +19,26 @@ import "./GovernanceEditor.css";
 type Props = {
   initialWorkId?: number;
   blurCovers: boolean;
+  view?: "scrape";
 };
 
-export function GovernancePage({ initialWorkId, blurCovers }: Props) {
+const ScrapeReviewQueue = lazy(() => import("./ScrapeReviewQueue").then(module => ({ default: module.ScrapeReviewQueue })));
+
+export function GovernancePage({ initialWorkId, blurCovers, view }: Props) {
+  return <section className="folio-page-body folio-governance-page">
+    <nav className="folio-governance-tabs" aria-label="整理内容">
+      {[{ id: "metadata", label: "作品整理", icon: PenLine, href: "#governance" }, { id: "scrape", label: "刮削审批", icon: ListChecks, href: "#governance?view=scrape" }].map(tab =>
+        <a key={tab.id} href={tab.href} aria-current={(view ?? "metadata") === tab.id ? "page" : undefined}>
+          {(view ?? "metadata") === tab.id ? <SlidingIndicator className="folio-control-active" layoutId="governance-views" /> : null}<tab.icon size={16} /><span>{tab.label}</span>
+        </a>)}
+    </nav>
+    <Suspense fallback={<div className="folio-governance-loading" role="status">正在读取刮削审批…</div>}>
+      {view === "scrape" ? <ScrapeReviewQueue blurCovers={blurCovers} /> : <GovernanceWorkspace initialWorkId={initialWorkId} blurCovers={blurCovers} />}
+    </Suspense>
+  </section>;
+}
+
+function GovernanceWorkspace({ initialWorkId, blurCovers }: Props) {
   const gov = useGovernanceState(initialWorkId);
   const [scrapeBusy, setScrapeBusy] = useState(false);
   const reduced = usePrefersReducedMotion();
@@ -33,7 +50,7 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
   }
 
   return (
-    <section className="folio-page-body folio-governance-page">
+    <div className="folio-governance-stage">
       {gov.error ? (
         <FadeIn key={gov.error} className="folio-governance-message is-error" role="alert" y={6}>
           <AlertTriangle size={16} />
@@ -161,6 +178,6 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
           {!gov.bulkMode && !gov.aggregateLoading && gov.aggregate ? <GovernanceSourceRail aggregate={gov.aggregate} disabled={gov.changedFields.length > 0 || gov.saving || scrapeBusy} onReload={() => void gov.reload()} /> : null}
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

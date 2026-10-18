@@ -200,6 +200,29 @@ def test_apply_persists_local_metadata_decisions(tmp_path):
     assert fields["language"]["working_value"] == "日语"
 
 
+def test_remote_summary_keeps_cached_values_separate_from_local_edits(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path, comic_info="<ComicInfo><Title>Local title</Title></ComicInfo>")
+    service.apply(work_id, {"metadata": [{"field": "title", "value": "Edited title", "source": "manual"}]})
+
+    aggregate = service.work_governance(work_id)
+    remote = aggregate["remote"]
+    values = {field["field"]: field["value"] for field in remote["fields"]}
+    assert remote["gallery_id"] == 1234
+    assert values["title"] == "Rain Classroom"
+    assert values["artist"] == "tonari"
+    assert values["pages"] == "2"
+    assert next(field for field in aggregate["metadata"]["fields"] if field["field"] == "title")["working_value"] == "Edited title"
+
+    db.execute("DELETE FROM remote_galleries WHERE gallery_id = 1234")
+    remote = service.work_governance(work_id)["remote"]
+    assert remote["gallery_id"] == 1234
+    assert all(field["value"] is None for field in remote["fields"])
+
+    db.execute("UPDATE works SET metadata_gallery_id = 1234, remote_gallery_id = NULL WHERE id = ?", (work_id,))
+    assert service.work_governance(work_id)["remote"] is None
+
+
 def test_queue_uses_saved_metadata_when_checking_missing_fields(tmp_path):
     db, archive, service = _setup(tmp_path)
     _import_work(db, archive, tmp_path)

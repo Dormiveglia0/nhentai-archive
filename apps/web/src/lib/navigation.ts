@@ -4,11 +4,10 @@ export type Page =
   | { name: "workbench" }
   | { name: "discover"; tag?: RemoteTag & { excluded?: boolean } }
   | { name: "library" }
-  | { name: "scrape" }
   | { name: "reader"; workId: number }
   | { name: "readerRemote"; galleryId: number }
   | { name: "gallery"; galleryId: number; returnTo?: string }
-  | { name: "governance"; workId?: number }
+  | { name: "governance"; workId?: number; view?: "scrape" }
   | { name: "export"; workId?: number }
   | { name: "dictionary" }
   | { name: "tasks" }
@@ -26,14 +25,14 @@ export function pageFromLocation(): Page {
   if (readerMatch) return { name: "reader", workId: Number(readerMatch[1]) };
   const galleryMatch = route.match(/^gallery\/(\d+)$/);
   if (galleryMatch) return { name: "gallery", galleryId: Number(galleryMatch[1]), returnTo: query.get("return_to") || undefined };
-  const governanceMatch = hash.match(/^governance\/(\d+)$/);
+  const governanceMatch = route.match(/^governance\/(\d+)$/);
   if (governanceMatch) return { name: "governance", workId: Number(governanceMatch[1]) };
   const exportMatch = hash.match(/^export\/(\d+)$/);
   if (exportMatch) return { name: "export", workId: Number(exportMatch[1]) };
   if (route === "workbench") return { name: "workbench" };
   if (route === "library") return { name: "library" };
-  if (route === "scrape") return { name: "scrape" };
-  if (route === "governance") return { name: "governance" };
+  if (route === "scrape") return { name: "governance", view: "scrape" };
+  if (route === "governance") return { name: "governance", view: query.get("view") === "scrape" ? "scrape" : undefined };
   if (route === "dictionary") return { name: "dictionary" };
   if (route === "tasks") return { name: "tasks" };
   if (route === "export") return { name: "export" };
@@ -78,6 +77,8 @@ export function pageHref(page: Page) {
           ? `gallery/${page.galleryId}${page.returnTo ? `?return_to=${encodeURIComponent(page.returnTo)}` : ""}`
           : page.name === "governance" && page.workId
             ? `governance/${page.workId}`
+            : page.name === "governance" && page.view === "scrape"
+              ? "governance?view=scrape"
             : page.name === "export" && page.workId
               ? `export/${page.workId}`
             : page.name === "discover" && page.tag

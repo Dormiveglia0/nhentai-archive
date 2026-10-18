@@ -196,6 +196,14 @@ class GovernanceService:
 
         return {
             "work": self._work_summary(work),
+            "remote": {
+                "gallery_id": work["remote_gallery_id"],
+                "fields": [
+                    {"field": field, "label": config["label"], "value": self._remote_source_value(field, remote_payload)}
+                    for field, config in METADATA_FIELDS.items()
+                    if field != "pretty_title"
+                ],
+            } if work.get("remote_gallery_id") else None,
             "files": [self._file_summary(row) for row in files],
             "metadata": {"fields": metadata_fields},
             "tags": {"groups": tag_groups, "summary": tag_summary},

@@ -2,6 +2,13 @@
   padding-bottom: 112px;
 }
 
+.folio-governance-tabs { display: flex; margin-bottom: 30px; border-bottom: 1px solid var(--folio-line); }
+.folio-governance-tabs a { position: relative; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 0 24px; color: var(--folio-muted); text-decoration: none; font-size: 14px; }
+.folio-governance-tabs a[aria-current] { color: var(--folio-red); }
+.folio-governance-tabs a > :is(svg, span:not(.folio-slide-indicator)) { position: relative; z-index: 1; }
+.folio-governance-tabs .folio-slide-indicator { background: var(--folio-red-soft); border-bottom: 2px solid var(--folio-red); }
+@media (max-width: 600px) { .folio-governance-tabs a { flex: 1; padding-inline: 12px; font-size: 13px; } }
+
 .folio-governance-message,
 .folio-governance-loading {
   min-height: 48px;

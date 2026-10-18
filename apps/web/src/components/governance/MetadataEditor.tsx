@@ -108,7 +108,7 @@ export function MetadataEditor({
   );
 }
 
-function MetadataCard({
+export function MetadataCard({
   field,
   edit,
   onChange,

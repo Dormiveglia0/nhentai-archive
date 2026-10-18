@@ -47,7 +47,7 @@ export function MediaLibraryActivity({ library, onChange }: { library: MediaLibr
     {library.scan_run_id ? <p className="folio-media-activity-counts"><span>已检查 <b>{c.files ?? 0}</b></span><span>导入 <b>{c.indexed ?? 0}</b></span><span>未变化 <b>{c.unchanged ?? 0}</b></span><span>待稳定 <b>{c.pending ?? 0}</b></span><span>失败 <b>{c.errors ?? 0}</b></span></p> : null}
     {active && library.scan_progress.path ? <p className="folio-media-current-file" title={library.scan_progress.path}>{library.scan_progress.path}</p> : null}
     <p className="folio-media-activity-counts"><strong>自动刮削{!library.enabled || !library.config.auto_scrape ? " · 未启用" : ""}</strong>
-      {[['pending', '等待', library.scrape_pending_count], ['running', '处理中', library.scrape_running_count], ['review', '待确认', library.scrape_review_count], ['error', '失败', library.scrape_error_count], ['completed', '已完成', library.scrape_completed_count]].map(([state, label, count]) => <a key={state} href={`#scrape?library_id=${library.id}&status=${state}`}>{label} <b>{count}</b></a>)}
+      {[['pending', '等待', library.scrape_pending_count], ['running', '处理中', library.scrape_running_count], ['review', '待确认', library.scrape_review_count], ['error', '失败', library.scrape_error_count], ['completed', '已完成', library.scrape_completed_count]].map(([state, label, count]) => <a key={state} href={`#governance?view=scrape&library_id=${library.id}&status=${state}`}>{label} <b>{count}</b></a>)}
     </p>
     {library.scrape_retry_at && library.scrape_retry_at * 1000 > Date.now() ? <p className="folio-media-hint">下次重试：{new Date(library.scrape_retry_at * 1000).toLocaleString()}</p> : null}
     {error ? <p className="folio-media-error" role="alert">{error}</p> : null}

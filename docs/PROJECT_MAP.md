@@ -1,5 +1,12 @@
 # NH Archive Project Map
 
+## 刮削审批并入整理（2026-10-18最新修正）
+
+- `GovernancePage` 提供作品整理与刮削审批两个视图，审批组件移到 `governance/ScrapeReviewQueue.tsx`，只挂载当前视图；统一入口为 `#governance?view=scrape`，旧 `#scrape` 及其筛选参数兼容。库和扫描状态的审批链接同步更新。
+- 审批复用 `GovernanceWorkHeader` 展示当前封面、`MetadataCard` 展示来源对照与最终值；作者/社团/标签词典建议和多选语言沿用整理控件。语言键去除远端词条的附加说明，避免同一种语言生成重复选项。
+- `GovernanceService.work_governance` 新增可空 `remote`，只返回已绑定作品的本地缓存字段，不请求远端或改变源资料；无schema迁移。审批保存后保留当前作品，重读整理数据与来源版本，再允许继续编辑或处理。
+- `scrape-review.spec.ts` 在私有真实归档副本验证四种宽度、旧入口、封面解码、词典/语言、连续保存、远端绑定后资料及导航；写入测试要求显式指定 `/tmp/nh-governance-review-*`。
+
 ## 刮削与分组卡片优化（2026-10-18）
 
 - 整理页的 `MetadataEditor` 在同一个元数据区域切换“编辑字段 / 刮削元数据”，保留未保存修改拦截和忙碌状态；不再在作品标题下插入独立折叠模块。`MetadataScrapePanel` 在整理、审批和上传中复用透明嵌入样式，按容器宽度排列候选与字段对比。
@@ -16,8 +23,8 @@
 - `GovernancePage` 集中刮削、双来源控制、词典建议和语言多选。人工作者/社团/标签/语言同时写入元数据和标签关联，后台同步及重扫保留人工值。
 - `source_rename_service.py` / `source_renames`：同目录、保留扩展名、Linux原子无覆盖重命名，复用来源锁、缓存锁和在用检查；执行前持有数据库写锁复查。持久化准备记录先于文件变更，失败回滚，启动恢复后才启动扫描。更新原有索引与文件关联，保留身份和阅读状态；不支持安全重命名的文件系统拒绝操作。
 - `library_group_service.py` / `work_groups` / `work_group_members`：一个作品最多属于一个手动组，成员外键随作品删除清理；分组变更参与库版本通知，并校验组版本。聚合匹配作品的轻量索引后分页，批量选择仅包括当前筛选匹配的成员。作者身份结合远端ID、词典和别名，按完整作者集合归组，手动组优先。
-- 新增 `/api/library/groups` 创建与组详情/修改/解散接口；`/api/library/search` 可选 `group_by` / `group_key`，默认保持旧的逐部返回。`WorkGroupCard` 提供封面轮播，`WorkGroupDialog` 管理组内作品。
-- `/api/works/{id}/source-rename`、`/api/library/scrape-queue` 及决定接口均沿用应用认证。`#scrape` 是我的库下的独立审批页。
+- 新增 `/api/library/groups` 创建与组详情/修改/解散接口；`/api/library/search` 可选 `group_by` / `group_key`，默认保持旧的逐部返回。`WorkGroupCard` 提供首次随机固定封面，`WorkGroupDialog` 管理组内作品。
+- `/api/works/{id}/source-rename`、`/api/library/scrape-queue` 及决定接口均沿用应用认证。审批现归属整理页，旧 `#scrape` 仅为兼容入口。
 
 ## 网页上传与文件权限（2026-10-17）
 

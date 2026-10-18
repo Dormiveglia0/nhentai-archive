@@ -4,6 +4,10 @@ import { api, type DictionaryCandidate } from "../../lib/api";
 const separator = /\s+\/\s+|[,，;；\n]/;
 const languageNames: Record<string, string> = { chinese: '中文', japanese: '日文', english: '英文' };
 const languageAliases: Record<string, string> = { zh: 'chinese', 'zh-cn': 'chinese', 'zh-tw': 'chinese', '中文': 'chinese', ja: 'japanese', jp: 'japanese', '日文': 'japanese', '日语': 'japanese', en: 'english', '英文': 'english', '英语': 'english' };
+function languageKey(value: string) {
+  const key = value.split('|')[0].trim().toLowerCase();
+  return languageAliases[key] || key;
+}
 
 export function DictionaryFieldInput({ kind, value, onChange, label }: { kind: string; value: string; onChange: (value: string) => void; label: string }) {
   const [items, setItems] = useState<DictionaryCandidate[]>([]);
@@ -49,9 +53,9 @@ export function LanguageFieldInput({ value, onChange }: { value: string; onChang
     api.dictionaryCandidates({ type: 'language', limit: 50 }).then(result => { if (alive) setKnown(result.result); }).catch(() => {});
     return () => { alive = false; };
   }, []);
-  const selected = [...new Set(value.split(separator).map(value => value.trim().toLowerCase()).filter(value => value && !value.startsWith('translat')).map(value => languageAliases[value] || value))];
+  const selected = [...new Set(value.split(separator).map(languageKey).filter(value => value && !value.startsWith('translat')))];
   const options = new Map(Object.entries(languageNames));
-  known.forEach(item => { const name = item.name || item.slug; if (name && !item.ignored && !name.toLowerCase().startsWith('translat')) options.set(languageAliases[name.toLowerCase()] || name.toLowerCase(), item.display || name); });
+  known.forEach(item => { const name = item.name || item.slug; if (name && !item.ignored && !languageKey(name).startsWith('translat')) options.set(languageKey(name), item.display || name); });
   selected.forEach(value => { if (!options.has(value)) options.set(value, value); });
   return <div className="folio-governance-language-options" role="group" aria-label="本地最终值：语言（可多选）">{[...options].map(([key, label]) => <button key={key} type="button" aria-pressed={selected.includes(key)} onClick={() => onChange((selected.includes(key) ? selected.filter(value => value !== key) : [...selected, key]).join(' / '))}>{label}</button>)}</div>;
 }

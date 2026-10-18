@@ -432,6 +432,7 @@ export type GovernanceTagGroup = {
 
 export type GovernanceAggregate = {
   work: LibraryWork;
+  remote: { gallery_id: number; fields: Array<{ field: string; label: string; value: string | null }> } | null;
   files: GovernanceFile[];
   metadata: { fields: MetadataFieldDiff[] };
   tags: { groups: GovernanceTagGroup[]; summary: { confirmed: number; preserved: number; unmapped: number; review: number; pending: number; conflicts: number } };
