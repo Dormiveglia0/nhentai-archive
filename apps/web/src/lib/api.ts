@@ -182,6 +182,7 @@ export type LibraryWorkGroup = {
   key: string; id?: number; version?: number; kind: "manual" | "author"; name: string;
   count: number; total_count?: number; member_ids: number[];
   covers: Array<Pick<LibraryWork, "id" | "title" | "cover_path" | "updated_at">>;
+  tags: Array<{ key: string; display: string; count: number }>;
 };
 export type SavedWorkGroup = { id: number; key: string; kind: "manual"; name: string; version: number; member_ids: number[]; count: number };
 

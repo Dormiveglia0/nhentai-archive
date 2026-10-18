@@ -1,5 +1,12 @@
 # NH Archive Project Map
 
+## 刮削与分组卡片优化（2026-10-18）
+
+- 整理页的 `MetadataEditor` 在同一个元数据区域切换“编辑字段 / 刮削元数据”，保留未保存修改拦截和忙碌状态；不再在作品标题下插入独立折叠模块。`MetadataScrapePanel` 在整理、审批和上传中复用透明嵌入样式，按容器宽度排列候选与字段对比。
+- `WorkGroupCard` 只预载可见卡片的下一张封面，实际图片解码成功后以480ms透明度过渡，加载失败保留当前封面并跳过失败项；继续遵守原有暂停条件。卡片底部为“打开分组”，不提供手动切图。
+- `LibraryGroupService.tags` 批量汇总当前筛选匹配的组成员标签；本地/远端重复记录及同一词典身份别名在每部作品中只计一次。`/api/library/search` 的 `group.tags` 新增 `key/display/count`，前端换行显示标签与小号数量。无数据库迁移或新依赖。
+- 词典补译为一次经核对的数据操作，不增加内置题材词库：70条中文译名、26条专名保留原文，其他类别与已有有效译名保持原样；备份与操作记录在正式部署目录的 `backups/20261018-tags-scrape-groups/`。
+
 ## 导入、整理与分组（2026-10-18）
 
 - 需求及验收顺序见 [CURRENT_REQUIREMENTS.md](CURRENT_REQUIREMENTS.md)。

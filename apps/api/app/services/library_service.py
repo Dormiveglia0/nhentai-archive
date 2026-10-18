@@ -250,11 +250,13 @@ class LibraryService:
             f"SELECT {WORK_COLUMNS} {WORK_JOINS} WHERE w.id IN (SELECT value FROM json_each(?))", (json.dumps(page_ids),)))}
         cover_ids = list(dict.fromkeys(work_id for bucket in selected if bucket['group'] for work_id in bucket['ids'][:6]))
         covers = {row['id']: row for row in self.db.fetchall("SELECT id,title,cover_path,updated_at FROM works WHERE id IN (SELECT value FROM json_each(?))", (json.dumps(cover_ids),))}
+        group_tags = self.groups.tags(selected)
         for bucket in selected:
             if bucket['ids'][0] not in works or not bucket['group'] or (bucket['group']['kind'] == 'author' and len(bucket['ids']) < 2):
                 continue
             works[bucket['ids'][0]]['group'] = {**bucket['group'], 'key': bucket['key'], 'count': len(bucket['ids']),
-                'member_ids': bucket['ids'], 'covers': [covers[work_id] for work_id in bucket['ids'][:6] if work_id in covers]}
+                'member_ids': bucket['ids'], 'tags': group_tags.get(bucket['key'], []),
+                'covers': [covers[work_id] for work_id in bucket['ids'][:6] if work_id in covers]}
         return {'result': [works[work_id] for work_id in page_ids if work_id in works], 'total': total,
                 'work_total': len(rows) if not group_key else total, 'page': page, 'per_page': per_page,
                 'num_pages': max(1, (total + per_page - 1) // per_page), 'revision': revision}

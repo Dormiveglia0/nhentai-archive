@@ -20,7 +20,7 @@
 .folio-upload-tabs button { min-height: 44px; padding: 8px 0; background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--folio-muted); font-size: 14px; }
 .folio-upload-tabs button[aria-pressed="true"] { color: var(--folio-red); border-bottom-color: var(--folio-red); }
 .folio-upload .folio-scrape-embedded { width: auto; max-height: none; padding: 0; margin: 0; border: 0; overflow: visible; background: transparent; }
-.folio-upload .folio-scrape-embedded header { position: static; padding: 16px 0 0; background: transparent; border: 0; }
+.folio-upload .folio-scrape-heading { padding-top: 16px; border: 0; }
 .folio-upload .folio-scrape-embedded h3 { margin: 0; padding: 0; border: 0; }
 @media (max-width: 700px) {
   .folio-library-toolbar-top { flex-wrap: wrap; gap: 8px; }

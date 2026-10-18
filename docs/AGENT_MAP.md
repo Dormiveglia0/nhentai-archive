@@ -21,13 +21,13 @@
 | 页面 | 正式组件与状态 | 样式与实际数据 |
 | --- | --- | --- |
 | 首页 `#workbench` | `workbench/WorkbenchPage.tsx`、`HomeActivity.tsx`、`folio/ui/HomeHero.tsx` | 对应 CSS；最多6部真实本地作品，4秒单步轮播；右下方4部实际最新作品。封面直接阅读，返回刷新进度并保持作品ID |
-| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`libraryLocation.ts`、`WorkGroupCard.tsx`、`WorkGroupDialog.tsx` | `LibraryPage.css`、`WorkGroupDialog.css`；分页历史、真实筛选、手动分组与作者合并；组内作品保持独立，批量计数按实际作品计算 |
+| 我的库 | `library/LibraryPage.tsx`、`useLibraryState.ts`、`libraryLocation.ts`、`WorkGroupCard.tsx`、`WorkGroupDialog.tsx` | `LibraryPage.css`、`WorkGroupDialog.css`；分页历史、真实筛选、手动分组与作者合并；封面解码后淡入，失败不切换；标签按组内实际作品去重计数，底部打开分组 |
 | 本地详情 | `library/WorkInspector.tsx` | `folio/ui/WorkDetail.css`；原生悬浮弹窗、自然封面、阅读/编辑/导出/删除；标识使用本地作品/远端绑定 |
 | 刮削审批 `#scrape` | `library/ScrapeReviewPage.tsx`、`MetadataScrapePanel.tsx`、`ManualMetadataFields.tsx` | `ScrapeReviewPage.css`、`MetadataScrapePanel.css`；保存的候选、状态/媒体库筛选、手动搜索与编辑、来源版本校验；主导航归属我的库 |
 | 发现 | `discover/DiscoverPage.tsx`、`useDiscoverState.ts`、`discoverState.ts`、`DiscoverToolbar.tsx`、`DiscoverFeed.tsx`、`PopularFan.tsx` | `DiscoverPage.css` 与共享发现规则；作品/更新/订阅三项常驻；作品全宽展示，无更新侧栏。筛选保存不能覆盖更新或订阅链接 |
 | 远端详情 `#gallery/{id}` | `discover/GalleryDetailPage.tsx`、`gallery/useGalleryDetail.ts`、`gallery/*` | `gallery/*.css`；作品信息、标签、预览和相关推荐；保留独立详情构图 |
 | 订阅与更新 | `subscriptions/CreatorSubscribeButton.tsx`、`SubscriptionsPanel.tsx`、`SubscriptionUpdates.tsx`、`useSubscriptionUpdates.ts` | `settings/NotificationSection.css`；作者/社团订阅、4部近期作品、未读、已读；发现页更新标签附未读数量，顶部无额外入口。保留原始日文标题精确匹配的语言预览折叠 |
-| 整理 | `governance/GovernancePage.tsx`、`useGovernanceState.ts`、`DictionaryFieldInput.tsx`、`SourceRenameControl.tsx` | `GovernancePage.css`、`GovernanceEditor.css`；刮削与双来源、词典补全、多语言、核对、源文件回写及安全重命名 |
+| 整理 | `governance/GovernancePage.tsx`、`MetadataEditor.tsx`、`useGovernanceState.ts`、`DictionaryFieldInput.tsx`、`SourceRenameControl.tsx` | `GovernancePage.css`、`GovernanceEditor.css`；元数据区域切换字段编辑/远端刮削，透明嵌入面板；双来源、词典补全、多语言、核对、源文件回写及安全重命名 |
 | 词典 | `dictionary/DictionaryPage.tsx`、`useDictionaryState.ts`、其子组件 | `DictionaryPage.css`、`DictionaryEditor.css` 与共享规则；搜索、候选、影响预览、应用、批量处理 |
 | 队列 | `tasks/TasksPage.tsx`、`useTasksState.ts`、其子组件 | `TasksPage.css`、共享任务规则；状态筛选、日志、暂停/恢复/取消/重试/删除 |
 | 文件 | `files/FilesPage.tsx`、`useFilesState.ts`、`FileList.tsx`、`FileDetailPanel.tsx`、`FileDeleteDialog.tsx`、`MetadataPanel.tsx`、`DerivedFilesPanel.tsx`、`MigrationPanel.tsx` | `FilesPage.css`、`MetadataPanel.css`；媒体库/文件/元数据/派生文件/迁移五个视图；本地资料查看与导出、恢复/清理预览、实际派生文件查看/下载、本页全选与批量清理，以及复制/移动迁移 |

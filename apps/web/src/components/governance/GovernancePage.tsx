@@ -106,10 +106,6 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                 {!gov.aggregateLoading && gov.aggregate ? (
                   <FadeIn key={gov.aggregate.work.id} className="folio-governance-document" y={10}>
                     <GovernanceWorkHeader aggregate={gov.aggregate} blurCovers={blurCovers} />
-                    <details className="folio-governance-scrape">
-                      <summary>刮削元数据</summary>
-                      {gov.changedFields.length ? <p>请先保存字段修改，再应用远端元数据。</p> : <MetadataScrapePanel embedded showBridge workId={gov.aggregate.work.id} title={gov.aggregate.work.title} blurCovers={blurCovers} onBusyChange={setScrapeBusy} onClose={() => {}} onApplied={() => void gov.reload()} />}
-                    </details>
                     <MetadataEditor
                       aggregate={gov.aggregate}
                       edits={gov.edits}
@@ -122,6 +118,10 @@ export function GovernancePage({ initialWorkId, blurCovers }: Props) {
                       onAcceptTranslation={gov.acceptTranslation}
                       onAcceptAllTranslations={gov.acceptAllTranslations}
                       onDismissTranslation={gov.dismissTranslation}
+                      scrapeBusy={scrapeBusy}
+                      scrapePanel={gov.changedFields.length
+                        ? <p className="folio-governance-scrape-lock"><AlertTriangle size={16} />请先保存或还原字段修改，再应用远端元数据。</p>
+                        : <MetadataScrapePanel embedded showBridge workId={gov.aggregate.work.id} title={gov.aggregate.work.title} blurCovers={blurCovers} onBusyChange={setScrapeBusy} onClose={() => {}} onApplied={() => void gov.reload()} />}
                     />
                     <GovernanceTagBoard
                       aggregate={gov.aggregate}

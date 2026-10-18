@@ -1,4 +1,4 @@
-import { Check, Search, X } from "lucide-react";
+import { AlertTriangle, Check, Search, SearchX, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api, type MetadataRefreshMatch, type MetadataRefreshPreview } from "../../lib/api";
@@ -28,6 +28,7 @@ export function MetadataScrapePanel({ workId, itemId, title, blurCovers, onAppli
   const dismiss = useNativeDialog(dialog, onClose, !embedded, applying);
 
   async function search() {
+    if (busy || !query.trim()) return;
     const current = ++revision.current;
     onBusyChange?.(true);
     setBusy(true); setError(""); setNotice(""); setPreview(null); setChosen(null);
@@ -59,48 +60,60 @@ export function MetadataScrapePanel({ workId, itemId, title, blurCovers, onAppli
   }
 
   const content = <>
-    <header><h3>{embedded ? "匹配远端作品" : "刮削元数据"}</h3>{!embedded ? <button type="button" aria-label="关闭刮削" disabled={applying} onClick={dismiss}><X size={18} /></button> : null}</header>
-    <form onSubmit={event => { event.preventDefault(); event.stopPropagation(); void search(); }}>
-      <input ref={input} data-dialog-focus autoFocus aria-label="作品名称或 ID" placeholder="作品名称或 ID" maxLength={240} value={query} disabled={busy}
-        onChange={event => { revision.current++; setQuery(event.target.value); setPreview(null); setChosen(null); setError(""); setNotice(""); }} />
-      <button type="submit" disabled={busy || !query.trim()}><Search size={16} />{busy ? "处理中" : "搜索"}</button>
+    <header className="folio-scrape-heading">
+      <div><h3>{embedded ? "匹配远端作品" : "刮削元数据"}</h3><p>查找作品后核对字段差异，确认后再应用。</p></div>
+      {!embedded ? <button type="button" aria-label="关闭刮削" disabled={applying} onClick={dismiss}><X size={18} /></button> : null}
+    </header>
+    <form className="folio-scrape-search" onSubmit={event => { event.preventDefault(); event.stopPropagation(); void search(); }}>
+      <label><span>作品名称或 ID</span><input ref={input} data-dialog-focus={!embedded || undefined} autoFocus={!embedded} placeholder="输入标题、作者关键词或远端 ID" maxLength={240} value={query} disabled={busy}
+        onChange={event => { revision.current++; setQuery(event.target.value); setPreview(null); setChosen(null); setError(""); setNotice(""); }} /></label>
+      <button type="submit" disabled={busy || !query.trim()}><Search size={16} />{busy && !applying ? "搜索中" : "搜索"}</button>
     </form>
-    {error ? <p className="folio-scrape-error" role="alert">{error}</p> : null}
-    {notice ? <p role="status"><Check size={16} />{notice}</p> : null}
-    {showBridge ? <ReaderBridgeControl key={notice} workId={workId} /> : null}
+    {error ? <p className="folio-scrape-message folio-scrape-error" role="alert"><AlertTriangle size={16} />{error}</p> : null}
+    <div className="folio-scrape-status" role="status" aria-live="polite">
+      {notice ? <p className="folio-scrape-message"><Check size={16} />{notice}</p> : busy ? <p className="folio-scrape-message is-loading">{applying ? "正在应用元数据…" : "正在查找远端作品…"}</p> : null}
+    </div>
     {preview ? <>
       {preview.candidates.length ? <div className="folio-scrape-results">
-        <div className="folio-scrape-candidates" aria-label="匹配候选">
+        <section className="folio-scrape-matches" aria-label="匹配候选">
+          <div className="folio-scrape-section-head"><h4>候选作品</h4><span>{preview.candidates.length} 部</span></div>
+          <div className="folio-scrape-candidates">
           {preview.candidates.map(candidate => <button type="button" key={candidate.gallery_id} aria-pressed={chosen?.gallery_id === candidate.gallery_id}
             disabled={busy} onClick={() => { setChosen(candidate); setError(""); }}>
-            {candidate.thumbnail_url ? <img src={candidate.thumbnail_url} alt="" loading="lazy" decoding="async" style={blurCovers ? { filter: "blur(12px)" } : undefined} /> : null}
-            <span><strong>{candidate.title_japanese || candidate.title}</strong><span>#{candidate.gallery_id} · {candidate.page_count} 页 · {candidate.confidence}%</span></span>
-            {chosen?.gallery_id === candidate.gallery_id ? <Check size={15} /> : null}
+            <span className="folio-scrape-candidate-cover">{candidate.thumbnail_url ? <img src={candidate.thumbnail_url} alt="" loading="lazy" decoding="async" className={blurCovers ? "folio-media-blurred" : undefined} /> : <Search size={18} />}</span>
+            <span className="folio-scrape-candidate-copy"><strong title={candidate.title_japanese || candidate.title}>{candidate.title_japanese || candidate.title}</strong><span>#{candidate.gallery_id} · {candidate.page_count} 页</span><small>匹配度 {candidate.confidence}%</small></span>
+            <span className="folio-scrape-candidate-check" aria-hidden="true">{chosen?.gallery_id === candidate.gallery_id ? <Check size={15} /> : null}</span>
           </button>)}
-        </div>
-        {chosen ? <div className="folio-scrape-comparison">
+          </div>
+        </section>
+        {chosen ? <section className="folio-scrape-comparison" aria-label="元数据对比">
+          <div className="folio-scrape-section-head"><h4>核对字段</h4><span>{chosen.diffs?.filter(diff => diff.changed).length ?? 0} 项差异</span></div>
           {chosen.diffs?.some(diff => diff.changed) ? <DiffTable diffs={chosen.diffs.filter(diff => diff.changed)} />
-            : <p>字段已一致</p>}
+            : <p className="folio-scrape-message"><Check size={16} />字段已一致</p>}
           {chosen.diffs?.some(diff => !diff.changed) ? <details key={chosen.gallery_id}>
             <summary>一致字段 · {chosen.diffs.filter(diff => !diff.changed).length}</summary>
             <DiffTable diffs={chosen.diffs.filter(diff => !diff.changed)} />
           </details> : null}
-          {chosen.reason ? <p>{chosen.reason}</p> : null}
-          {chosen.diffs?.some(diff => diff.field === "pages" && diff.changed) ? <p>页数不一致，将保留本地阅读并停用远端过渡。</p> : null}
-          <button className="is-primary" type="button" disabled={busy || chosen.selectable === false} onClick={() => void apply()}>
-            <Check size={16} />{(bind ?? preview.config.auto_bind) ? "确认应用并绑定" : "确认应用元数据"}
-          </button>
-        </div> : null}
-      </div> : <p role="status">{preview.reason || "没有匹配的作品"}</p>}
+          {chosen.reason ? <p className="folio-scrape-note">{chosen.reason}</p> : null}
+          {chosen.diffs?.some(diff => diff.field === "pages" && diff.changed) ? <p className="folio-scrape-note">页数不一致，将保留本地阅读并停用远端过渡。</p> : null}
+          <footer className="folio-scrape-confirm">
+            <p>{(bind ?? preview.config.auto_bind) ? `应用后绑定远端 #${chosen.gallery_id}` : "仅更新元数据"}</p>
+            <button className="is-primary" type="button" disabled={busy || chosen.selectable === false} onClick={() => void apply()}>
+              <Check size={16} />{applying ? "应用中" : (bind ?? preview.config.auto_bind) ? "确认应用并绑定" : "确认应用元数据"}
+            </button>
+          </footer>
+        </section> : null}
+      </div> : <div className="folio-scrape-empty" role="status"><SearchX size={25} /><div><strong>没有匹配的作品</strong><p>{preview.reason || "尝试缩短标题、调整关键词，或直接输入远端 ID。"}</p></div></div>}
     </> : null}
+    {showBridge ? <ReaderBridgeControl key={notice} workId={workId} /> : null}
   </>;
   return embedded ? <section className="folio-scrape folio-scrape-embedded" aria-busy={busy}>{content}</section> : createPortal(<dialog ref={dialog} className="folio-scrape" aria-label="刮削元数据" aria-busy={busy}>{content}</dialog>, document.querySelector(".folio") ?? document.body);
 }
 
 function DiffTable({ diffs }: { diffs: NonNullable<MetadataRefreshMatch["diffs"]> }) {
   return <table><thead><tr><th>字段</th><th>本地</th><th>远端</th></tr></thead><tbody>
-    {diffs.map(diff => <tr key={diff.field} data-changed={diff.changed || undefined}>
-      <th>{diff.label}{diff.protected ? <span>保留</span> : null}</th>
+    {diffs.map(diff => <tr key={diff.field} data-changed={diff.changed || undefined} data-protected={diff.protected || undefined}>
+      <th>{diff.label}{diff.protected ? <span title="保留本地人工配置">保留</span> : null}</th>
       <td data-label="本地">{diff.local || "—"}</td><td data-label="远端">{diff.remote || "—"}</td>
     </tr>)}
   </tbody></table>;

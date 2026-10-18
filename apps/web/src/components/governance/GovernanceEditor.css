@@ -647,11 +647,19 @@
 .folio-governance-language-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .folio-governance-language-options button { min-height: 38px; padding: 8px 12px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); font: inherit; font-size: 12px; cursor: pointer; }
 .folio-governance-language-options button[aria-pressed="true"] { background: var(--folio-red-soft); border-color: var(--folio-red); }
-.folio-governance-scrape { border-block: 1px solid var(--folio-line); margin-block: 20px; }
-.folio-governance-scrape > summary { padding: 16px 12px; cursor: pointer; font-weight: 700; }
-.folio-governance-scrape > summary:hover { background: var(--folio-red-soft); }
-.folio-governance-scrape > .folio-scrape-embedded { margin: 0; border: 0; }
-.folio-governance-scrape > p { padding-inline: 12px; color: var(--folio-muted); font-size: 13px; }
+.folio-governance-metadata-modes { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.folio-governance-metadata-modes > button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 12px; border: 1px solid transparent; background: transparent; color: var(--folio-muted); font: inherit; font-size: 13px; cursor: pointer; transition: color 180ms, background-color 180ms; }
+.folio-governance-metadata-modes > button:is(:hover,[aria-pressed="true"]) { background: var(--folio-red-soft); color: var(--folio-red); }
+.folio-governance-metadata-modes > button[aria-pressed="true"] { border-color: var(--folio-line); }
+.folio-governance-metadata-modes > button:disabled { cursor: wait; }
+.folio-governance-field-tools { justify-content: flex-end; padding-block: 12px; border-bottom: 1px solid var(--folio-line); }
+.folio-governance-scrape { min-width: 0; padding-block: 22px 8px; }
+.folio-governance-scrape-lock { display: flex; align-items: start; gap: 10px; margin: 0 0 14px; color: var(--folio-muted); font-size: 13px; line-height: 1.7; }
+.folio-governance-scrape-lock svg { flex-shrink: 0; margin-top: 3px; color: var(--folio-red); }
+@media (max-width: 700px) {
+  .folio-governance-metadata-modes { width: 100%; }
+  .folio-governance-metadata-modes > button { flex: 1; }
+}
 .folio-governance-rename { padding: 16px 12px; border-top: 1px solid var(--folio-line); }
 .folio-governance-rename p { margin: 0 0 10px; font-size: 12px; overflow-wrap: anywhere; }
 .folio-governance-rename form { display: grid; gap: 10px; }

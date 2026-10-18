@@ -36,6 +36,29 @@ def test_manual_groups_merge_across_pages_and_keep_selection_scoped_to_filters(l
     assert filtered['result'][0]['group']['total_count'] == 2
 
 
+@pytest.mark.parametrize('mode', ['manual', 'author'])
+def test_group_tags_count_works_deduplicate_sources_and_respect_filters(library, mode):
+    a, b, outside = [work(library, title, ['Writer']) for title in ('A', 'B', 'Outside')]
+    if mode == 'manual':
+        library.groups.create('Chosen', [a, b])
+    dictionary = DictionaryService(library.db, None)
+    term = dictionary.apply({'original_text': 'shared', 'tag_type': 'tag', 'zh_name': '共同标签'})['dictionary']['id']
+    for work_id, name, dictionary_id in [(a, 'shared', term), (a, 'shared', None), (a, 'alias', term),
+                                           (b, 'shared', term), (b, 'second', None), (outside, 'outside', None)]:
+        library.db.execute("INSERT INTO work_tags(work_id,tag_type,remote_name,dictionary_id) VALUES (?,'tag',?,?)", (work_id, name, dictionary_id))
+    library.set_favorite(a, True)
+    library.set_favorite(b, True)
+    group = library.search(group_by=mode, favorite_only=True)['result'][0]['group']
+    assert group['count'] == 2
+    assert [(tag['display'], tag['count']) for tag in group['tags']] == [('共同标签', 2), ('second', 1)]
+    library.set_favorite(b, False)
+    filtered = library.search(group_by=mode, favorite_only=True)['result'][0]
+    if mode == 'manual':
+        assert filtered['group']['tags'] == [{'key': f'dictionary:{term}', 'display': '共同标签', 'count': 1}]
+    else:
+        assert 'group' not in filtered
+
+
 def test_membership_conflicts_are_atomic_and_stale_edits_are_rejected(library):
     a, b, c, d = [work(library, title) for title in ('A', 'B', 'C', 'D')]
     first = library.groups.create('First', [a, b])

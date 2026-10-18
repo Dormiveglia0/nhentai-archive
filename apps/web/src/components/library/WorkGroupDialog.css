@@ -1,10 +1,18 @@
 .folio-library-group-count { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 6px; padding: 6px 9px; color: var(--folio-paper-bright); background: rgba(23,24,21,.86); font: 12px "IBM Plex Mono", monospace; }
 .folio-library-group-card .folio-library-card-body { flex: 1; }
-.folio-library-group-carousel { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: auto; padding-top: 10px; min-height: 38px; }
-.folio-library-group-carousel > span { font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; color: var(--folio-muted); }
-.folio-library-group-carousel button { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; min-width: 28px; padding: 4px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); cursor: pointer; }
-.folio-library-group-carousel button:hover { background: var(--folio-red-soft); }
-.folio-library-group-carousel .folio-library-group-open { margin-left: auto; padding-inline: 9px; white-space: nowrap; font-size: 12px; }
+.folio-library-group-covers, .folio-library-group-cover { position: absolute; inset: 0; pointer-events: none; }
+.folio-library-group-cover { opacity: 0; transition: opacity 480ms ease; }
+.folio-library-group-cover.is-previous { opacity: 1; z-index: 1; }
+.folio-library-group-cover.is-active { opacity: 1; z-index: 2; }
+.folio-library-group-cover.is-failed { opacity: 0; }
+.folio-library-group-tags { min-height: 88px; max-height: 112px; margin-block: 4px 8px; padding: 2px; display: flex; flex-wrap: wrap; align-content: start; gap: 6px; overflow-y: auto; scrollbar-width: thin; }
+.folio-library-group-tags > span { min-width: 0; max-width: 100%; min-height: 26px; display: inline-flex; align-items: baseline; gap: 5px; padding: 4px 7px; border: 1px solid var(--folio-line); font-size: 11px; line-height: 1.4; color: var(--folio-muted); }
+.folio-library-group-tags > span > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folio-library-group-tags sup { flex-shrink: 0; position: relative; top: -2px; color: var(--folio-red); font: 10px/1 "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+.folio-library-group-tags > small { font-size: 12px; color: var(--folio-muted); }
+.folio-library-group-open { width: 100%; min-height: 42px; margin-top: auto; padding: 10px 0 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 0; border-top: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.folio-library-group-open:hover { color: var(--folio-red); }
+@media (prefers-reduced-motion: reduce) { .folio-library-group-cover { transition: none; } }
 .folio-work-group-dialog { width: min(1120px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid var(--folio-line-strong); background: var(--folio-paper); color: var(--folio-ink); overflow: auto; }
 .folio-work-group-dialog.is-create { width: min(560px, calc(100vw - 32px)); }
 .folio-work-group-dialog::backdrop { background: rgba(23,24,21,.46); backdrop-filter: blur(5px); }

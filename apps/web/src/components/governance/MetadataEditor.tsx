@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { PenLine, Search } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import type { GovernanceAggregate, GovernanceTranslateSuggestion, MetadataFieldDiff } from "../../lib/api";
 import { Stagger, StaggerItem } from "../../lib/motion";
@@ -18,6 +19,8 @@ type Props = {
   onAcceptTranslation: (suggestion: GovernanceTranslateSuggestion) => void;
   onAcceptAllTranslations: () => void;
   onDismissTranslation: (field: string) => void;
+  scrapePanel: ReactNode;
+  scrapeBusy: boolean;
 };
 
 const REQUIRED_FIELDS = new Set(["title", "language"]);
@@ -34,7 +37,10 @@ export function MetadataEditor({
   onAcceptTranslation,
   onAcceptAllTranslations,
   onDismissTranslation,
+  scrapePanel,
+  scrapeBusy,
 }: Props) {
+  const [mode, setMode] = useState<'fields' | 'scrape'>('fields');
   const changed = (field: MetadataFieldDiff) => isChanged(field, edits[field.field]);
   const needsDecision = (field: MetadataFieldDiff) =>
     changed(field) ||
@@ -57,9 +63,15 @@ export function MetadataEditor({
     <section id="governance-metadata" className="folio-governance-fields">
       <header className="folio-governance-section-head">
         <div>
-          <h2>字段决策</h2>
+          <h2>元数据</h2>
         </div>
-        <div className="folio-governance-section-tools">
+        <div className="folio-governance-metadata-modes" role="group" aria-label="元数据操作">
+          <button type="button" aria-pressed={mode === 'fields'} disabled={scrapeBusy} onClick={() => setMode('fields')}><PenLine size={15} />编辑字段</button>
+          <button type="button" aria-pressed={mode === 'scrape'} disabled={scrapeBusy} onClick={() => setMode('scrape')}><Search size={15} />刮削元数据</button>
+        </div>
+      </header>
+      {mode === 'scrape' ? <div className="folio-governance-scrape">{scrapePanel}</div> : <>
+        <div className="folio-governance-section-tools folio-governance-field-tools">
           <button type="button" className="folio-line-button" onClick={adoptAllSources} disabled={!adoptable.length}>
             补全空字段{adoptable.length ? ` (${adoptable.length})` : ""}
           </button>
@@ -72,7 +84,6 @@ export function MetadataEditor({
             {onlyDiff ? "查看全部字段" : "只看待确认"}
           </button>
         </div>
-      </header>
       <GovernanceTranslationPanel
         suggestions={translationSuggestions}
         translating={translating}
@@ -92,6 +103,7 @@ export function MetadataEditor({
           <p className="folio-governance-inline-empty">当前没有待确认字段；可查看全部字段进行人工复核。</p>
         )}
       </Stagger>
+      </>}
     </section>
   );
 }
