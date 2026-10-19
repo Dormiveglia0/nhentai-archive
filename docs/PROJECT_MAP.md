@@ -3,7 +3,7 @@
 ## 封面核对与以图刮削（2026-10-19）
 
 - `CoverSimilarityService` 使用 `ImageHash==4.3.2` 的256位pHash/dHash；本地封面限定数据目录并按大小/mtime缓存，远端图片经既有CDN客户端读取，限制8MB/3000万解码像素，不写派生文件。JPEG先复用Pillow的draft缩小解码，再检查像素上限，与扫描保持一致；不关闭解压炸弹保护。分数是图像特征距离，不是正确率。
-- `ImageSearchService` 直连 SoutuBot 标准 multipart `/api/search`，仅接收schema 2.x中的有效nhentai ID，不访问第三方返回的链接。图片重编码去除EXIF，最长边1200px；请求间隔至少5秒，403/429/故障进入独立冷却，不使用验证码绕过或额外凭据。
+- `ImageSearchService` 直连 SoutuBot 标准 multipart `/api/search`，仅接收schema 2.x中的有效nhentai ID，不访问第三方返回的链接。图片重编码去除EXIF，最长边1200px；请求间隔至少5秒，403/429/故障进入独立冷却。429明确返回“今日搜索次数已用完”时保守等待24小时，不按普通五分钟冷却重试；错误正文只读取前4096字节。不使用验证码绕过或额外凭据。
 - `/api/governance/metadata-refresh/preview` 增加单作品 `image_search=cover|page`；整理/审批/上传共用面板提供明确上传说明及两个入口。默认文字搜索和扫描不向SoutuBot上传图片。内页读取复用版本化直接读取与挂载限时子进程，不下载整个归档。
 - `MetadataRefreshService.enqueue_batch(work_ids, reverse_images=False)` 创建持久化 `metadata_scrape` 任务，现有自动刮削线程执行，复用nhentai前台优先限速；任务中心暂停、恢复、取消、失败重试共用控制。nhentai或SoutuBot的429保存冷却截止时间到任务target，等待后重试同一部，暂停重启也不提前请求或推进游标。已绑定/已忽略作品保留；未完成图片核对、页数/语言/人工作者冲突、重复绑定和并发变更留审。以图候选必须核对两张不同且非相邻内页，pHash/dHash相似度均达到98%，仍核对封面和总页数。来源证据写入原有scrape_result_json；不更改schema或源文件。
 - 用户明确授权当前库的一次性批量搜图及绑定，操作备份在 `/opt/nhentai/backups/20261019-cover-scrape/`；发布与数据操作证据分开保存。

@@ -144,7 +144,14 @@ class ImageSearchService:
                         self._block('SoutuBot 拒绝访问，已暂停搜图；请稍后重试或手动搜索', 3600)
                     if response.status_code == 429:
                         retry = response.headers.get('Retry-After', '')
-                        self._block('SoutuBot 请求限流，已暂停搜图，请稍后重试', max(60, min(86400, int(retry))) if retry.isdecimal() else 300, rate_limited=True)
+                        delay = max(60, min(86400, int(retry))) if retry.isdecimal() else 300
+                        try:
+                            error = json.loads(next(response.iter_bytes(chunk_size=4096), b''))
+                        except ValueError:
+                            error = None
+                        if isinstance(error, dict) and '今日搜索次数已用完' in str(error.get('detail', '')):
+                            self._block('SoutuBot 今日搜图额度已用完，已暂停搜图，请额度恢复后重试', 86400, rate_limited=True)
+                        self._block('SoutuBot 请求限流，已暂停搜图，请稍后重试', delay, rate_limited=True)
                     if response.status_code != 200:
                         self._block(f'SoutuBot 暂不可用（HTTP {response.status_code}），请稍后重试', 60)
                     content = bytearray()

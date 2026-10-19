@@ -79,6 +79,21 @@ def test_response_size_limit_and_cancel_prevent_more_network_io(tmp_path, monkey
         ImageSearchService(None, tmp_path).search(b'jpeg', lambda: True)
 
 
+def test_daily_quota_cools_down_for_a_day_without_another_upload(tmp_path, monkeypatch):
+    calls = []
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(429, json={'detail': '今日搜索次数已用完，请稍后再试'})
+    transport(monkeypatch, handle)
+    service = ImageSearchService(None, tmp_path)
+    with pytest.raises(ImageSearchError, match='今日搜图额度已用完') as first:
+        service.search(b'jpeg')
+    assert first.value.retry_after == 86400
+    with pytest.raises(ImageSearchError) as again:
+        service.lookup({}, 'cover')
+    assert 86399 <= again.value.retry_after <= 86400 and len(calls) == 1
+
+
 def test_random_page_reads_one_versioned_page_without_copying_archive(tmp_path):
     class Cache:
         def direct_source(self, work_id):
