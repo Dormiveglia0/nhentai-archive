@@ -4,7 +4,7 @@
 
 当前库一次性操作由用户授权，原始备份 `/opt/nhentai/backups/20261019-cover-scrape/before.db`；`operation.json` 才是最终统计，`metadata_scrape` 任务未完成时继续执行或从任务中心恢复。发布证据单独在 `20261019-cover-scrape-release/`，部署只更新GHCR latest容器，不重启主机。不得让开发或测试连接正式数据，也不得用回写归档来完成刮削。
 
-实际任务 #133，1675部，操作前绑定244部；运行审计仅允许 `library.revision` 随元数据更新递增，账号/API等设置仍逐值保留。JPEG指纹与搜图先draft缩小解码再检查像素上限，与原扫描一致，不允许关闭Pillow保护。该小修正的镜像证据目录为 `20261019-image-decode-release/`；升级暂停任务并保留游标，启动后恢复原任务，不能重复新建全库任务。
+实际任务 #133，1675部，操作前绑定244部；运行审计仅允许 `library.revision` 随元数据更新递增，账号/API等设置仍逐值保留。JPEG指纹与搜图先draft缩小解码再检查像素上限，与原扫描一致，不允许关闭Pillow保护。SoutuBot及nhentai的429在任务target保存retry_at，等待后重试同一部，不推进游标或转成待审批；暂停重启保留截止时间。修正镜像证据目录为 `20261019-image-decode-release/`；升级暂停任务并保留游标，启动后恢复原任务，不能重复新建全库任务。原批完成后只补查此前因SoutuBot限流跳过且仍未绑定的作品，最终审计须汇总补查结果。
 
 最新阶段为整理页搜索、分类与每页30部；重命名单入口和固定后缀；扫描transform动画；元信息变化后才索引扫描，见 [CURRENT_REQUIREMENTS.md](CURRENT_REQUIREMENTS.md)。90项服务及HTTP回归、Web构建和1440/1365/390/320真实副本验收通过，真实扫描动画60帧均变化，中位帧间隔约16.7ms。发布按CI→GHCR latest进行，正式状态以 `/opt/nhentai/backups/20261019-governance-monitor/release.json` 为准，不重启主机。
 

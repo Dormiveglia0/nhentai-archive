@@ -19,7 +19,9 @@ from app.services.cover_similarity_service import MAX_IMAGE_BYTES, MAX_IMAGE_PIX
 
 
 class ImageSearchError(ValueError):
-    pass
+    def __init__(self, message, retry_after=0):
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 def prepare_image(body):
@@ -75,6 +77,7 @@ class ImageSearchService:
         self._condition = threading.Condition()
         self._next_at = self._blocked_until = 0.0
         self._blocked_reason = ''
+        self._rate_limited = False
         self._cache = OrderedDict()
 
     def sample(self, snapshot, mode, exclude=()):
@@ -100,14 +103,19 @@ class ImageSearchService:
     def lookup(self, snapshot, mode, cancelled=lambda: False):
         with self._condition:
             if self._blocked_until > time.monotonic():
-                raise ImageSearchError(self._blocked_reason)
+                raise self._cooldown_error()
         body, page = self.sample(snapshot, mode)
         return self.search(body, cancelled), body, page
 
-    def _block(self, message, seconds):
+    def _cooldown_error(self):
+        retry = max(0, math.ceil(self._blocked_until - time.monotonic())) if self._rate_limited else 0
+        return ImageSearchError(self._blocked_reason, retry)
+
+    def _block(self, message, seconds, rate_limited=False):
         with self._condition:
             self._blocked_until, self._blocked_reason = time.monotonic() + seconds, message
-        raise ImageSearchError(message)
+            self._rate_limited = rate_limited
+            raise self._cooldown_error()
 
     def search(self, body, cancelled=lambda: False):
         key = hashlib.sha256(body).digest()
@@ -119,7 +127,7 @@ class ImageSearchService:
                 if cancelled():
                     raise InterruptedError('搜图已暂停')
                 if self._blocked_until > time.monotonic():
-                    raise ImageSearchError(self._blocked_reason)
+                    raise self._cooldown_error()
                 delay = self._next_at - time.monotonic()
                 if delay <= 0:
                     self._next_at = time.monotonic() + 5
@@ -136,7 +144,7 @@ class ImageSearchService:
                         self._block('SoutuBot 拒绝访问，已暂停搜图；请稍后重试或手动搜索', 3600)
                     if response.status_code == 429:
                         retry = response.headers.get('Retry-After', '')
-                        self._block('SoutuBot 请求限流，已暂停搜图，请稍后重试', max(60, min(86400, int(retry))) if retry.isdecimal() else 300)
+                        self._block('SoutuBot 请求限流，已暂停搜图，请稍后重试', max(60, min(86400, int(retry))) if retry.isdecimal() else 300, rate_limited=True)
                     if response.status_code != 200:
                         self._block(f'SoutuBot 暂不可用（HTTP {response.status_code}），请稍后重试', 60)
                     content = bytearray()

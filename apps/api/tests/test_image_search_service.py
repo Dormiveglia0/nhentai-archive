@@ -64,8 +64,9 @@ def test_provider_rejection_cools_down_without_uploading_again(tmp_path, monkeyp
     transport(monkeypatch, handle)
     service = ImageSearchService(None, tmp_path)
     for _ in range(2):
-        with pytest.raises(ImageSearchError):
+        with pytest.raises(ImageSearchError) as error:
             service.search(b'jpeg')
+        assert 119 <= error.value.retry_after <= 120 if status == 429 else error.value.retry_after == 0
     assert len(calls) == 1
 
 

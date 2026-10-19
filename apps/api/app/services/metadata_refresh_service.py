@@ -596,6 +596,12 @@ class MetadataRefreshService:
             for index in range(target.get('cursor', 0), len(ids)):
                 while True:
                     self._batch_checkpoint(job_id)
+                    retry_at = self.jobs.get(job_id)['target'].get('retry_at', 0)
+                    if retry_at > time.time():
+                        self.jobs.mark_running(job_id, 'remote_cooldown', index, len(ids))
+                        while time.time() < retry_at:
+                            self._batch_checkpoint(job_id)
+                            self._closing.wait(min(.5, max(0, retry_at - time.time())))
                     self.jobs.mark_running(job_id, 'matching_metadata', index, len(ids))
                     snapshot = None
                     candidates = []
@@ -628,6 +634,8 @@ class MetadataRefreshService:
                                             try:
                                                 images, image_reason = self._image_candidates(snapshot, mode, True, lambda: self._batch_interrupted(job_id))
                                             except ImageSearchError as exc:
+                                                if exc.retry_after:
+                                                    raise
                                                 reason = str(exc)
                                                 break
                                             except (OSError, ValueError) as exc:
@@ -664,13 +672,14 @@ class MetadataRefreshService:
                         if snapshot and snapshot['file']:
                             self.db.execute("UPDATE library_items SET scrape_status='pending' WHERE id=? AND scrape_status='running'", (snapshot['file']['library_item_id'],))
                         self._batch_checkpoint(job_id)
-                    except NhentaiApiError as exc:
-                        if exc.status_code == 429:
-                            self.jobs.mark_running(job_id, 'remote_cooldown', index, len(ids))
-                            deadline = time.monotonic() + max(30, exc.retry_after or 60)
-                            while time.monotonic() < deadline:
-                                self._batch_checkpoint(job_id)
-                                self._closing.wait(min(.5, max(0, deadline - time.monotonic())))
+                    except (NhentaiApiError, ImageSearchError) as exc:
+                        if (isinstance(exc, NhentaiApiError) and exc.status_code == 429) or (isinstance(exc, ImageSearchError) and exc.retry_after):
+                            delay = max(30, exc.retry_after or 60)
+                            with self.db.connect() as conn:
+                                current = json.loads(conn.execute('SELECT target_json FROM jobs WHERE id=?', (job_id,)).fetchone()[0])
+                                current['retry_at'] = time.time() + delay
+                                conn.execute('UPDATE jobs SET target_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (json.dumps(current, ensure_ascii=False), job_id))
+                                self.jobs._log_with_conn(conn, job_id, 'info', f'{str(exc)[:300]}；等待{delay}秒后重试当前作品')
                             if snapshot and snapshot['file']:
                                 self.db.execute("UPDATE library_items SET scrape_status='pending' WHERE id=? AND scrape_status='running'", (snapshot['file']['library_item_id'],))
                             continue
@@ -683,6 +692,7 @@ class MetadataRefreshService:
                 self._batch_checkpoint(job_id)
                 with self.db.connect() as conn:
                     current = json.loads(conn.execute('SELECT target_json FROM jobs WHERE id=?', (job_id,)).fetchone()[0])
+                    current.pop('retry_at', None)
                     current.update(cursor=index + 1)
                     current[outcome] = current.get(outcome, 0) + 1
                     conn.execute('UPDATE jobs SET target_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?', (json.dumps(current, ensure_ascii=False), job_id))

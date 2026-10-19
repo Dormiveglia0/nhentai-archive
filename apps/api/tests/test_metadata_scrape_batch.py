@@ -1,13 +1,17 @@
 import json
 import io
 import threading
+import time
 import zipfile
 
+import pytest
 from PIL import ImageDraw
 
 from app.services.archive_service import ArchiveService
 from app.services.cover_similarity_service import CoverSimilarityService, fingerprint
-from app.services.image_search_service import ImageSearchService
+from app.services.image_search_service import ImageSearchError, ImageSearchService
+from app.services.metadata_refresh_service import MetadataRefreshService
+from app.services.nhentai_client import NhentaiApiError
 from test_cover_similarity_service import cover_image
 
 from test_metadata_refresh_service import _indexed_service
@@ -136,6 +140,48 @@ def test_batch_rejects_changed_remote_id_and_concurrent_manual_edit(tmp_path, mo
     row = db.fetchone('SELECT scrape_status,scrape_result_json FROM library_items WHERE id=?', (item['id'],))
     assert row['scrape_status'] == 'review' and '变化' in json.loads(row['scrape_result_json'])['reason']
     assert service.jobs.get(job['id'])['target']['updated'] == 0
+
+
+@pytest.mark.parametrize('provider', ['soutubot', 'nhentai'])
+def test_rate_limit_keeps_cursor_and_cooldown_across_pause_and_restart(tmp_path, monkeypatch, provider):
+    db, item, gallery, service = staged(tmp_path, monkeypatch)
+    candidates, _ = service._candidates(service._snapshot(item['work_id']), bind=True)
+    assert candidates[0]['automatic_eligible']
+    monkeypatch.setattr(service, '_candidates', lambda *args, **kwargs: ([], ''))
+    def limited(*args):
+        if provider == 'soutubot':
+            raise ImageSearchError('SoutuBot 请求限流', retry_after=120)
+        raise NhentaiApiError(429, 'rate_limited', 'Remote API cooldown active', retry_after=120)
+    monkeypatch.setattr(service, '_image_candidates', limited)
+    job = service.enqueue_batch([item['work_id']], reverse_images=True)
+    def shutdown(_):
+        assert service.jobs.get(job['id'])['stage'] == 'remote_cooldown'
+        service.jobs.pause(job['id'])
+        service._closing.set()
+    monkeypatch.setattr(service._closing, 'wait', shutdown)
+    service.tick()
+    paused = service.jobs.get(job['id'])
+    assert paused['status'] == 'paused' and paused['target']['cursor'] == 0
+    assert paused['target']['review'] == paused['target']['updated'] == 0
+    assert paused['target']['retry_at'] >= time.time() + 119
+    assert db.fetchone('SELECT scrape_status FROM library_items WHERE id=?', (item['id'],))['scrape_status'] == 'pending'
+
+    restarted = MetadataRefreshService(db, service.client, service.discover, service.dictionary, service.libraries)
+    clock = [time.time()]
+    monkeypatch.setattr('app.services.metadata_refresh_service.time.time', lambda: clock[0])
+    monkeypatch.setattr(restarted, '_cover', service._cover)
+    monkeypatch.setattr(restarted, '_candidates', lambda *args, **kwargs: ([], ''))
+    def images(*args):
+        assert clock[0] >= paused['target']['retry_at']
+        return candidates, ''
+    monkeypatch.setattr(restarted, '_image_candidates', images)
+    monkeypatch.setattr(restarted._closing, 'wait', lambda _: clock.__setitem__(0, paused['target']['retry_at']))
+    restarted.resume_job(job['id'])
+    restarted.tick()
+    done = restarted.jobs.get(job['id'])
+    assert done['status'] == 'completed' and done['target']['cursor'] == done['target']['updated'] == 1
+    assert done['target']['review'] == 0 and 'retry_at' not in done['target']
+    assert db.fetchone('SELECT remote_gallery_id FROM works WHERE id=?', (item['work_id'],))['remote_gallery_id'] == gallery['id']
 
 
 def test_two_independent_interior_images_verify_source_and_reject_repeated_art(tmp_path, monkeypatch):
