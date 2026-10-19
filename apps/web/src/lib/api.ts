@@ -369,6 +369,10 @@ export type GovernanceQueueItem = {
 
 export type GovernanceQueue = {
   result: GovernanceQueueItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  counts: Record<GovernanceQueueFilter, number>;
   summary: {
     total: number;
     unreviewed: number;
@@ -385,6 +389,8 @@ export type GovernanceQueue = {
     missing_cover: number;
   };
 };
+
+export type GovernanceQueueFilter = "review" | "metadata" | "dictionary" | "files" | "approved" | "all";
 
 export type MetadataFieldDiff = {
   field: string;
@@ -1475,7 +1481,8 @@ export const api = {
   libraryContinueReading: (limit = 12) => request<{ result: LibraryWork[] }>(`/api/library/continue-reading?limit=${limit}`),
   libraryTagFilters: (q = "", limit = 40) =>
     request<{ result: LibraryTagFilter[] }>(`/api/library/tag-filters?q=${encodeURIComponent(q)}&limit=${limit}`),
-  governanceQueue: () => request<GovernanceQueue>("/api/governance/queue"),
+  governanceQueue: (q = "", status: GovernanceQueueFilter = "all", page = 1) =>
+    request<GovernanceQueue>(`/api/governance/queue?${new URLSearchParams({ q, status, page: String(page), per_page: "30" })}`),
   workGovernance: (id: number) => request<GovernanceAggregate>(`/api/works/${id}/governance`),
   applyWorkGovernance: (id: number, payload: GovernanceApplyPayload) =>
     request<GovernanceApplyResult>(`/api/works/${id}/governance/apply`, {

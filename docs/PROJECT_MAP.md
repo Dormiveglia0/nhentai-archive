@@ -1,5 +1,12 @@
 # NH Archive Project Map
 
+## 整理队列与轻量文件检查（2026-10-19）
+
+- `GovernanceService.queue(q,status,page,per_page)` / `/api/governance/queue`：服务端关键词、问题分类与分页，默认30、最多100部；响应增加`total/page/per_page/counts`，原`summary`保留。`useGovernanceState`与`GovernanceQueueRail`使用同一查询，保存/核对/批量完成后刷新当前页，分页复用`IconPager`。
+- `SourceRenameControl`每部作品只渲染一次，多源可选择实际文件；编辑框不含扩展名，固定后缀附加到请求，后端拒绝格式变更。侧栏保留有界滚动，避免菜单被底栏挡住。`SourceRenameService`优先原子无覆盖重命名，挂载不支持该标志时独占复制、SHA256核验、持久化准备记录，再移除旧路径并更新原索引；恢复兼容原列表版本和新的复制校验记录，不新增schema。
+- `LibraryIndexService.changes`维护元信息快照；本地复用未变目录的名称列表，挂载库复用原限时子进程列举元信息。对比清单、大小、修改/状态变更时间及身份；修改按路径处理，增删完整核对，无变化不进入索引扫描。元信息变化但mtime/大小保留时仍会重新解析，稳定等待与持久重试保留。
+- `MediaLibraryActivity`的未知总量进度条改为CSS transform动画，支持暂停和减少动态效果。无schema迁移或新依赖。90项服务/HTTP回归及Web构建、四种宽度真实副本交互通过；真实扫描60帧采样中位帧间隔约16.7ms，挂载临时文件兼容检查通过。发布状态见本阶段release.json。
+
 ## 本地与远端标签展示去重（2026-10-19）
 
 - `work_tag_display.visible_work_tags` 在同一作品、同一类别内合并显示名重复的来源，归一空白与大小写；CBZ原名通过该作品已知词典译名对应远端标签。优先保留远端记录的链接，合并后仍暴露冲突或待确认状态，不修改原始行。
@@ -27,7 +34,7 @@
 - `library_scan_runs.progress_json` 保存阶段、当前路径、真实计数及最近20条操作；`MediaLibraryActivity` 展示进度、控制与历史。`metadata_refresh_service.py` 提供保存候选的审批清单、指定来源、版本校验与决定；手动审批在同一事务中保存元数据和完成状态。
 - `libraryLocation.ts` / `useLibraryState.ts` 负责库内筛选、分页、视图和滚动历史；翻页使用 pushState，滚动保存节流。
 - `GovernancePage` 集中刮削、双来源控制、词典建议和语言多选。人工作者/社团/标签/语言同时写入元数据和标签关联，后台同步及重扫保留人工值。
-- `source_rename_service.py` / `source_renames`：同目录、保留扩展名、Linux原子无覆盖重命名，复用来源锁、缓存锁和在用检查；执行前持有数据库写锁复查。持久化准备记录先于文件变更，失败回滚，启动恢复后才启动扫描。更新原有索引与文件关联，保留身份和阅读状态；不支持安全重命名的文件系统拒绝操作。
+- `source_rename_service.py` / `source_renames`：同目录、保留扩展名，优先Linux原子无覆盖重命名；不支持时独占复制并核验内容，保留来源锁、缓存锁和在用检查。移除旧路径前持有数据库写锁复查，准备记录先于文件变更，启动恢复后才启动扫描。更新原索引与关联、保留作品和阅读身份；未完整核验时保留文件并阻止扫描。
 - `library_group_service.py` / `work_groups` / `work_group_members`：一个作品最多属于一个手动组，成员外键随作品删除清理；分组变更参与库版本通知，并校验组版本。聚合匹配作品的轻量索引后分页，批量选择仅包括当前筛选匹配的成员。作者身份结合远端ID、词典和别名，按完整作者集合归组，手动组优先。
 - 新增 `/api/library/groups` 创建与组详情/修改/解散接口；`/api/library/search` 可选 `group_by` / `group_key`，默认保持旧的逐部返回。`WorkGroupCard` 提供首次随机固定封面，`WorkGroupDialog` 管理组内作品。
 - `/api/works/{id}/source-rename`、`/api/library/scrape-queue` 及决定接口均沿用应用认证。审批现归属整理页，旧 `#scrape` 仅为兼容入口。

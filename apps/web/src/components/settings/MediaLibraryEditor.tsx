@@ -89,7 +89,7 @@ export function MediaLibraryEditor({ library, defaults, onClose, onSaved }: {
           <h3>扫描与监控</h3>
           <div className="folio-toggle-list">
             <FolioToggleRow label="扫描子文件夹" copy="包含当前目录下的所有层级。" checked={config.recursive} onChange={value => toggle("recursive", value)} />
-            <FolioToggleRow label="自动检查文件变化" copy={kind === "mounted" ? "定时检查挂载目录；远端变化的可见时间取决于 rclone 的目录缓存。" : "监听新增、修改与删除，并定时补充检查。"} checked={config.watch} onChange={value => toggle("watch", value)} />
+            <FolioToggleRow label="自动检查文件变化" copy={kind === "mounted" ? "定时比较目录条目、文件大小与修改时间，变化后再扫描；远端变化需先更新 rclone 缓存。" : "监听文件变化，并定时比较目录条目、文件大小与修改时间；未变化时跳过扫描。"} checked={config.watch} onChange={value => toggle("watch", value)} />
           </div>
           <h3>元数据刮削</h3>
           <div className="folio-toggle-list">

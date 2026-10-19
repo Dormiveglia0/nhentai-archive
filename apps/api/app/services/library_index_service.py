@@ -59,18 +59,18 @@ class LibraryIndexService:
 
     def scan(self, library_id: int, checkpoint: Callable[[], None] | None = None,
              progress: Callable[[dict[str, int]], None] | None = None, job_id: int | None = None,
-             paths: list[str] | None = None) -> dict[str, Any]:
+             paths: list[str] | None = None, refresh_paths: list[str] | None = None) -> dict[str, Any]:
         checkpoint = checkpoint or (lambda: None)
         # ponytail: one scanner bounds mount IO; add per-library locks if scans need parallelism.
         while not self._scan_lock.acquire(timeout=0.2):
             checkpoint()
         try:
-            return self._scan(library_id, checkpoint, progress or (lambda counts: None), job_id, paths)
+            return self._scan(library_id, checkpoint, progress or (lambda counts: None), job_id, paths, set(refresh_paths or []))
         finally:
             self._scan_lock.release()
 
     def _scan(self, library_id: int, checkpoint: Callable[[], None], progress: Callable[[dict[str, int]], None],
-              job_id: int | None, paths: list[str] | None) -> dict[str, Any]:
+              job_id: int | None, paths: list[str] | None, refresh_paths: set[str]) -> dict[str, Any]:
         library = self.libraries.get(library_id)
         if self.db.fetchone("SELECT 1 FROM source_renames WHERE library_id=? AND state IN ('prepared','blocked')", (library_id,)):
             raise MountUnavailable("此库有未完成的源文件重命名，保留现有索引，请先恢复重命名记录")
@@ -139,7 +139,7 @@ class LibraryIndexService:
                 relative = path.relative_to(root).as_posix()
                 report("reading", relative, force=not events)
                 try:
-                    status = self._index_file(library, path, info, int(run_id), checkpoint, lookup, seen, probe)
+                    status = self._index_file(library, path, info, int(run_id), checkpoint, lookup, seen, probe, relative in refresh_paths)
                     counts[status] += 1
                     events.append({"path": relative, "status": status, "at": time.time()})
                     consecutive_timeouts = 0
@@ -211,6 +211,55 @@ class LibraryIndexService:
                                  ((run_id, item_id) for item_id in seen))
             seen.clear()
 
+    def changes(self, library_id: int, previous: dict | None, checkpoint: Callable[[], None]) -> tuple[dict, list[str] | None, list[str]]:
+        while not self._scan_lock.acquire(timeout=.2):
+            checkpoint()
+        walker = None
+        try:
+            library = self.libraries.get(library_id)
+            root, config = Path(library["root_path"]), library["config"]
+            config["_root_boundaries"] = self.libraries.root_boundaries(library_id)
+            signature = (str(root), library["kind"], config["recursive"], config["include_hidden"], config["follow_symlinks"], tuple(config["exclude_patterns"]))
+            if previous and previous["signature"] != signature:
+                previous = None
+            directories = dict(previous["directories"]) if previous else {}
+            if library["kind"] == "mounted":
+                # Remote directory timestamps may stay unchanged when children change.
+                walker = self._walk_mounted(root, config, checkpoint, None)
+                root_stat, _canonical = next(walker)
+            else:
+                self.libraries.validate_root(root, config["_root_boundaries"])
+                root_stat = root.stat()
+                walker = self._walk(root, config, directory_cache=directories)
+            files = {}
+            checked_at = 0.0
+            for path, info, error in walker:
+                if time.monotonic() - checked_at >= .2:
+                    checkpoint()
+                    checked_at = time.monotonic()
+                if error:
+                    raise OSError(error)
+                if path.suffix.lower() in ARCHIVES | UNSUPPORTED:
+                    files[path.relative_to(root).as_posix()] = self._metadata_stamp(info)
+            checkpoint()
+            root_identity = (root_stat.st_dev, root_stat.st_ino)
+            snapshot = {"signature": signature, "directories": directories, "files": files, "root": root_identity}
+            if not previous or previous["root"] != root_identity:
+                return snapshot, None, []
+            changed = [path for path, stamp in files.items() if previous["files"].get(path) != stamp]
+            refresh = [path for path in changed if path in previous["files"]]
+            paths = None if files.keys() != previous["files"].keys() else changed
+            return snapshot, paths, refresh
+        finally:
+            if walker is not None:
+                walker.close()
+            self._scan_lock.release()
+
+    @staticmethod
+    def _metadata_stamp(info):
+        # Reading changes atime; it must not trigger another content scan.
+        return (info.st_size, info.st_mtime_ns, info.st_ctime_ns, info.st_dev, info.st_ino)
+
     def _walk_mounted(self, root: Path, config: dict[str, Any], checkpoint, paths: list[str] | None):
         if self._walk_process is not None and self._walk_process.is_alive():
             raise MountUnavailable("挂载目录仍被系统阻塞，请恢复挂载后重试")
@@ -254,7 +303,7 @@ class LibraryIndexService:
                 self._walk_process = None
 
     @staticmethod
-    def _walk(root: Path, config: dict[str, Any], paths: list[str] | None = None) -> Iterator[tuple[Path, Any, str | None]]:
+    def _walk(root: Path, config: dict[str, Any], paths: list[str] | None = None, directory_cache: dict | None = None) -> Iterator[tuple[Path, Any, str | None]]:
         if paths is not None:
             for relative in paths:
                 path = root / relative
@@ -266,7 +315,7 @@ class LibraryIndexService:
                 except (OSError, ValueError) as exc:
                     yield path, None, str(exc)[:500]
             return
-        directories, visited = [root], set()
+        directories, visited, checked_directories = [root], set(), set()
         while directories:
             directory = directories.pop()
             try:
@@ -275,34 +324,49 @@ class LibraryIndexService:
                 if canonical in visited:
                     continue
                 visited.add(canonical)
-                with os.scandir(directory) as entries:
-                    for entry in entries:
-                        relative = Path(entry.path).relative_to(root).as_posix()
-                        if (not config["include_hidden"] and entry.name.startswith(".")) or any(
-                            fnmatch.fnmatch(entry.name, pattern) or fnmatch.fnmatch(relative, pattern)
-                            for pattern in config["exclude_patterns"]
-                        ):
-                            continue
-                        try:
-                            if entry.is_symlink():
-                                if not config["follow_symlinks"]:
-                                    continue
-                                target = Path(entry.path).resolve()
-                                if target != root.resolve() and root.resolve() not in target.parents:
-                                    yield Path(entry.path), None, "符号链接指向目录库外，已跳过"
-                                    continue
-                            info = entry.stat(follow_symlinks=config["follow_symlinks"])
-                            if stat.S_ISDIR(info.st_mode) and config["recursive"]:
-                                directories.append(Path(entry.path))
-                            elif stat.S_ISREG(info.st_mode):
-                                yield Path(entry.path), info, None
-                        except OSError as exc:
-                            yield Path(entry.path), None, str(exc)[:500]
+                key = directory.relative_to(root).as_posix()
+                checked_directories.add(key)
+                cached = directory_cache.get(key) if directory_cache is not None else None
+                signature = LibraryIndexService._metadata_stamp(info)
+                if cached and cached[0] == signature:
+                    names = cached[1]
+                else:
+                    with os.scandir(directory) as entries:
+                        names = [entry.name for entry in entries]
+                    if directory_cache is not None:
+                        directory_cache[key] = (signature, names)
+                for name in names:
+                    entry = directory / name
+                    relative = entry.relative_to(root).as_posix()
+                    if (not config["include_hidden"] and entry.name.startswith(".")) or any(
+                        fnmatch.fnmatch(entry.name, pattern) or fnmatch.fnmatch(relative, pattern)
+                        for pattern in config["exclude_patterns"]
+                    ):
+                        continue
+                    try:
+                        info = entry.lstat()
+                        if stat.S_ISLNK(info.st_mode):
+                            if not config["follow_symlinks"]:
+                                continue
+                            target = entry.resolve()
+                            if target != root.resolve() and root.resolve() not in target.parents:
+                                yield entry, None, "符号链接指向目录库外，已跳过"
+                                continue
+                            info = entry.stat()
+                        if stat.S_ISDIR(info.st_mode) and config["recursive"]:
+                            directories.append(entry)
+                        elif stat.S_ISREG(info.st_mode):
+                            yield entry, info, None
+                    except OSError as exc:
+                        yield entry, None, str(exc)[:500]
             except OSError as exc:
                 yield directory, None, str(exc)[:500]
+        if directory_cache is not None:
+            for key in directory_cache.keys() - checked_directories:
+                del directory_cache[key]
 
     def _index_file(self, library: dict[str, Any], path: Path, info: os.stat_result, run_id: int,
-                    checkpoint: Callable[[], None], lookup: sqlite3.Connection, seen: list[int], probe: MountedArchiveProbe | None) -> str:
+                    checkpoint: Callable[[], None], lookup: sqlite3.Connection, seen: list[int], probe: MountedArchiveProbe | None, refresh: bool = False) -> str:
         relative = path.relative_to(library["root_path"]).as_posix()
         row = lookup.execute("""SELECT id, work_id, size_bytes, mtime_ns, device, inode, stable_since, status, retry_at
                               FROM library_items WHERE library_id = ? AND relative_path = ?""", (library["id"], relative)).fetchone()
@@ -324,7 +388,7 @@ class LibraryIndexService:
                         conn.execute("UPDATE work_files SET path = ? WHERE library_item_id = ?", (location, previous["id"]))
                     existing = previous
         now = time.time()
-        same = existing and (existing["size_bytes"], existing["mtime_ns"], existing["device"], existing["inode"]) == (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino))
+        same = not refresh and existing and (existing["size_bytes"], existing["mtime_ns"], existing["device"], existing["inode"]) == (info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino))
         if same and (existing["status"] == "ready" and existing["work_id"] is not None or existing["status"] == "unsupported" or
                      existing["status"] == "error" and (existing["retry_at"] or 0) > now):
             seen.append(existing["id"])

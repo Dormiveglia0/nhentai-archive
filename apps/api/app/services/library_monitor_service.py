@@ -20,6 +20,7 @@ class LibraryMonitorService:
         self._closing = threading.Event()
         self._thread = None
         self._watchers = {}
+        self._snapshots = {}
 
     def _active(self):
         rows = self.db.fetchall("SELECT * FROM media_libraries WHERE enabled = 1 AND removed_at IS NULL")
@@ -99,6 +100,8 @@ class LibraryMonitorService:
 
     def tick(self):
         libraries = self._active()
+        active_ids = {library["id"] for library in libraries}
+        self._snapshots = {key: value for key, value in self._snapshots.items() if key in active_ids}
         self._sync_watchers(libraries)
         now = time.time()
         for library in libraries:
@@ -116,7 +119,7 @@ class LibraryMonitorService:
                 AND status IN ('queued', 'running', 'paused', 'cancelling')
                 AND json_extract(target_json, '$.library_id') = ? LIMIT 1""", (library_id,)):
                 continue
-            paths = None if periodic or any(row["relative_path"] == "" for row in events) else [row["relative_path"] for row in events]
+            paths = None if any(row["relative_path"] == "" for row in events) else [row["relative_path"] for row in events]
             claimed_at = now
             self.db.execute("UPDATE media_libraries SET next_scan_at = ? WHERE id = ?", (now + config["scan_interval_seconds"], library_id))
             def checkpoint():
@@ -124,9 +127,19 @@ class LibraryMonitorService:
                 if self._closing.is_set() or not current or not current["enabled"] or current["removed_at"] or current["config_json"] != library["config_json"]:
                     raise JobCancelled()
             try:
-                result = self.index.scan(library_id, checkpoint, paths=paths)
+                snapshot, refresh_paths = None, []
+                if periodic:
+                    snapshot, changed_paths, refresh_paths = self.index.changes(library_id, self._snapshots.get(library_id), checkpoint)
+                    paths = None if changed_paths is None or paths is None else sorted(set(paths) | set(changed_paths))
+                    if paths == []:
+                        self._snapshots[library_id] = snapshot
+                        self.db.execute("UPDATE media_libraries SET scan_failures=0,next_scan_at=? WHERE id=?", (time.time() + config["scan_interval_seconds"], library_id))
+                        continue
+                result = self.index.scan(library_id, checkpoint, paths=paths, refresh_paths=refresh_paths)
                 if result["status"] != "completed":
                     raise OSError(library["last_error"] or "目录暂时不可用，稍后重试")
+                if snapshot is not None:
+                    self._snapshots[library_id] = snapshot
                 with self.db.connect() as conn:
                     conn.execute("DELETE FROM library_changes WHERE library_id = ? AND due_at <= ?", (library_id, claimed_at))
                     conn.execute("UPDATE media_libraries SET scan_failures = 0, next_scan_at = ? WHERE id = ?", (time.time() + config["scan_interval_seconds"], library_id))
@@ -148,8 +161,9 @@ class LibraryMonitorService:
                 self.db.execute("DELETE FROM library_scan_runs WHERE library_id = ? AND job_id IS NULL AND status <> 'running' "
                                 "AND id NOT IN (SELECT id FROM library_scan_runs WHERE library_id = ? ORDER BY id DESC LIMIT 100)", (library_id, library_id))
             except JobCancelled:
-                pass
+                self._snapshots.pop(library_id, None)
             except Exception:
+                self._snapshots.pop(library_id, None)
                 failures = min(library["scan_failures"] + 1, 8)
                 delay = min(3600, config["scan_interval_seconds"] * 2**failures)
                 self.db.execute("UPDATE media_libraries SET scan_failures = ?, next_scan_at = ? WHERE id = ?", (failures, time.time() + delay, library_id))

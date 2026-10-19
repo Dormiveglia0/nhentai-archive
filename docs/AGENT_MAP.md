@@ -27,7 +27,7 @@
 | 发现 | `discover/DiscoverPage.tsx`、`useDiscoverState.ts`、`discoverState.ts`、`DiscoverToolbar.tsx`、`DiscoverFeed.tsx`、`PopularFan.tsx` | `DiscoverPage.css` 与共享发现规则；作品/更新/订阅三项常驻；作品全宽展示，无更新侧栏。筛选保存不能覆盖更新或订阅链接 |
 | 远端详情 `#gallery/{id}` | `discover/GalleryDetailPage.tsx`、`gallery/useGalleryDetail.ts`、`gallery/*` | `gallery/*.css`；作品信息、标签、预览和相关推荐；保留独立详情构图 |
 | 订阅与更新 | `subscriptions/CreatorSubscribeButton.tsx`、`SubscriptionsPanel.tsx`、`SubscriptionUpdates.tsx`、`useSubscriptionUpdates.ts` | `settings/NotificationSection.css`；作者/社团订阅、4部近期作品、未读、已读；发现页更新标签附未读数量，顶部无额外入口。保留原始日文标题精确匹配的语言预览折叠 |
-| 整理 | `governance/GovernancePage.tsx`、`MetadataEditor.tsx`、`useGovernanceState.ts`、`DictionaryFieldInput.tsx`、`SourceRenameControl.tsx` | `GovernancePage.css`、`GovernanceEditor.css`；作品整理/刮削审批子视图；元数据区域切换字段编辑/远端刮削，透明嵌入面板；双来源、词典补全、多语言、核对、源文件回写及安全重命名 |
+| 整理 | `governance/GovernancePage.tsx`、`MetadataEditor.tsx`、`useGovernanceState.ts`、`DictionaryFieldInput.tsx`、`SourceRenameControl.tsx` | `GovernancePage.css`、`GovernanceEditor.css`；作品整理/刮削审批子视图；服务端搜索、分类与每页30部，查询和页码保存在链接中；统一重命名入口、多源选择与固定扩展名；字段/远端刮削、词典补全、多语言、核对及回写 |
 | 词典 | `dictionary/DictionaryPage.tsx`、`useDictionaryState.ts`、其子组件 | `DictionaryPage.css`、`DictionaryEditor.css` 与共享规则；搜索、候选、影响预览、应用、批量处理 |
 | 队列 | `tasks/TasksPage.tsx`、`useTasksState.ts`、其子组件 | `TasksPage.css`、共享任务规则；状态筛选、日志、暂停/恢复/取消/重试/删除 |
 | 文件 | `files/FilesPage.tsx`、`useFilesState.ts`、`FileList.tsx`、`FileDetailPanel.tsx`、`FileDeleteDialog.tsx`、`MetadataPanel.tsx`、`DerivedFilesPanel.tsx`、`MigrationPanel.tsx` | `FilesPage.css`、`MetadataPanel.css`；媒体库/文件/元数据/派生文件/迁移五个视图；本地资料查看与导出、恢复/清理预览、实际派生文件查看/下载、本页全选与批量清理，以及复制/移动迁移 |
@@ -39,6 +39,8 @@
 
 ## 共用实现
 
+- `SourceRenameService`：原子无覆盖重命名优先；挂载不支持时独占创建目标、核验内容并记录恢复状态，再移除源路径和更新同一索引身份。未核验中断保留文件、阻止扫描，不得直接降级为可能覆盖目标的rename。
+- `library_index_service.LibraryIndexService.changes` / `library_monitor_service`：自动检查先比较文件清单、大小、mtime/ctime和身份；本地缓存未变目录的条目，挂载目录仍通过限时子进程列举元信息，避免远端目录时间不可靠导致漏检。无变化跳过索引扫描；现有文件修改增量处理，新增/删除完整核对；访问时间不触发扫描。
 - `apps/api/app/services/work_tag_display.py`：作品标签按作品、类别和归一后的显示名去重，优先保留远端链接及需处理的词典状态。作品列表/详情/阅读、整理字段与分组共享；词典审批按独立词条计数，来源记录和核对指纹保留完整数据。
 - `folio/config.ts`：8个主导航、设置章节与图标。
 - `folio/shell/FolioChrome.tsx`：8项顶部导航、手机菜单、滚动恢复、进度；`ArchiveShell.tsx` 接入正式页面，阅读器绕过 chrome。

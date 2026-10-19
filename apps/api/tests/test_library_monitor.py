@@ -1,3 +1,5 @@
+import json
+import os
 import time
 import pytest
 
@@ -119,3 +121,67 @@ def test_event_overflow_coalesces_and_disabled_libraries_ignore_events(tmp_path)
     libraries.update(library['id'], {'enabled': False})
     monitor.changed(library['id'], ['new.cbz'])
     assert db.fetchall('SELECT * FROM library_changes') == rows
+
+
+@pytest.mark.parametrize('kind', ['local', 'mounted'])
+def test_periodic_check_skips_unchanged_library_and_interval_change(tmp_path, monkeypatch, kind):
+    _, db, libraries, index, root, library = setup_index(tmp_path)
+    db.execute("UPDATE media_libraries SET enabled=0 WHERE kind='managed'")
+    libraries.update(library['id'], {'kind': kind})
+    source = root / 'nested/book.cbz'
+    create_archive(source)
+    monitor = LibraryMonitorService(index, libraries)
+    monkeypatch.setattr(monitor, '_sync_watchers', lambda libraries: None)
+    monitor.tick()
+    runs = db.fetchone('SELECT COUNT(*) n FROM library_scan_runs')['n']
+    # A normal read changes atime, without changing content or requiring a scan.
+    source.read_bytes()
+    libraries.update(library['id'], {'config': {'scan_interval_seconds': 10}})
+    if kind == 'local':
+        def no_listing(path):
+            raise AssertionError('unchanged directories must reuse their entries')
+        monkeypatch.setattr('app.services.library_index_service.os.scandir', no_listing)
+    monitor.tick()
+    assert db.fetchone('SELECT COUNT(*) n FROM library_scan_runs')['n'] == runs
+    assert libraries.get(library['id'])['scan_failures'] == 0
+    assert not db.fetchone('SELECT id FROM jobs')
+
+
+def test_periodic_check_finds_nested_edits_additions_and_deletions(tmp_path, monkeypatch):
+    _, db, libraries, index, root, library = setup_index(tmp_path)
+    db.execute("UPDATE media_libraries SET enabled=0 WHERE kind='managed'")
+    source = root / 'nested/book.cbz'
+    create_archive(source, title='One')
+    monitor = LibraryMonitorService(index, libraries)
+    monkeypatch.setattr(monitor, '_sync_watchers', lambda libraries: None)
+    monitor.tick()
+    work_id = db.fetchone('SELECT work_id FROM library_items')['work_id']
+    version = source.stat()
+    directory_time = source.parent.stat().st_mtime_ns
+    create_archive(source, title='Two')
+    assert source.stat().st_size == version.st_size
+    os.utime(source, ns=(version.st_atime_ns, version.st_mtime_ns))
+    assert source.parent.stat().st_mtime_ns == directory_time
+    scans = []
+    scan = index.scan
+    def record(*args, **kwargs):
+        scans.append(kwargs['paths'])
+        return scan(*args, **kwargs)
+    monkeypatch.setattr(index, 'scan', record)
+    db.execute('UPDATE media_libraries SET next_scan_at=0')
+    monitor.tick()
+    assert scans == [['nested/book.cbz']]
+    item = db.fetchone('SELECT work_id,metadata_json FROM library_items')
+    assert item['work_id'] == work_id and json.loads(item['metadata_json'])['Title'] == 'Two'
+    create_archive(root / 'new/deeper/another.cbz', title='Another')
+    db.execute('UPDATE media_libraries SET next_scan_at=0')
+    monitor.tick()
+    assert scans[-1] is None
+    assert db.fetchone('SELECT COUNT(*) n FROM works')['n'] == 2
+    source.unlink()
+    db.execute('UPDATE media_libraries SET next_scan_at=0')
+    monitor.tick()
+    assert scans[-1] is None
+    assert db.fetchone('SELECT status FROM library_items WHERE work_id=?', (work_id,))['status'] == 'missing'
+    assert db.fetchone('SELECT COUNT(*) n FROM works')['n'] == 2
+    assert not db.fetchone('SELECT id FROM jobs')

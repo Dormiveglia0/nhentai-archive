@@ -140,7 +140,11 @@
 .folio-media-activity > header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; }
 .folio-media-activity > header > time { color: var(--folio-muted); font-size: 12px; }
 .folio-media-activity > header > div { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
-.folio-media-activity progress { display: block; width: 100%; height: 4px; margin-top: 14px; accent-color: var(--folio-red); }
+.folio-media-scan-progress { position: relative; height: 4px; margin-top: 14px; overflow: hidden; background: var(--folio-paper-deep); }
+.folio-media-scan-progress::before { content: ""; position: absolute; inset-block: 0; left: 0; width: 30%; background: var(--folio-red); will-change: transform; animation: folio-media-scan 1.6s linear infinite; }
+.folio-media-scan-progress.is-paused::before { animation-play-state: paused; }
+@keyframes folio-media-scan { from { transform: translateX(-100%); } to { transform: translateX(334%); } }
+@media (prefers-reduced-motion: reduce) { .folio-media-scan-progress::before { animation: none; transform: translateX(117%); } }
 .folio-media-activity-counts { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 14px 0 0; color: var(--folio-muted); font-size: 12px; }
 .folio-media-activity-counts b { color: var(--folio-ink); font-variant-numeric: tabular-nums; }
 .folio-media-activity-counts a { color: inherit; text-decoration-color: var(--folio-line-strong); text-underline-offset: 4px; }

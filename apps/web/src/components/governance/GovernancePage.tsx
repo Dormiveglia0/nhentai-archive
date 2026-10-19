@@ -64,19 +64,9 @@ function GovernanceWorkspace({ initialWorkId, blurCovers }: Props) {
         </FadeIn>
       ) : null}
 
-      {gov.loading ? <div className="folio-governance-loading" role="status">正在读取整理队列…</div> : null}
+      {gov.loading && !gov.queue ? <div className="folio-governance-loading" role="status">正在读取整理队列…</div> : null}
 
-      {!gov.loading && gov.queue && gov.queue.result.length === 0 ? (
-        <section className="folio-ruled-panel folio-governance-empty">
-          <FolioEmptyState
-            icon={PenLine}
-            title="暂无待编辑作品"
-            copy="导入作品后，可在这里编辑信息。"
-          />
-        </section>
-      ) : null}
-
-      {!gov.loading && gov.queue && gov.queue.result.length ? (
+      {gov.queue ? (
         <div className={gov.bulkMode ? "folio-governance-workspace is-bulk" : "folio-governance-workspace"}>
           <GovernanceQueueRail
             queue={gov.queue}
@@ -85,6 +75,9 @@ function GovernanceWorkspace({ initialWorkId, blurCovers }: Props) {
             bulkMode={gov.bulkMode}
             selectedIds={gov.selectedIds}
             onToggleSelected={gov.toggleSelected}
+            filters={gov.filters}
+            onChange={gov.changeQueue}
+            loading={gov.loading}
           />
 
           <section className="folio-governance-editor" aria-label={gov.bulkMode ? "批量编辑区" : "单部编辑区"}>

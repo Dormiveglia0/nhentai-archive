@@ -667,3 +667,9 @@
 .folio-governance-rename input { min-width: 0; width: 100%; padding: 10px 12px; background: transparent; border: 1px solid var(--folio-line-strong); color: var(--folio-ink); font: inherit; }
 .folio-governance-rename form > div { display: flex; gap: 8px; flex-wrap: wrap; }
 .folio-governance-rename small { display: block; margin-top: 10px; color: var(--folio-muted); line-height: 1.6; }
+.folio-governance-rename > .folio-select { margin-bottom: 12px; }
+.folio-governance-rename .folio-select-menu { inset-inline: 0; min-width: 0; max-height: 240px; overflow-y: auto; }
+.folio-governance-rename .folio-select-menu button { padding: 10px 12px; }
+.folio-governance-rename .folio-select-menu button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.folio-governance-rename-name { display: flex; min-width: 0; }
+.folio-governance-rename-name > span { display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--folio-line-strong); border-left: 0; color: var(--folio-muted); }

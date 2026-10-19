@@ -149,10 +149,21 @@
 }
 
 .folio-governance-queue-list {
-  max-height: calc(100vh - 414px);
+  max-height: calc(100dvh - 450px);
   overflow-y: auto;
   scrollbar-width: none;
 }
+
+.folio-governance-search { display: flex; min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--folio-line); }
+.folio-governance-search input { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); font: inherit; font-size: 12px; }
+.folio-governance-search button { flex: 0 0 40px; display: grid; place-items: center; border: 1px solid var(--folio-line); border-left: 0; background: transparent; color: var(--folio-ink); }
+.folio-governance-search input:focus-visible { outline: 1px solid var(--folio-red); outline-offset: -1px; }
+.folio-governance-pager { min-height: 54px; display: flex; align-items: center; justify-content: center; gap: 5px; border-top: 1px solid var(--folio-line); }
+.folio-governance-pager :is(button, input) { width: 28px; height: 32px; min-width: 0; display: grid; place-items: center; padding: 0; border: 1px solid var(--folio-line); background: transparent; color: var(--folio-ink); text-align: center; font: inherit; font-size: 12px; }
+.folio-governance-pager input { width: 32px; }
+.folio-governance-pager span { color: var(--folio-muted); font-size: 12px; white-space: nowrap; }
+.folio-governance-pager button:hover:not(:disabled), .folio-governance-search button:hover:not(:disabled) { background: var(--folio-red-soft); color: var(--folio-red); }
+.folio-governance-pager button:disabled { opacity: .3; cursor: not-allowed; }
 
 .folio-governance-queue-list::-webkit-scrollbar {
   display: none;
@@ -761,7 +772,11 @@
 
 .folio-governance-source {
   min-height: 390px;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
+
+.folio-governance-source::-webkit-scrollbar { display: none; }
 
 .folio-governance-source header {
   min-height: 78px;

@@ -51,7 +51,7 @@ export function GovernanceSourceRail({
             <div><dt><FileArchive size={14} />源文件</dt><dd>{sourceFile?.exists ? formatBytes(sourceFile.size_bytes) : "不可用"}</dd></div>
           </dl>
 
-          {aggregate.files.filter(file => file.kind === "source_cbz").map(file => <SourceRenameControl key={`${file.id}:${file.path}`} file={file} workId={aggregate.work.id} disabled={disabled} onRenamed={onReload} />)}
+          <SourceRenameControl key={aggregate.work.id} files={aggregate.files.filter(file => file.kind === "source_cbz")} workId={aggregate.work.id} disabled={disabled} onRenamed={onReload} />
 
           <section className="folio-governance-source-tags">
             <div><Tags size={15} /><strong>词典状态</strong></div>

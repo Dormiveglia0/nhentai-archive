@@ -1,10 +1,11 @@
-import { CheckCircle2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CheckCircle2, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import type { GovernanceQueue, GovernanceQueueItem } from "../../lib/api";
+import type { GovernanceQueue, GovernanceQueueFilter, GovernanceQueueItem } from "../../lib/api";
 import { SlidingIndicator, Stagger, StaggerItem } from "../../lib/motion";
 import { NumberTicker } from "../effects/NumberTicker";
 import { workTitle } from "../../lib/format";
+import { IconPager } from "../folio/ui/IconPager";
 
 type Props = {
   queue: GovernanceQueue;
@@ -13,30 +14,25 @@ type Props = {
   bulkMode: boolean;
   selectedIds: Set<number>;
   onToggleSelected: (id: number) => void;
+  filters: { q: string; status: GovernanceQueueFilter; page: number };
+  onChange: (next: Partial<Props["filters"]>) => void;
+  loading: boolean;
 };
 
-type QueueFilter = "review" | "metadata" | "dictionary" | "files" | "approved" | "all";
-
-const DICTIONARY_REASONS = new Set(["untagged", "dictionary_unmapped", "dictionary_review", "dictionary_conflict"]);
-const FILE_REASONS = new Set(["missing_source", "missing_comicinfo", "missing_cover"]);
-
-export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, selectedIds, onToggleSelected }: Props) {
-  const [filter, setFilter] = useState<QueueFilter>(() => (queue.summary.total ? "review" : "all"));
-  const filters: Array<{ id: QueueFilter; label: string; count: number }> = [
-    { id: "review", label: "待核对", count: queue.summary.total },
-    { id: "metadata", label: "元数据", count: queue.summary.missing_metadata },
-    { id: "dictionary", label: "词典", count: countMatching(queue, DICTIONARY_REASONS) },
-    { id: "files", label: "文件", count: countMatching(queue, FILE_REASONS) },
-    { id: "approved", label: "已核对", count: queue.summary.approved },
-    { id: "all", label: "全部", count: queue.result.length },
+export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, selectedIds, onToggleSelected, filters, onChange, loading }: Props) {
+  const [draft, setDraft] = useState(filters.q);
+  useEffect(() => setDraft(filters.q), [filters.q]);
+  const options: Array<{ id: GovernanceQueueFilter; label: string }> = [
+    { id: "review", label: "待核对" },
+    { id: "metadata", label: "元数据" },
+    { id: "dictionary", label: "词典" },
+    { id: "files", label: "文件" },
+    { id: "approved", label: "已核对" },
+    { id: "all", label: "全部" },
   ];
-  const visibleItems = useMemo(
-    () => queue.result.filter((item) => matchesFilter(item, filter)),
-    [filter, queue.result]
-  );
 
   return (
-    <aside className="folio-governance-queue">
+    <aside className="folio-governance-queue" aria-busy={loading}>
       <div className="folio-governance-queue-head">
         <div>
           <h2>待处理作品</h2>
@@ -45,24 +41,29 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
           <NumberTicker value={queue.summary.total} />
         </strong>
       </div>
+      <form className="folio-governance-search" role="search" onSubmit={event => { event.preventDefault(); onChange({ q: draft.trim() }); }}>
+        <input type="search" aria-label="搜索整理作品" placeholder="作品、作者或文件名" value={draft} onChange={event => setDraft(event.target.value)} maxLength={240} />
+        <button type="submit" aria-label="搜索" disabled={loading}><Search size={17} /></button>
+      </form>
       <div className="folio-governance-queue-filters" role="group" aria-label="按问题类型筛选整理队列">
-        {filters.map((item) => (
+        {options.map((item) => (
           <button
             key={item.id}
             type="button"
-            className={filter === item.id ? "is-active" : ""}
-            aria-pressed={filter === item.id}
-            onClick={() => setFilter(item.id)}
+            className={filters.status === item.id ? "is-active" : ""}
+            aria-pressed={filters.status === item.id}
+            disabled={loading}
+            onClick={() => onChange({ status: item.id })}
           >
-            {filter === item.id ? <SlidingIndicator className="folio-governance-filter-active" layoutId="governance-queue-filter" /> : null}
+            {filters.status === item.id ? <SlidingIndicator className="folio-governance-filter-active" layoutId="governance-queue-filter" /> : null}
             <span>{item.label}</span>
-            <strong>{item.count}</strong>
+            <strong>{queue.counts[item.id]}</strong>
           </button>
         ))}
       </div>
-      {visibleItems.length ? (
-        <Stagger key={`${filter}-${visibleItems.map((item) => item.work.id).join("-")}`} className="folio-governance-queue-list">
-          {visibleItems.map((item) => (
+      {queue.result.length ? (
+        <Stagger key={`${filters.status}-${queue.page}-${queue.result.map((item) => item.work.id).join("-")}`} className="folio-governance-queue-list">
+          {queue.result.map((item) => (
             <StaggerItem key={item.work.id}>
               <QueueCard
                 item={item}
@@ -78,10 +79,11 @@ export function GovernanceQueueRail({ queue, selectedId, onSelect, bulkMode, sel
       ) : (
         <div className="folio-governance-queue-clear">
           <CheckCircle2 size={20} />
-          <strong>这个分类已经处理完</strong>
-          <button type="button" onClick={() => setFilter("all")}>查看全部作品</button>
+          <strong>{loading ? "正在读取作品…" : filters.q ? "没有匹配的作品" : "这个分类已经处理完"}</strong>
+          <button type="button" disabled={loading} onClick={() => { setDraft(""); onChange({ status: "all", q: "" }); }}>查看全部作品</button>
         </div>
       )}
+      <IconPager className="folio-governance-pager" page={queue.page} totalPages={Math.max(1, Math.ceil(queue.total / queue.per_page))} loading={loading} onPage={page => onChange({ page })} />
     </aside>
   );
 }
@@ -134,17 +136,4 @@ function QueueCard({
       </button>
     </article>
   );
-}
-
-function countMatching(queue: GovernanceQueue, codes: Set<string>) {
-  return queue.result.filter((item) => item.reasons.some((reason) => codes.has(reason.code))).length;
-}
-
-function matchesFilter(item: GovernanceQueueItem, filter: QueueFilter) {
-  if (filter === "all") return true;
-  if (filter === "review") return item.review.state !== "approved";
-  if (filter === "approved") return item.review.state === "approved";
-  if (filter === "metadata") return item.reasons.some((reason) => reason.code === "missing_metadata");
-  const codes = filter === "dictionary" ? DICTIONARY_REASONS : FILE_REASONS;
-  return item.reasons.some((reason) => codes.has(reason.code));
 }

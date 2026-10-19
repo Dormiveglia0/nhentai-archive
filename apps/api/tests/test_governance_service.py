@@ -39,6 +39,34 @@ def _setup(tmp_path):
     return db, archive, service
 
 
+def test_queue_search_and_pagination_keep_counts_across_all_matching_works(tmp_path):
+    db, archive, service = _setup(tmp_path)
+    ids = [_import_work(db, archive, tmp_path, title, gallery_id=None) for title in ('Alpha', 'Beta', 'Gamma')]
+    page = service.queue(per_page=2)
+    assert len(page['result']) == 2 and page['total'] == page['counts']['all'] == 3
+    following = service.queue(page=2, per_page=2)
+    assert len(following['result']) == 1 and following['summary'] == page['summary']
+    assert service.queue(per_page=1000)['per_page'] == 100
+    assert {row['work']['id'] for row in page['result'] + following['result']} == set(ids)
+    assert service.queue(q=' alpha ')['result'][0]['work']['id'] == ids[0]
+    filename = Path(service.libraries.files(ids[1])[0]['path']).name
+    assert [row['work']['id'] for row in service.queue(q=filename)['result']] == [ids[1]]
+    db.execute("INSERT INTO work_metadata(work_id,field,value,source) VALUES (?,'artist','中文作者','manual')", (ids[2],))
+    assert service.queue(q='中文作者')['result'][0]['work']['id'] == ids[2]
+    assert service.queue(q='100%_missing')['total'] == 0
+    assert service.queue(status='approved')['total'] == 0
+    assert service.queue(status='dictionary')['counts']['dictionary'] == 3
+
+
+def test_queue_api_rejects_unbounded_pages_and_unknown_status(tmp_path, monkeypatch):
+    _db, _archive, service = _setup(tmp_path)
+    monkeypatch.setattr(main.services, 'governance', service)
+    client = TestClient(main.app)
+    assert client.get('/api/governance/queue?per_page=2').json()['per_page'] == 2
+    assert client.get('/api/governance/queue?per_page=101').status_code == 422
+    assert client.get('/api/governance/queue?status=unknown').status_code == 422
+
+
 def _import_work(
     db: Database,
     archive: ArchiveService,

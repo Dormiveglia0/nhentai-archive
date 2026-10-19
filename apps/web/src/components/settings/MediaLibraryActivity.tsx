@@ -43,7 +43,7 @@ export function MediaLibraryActivity({ library, onChange }: { library: MediaLibr
         <button type="button" className="folio-settings-mini-action" disabled={busy || library.active_scan_status === "cancelling"} onClick={() => void control("cancel")}>取消扫描</button>
       </> : null}<button type="button" className="folio-settings-mini-action" aria-expanded={open} onClick={() => setOpen(value => !value)}>操作记录</button></div>
     </header>
-    {active ? <progress aria-label="目录扫描进行中" /> : null}
+    {active ? <div className={`folio-media-scan-progress${library.active_scan_status === 'paused' ? ' is-paused' : ''}`} role="progressbar" aria-label="目录扫描进行中" aria-valuetext={library.active_scan_status === 'paused' ? '扫描已暂停' : '正在检查文件'} /> : null}
     {library.scan_run_id ? <p className="folio-media-activity-counts"><span>已检查 <b>{c.files ?? 0}</b></span><span>导入 <b>{c.indexed ?? 0}</b></span><span>未变化 <b>{c.unchanged ?? 0}</b></span><span>待稳定 <b>{c.pending ?? 0}</b></span><span>失败 <b>{c.errors ?? 0}</b></span></p> : null}
     {active && library.scan_progress.path ? <p className="folio-media-current-file" title={library.scan_progress.path}>{library.scan_progress.path}</p> : null}
     <p className="folio-media-activity-counts"><strong>自动刮削{!library.enabled || !library.config.auto_scrape ? " · 未启用" : ""}</strong>

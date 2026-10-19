@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Query
 
 from app.api.schemas import (
     GovernanceApplyRequest,
@@ -25,8 +27,9 @@ def rename_source(work_id: int, payload: SourceRenameRequest):
 
 
 @router.get("/governance/queue")
-def queue():
-    return services.governance.queue()
+def queue(q: str = Query("", max_length=240), status: Literal["all", "review", "metadata", "dictionary", "files", "approved"] = "all",
+          page: int = Query(1, ge=1), per_page: int = Query(30, ge=1, le=100)):
+    return services.governance.queue(q, status, page, per_page)
 
 
 @router.get("/works/{work_id}/governance")

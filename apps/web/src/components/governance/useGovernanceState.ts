@@ -7,13 +7,21 @@ import {
   GovernanceBulkPreview,
   GovernanceBulkResult,
   GovernanceQueue,
+  GovernanceQueueFilter,
   GovernanceTag,
   GovernanceTranslateSuggestion,
 } from "../../lib/api";
-import { navigate } from "../../lib/navigation";
 import { buildInitialEdits, type FieldEdit, normalize } from "./governanceHelpers";
 
+function readQueueFilters(): { q: string; status: GovernanceQueueFilter; page: number } {
+  const params = new URLSearchParams(window.location.hash.split("?")[1]);
+  const status = params.get("status") as GovernanceQueueFilter;
+  return { q: params.get("q") ?? "", status: ["review", "metadata", "dictionary", "files", "approved", "all"].includes(status) ? status : "review",
+    page: Math.max(1, Number(params.get("page")) || 1) };
+}
+
 export function useGovernanceState(initialWorkId?: number) {
+  const [filters, setFilters] = useState(readQueueFilters);
   const [queue, setQueue] = useState<GovernanceQueue | null>(null);
   const [aggregate, setAggregate] = useState<GovernanceAggregate | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(initialWorkId ?? null);
@@ -42,34 +50,39 @@ export function useGovernanceState(initialWorkId?: number) {
   const [bulkBusy, setBulkBusy] = useState(false);
 
   useEffect(() => {
-    setSelectedId(initialWorkId ?? null);
+    if (initialWorkId) setSelectedId(initialWorkId);
   }, [initialWorkId]);
+
+  useEffect(() => {
+    const sync = () => {
+      if (/^#governance(?:\/\d+)?(?:\?|$)/.test(window.location.hash)) setFilters(readQueueFilters());
+    };
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setError(null);
     api
-      .governanceQueue()
+      .governanceQueue(filters.q, filters.status, filters.page)
       .then((payload) => {
         if (!alive) return;
         setQueue(payload);
-        if (!selectedId && payload.result.length) {
-          setSelectedId(payload.result[0].work.id);
-        }
+        setSelectedId(current => /^#governance\/\d+/.test(window.location.hash) ? current : payload.result[0]?.work.id ?? null);
       })
       .catch((err: Error) => alive && setError(err.message))
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
-    // Initial queue load only; selection is seeded inside.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters.q, filters.status, filters.page]);
 
   useEffect(() => {
     if (!selectedId) {
       setAggregate(null);
+      setAggregateLoading(false);
       return;
     }
     let alive = true;
@@ -114,7 +127,7 @@ export function useGovernanceState(initialWorkId?: number) {
     setAggregateLoading(Boolean(selectedId));
     try {
       const [queuePayload, aggregatePayload] = await Promise.all([
-        api.governanceQueue(),
+        api.governanceQueue(filters.q, filters.status, filters.page),
         selectedId ? api.workGovernance(selectedId) : Promise.resolve(null),
       ]);
       setQueue(queuePayload);
@@ -148,7 +161,7 @@ export function useGovernanceState(initialWorkId?: number) {
         write_back: canWriteBack,
       });
       setAggregate(result.governance);
-      setQueue(await api.governanceQueue());
+      setQueue(await api.governanceQueue(filters.q, filters.status, filters.page));
       if (result.write_back?.error) {
         setNotice(`已保存 ${result.saved} 个字段，但回写源文件失败：${result.write_back.error}`);
       } else if (result.write_back?.written) {
@@ -234,7 +247,7 @@ export function useGovernanceState(initialWorkId?: number) {
       }
       const result = await api.applyWorkGovernance(aggregate.work.id, { metadata: [], dictionary_apply: [payload] });
       setAggregate(result.governance);
-      setQueue(await api.governanceQueue());
+      setQueue(await api.governanceQueue(filters.q, filters.status, filters.page));
       setNotice(`已建立词典映射：${original} → ${cleanName}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -252,7 +265,7 @@ export function useGovernanceState(initialWorkId?: number) {
       await api.dictionaryReview(tag.dictionary_id);
       const [nextAggregate, nextQueue] = await Promise.all([
         api.workGovernance(aggregate.work.id),
-        api.governanceQueue(),
+        api.governanceQueue(filters.q, filters.status, filters.page),
       ]);
       setAggregate(nextAggregate);
       setQueue(nextQueue);
@@ -276,7 +289,7 @@ export function useGovernanceState(initialWorkId?: number) {
     try {
       const result = await api.reviewWorkGovernance(aggregate.work.id, action, reviewNote);
       setAggregate(result.governance);
-      setQueue(await api.governanceQueue());
+      setQueue(await api.governanceQueue(filters.q, filters.status, filters.page));
       setReviewNote("");
       setNotice(action === "approve" ? "已记录本版本的人工核对；字段、词典或文件变化后会自动失效。" : "已撤销人工核对，作品重新进入待核对队列。");
     } catch (err) {
@@ -288,7 +301,18 @@ export function useGovernanceState(initialWorkId?: number) {
 
   const selectWork = (id: number) => {
     setSelectedId(id);
-    navigate({ name: "governance", workId: id });
+    const params = new URLSearchParams({ q: filters.q, status: filters.status, page: String(filters.page) });
+    window.location.hash = `governance/${id}?${params}`;
+  };
+
+  const changeQueue = (next: Partial<typeof filters>) => {
+    const value = { ...filters, page: 1, ...next };
+    if (value.q === filters.q && value.status === filters.status && value.page === filters.page) return;
+    setFilters(value);
+    setSelectedId(null);
+    setAggregate(null);
+    const params = new URLSearchParams({ q: value.q, status: value.status, page: String(value.page) });
+    window.location.hash = `governance?${params}`;
   };
 
   const toggleBulkMode = () => {
@@ -375,7 +399,7 @@ export function useGovernanceState(initialWorkId?: number) {
       });
       setBulkResult(result);
       setBulkPreview(null);
-      setQueue(await api.governanceQueue());
+      setQueue(await api.governanceQueue(filters.q, filters.status, filters.page));
       const { filled_fields, written, errors, dictionary_terms_confirmed } = result.summary;
       setNotice(
         `批量完成：补全 ${filled_fields} 个字段，确认 ${dictionary_terms_confirmed} 个词条，回写 ${written} 个文件${errors ? `，${errors} 个失败` : ""}。`
@@ -389,6 +413,8 @@ export function useGovernanceState(initialWorkId?: number) {
 
   return {
     queue,
+    filters,
+    changeQueue,
     aggregate,
     selectedId,
     loading,

@@ -88,7 +88,12 @@ class GovernanceService:
         self.cache = cache
         self.metadata_refresh = metadata_refresh
 
-    def queue(self) -> dict[str, Any]:
+    def queue(self, q: str = "", status: str = "all", page: int = 1, per_page: int = 30) -> dict[str, Any]:
+        if status not in {"all", "review", "approved", *REASON_GROUPS}:
+            raise ValueError("未知整理队列分类")
+        page, per_page = max(1, page), max(1, min(100, per_page))
+        query = q.strip().casefold()
+        pattern = "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
         rows = self.db.fetchall(
             """
             SELECT
@@ -96,11 +101,19 @@ class GovernanceService:
               rg.payload_json AS remote_payload_json
             FROM works w
             LEFT JOIN remote_galleries rg ON rg.gallery_id = COALESCE(w.metadata_gallery_id, w.remote_gallery_id)
+            WHERE ? = '' OR lower(COALESCE(w.title, '') || ' ' || COALESCE(w.title_japanese, '') || ' ' ||
+              COALESCE(w.pretty_title, '') || ' ' || COALESCE(w.remote_gallery_id, '')) LIKE ? ESCAPE '\\'
+              OR EXISTS (SELECT 1 FROM work_metadata m WHERE m.work_id=w.id AND lower(m.value) LIKE ? ESCAPE '\\')
+              OR EXISTS (SELECT 1 FROM work_files f WHERE f.work_id=w.id AND lower(f.path) LIKE ? ESCAPE '\\')
+              OR EXISTS (SELECT 1 FROM work_tags t LEFT JOIN local_tag_dictionary d ON d.id=t.dictionary_id
+                WHERE t.work_id=w.id AND lower(COALESCE(t.remote_name, '') || ' ' || COALESCE(t.remote_slug, '') || ' ' ||
+                  COALESCE(d.zh_name, '')) LIKE ? ESCAPE '\\')
             ORDER BY w.updated_at DESC, w.id DESC
-            """
+            """, (query, pattern, pattern, pattern, pattern)
         )
         review_context = self._queue_review_context()
         items = []
+        counts = dict.fromkeys(("all", "review", "approved", *REASON_GROUPS), 0)
         summary = {
             "total": 0,
             "unreviewed": 0,
@@ -138,6 +151,13 @@ class GovernanceService:
             for reason in reasons:
                 if reason["code"] in summary:
                     summary[reason["code"]] += 1
+            codes = {reason["code"] for reason in reasons}
+            matches = {"all", "approved" if review["state"] == "approved" else "review"}
+            matches.update(group for group, reasons in REASON_GROUPS.items() if codes & reasons)
+            for group in matches:
+                counts[group] += 1
+            if status not in matches:
+                continue
             items.append(
                 {
                     "work": self._work_summary(row),
@@ -147,7 +167,10 @@ class GovernanceService:
                     "updated_at": row.get("updated_at"),
                 }
             )
-        return {"result": items, "summary": summary}
+        total = len(items)
+        page = min(page, max(1, (total + per_page - 1) // per_page))
+        return {"result": items[(page - 1) * per_page:page * per_page], "summary": summary,
+                "counts": counts, "total": total, "page": page, "per_page": per_page}
 
     def work_governance(self, work_id: int) -> dict[str, Any]:
         work = self._work_row(work_id)
