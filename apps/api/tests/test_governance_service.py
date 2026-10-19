@@ -280,6 +280,29 @@ def test_dictionary_review_tags_surface_pending_and_conflict_summary(tmp_path):
     assert aggregate["tags"]["summary"]["conflicts"] == 1
 
 
+def test_duplicate_tag_sources_do_not_repeat_fields_or_create_unmapped_warnings(tmp_path):
+    from app.services.dictionary_service import DictionaryService
+
+    db, archive, _ = _setup(tmp_path)
+    work_id = _import_work(db, archive, tmp_path)
+    dictionary = DictionaryService(db, None)
+    dictionary.cache_remote_tag({"id": 40, "type": "tag", "name": "winter", "slug": "winter"})
+    dictionary.apply({"original_text": "winter", "zh_name": "冬季", "tag_type": "tag", "remote_tag_id": 40})
+    dictionary.link_work_tags(work_id, [{"id": 40, "type": "tag", "name": "winter", "slug": "winter"}])
+    for name in ("winter", "冬季"):
+        db.execute("INSERT INTO work_tags(work_id,tag_type,remote_name,remote_slug,source) VALUES (?,'tag',?,?,'comicinfo')", (work_id, name, name))
+    service = GovernanceService(db, dictionary)
+    before = db.fetchall("SELECT * FROM work_tags WHERE work_id=? ORDER BY id", (work_id,))
+
+    aggregate = service.work_governance(work_id)
+    assert [tag["display"] for group in aggregate["tags"]["groups"] for tag in group["tags"]] == ["冬季"]
+    assert aggregate["tags"]["summary"]["unmapped"] == 0
+    assert next(field for field in aggregate["metadata"]["fields"] if field["field"] == "tags")["current_value"] == "冬季"
+    assert "dictionary_unmapped" not in {reason["code"] for reason in aggregate["automatic_issues"]}
+    assert "dictionary_unmapped" not in {reason["code"] for reason in service.queue()["result"][0]["reasons"]}
+    assert db.fetchall("SELECT * FROM work_tags WHERE work_id=? ORDER BY id", (work_id,)) == before
+
+
 def test_dictionary_check_preserves_proper_names_but_flags_content_tags(tmp_path):
     db, archive, service = _setup(tmp_path)
     work_id = _import_work(db, archive, tmp_path, comic_info="<ComicInfo><Title>Rain Classroom</Title></ComicInfo>")

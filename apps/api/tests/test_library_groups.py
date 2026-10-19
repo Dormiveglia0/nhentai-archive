@@ -43,8 +43,8 @@ def test_group_tags_count_works_deduplicate_sources_and_respect_filters(library,
         library.groups.create('Chosen', [a, b])
     dictionary = DictionaryService(library.db, None)
     term = dictionary.apply({'original_text': 'shared', 'tag_type': 'tag', 'zh_name': '共同标签'})['dictionary']['id']
-    for work_id, name, dictionary_id in [(a, 'shared', term), (a, 'shared', None), (a, 'alias', term),
-                                           (b, 'shared', term), (b, 'second', None), (outside, 'outside', None)]:
+    for work_id, name, dictionary_id in [(a, 'shared', term), (a, 'shared', None), (a, 'alias', term), (a, '共同标签', None),
+                                           (b, 'shared', term), (b, '共同标签', None), (b, 'second', None), (outside, 'outside', None)]:
         library.db.execute("INSERT INTO work_tags(work_id,tag_type,remote_name,dictionary_id) VALUES (?,'tag',?,?)", (work_id, name, dictionary_id))
     library.set_favorite(a, True)
     library.set_favorite(b, True)

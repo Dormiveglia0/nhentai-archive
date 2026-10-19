@@ -134,6 +134,29 @@ def test_local_tag_keys_keep_artist_group_scope_and_support_and_filters(tmp_path
     assert library.work(a)["tags"][0]["key"] == "local:artist:new name"
 
 
+def test_local_and_remote_tag_labels_render_once_without_changing_source_rows(tmp_path):
+    from app.services.dictionary_service import DictionaryService
+
+    _, db, archive = _setup(tmp_path)
+    library = LibraryService(db)
+    work_id = _import_work(archive, tmp_path, "overlap", "Winter", "local", None)
+    dictionary = DictionaryService(db, None)
+    dictionary.cache_remote_tag({"id": 40, "type": "tag", "name": "winter", "slug": "winter"})
+    dictionary.apply({"original_text": "winter", "zh_name": "冬季", "tag_type": "tag", "remote_tag_id": 40})
+    dictionary.link_work_tags(work_id, [{"id": 40, "type": "tag", "name": "winter", "slug": "winter"}])
+    for kind, name in [("tag", "Winter"), ("tag", "冬季"), ("group", "冬季")]:
+        db.execute("INSERT INTO work_tags(work_id,tag_type,remote_name,remote_slug,source) VALUES (?,?,?,?, 'comicinfo')",
+                   (work_id, kind, name, name.casefold()))
+    before = db.fetchall("SELECT * FROM work_tags WHERE work_id=? ORDER BY id", (work_id,))
+
+    work = library.work(work_id)
+    assert work["tag_count"] == len(work["tags"]) == 2
+    tag = next(tag for tag in work["tags"] if tag["type"] == "tag")
+    assert (tag["display"], tag["id"], tag["key"]) == ("冬季", 40, "local:tag:winter")
+    assert library.search(tag_keys=[tag["key"]])["result"][0]["tags"] == work["tags"]
+    assert db.fetchall("SELECT * FROM work_tags WHERE work_id=? ORDER BY id", (work_id,)) == before
+
+
 def test_summary_treats_translated_as_a_marker_not_a_language(tmp_path):
     settings, db, archive = _setup(tmp_path)
     library = LibraryService(db)

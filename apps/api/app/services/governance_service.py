@@ -16,9 +16,10 @@ from app.services.file_identity import sqlite_file_id
 from app.database import Database
 from app.config import Settings
 from app.services import comicinfo
-from app.services.dictionary_service import DEFAULT_IGNORED_REMOTE_TYPES, DEFAULT_IGNORED_REMOTE_TYPE_SQL
+from app.services.dictionary_service import DEFAULT_IGNORED_REMOTE_TYPES
 from app.services.media_library_service import MediaLibraryService
 from app.services.archive_manifest import open_archive
+from app.services.work_tag_display import visible_work_tags
 
 
 METADATA_FIELDS = {
@@ -89,35 +90,10 @@ class GovernanceService:
 
     def queue(self) -> dict[str, Any]:
         rows = self.db.fetchall(
-            f"""
+            """
             SELECT
               w.*,
-              rg.payload_json AS remote_payload_json,
-              (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata,
-              (SELECT wm.value FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'language') AS language_metadata,
-              (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'title') AS title_metadata_count,
-              (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id AND wm.field = 'language') AS language_metadata_count,
-              (SELECT COUNT(*) FROM work_tags wt WHERE wt.work_id = w.id) AS tag_count,
-              (SELECT COUNT(*)
-                 FROM work_tags wt
-                 LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
-                WHERE wt.work_id = w.id
-                  AND wt.tag_type = 'language'
-                  AND TRIM(COALESCE(d.zh_name, wt.remote_name, wt.remote_slug, '')) <> '') AS language_tag_count,
-              (SELECT COUNT(*)
-                 FROM work_tags wt
-                 JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
-                WHERE wt.work_id = w.id AND d.status = 'review') AS review_count,
-              (SELECT COUNT(*)
-                 FROM work_tags wt
-                 JOIN local_tag_dictionary d ON d.id = wt.dictionary_id
-                WHERE wt.work_id = w.id AND d.status = 'conflict') AS conflict_count,
-              (SELECT COUNT(*)
-                 FROM work_tags wt
-                WHERE wt.work_id = w.id
-                  AND wt.dictionary_id IS NULL
-                  AND COALESCE(wt.tag_type, 'tag') NOT IN ({DEFAULT_IGNORED_REMOTE_TYPE_SQL})) AS unmapped_count,
-              (SELECT COUNT(*) FROM work_metadata wm WHERE wm.work_id = w.id) AS metadata_count
+              rg.payload_json AS remote_payload_json
             FROM works w
             LEFT JOIN remote_galleries rg ON rg.gallery_id = COALESCE(w.metadata_gallery_id, w.remote_gallery_id)
             ORDER BY w.updated_at DESC, w.id DESC
@@ -143,9 +119,9 @@ class GovernanceService:
         for row in rows:
             work_id = int(row["id"])
             files = review_context["files"].get(work_id, [])
-            source = next((file for file in files if file["kind"] == "source_cbz"), None)
-            row.update(_source_file=source, source_path=source["path"] if source else None,
-                       size_bytes=sum(file["size_bytes"] for file in files if file["kind"] == "source_cbz"))
+            row["size_bytes"] = sum(file["size_bytes"] for file in files if file["kind"] == "source_cbz")
+            row.update(self._queue_row_for_work(row, files, review_context["tags"].get(work_id, []),
+                {field["field"]: field for field in review_context["metadata"].get(work_id, [])}))
             reasons = self._queue_reasons(row)
             fingerprint = self._review_fingerprint(
                 row,
@@ -1133,7 +1109,7 @@ class GovernanceService:
         groups: dict[str, dict[str, Any]] = {}
         tag_summary = {"confirmed": 0, "preserved": 0, "unmapped": 0, "review": 0, "pending": 0, "conflicts": 0}
         dictionary_summary = {"matched": 0, "preserved": 0, "unmapped": 0, "review": 0, "pending": 0, "conflicts": 0}
-        for row in rows:
+        for row in visible_work_tags(rows):
             status = row.get("dictionary_status")
             state = "confirmed"
             default_preserved = not row.get("dictionary_id") and row.get("tag_type") in DEFAULT_IGNORED_REMOTE_TYPES
@@ -1181,7 +1157,7 @@ class GovernanceService:
                     "type": row["tag_type"] or "tag",
                     "name": row["remote_name"],
                     "slug": row["remote_slug"],
-                    "display": row["zh_name"] or row["remote_name"] or row["remote_slug"] or str(row["remote_tag_id"]),
+                    "display": row["display"],
                     "dictionary_status": status,
                     "state": state,
                 }
@@ -1190,8 +1166,8 @@ class GovernanceService:
 
     def _joined_tag_names(self, tag_rows: list[dict[str, Any]], tag_type: str) -> str | None:
         values = [
-            self._stringify(row.get("zh_name") or row.get("remote_name") or row.get("remote_slug"))
-            for row in tag_rows
+            self._stringify(row["display"])
+            for row in visible_work_tags(tag_rows)
             if row.get("tag_type") == tag_type
         ]
         return " / ".join(value for value in values if value) or None
@@ -1219,6 +1195,7 @@ class GovernanceService:
         tag_rows: list[dict[str, Any]],
         saved: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        tag_rows = visible_work_tags(tag_rows)
         source_file = next((row for row in files if row["kind"] == "source_cbz"), None)
         review_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "review")
         conflict_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "conflict")

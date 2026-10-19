@@ -6,6 +6,7 @@ import re
 from contextlib import nullcontext
 
 from app.services.dictionary_service import normalize_key
+from app.services.work_tag_display import visible_work_tags
 
 
 class LibraryGroupService:
@@ -110,21 +111,19 @@ class LibraryGroupService:
         membership = {work_id: bucket['key'] for bucket in buckets if bucket['group'] for work_id in bucket['ids']}
         if not membership:
             return {}
-        rows = self.db.fetchall('''SELECT wt.work_id,wt.tag_key,wt.remote_name,wt.remote_slug,
+        rows = self.db.fetchall('''SELECT wt.work_id,wt.tag_key,wt.tag_type,wt.remote_tag_id,wt.remote_name,wt.remote_slug,
                 d.id AS dictionary_id,d.zh_name
             FROM work_tags wt LEFT JOIN local_tag_dictionary d ON d.id=wt.dictionary_id AND d.ignored=0
             WHERE wt.tag_type='tag' AND wt.work_id IN (SELECT value FROM json_each(?))
             ORDER BY wt.remote_tag_id IS NULL,wt.id''', (json.dumps(list(membership)),))
         identities = {row['tag_key']: f"dictionary:{row['dictionary_id']}" for row in rows if row['dictionary_id']}
-        translations = {f"dictionary:{row['dictionary_id']}": row['zh_name'] for row in rows if row['dictionary_id'] and row['zh_name']}
-        result, seen = {}, set()
-        for row in rows:
+        result = {}
+        for row in visible_work_tags(rows):
             key = identities.get(row['tag_key'], row['tag_key'])
-            if not key or (row['work_id'], key) in seen:
+            if not key:
                 continue
-            seen.add((row['work_id'], key))
             tags = result.setdefault(membership[row['work_id']], {})
-            tag = tags.setdefault(key, {'key': key, 'display': translations.get(key) or row['remote_name'] or row['remote_slug'] or key, 'count': 0})
+            tag = tags.setdefault(normalize_key(row['display']), {'key': key, 'display': row['display'], 'count': 0})
             tag['count'] += 1
         return {key: sorted(tags.values(), key=lambda tag: (-tag['count'], normalize_key(tag['display']), tag['key'])) for key, tags in result.items()}
 

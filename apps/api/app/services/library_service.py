@@ -5,6 +5,7 @@ from typing import Any
 
 from app.database import Database
 from app.services.library_group_service import LibraryGroupService
+from app.services.work_tag_display import visible_work_tags
 import json
 
 
@@ -805,8 +806,8 @@ class LibraryService:
             f"""
             SELECT
               wt.work_id, wt.remote_tag_id, wt.tag_type, wt.remote_name, wt.remote_slug,
-              wt.tag_key,
-              d.zh_name AS display_zh
+              wt.tag_key, wt.dictionary_id,
+              d.zh_name
             FROM work_tags wt
             LEFT JOIN local_tag_dictionary d ON d.id = wt.dictionary_id AND d.ignored = 0
             WHERE wt.work_id IN ({placeholders})
@@ -815,12 +816,7 @@ class LibraryService:
             work_ids,
         )
         grouped: dict[int, list[dict[str, Any]]] = {work_id: [] for work_id in work_ids}
-        seen = set()
-        for tag in sorted(tag_rows, key=lambda tag: tag["remote_tag_id"] is None):
-            identity = (tag["work_id"], tag["tag_key"])
-            if identity in seen:
-                continue
-            seen.add(identity)
+        for tag in visible_work_tags(tag_rows):
             work_id = int(tag["work_id"])
             grouped.setdefault(work_id, []).append(
                 {
@@ -829,7 +825,7 @@ class LibraryService:
                     "type": tag["tag_type"],
                     "name": tag["remote_name"],
                     "slug": tag["remote_slug"],
-                    "display": tag["display_zh"] or tag["remote_name"] or tag["remote_slug"] or str(tag["remote_tag_id"]),
+                    "display": tag["display"],
                 }
             )
         type_rank = {kind: index for index, kind in enumerate(CARD_TAG_TYPES)}
@@ -837,3 +833,4 @@ class LibraryService:
             tags = grouped.get(row["id"], [])
             tags.sort(key=lambda tag: type_rank.get(tag.get("type") or "", len(type_rank)))
             row["tags"] = tags
+            row["tag_count"] = len(tags)

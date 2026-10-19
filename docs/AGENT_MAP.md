@@ -39,6 +39,7 @@
 
 ## 共用实现
 
+- `apps/api/app/services/work_tag_display.py`：作品标签按作品、类别和归一后的显示名去重，优先保留远端链接及需处理的词典状态。作品列表/详情/阅读、整理字段与检查计数、分组标签共享；来源记录和核对指纹仍保留完整数据。
 - `folio/config.ts`：8个主导航、设置章节与图标。
 - `folio/shell/FolioChrome.tsx`：8项顶部导航、手机菜单、滚动恢复、进度；`ArchiveShell.tsx` 接入正式页面，阅读器绕过 chrome。
 - `folio/shell/PageNavigation.tsx`：NH 原标志与导航线稿图标。`public/icon.svg` 只负责网页 favicon。
