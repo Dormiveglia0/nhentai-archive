@@ -76,3 +76,11 @@ def test_cover_matching_caps_decode_pixels(tmp_path, monkeypatch):
     monkeypatch.setattr('app.services.cover_similarity_service.MAX_IMAGE_PIXELS', 100)
     assert matcher.compare(str(local), {'thumbnail': '/cover.jpg'})['status'] == 'unavailable'
     assert client.calls == 0
+
+
+def test_large_jpeg_fingerprint_uses_bounded_decoder_scaling(tmp_path, monkeypatch):
+    matcher, local, _client = service(tmp_path, cover_image())
+    cover_image().resize((2400, 3600)).save(local, 'JPEG')
+    monkeypatch.setattr('app.services.cover_similarity_service.MAX_IMAGE_PIXELS', 3_000_000)
+    result = matcher.compare(str(local), {'thumbnail': '/cover.jpg'})
+    assert result['status'] == 'compared' and result['similar']

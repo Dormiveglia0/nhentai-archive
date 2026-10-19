@@ -97,3 +97,12 @@ def test_random_page_reads_one_versioned_page_without_copying_archive(tmp_path):
     service = ImageSearchService(Archive(), tmp_path)
     body, page = service.sample({'work': {'id': 1, 'page_count': 7}, 'file': {'id': 7}}, 'page', exclude=(2, 3, 4, 5))
     assert page == 6 and body.startswith(b'\xff\xd8')
+
+
+def test_large_jpeg_search_scales_at_decode_before_pixel_limit(monkeypatch):
+    body = io.BytesIO()
+    cover_image().resize((2400, 3600)).save(body, 'JPEG')
+    monkeypatch.setattr('app.services.image_search_service.MAX_IMAGE_PIXELS', 3_000_000)
+    prepared = prepare_image(body.getvalue())
+    with Image.open(io.BytesIO(prepared)) as image:
+        assert max(image.size) <= 1200

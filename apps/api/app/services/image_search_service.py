@@ -30,6 +30,7 @@ def prepare_image(body):
     except Image.DecompressionBombError as exc:
         raise ValueError('图片像素超过3000万，无法搜图') from exc
     with original:
+        original.draft('RGB', (1200, 1200))
         if original.width * original.height > MAX_IMAGE_PIXELS:
             raise ValueError('图片像素超过3000万，无法搜图')
         image = ImageOps.exif_transpose(original).convert('RGB')

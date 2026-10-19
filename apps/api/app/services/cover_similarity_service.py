@@ -18,6 +18,7 @@ MIN_COVER_SCORE = 92
 
 def fingerprint(stream):
     with Image.open(stream) as original:
+        original.draft('RGB', (512, 768))
         if original.width * original.height > MAX_IMAGE_PIXELS:
             raise ValueError('封面像素超过限制')
         image = ImageOps.exif_transpose(original).convert('RGB')
