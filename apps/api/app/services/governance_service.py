@@ -1109,7 +1109,8 @@ class GovernanceService:
         groups: dict[str, dict[str, Any]] = {}
         tag_summary = {"confirmed": 0, "preserved": 0, "unmapped": 0, "review": 0, "pending": 0, "conflicts": 0}
         dictionary_summary = {"matched": 0, "preserved": 0, "unmapped": 0, "review": 0, "pending": 0, "conflicts": 0}
-        for row in visible_work_tags(rows):
+        visible = visible_work_tags(rows)
+        for row in visible:
             status = row.get("dictionary_status")
             state = "confirmed"
             default_preserved = not row.get("dictionary_id") and row.get("tag_type") in DEFAULT_IGNORED_REMOTE_TYPES
@@ -1134,19 +1135,6 @@ class GovernanceService:
                 tag_summary["confirmed"] += 1
             else:
                 tag_summary["confirmed"] += 1
-            if row.get("dictionary_id") and status not in PROBLEM_DICTIONARY_STATUSES:
-                dictionary_summary["matched"] += 1
-            elif default_preserved:
-                dictionary_summary["preserved"] += 1
-            elif not row.get("dictionary_id"):
-                dictionary_summary["unmapped"] += 1
-                dictionary_summary["pending"] += 1
-            elif status == "review":
-                dictionary_summary["review"] += 1
-                dictionary_summary["pending"] += 1
-            elif status == "conflict":
-                dictionary_summary["conflicts"] += 1
-
             group_key = TAG_GROUP_LABELS.get(str(row.get("tag_type") or "other"), "其他")
             group = groups.setdefault(group_key, {"key": group_key, "label": group_key, "tags": []})
             group["tags"].append(
@@ -1162,6 +1150,22 @@ class GovernanceService:
                     "state": state,
                 }
             )
+        # 同译名可以合并显示，独立词典条目的审批仍分别计数。
+        dictionaries = {row["dictionary_id"]: row for row in rows if row.get("dictionary_id")}
+        for row in [*dictionaries.values(), *(row for row in visible if not row.get("dictionary_id"))]:
+            status = row.get("dictionary_status")
+            if row.get("dictionary_id") and status not in PROBLEM_DICTIONARY_STATUSES:
+                dictionary_summary["matched"] += 1
+            elif not row.get("dictionary_id") and row.get("tag_type") in DEFAULT_IGNORED_REMOTE_TYPES:
+                dictionary_summary["preserved"] += 1
+            elif not row.get("dictionary_id"):
+                dictionary_summary["unmapped"] += 1
+                dictionary_summary["pending"] += 1
+            elif status == "review":
+                dictionary_summary["review"] += 1
+                dictionary_summary["pending"] += 1
+            elif status == "conflict":
+                dictionary_summary["conflicts"] += 1
         return list(groups.values()), tag_summary, dictionary_summary
 
     def _joined_tag_names(self, tag_rows: list[dict[str, Any]], tag_type: str) -> str | None:
@@ -1195,10 +1199,11 @@ class GovernanceService:
         tag_rows: list[dict[str, Any]],
         saved: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        dictionaries = {row["dictionary_id"]: row for row in tag_rows if row.get("dictionary_id")}
         tag_rows = visible_work_tags(tag_rows)
         source_file = next((row for row in files if row["kind"] == "source_cbz"), None)
-        review_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "review")
-        conflict_count = sum(1 for row in tag_rows if row.get("dictionary_status") == "conflict")
+        review_count = sum(1 for row in dictionaries.values() if row.get("dictionary_status") == "review")
+        conflict_count = sum(1 for row in dictionaries.values() if row.get("dictionary_status") == "conflict")
         unmapped_count = sum(
             1
             for row in tag_rows

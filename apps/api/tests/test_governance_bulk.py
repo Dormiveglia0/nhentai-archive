@@ -194,6 +194,10 @@ def test_bulk_apply_confirms_dictionary_terms_and_updates_queue_counts(tmp_path)
     before = governance.queue()["summary"]
     assert before["dictionary_review"] == 2
     assert before["dictionary_conflict"] == 1
+    detail = governance.work_governance(second)
+    assert detail["dictionary"]["review"] == 1
+    assert detail["dictionary"]["conflicts"] == 1
+    assert len([tag for group in detail["tags"]["groups"] for tag in group["tags"] if tag["type"] == "tag"]) == 1
 
     out = governance.bulk_apply([first, second], {"confirm_dictionary_terms": True})
 
@@ -206,6 +210,7 @@ def test_bulk_apply_confirms_dictionary_terms_and_updates_queue_counts(tmp_path)
     after = governance.queue()["summary"]
     assert after["dictionary_review"] == 0
     assert after["dictionary_conflict"] == 0
+    assert governance.work_governance(second)["dictionary"]["matched"] == 2
 
 
 def test_bulk_apply_skips_locked_empty_and_ignored_dictionary_terms(tmp_path):
