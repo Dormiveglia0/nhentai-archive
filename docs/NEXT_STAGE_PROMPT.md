@@ -1,5 +1,9 @@
 # 下一阶段工作入口
 
+最新工作为封面相似度、SoutuBot封面/随机内页检索及当前库批量刮削，见 PROJECT_MAP/PROJECT_STATUS 对应2026-10-19条目。图像比对使用ImageHash，不能改成普通文件哈希；分数不是正确率。默认不上传图片，只有用户主动点击搜图或显式授权的批任务启用SoutuBot；坚持图片压缩去EXIF、有效nhentai ID解析、独立限速冷却与两张不同非相邻内页核对。不要放宽语言、总页数、重复绑定、人工作者或源版本保护来提高数量。
+
+当前库一次性操作由用户授权，原始备份 `/opt/nhentai/backups/20261019-cover-scrape/before.db`；`operation.json` 才是最终统计，`metadata_scrape` 任务未完成时继续执行或从任务中心恢复。发布证据单独在 `20261019-cover-scrape-release/`，部署只更新GHCR latest容器，不重启主机。不得让开发或测试连接正式数据，也不得用回写归档来完成刮削。
+
 最新阶段为整理页搜索、分类与每页30部；重命名单入口和固定后缀；扫描transform动画；元信息变化后才索引扫描，见 [CURRENT_REQUIREMENTS.md](CURRENT_REQUIREMENTS.md)。90项服务及HTTP回归、Web构建和1440/1365/390/320真实副本验收通过，真实扫描动画60帧均变化，中位帧间隔约16.7ms。发布按CI→GHCR latest进行，正式状态以 `/opt/nhentai/backups/20261019-governance-monitor/release.json` 为准，不重启主机。
 
 正式挂载库外临时文件已实测：fsync支持，RENAME_NOREPLACE返回Errno 22；普通rename虽可用，但会有覆盖竞态，不能直接降级。兼容方案使用独占目标、内容核验和持久恢复记录，核验后才移除源路径并更新索引的文件身份。真实归档副本复现错误后完成兼容重命名、格式保护和元数据/哈希保留；临时挂载文件也验证了所需文件操作。复制需要额外空间和读取整份归档，未核验中断时保留文件及恢复记录、暂停该库扫描，不要直接清理记录。证据与脚本在 `/tmp/nh-governance-monitor-20261019/`，测试只修改私有副本；不要用正式归档做回归。

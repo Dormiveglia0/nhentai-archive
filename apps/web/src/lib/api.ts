@@ -545,7 +545,7 @@ export type GovernanceBulkResult = {
   };
 };
 
-export type MetadataRefreshSource = "remote_id" | "web" | "manual_id" | "fuzzy";
+export type MetadataRefreshSource = "remote_id" | "web" | "manual_id" | "fuzzy" | "image";
 
 export type MetadataRefreshMatch = {
   gallery_id: number;
@@ -562,6 +562,9 @@ export type MetadataRefreshMatch = {
   automatic_eligible?: boolean;
   selectable?: boolean;
   thumbnail_url?: string | null;
+  cover?: { status: "compared" | "unavailable" | "not_checked"; score: number | null; similar?: boolean; reason?: string; ratio_match?: boolean };
+  image_search?: { provider: string; score: number; sample_page: number | null; matched_page: number | null; verified: boolean; pages: Array<{ page: number; score: number }> };
+  evidence?: { title_score: number };
   diffs?: Array<{ field: string; label: string; local: string | number | null; remote: string | number | null; changed: boolean; protected: boolean }>;
 };
 
@@ -1518,11 +1521,11 @@ export const api = {
       headers: JSON_HEADERS,
       body: JSON.stringify({ work_ids, actions })
     }).then(clearDiscoverCache),
-  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}, bind?: boolean, item_ids: Record<number, number> = {}) =>
+  metadataRefreshPreview: (work_ids: number[], gallery_ids: Record<number, number> = {}, queries: Record<number, string> = {}, bind?: boolean, item_ids: Record<number, number> = {}, image_search?: "cover" | "page") =>
     request<MetadataRefreshPreview>("/api/governance/metadata-refresh/preview", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ work_ids, gallery_ids, queries, bind, item_ids })
+      body: JSON.stringify({ work_ids, gallery_ids, queries, bind, item_ids, image_search })
     }),
   metadataRefreshApply: (matches: Array<{ work_id: number; item_id?: number; version?: string; query?: string; bind?: boolean } & MetadataRefreshMatch>) =>
     request<MetadataRefreshResult>("/api/governance/metadata-refresh/apply", {

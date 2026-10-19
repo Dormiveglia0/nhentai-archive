@@ -207,6 +207,7 @@ const SOURCE_LABELS = {
   web: "ComicInfo Web",
   manual_id: "手动作品 ID",
   fuzzy: "标题模糊匹配",
+  image: "图片检索",
 } satisfies Record<MetadataRefreshMatch["source"], string>;
 
 function MetadataRefreshPanel({

@@ -35,6 +35,7 @@ export function jobTypeLabel(type: string) {
     archive_cache: "阅读缓存",
     library_migration: "媒体库迁移",
     reader_verify: "阅读源核验",
+    metadata_scrape: "元数据刮削",
   };
   return labels[type] ?? type;
 }
@@ -47,6 +48,7 @@ export function jobTypeDescription(type: string) {
     archive_cache: "下载作品归档以供本地阅读",
     library_migration: "校验并归并本地导入文件，保留作品记录",
     reader_verify: "逐页比较本地与远端作品",
+    metadata_scrape: "核对封面与作品信息，刮削并绑定可靠匹配",
   };
   return labels[type] ?? "任务";
 }
@@ -72,6 +74,9 @@ export function stageLabel(stage: string) {
     ingesting: "入库中",
     migrating: "迁移文件",
     verifying_pages: "逐页核验",
+    matching_metadata: "匹配与核对作品",
+    matching_images: "搜图核对作品",
+    remote_cooldown: "等待远端冷却",
     completed: "已完成",
     failed: "失败",
     cancelling: "取消中",
@@ -81,6 +86,9 @@ export function stageLabel(stage: string) {
 }
 
 export function targetLabel(job: Job) {
+  if (job.type === "metadata_scrape") {
+    return `已绑定 ${numberTarget(job, "updated") ?? 0} · 待确认 ${numberTarget(job, "review") ?? 0} · 已处理 ${numberTarget(job, "cursor") ?? 0}/${Array.isArray(job.target.work_ids) ? job.target.work_ids.length : 0}`;
+  }
   if (job.type === "library_migration") {
     return `${numberTarget(job, "migrated") ?? 0} / ${Array.isArray(job.target.plan) ? job.target.plan.filter(item => item && typeof item === "object" && "status" in item && item.status !== "skipped").length : 0} 部 · ${job.target.move ? "移动" : "复制"}`;
   }
@@ -106,7 +114,7 @@ export function targetLabel(job: Job) {
 export function canRetry(job: Job) {
   if (job.status !== "failed") return false;
   if (job.type === "bulk_export") return true;
-  if (["library_scan", "archive_cache", "library_migration", "reader_verify"].includes(job.type)) return true;
+  if (["library_scan", "archive_cache", "library_migration", "reader_verify", "metadata_scrape"].includes(job.type)) return true;
   return job.type === "remote_import" && Boolean(numberTarget(job, "gallery_id"));
 }
 

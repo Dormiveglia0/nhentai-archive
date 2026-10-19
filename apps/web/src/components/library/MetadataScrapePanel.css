@@ -17,6 +17,10 @@
 .folio-scrape-search input:focus { border-color: var(--folio-red); }
 .folio-scrape-search > button { min-width: 92px; min-height: 44px; background: var(--folio-ink); color: var(--folio-paper-bright); border-color: var(--folio-ink); }
 .folio-scrape-search > button:hover:not(:disabled) { background: var(--folio-red); border-color: var(--folio-red); color: var(--folio-paper-bright); }
+.folio-scrape-image-search { margin-top: 14px; }
+.folio-scrape-image-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.folio-scrape-image-actions > button { min-width: 112px; }
+.folio-scrape-image-search > p { margin: 9px 0 0; color: var(--folio-muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
 .folio-scrape-message { display: flex; align-items: start; gap: 8px; margin-block: 14px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .folio-scrape-message svg { flex-shrink: 0; margin-top: 3px; color: var(--folio-red); }
 .folio-scrape-message.is-loading { color: var(--folio-muted); padding-left: 12px; border-left: 2px solid var(--folio-red); }

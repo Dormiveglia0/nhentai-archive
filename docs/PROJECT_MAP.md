@@ -1,5 +1,13 @@
 # NH Archive Project Map
 
+## 封面核对与以图刮削（2026-10-19）
+
+- `CoverSimilarityService` 使用 `ImageHash==4.3.2` 的256位pHash/dHash；本地封面限定数据目录并按大小/mtime缓存，远端图片经既有CDN客户端读取，限制8MB/3000万像素，不写派生文件。分数是图像特征距离，不是正确率。
+- `ImageSearchService` 直连 SoutuBot 标准 multipart `/api/search`，仅接收schema 2.x中的有效nhentai ID，不访问第三方返回的链接。图片重编码去除EXIF，最长边1200px；请求间隔至少5秒，403/429/故障进入独立冷却，不使用验证码绕过或额外凭据。
+- `/api/governance/metadata-refresh/preview` 增加单作品 `image_search=cover|page`；整理/审批/上传共用面板提供明确上传说明及两个入口。默认文字搜索和扫描不向SoutuBot上传图片。内页读取复用版本化直接读取与挂载限时子进程，不下载整个归档。
+- `MetadataRefreshService.enqueue_batch(work_ids, reverse_images=False)` 创建持久化 `metadata_scrape` 任务，现有自动刮削线程执行，复用nhentai前台优先限速；任务中心暂停、恢复、取消、失败重试共用控制。已绑定/已忽略作品保留；未完成图片核对、页数/语言/人工作者冲突、重复绑定和并发变更留审。以图候选必须核对两张不同且非相邻内页，pHash/dHash相似度均达到98%，仍核对封面和总页数。来源证据写入原有scrape_result_json；不更改schema或源文件。
+- 用户明确授权当前库的一次性批量搜图及绑定，操作备份在 `/opt/nhentai/backups/20261019-cover-scrape/`；发布与数据操作证据分开保存。
+
 ## 整理队列与轻量文件检查（2026-10-19）
 
 - `GovernanceService.queue(q,status,page,per_page)` / `/api/governance/queue`：服务端关键词、问题分类与分页，默认30、最多100部；响应增加`total/page/per_page/counts`，原`summary`保留。`useGovernanceState`与`GovernanceQueueRail`使用同一查询，保存/核对/批量完成后刷新当前页，分页复用`IconPager`。

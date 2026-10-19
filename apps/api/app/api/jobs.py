@@ -16,6 +16,8 @@ def _dispatch(job_id: int):
         return services.library_scan_jobs
     if job_type == "archive_cache":
         return services.archive.cache
+    if job_type == "metadata_scrape":
+        return services.metadata_refresh
     return services.imports
 
 
