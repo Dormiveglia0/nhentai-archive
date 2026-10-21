@@ -127,15 +127,15 @@ class LibraryMonitorService:
                 if self._closing.is_set() or not current or not current["enabled"] or current["removed_at"] or current["config_json"] != library["config_json"]:
                     raise JobCancelled()
             try:
-                snapshot, refresh_paths = None, []
+                snapshot = None
                 if periodic:
-                    snapshot, changed_paths, refresh_paths = self.index.changes(library_id, self._snapshots.get(library_id), checkpoint)
-                    paths = None if changed_paths is None or paths is None else sorted(set(paths) | set(changed_paths))
-                    if paths == []:
+                    snapshot, result = self.index.scan_changes(library_id, self._snapshots.get(library_id), checkpoint, paths)
+                    if result is None:
                         self._snapshots[library_id] = snapshot
                         self.db.execute("UPDATE media_libraries SET scan_failures=0,next_scan_at=? WHERE id=?", (time.time() + config["scan_interval_seconds"], library_id))
                         continue
-                result = self.index.scan(library_id, checkpoint, paths=paths, refresh_paths=refresh_paths)
+                else:
+                    result = self.index.scan(library_id, checkpoint, paths=paths)
                 if result["status"] != "completed":
                     raise OSError(library["last_error"] or "目录暂时不可用，稍后重试")
                 if snapshot is not None:

@@ -163,11 +163,11 @@ def test_periodic_check_finds_nested_edits_additions_and_deletions(tmp_path, mon
     os.utime(source, ns=(version.st_atime_ns, version.st_mtime_ns))
     assert source.parent.stat().st_mtime_ns == directory_time
     scans = []
-    scan = index.scan
+    scan = index._scan
     def record(*args, **kwargs):
-        scans.append(kwargs['paths'])
+        scans.append(args[4])
         return scan(*args, **kwargs)
-    monkeypatch.setattr(index, 'scan', record)
+    monkeypatch.setattr(index, '_scan', record)
     db.execute('UPDATE media_libraries SET next_scan_at=0')
     monitor.tick()
     assert scans == [['nested/book.cbz']]
@@ -185,3 +185,62 @@ def test_periodic_check_finds_nested_edits_additions_and_deletions(tmp_path, mon
     assert db.fetchone('SELECT status FROM library_items WHERE work_id=?', (work_id,))['status'] == 'missing'
     assert db.fetchone('SELECT COUNT(*) n FROM works')['n'] == 2
     assert not db.fetchone('SELECT id FROM jobs')
+
+
+@pytest.mark.parametrize('kind', ['local', 'mounted'])
+def test_periodic_reconciliation_lists_once_and_reads_only_changed_archives(tmp_path, monkeypatch, kind):
+    _, db, libraries, index, root, library = setup_index(tmp_path)
+    db.execute("UPDATE media_libraries SET enabled=0 WHERE kind='managed'")
+    libraries.update(library['id'], {'kind': kind})
+    create_archive(root / 'existing.cbz', title='Existing')
+    monitor = LibraryMonitorService(index, libraries)
+    monkeypatch.setattr(monitor, '_sync_watchers', lambda libraries: None)
+    walked, opened = [], []
+    method = '_walk_mounted' if kind == 'mounted' else '_walk'
+    walk = getattr(index, method)
+    def count_walk(*args, **kwargs):
+        walked.append(1)
+        yield from walk(*args, **kwargs)
+    monkeypatch.setattr(index, method, count_walk)
+    if kind == 'mounted':
+        from app.services.archive_manifest import MountedArchiveProbe
+        inspect = MountedArchiveProbe.inspect
+        def count_open(probe, relative, checkpoint):
+            opened.append(relative)
+            return inspect(probe, relative, checkpoint)
+        monkeypatch.setattr(MountedArchiveProbe, 'inspect', count_open)
+    else:
+        def count_open(path):
+            opened.append(path.name)
+            return inspect_archive(path)
+        monkeypatch.setattr('app.services.library_index_service.inspect_archive', count_open)
+    monitor.tick()
+    assert len(walked) == 1 and opened == ['existing.cbz']
+    work_id = db.fetchone('SELECT id FROM works')['id']
+    walked.clear(); opened.clear()
+    runs = db.fetchone('SELECT COUNT(*) n FROM library_scan_runs')['n']
+    db.execute('UPDATE media_libraries SET next_scan_at=0')
+    monitor.tick()
+    assert len(walked) == 1 and not opened
+    assert db.fetchone('SELECT COUNT(*) n FROM library_scan_runs')['n'] == runs
+
+    for action, expected in [('add', ['new.cbz']), ('edit', ['existing.cbz']), ('delete', [])]:
+        if action == 'add':
+            create_archive(root / 'new.cbz', title='New')
+        elif action == 'edit':
+            create_archive(root / 'existing.cbz', title='Edited')
+        else:
+            (root / 'new.cbz').unlink()
+        walked.clear(); opened.clear()
+        db.execute('UPDATE media_libraries SET next_scan_at=0')
+        monitor.tick()
+        assert len(walked) == 1 and opened == expected
+    assert db.fetchone("SELECT status FROM library_items WHERE relative_path='new.cbz'")['status'] == 'missing'
+    assert db.fetchone("SELECT work_id FROM library_items WHERE relative_path='existing.cbz'")['work_id'] == work_id
+    assert db.fetchone('SELECT title FROM works WHERE id=?', (work_id,))['title'] == 'Edited'
+    if kind == 'mounted':
+        (root / 'existing.cbz').unlink()
+        db.execute('UPDATE media_libraries SET next_scan_at=0')
+        monitor.tick()
+        assert db.fetchone('SELECT status FROM library_items WHERE work_id=?', (work_id,))['status'] == 'ready'
+        assert libraries.get(library['id'])['health'] == 'offline'

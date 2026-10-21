@@ -1,3 +1,9 @@
+import gc
+import sqlite3
+from pathlib import Path
+
+import pytest
+
 from app.database import Database
 
 
@@ -45,6 +51,47 @@ def test_database_enables_concurrency_pragmas_and_query_indexes(tmp_path):
         "idx_jobs_status_updated",
         "idx_jobs_updated",
     } <= index_names
+
+
+def test_database_connections_close_after_commit_and_rollback(tmp_path):
+    db = Database(tmp_path / 'archive.db')
+    db.init_schema()
+    with db.connect() as committed:
+        committed.execute("INSERT INTO works(title,source) VALUES ('Saved','local')")
+    with pytest.raises(sqlite3.ProgrammingError, match='closed'):
+        committed.execute('SELECT 1')
+    with pytest.raises(ValueError, match='abort'):
+        with db.connect() as rolled_back:
+            rolled_back.execute("INSERT INTO works(title,source) VALUES ('Discarded','local')")
+            raise ValueError('abort')
+    with pytest.raises(sqlite3.ProgrammingError, match='closed'):
+        rolled_back.execute('SELECT 1')
+    assert db.fetchone('SELECT COUNT(*) n FROM works')['n'] == 1
+    result = db.execute("UPDATE works SET favorite=1")
+    assert result.rowcount == 1
+
+
+def test_polling_does_not_accumulate_database_handles_without_gc(tmp_path):
+    if not Path('/proc/self/fd').exists():
+        pytest.skip('Linux file descriptor accounting')
+    db = Database(tmp_path / 'archive.db')
+    db.init_schema()
+    gc.collect()
+    before = len(list(Path('/proc/self/fd').iterdir()))
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        results = []
+        for _ in range(60):
+            assert db.fetchone('SELECT 1 AS value')['value'] == 1
+            assert db.fetchall('SELECT 1 AS value') == [{'value': 1}]
+            results.append(db.execute("UPDATE settings SET value=value WHERE key='library.revision'"))
+        assert all(row.rowcount == 1 for row in results)
+        assert len(list(Path('/proc/self/fd').iterdir())) <= before + 3
+    finally:
+        if enabled:
+            gc.enable()
+        gc.collect()
 
 
 def test_database_rebases_missing_managed_paths_after_repo_move(tmp_path):

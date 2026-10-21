@@ -70,7 +70,7 @@ class LibraryIndexService:
             self._scan_lock.release()
 
     def _scan(self, library_id: int, checkpoint: Callable[[], None], progress: Callable[[dict[str, int]], None],
-              job_id: int | None, paths: list[str] | None, refresh_paths: set[str]) -> dict[str, Any]:
+              job_id: int | None, paths: list[str] | None, refresh_paths: set[str], observation=None) -> dict[str, Any]:
         library = self.libraries.get(library_id)
         if self.db.fetchone("SELECT 1 FROM source_renames WHERE library_id=? AND state IN ('prepared','blocked')", (library_id,)):
             raise MountUnavailable("此库有未完成的源文件重命名，保留现有索引，请先恢复重命名记录")
@@ -106,17 +106,22 @@ class LibraryIndexService:
                     raise MountUnavailable("挂载读取仍被系统阻塞，请恢复挂载后重试")
                 probe = MountedArchiveProbe(root, config["follow_symlinks"], config["io_timeout_seconds"])
                 self._mount_probe = probe
-                walker = self._walk_mounted(root, config, checkpoint, paths)
-                root_stat, canonical_root = next(walker)
+                if observation is None:
+                    walker = self._walk_mounted(root, config, checkpoint, paths)
+                    root_stat, canonical_root = next(walker)
             else:
-                canonical_root = str(self.libraries.validate_root(root, config["_root_boundaries"]))
-                root_stat = root.stat()
+                if observation is None:
+                    canonical_root = str(self.libraries.validate_root(root, config["_root_boundaries"]))
+                    root_stat = root.stat()
+            if observation is not None:
+                root_stat, canonical_root, entries = observation
+            else:
+                entries = walker if walker is not None else self._walk(root, config, paths)
             if not stat.S_ISDIR(root_stat.st_mode):
                 raise OSError("库根路径不是目录")
             root_changed = library["root_device"] is not None and (
                 library["root_device"] != sqlite_file_id(root_stat.st_dev) or library["root_inode"] != sqlite_file_id(root_stat.st_ino)
             )
-            entries = walker if walker is not None else self._walk(root, config, paths)
             selected = set(paths) if paths is not None else None
             checked_at = 0.0
             for path, info, error in entries:
@@ -211,7 +216,8 @@ class LibraryIndexService:
                                  ((run_id, item_id) for item_id in seen))
             seen.clear()
 
-    def changes(self, library_id: int, previous: dict | None, checkpoint: Callable[[], None]) -> tuple[dict, list[str] | None, list[str]]:
+    def scan_changes(self, library_id: int, previous: dict | None, checkpoint: Callable[[], None],
+                     paths: list[str] | None) -> tuple[dict, dict | None]:
         while not self._scan_lock.acquire(timeout=.2):
             checkpoint()
         walker = None
@@ -226,12 +232,12 @@ class LibraryIndexService:
             if library["kind"] == "mounted":
                 # Remote directory timestamps may stay unchanged when children change.
                 walker = self._walk_mounted(root, config, checkpoint, None)
-                root_stat, _canonical = next(walker)
+                root_stat, canonical_root = next(walker)
             else:
-                self.libraries.validate_root(root, config["_root_boundaries"])
+                canonical_root = str(self.libraries.validate_root(root, config["_root_boundaries"]))
                 root_stat = root.stat()
                 walker = self._walk(root, config, directory_cache=directories)
-            files = {}
+            files, entries = {}, []
             checked_at = 0.0
             for path, info, error in walker:
                 if time.monotonic() - checked_at >= .2:
@@ -239,17 +245,25 @@ class LibraryIndexService:
                     checked_at = time.monotonic()
                 if error:
                     raise OSError(error)
+                entries.append((path, info, error))
                 if path.suffix.lower() in ARCHIVES | UNSUPPORTED:
                     files[path.relative_to(root).as_posix()] = self._metadata_stamp(info)
             checkpoint()
             root_identity = (root_stat.st_dev, root_stat.st_ino)
             snapshot = {"signature": signature, "directories": directories, "files": files, "root": root_identity}
+            refresh = []
             if not previous or previous["root"] != root_identity:
-                return snapshot, None, []
-            changed = [path for path, stamp in files.items() if previous["files"].get(path) != stamp]
-            refresh = [path for path in changed if path in previous["files"]]
-            paths = None if files.keys() != previous["files"].keys() else changed
-            return snapshot, paths, refresh
+                paths = None
+            else:
+                changed = [path for path, stamp in files.items() if previous["files"].get(path) != stamp]
+                refresh = [path for path in changed if path in previous["files"]]
+                paths = None if paths is None or files.keys() != previous["files"].keys() else sorted(set(paths) | set(changed))
+            if paths == []:
+                return snapshot, None
+            # Keep the source lock from observation through reconciliation; no second mount walk.
+            result = self._scan(library_id, checkpoint, lambda counts: None, None, paths, set(refresh),
+                                (root_stat, canonical_root, entries))
+            return snapshot, result
         finally:
             if walker is not None:
                 walker.close()

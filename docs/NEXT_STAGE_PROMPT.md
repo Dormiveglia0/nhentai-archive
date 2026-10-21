@@ -1,5 +1,7 @@
 # 下一阶段工作入口
 
+当前优先处理rclone扫描I/O，见2026-10-21记录。`Database.connect` 的事务上下文结束后必须关闭连接；显式持有连接由调用方关闭，不能破坏借用连接的事务。`LibraryIndexService.scan_changes` 在同一来源锁内复用清单及stat结果完成周期检查和索引，不能恢复“检查后再遍历全库”。挂载仍需元信息列举，保留ctime、身份、空挂载、超时及重命名保护。正式挂载watch/auto_scrape曾临时暂停，原配置及备份位于 `/opt/nhentai/backups/20261021-scan-io/`；完成新镜像验证后按记录恢复，不覆盖用户期间改动。共享rclone挂载参数未改，不重启主机；图片补查136因句柄耗尽失败，I/O问题解决前不恢复。
+
 最新工作为封面相似度、SoutuBot封面/随机内页检索及当前库批量刮削，见 PROJECT_MAP/PROJECT_STATUS 对应2026-10-19条目。图像比对使用ImageHash，不能改成普通文件哈希；分数不是正确率。默认不上传图片，只有用户主动点击搜图或显式授权的批任务启用SoutuBot；坚持图片压缩去EXIF、有效nhentai ID解析、独立限速冷却与两张不同非相邻内页核对。不要放宽语言、总页数、重复绑定、人工作者或源版本保护来提高数量。
 
 当前库一次性操作由用户授权，原始备份 `/opt/nhentai/backups/20261019-cover-scrape/before.db`；`operation.json` 才是最终统计，`metadata_scrape` 任务未完成时继续执行或从任务中心恢复。发布证据单独在 `20261019-cover-scrape-release/`，部署只更新GHCR latest容器，不重启主机。不得让开发或测试连接正式数据，也不得用回写归档来完成刮削。

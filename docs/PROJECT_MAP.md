@@ -1,5 +1,11 @@
 # NH Archive Project Map
 
+## 扫描I/O与连接释放（2026-10-21）
+
+- `Database.connect` 使用会在事务上下文结束后关闭的SQLite连接；保留原提交、回滚及写入游标的lastrowid/rowcount。显式持有的扫描lookup连接仍由调用方关闭，借用连接不另行提交或关闭。
+- `LibraryIndexService.scan_changes` 在同一来源锁内完成元信息检查和必要的索引更新，将已取得的清单及stat结果交给 `_scan`，增删、修改及首次核对都不再二次遍历挂载。无变化不创建扫描记录、不打开归档；仍保留ctime、大小、mtime、身份、稳定等待、超时、空挂载和重命名保护。
+- `LibraryMonitorService` 的周期检查调用 `scan_changes`，原生事件和稳定重试继续使用定向 `scan`。没有新增配置、schema或rclone控制接口。
+
 ## 封面核对与以图刮削（2026-10-19）
 
 - `CoverSimilarityService` 使用 `ImageHash==4.3.2` 的256位pHash/dHash；本地封面限定数据目录并按大小/mtime缓存，远端图片经既有CDN客户端读取，限制8MB/3000万解码像素，不写派生文件。JPEG先复用Pillow的draft缩小解码，再检查像素上限，与扫描保持一致；不关闭解压炸弹保护。分数是图像特征距离，不是正确率。
@@ -12,7 +18,7 @@
 
 - `GovernanceService.queue(q,status,page,per_page)` / `/api/governance/queue`：服务端关键词、问题分类与分页，默认30、最多100部；响应增加`total/page/per_page/counts`，原`summary`保留。`useGovernanceState`与`GovernanceQueueRail`使用同一查询，保存/核对/批量完成后刷新当前页，分页复用`IconPager`。
 - `SourceRenameControl`每部作品只渲染一次，多源可选择实际文件；编辑框不含扩展名，固定后缀附加到请求，后端拒绝格式变更。侧栏保留有界滚动，避免菜单被底栏挡住。`SourceRenameService`优先原子无覆盖重命名，挂载不支持该标志时独占复制、SHA256核验、持久化准备记录，再移除旧路径并更新原索引；恢复兼容原列表版本和新的复制校验记录，不新增schema。
-- `LibraryIndexService.changes`维护元信息快照；本地复用未变目录的名称列表，挂载库复用原限时子进程列举元信息。对比清单、大小、修改/状态变更时间及身份；修改按路径处理，增删完整核对，无变化不进入索引扫描。元信息变化但mtime/大小保留时仍会重新解析，稳定等待与持久重试保留。
+- `LibraryIndexService.scan_changes`维护元信息快照；本地复用未变目录的名称列表，挂载库复用原限时子进程列举元信息。对比清单、大小、修改/状态变更时间及身份；修改按路径处理，增删复用该轮清单核对，无变化不进入索引扫描。元信息变化但mtime/大小保留时仍会重新解析，稳定等待与持久重试保留。
 - `MediaLibraryActivity`的未知总量进度条改为CSS transform动画，支持暂停和减少动态效果。无schema迁移或新依赖。90项服务/HTTP回归及Web构建、四种宽度真实副本交互通过；真实扫描60帧采样中位帧间隔约16.7ms，挂载临时文件兼容检查通过。发布状态见本阶段release.json。
 
 ## 本地与远端标签展示去重（2026-10-19）

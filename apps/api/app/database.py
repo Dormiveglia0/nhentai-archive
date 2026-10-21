@@ -473,6 +473,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_work_files_library_item
 """
 
 
+class _Connection(sqlite3.Connection):
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self.close()
+
+
 class Database:
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -480,7 +488,7 @@ class Database:
         self._managed_root = self.path.parent.resolve()
 
     def connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.path, timeout=5)
+        conn = sqlite3.connect(self.path, timeout=5, factory=_Connection)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA busy_timeout = 5000")
