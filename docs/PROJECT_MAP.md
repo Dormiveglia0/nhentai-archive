@@ -5,6 +5,7 @@
 - `Database.connect` 使用会在事务上下文结束后关闭的SQLite连接；保留原提交、回滚及写入游标的lastrowid/rowcount。显式持有的扫描lookup连接仍由调用方关闭，借用连接不另行提交或关闭。
 - `LibraryIndexService.scan_changes` 在同一来源锁内完成元信息检查和必要的索引更新，将已取得的清单及stat结果交给 `_scan`，增删、修改及首次核对都不再二次遍历挂载。无变化不创建扫描记录、不打开归档；仍保留ctime、大小、mtime、身份、稳定等待、超时、空挂载和重命名保护。
 - `LibraryMonitorService` 的周期检查调用 `scan_changes`，原生事件和稳定重试继续使用定向 `scan`。没有新增配置、schema或rclone控制接口。
+- 455项后端回归、Web构建和镜像验证通过，实现提交 `d8e7128ed3788fe90f036fc617a29dedacc82fc5` 已发布。正式挂载库恢复原300秒自动检查，1822个不变归档解析0，随后未变化检查不新增扫描记录；运行证据见 `/opt/nhentai/backups/20261021-scan-io/`。
 
 ## 封面核对与以图刮削（2026-10-19）
 
