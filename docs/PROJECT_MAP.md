@@ -1,5 +1,10 @@
 # NH Archive Project Map
 
+## 人工审批数据操作（2026-10-21）
+
+- 复用 `/api/governance/metadata-refresh/apply`、整理字段保存及 `/api/library/scrape-queue/{item_id}/decision`，保留作品版本、人工字段和重复绑定保护；没有新增接口、配置或schema。人工接受5页以内附页差不等于修改全局自动规则。
+- 已新增518个远端绑定，3部既有绑定及1个同指纹重复审批项确认完成；原有来源和阅读资料审计通过。最终决定与留审清单见 `/opt/nhentai/backups/20261021-manual-review/operation.json`，后续操作不得重复绑定或覆盖明确保留的人工语言字段。
+
 ## 扫描I/O与连接释放（2026-10-21）
 
 - `Database.connect` 使用会在事务上下文结束后关闭的SQLite连接；保留原提交、回滚及写入游标的lastrowid/rowcount。显式持有的扫描lookup连接仍由调用方关闭，借用连接不另行提交或关闭。
