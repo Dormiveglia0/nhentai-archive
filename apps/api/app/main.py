@@ -13,24 +13,27 @@ from app.container import services
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    services.jobs.recover_interrupted()
-    services.library_index.recover_interrupted()
-    services.source_renames.recover()
-    services.archive.cache.recover_interrupted()
-    services.archive.cache.start()
-    services.export_jobs.sweep_exports()
-    services.library_scan_jobs.start()
-    services.library_monitor.start()
-    services.metadata_refresh.start()
-    services.subscriptions.start()
-    try:
-        yield
-    finally:
-        services.subscriptions.close()
-        services.metadata_refresh.close()
-        services.library_monitor.close()
-        services.library_scan_jobs.close()
-        services.archive.cache.close()
+    # Keep WAL open without a transaction; last-connection cleanup takes an exclusive lock.
+    with services.db.connect() as keepalive:
+        keepalive.execute("SELECT 1 FROM sqlite_schema LIMIT 1").fetchall()
+        services.jobs.recover_interrupted()
+        services.library_index.recover_interrupted()
+        services.source_renames.recover()
+        services.archive.cache.recover_interrupted()
+        services.archive.cache.start()
+        services.export_jobs.sweep_exports()
+        services.library_scan_jobs.start()
+        services.library_monitor.start()
+        services.metadata_refresh.start()
+        services.subscriptions.start()
+        try:
+            yield
+        finally:
+            services.subscriptions.close()
+            services.metadata_refresh.close()
+            services.library_monitor.close()
+            services.library_scan_jobs.close()
+            services.archive.cache.close()
 
 
 def create_app(enforce_auth: bool | None = None) -> FastAPI:

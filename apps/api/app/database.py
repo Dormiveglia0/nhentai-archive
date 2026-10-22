@@ -489,10 +489,14 @@ class Database:
 
     def connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=5, factory=_Connection)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA busy_timeout = 5000")
-        conn.execute("PRAGMA synchronous = NORMAL")
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA busy_timeout = 5000")
+            conn.execute("PRAGMA synchronous = NORMAL")
+        except BaseException:
+            conn.close()
+            raise
         return conn
 
     def init_schema(self) -> None:

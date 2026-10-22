@@ -94,6 +94,25 @@ def test_polling_does_not_accumulate_database_handles_without_gc(tmp_path):
         gc.collect()
 
 
+def test_failed_connection_setup_closes_the_connection(tmp_path, monkeypatch):
+    from app import database
+
+    connections = []
+
+    class FailedConnection(database._Connection):
+        def execute(self, sql, *args, **kwargs):
+            if sql == "PRAGMA synchronous = NORMAL":
+                connections.append(self)
+                raise sqlite3.OperationalError("database is locked")
+            return super().execute(sql, *args, **kwargs)
+
+    monkeypatch.setattr(database, "_Connection", FailedConnection)
+    with pytest.raises(sqlite3.OperationalError, match="locked"):
+        Database(tmp_path / "archive.db").connect()
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        connections[0].execute("SELECT 1")
+
+
 def test_database_rebases_missing_managed_paths_after_repo_move(tmp_path):
     data_dir = tmp_path / ".local-data"
     library = data_dir / "library"
