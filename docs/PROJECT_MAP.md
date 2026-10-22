@@ -2,9 +2,9 @@
 
 ## 刮削跳过绑定与挂载迁移（2026-10-22）
 
-- `MetadataRefreshService.queue/tick/decide`及媒体库刮削统计统一排除已绑定作品；`LibraryIndexService._persist`和媒体库设置更新保留完成状态。下载保存明确远端ID，索引完成统一使用`completed`；启动归并旧`done`和已绑定的遗留待处理状态，手动整理入口不受影响。
+- `MetadataRefreshService.queue/tick/decide`及媒体库刮削待处理统计统一排除已绑定作品；`LibraryIndexService._persist`和媒体库设置更新保留完成状态。下载保存明确远端ID，索引完成统一使用`completed`；启动归并旧`done`和已绑定的遗留待处理状态，手动整理入口不受影响。
 - `LibraryMigrationService`允许可写`local/mounted`目标，挂载归档在本地暂存核验后独占发布并回读校验，复用`sync_directory`兼容FUSE目录同步。收藏、阅读、元数据、标签与作品身份不重新导入；`MigrationPanel`开放挂载库选项。失败、取消、同名保护及绑定重复扫描有针对性回归。
-- 当前正式旧下载迁移的备份、临时暂停状态、执行与云端校验记录位于 `/opt/nhentai/backups/20261022-bound-scrape-migration/`，实际结果以`operation.json`为准。
+- 实现提交`83bb1c11927e47a32185c75bb2dcfa24dc5caa6e`通过473项CI回归、Web和镜像验证后发布；正式116部旧下载迁入Google，源/目标SHA256与云端MD5全部匹配。19张受保护表及其他来源保留，116条旧索引和1条失效关联通过既有元数据清理接口移除；watch及本轮临时暂停的原运行任务已恢复，维护会话撤销。备份与最终证据在 `/opt/nhentai/backups/20261022-bound-scrape-migration/`，`operation.json`已完成。
 
 ## 数据库运行生命周期（2026-10-22）
 
