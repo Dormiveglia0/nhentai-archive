@@ -12,6 +12,7 @@ from typing import Any
 from app.services.file_identity import sqlite_file_id
 from app.services.archive_manifest import inspect_archive, open_archive
 from app.services.job_service import JobCancelled
+from app.services.source_rename_service import sync_directory
 
 
 class LibraryMigrationService:
@@ -39,8 +40,8 @@ class LibraryMigrationService:
 
     def _target(self, library_id):
         library = self.libraries.get(library_id)
-        if library["kind"] != "local" or library["read_only"] or not library["enabled"]:
-            raise ValueError("迁移目标必须是已启用、可写的本地目录库")
+        if library["kind"] not in {"local", "mounted"} or library["read_only"] or not library["enabled"]:
+            raise ValueError("迁移目标必须是已启用、可写的目录库")
         root = self.libraries.validate_root(Path(library["root_path"]), self.libraries.root_boundaries(library_id))
         info = root.stat()
         if library["resolved_root_path"] and str(root) != library["resolved_root_path"]:
@@ -109,6 +110,11 @@ class LibraryMigrationService:
         free = shutil.disk_usage(root).free
         if total > free - min(256 * 1024**2, free // 10):
             raise ValueError("目标磁盘空间不足，需同时保留源文件和已验证副本")
+        if library["kind"] == "mounted":
+            staging_free = shutil.disk_usage(self.settings.tmp_dir).free
+            largest = max((entry["size_bytes"] for entry in plan if entry["status"] == "ready"), default=0)
+            if largest > staging_free - min(256 * 1024**2, staging_free // 10):
+                raise ValueError("本地暂存空间不足，需先校验单部归档再写入挂载库")
         return {"library_id": library_id, "library_name": library["name"], "root_path": str(root),
                 "root_stamp": self._stamp(root.stat()), "move": bool(move), "conflict": conflict,
                 "plan": plan, "total_bytes": total, "free_bytes": free,
@@ -148,11 +154,11 @@ class LibraryMigrationService:
                 raise ValueError("原作品记录已移除")
             item_id = conn.execute("""INSERT INTO library_items(library_id, relative_path, work_id, size_bytes,
                 mtime_ns, device, inode, stable_since, status, fingerprint, manifest, metadata_json, archive_info_json, indexed_at, scrape_status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?, ?, CURRENT_TIMESTAMP, 'done')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?, ?, CURRENT_TIMESTAMP, 'completed')
                 ON CONFLICT(library_id, relative_path) DO UPDATE SET work_id=excluded.work_id, size_bytes=excluded.size_bytes,
                 mtime_ns=excluded.mtime_ns, device=excluded.device, inode=excluded.inode, status='ready', fingerprint=excluded.fingerprint,
                 manifest=excluded.manifest, metadata_json=excluded.metadata_json, archive_info_json=excluded.archive_info_json,
-                last_error=NULL, indexed_at=CURRENT_TIMESTAMP RETURNING id""",
+                last_error=NULL, indexed_at=CURRENT_TIMESTAMP, scrape_status='completed', scrape_retry_at=0 RETURNING id""",
                 (library["id"], entry["name"], entry["work_id"], info.st_size, info.st_mtime_ns, sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), time.time(),
                  data["fingerprint"], data["manifest"], json.dumps(data["metadata"], ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False))).fetchone()["id"]
             conn.execute("""INSERT INTO work_files(work_id, kind, path, size_bytes, sha256, library_item_id)
@@ -162,6 +168,28 @@ class LibraryMigrationService:
             conn.execute("UPDATE media_libraries SET health='online', root_device=?, root_inode=?, resolved_root_path=? WHERE id=?",
                          (sqlite_file_id(destination.parent.stat().st_dev), sqlite_file_id(destination.parent.stat().st_ino), str(destination.parent), library["id"]))
         # Work metadata, tags, cover, favorite, governance and progress are deliberately untouched.
+
+    def _publish(self, temporary, destination, library, digest, checkpoint):
+        if library["kind"] != "mounted":
+            os.link(temporary, destination)
+            return
+        created = None
+        try:
+            with temporary.open("rb") as source, destination.open("xb") as output:
+                created = os.fstat(output.fileno())
+                while chunk := source.read(1024 * 1024):
+                    checkpoint()
+                    output.write(chunk)
+                output.flush()
+                os.fsync(output.fileno())
+            if self._digest(destination, checkpoint) != digest:
+                raise ValueError("挂载库目标副本校验失败，保留源文件")
+        except BaseException:
+            if created and destination.exists():
+                current = destination.lstat()
+                if (current.st_dev, current.st_ino) == (created.st_dev, created.st_ino):
+                    destination.unlink()
+            raise
 
     def run(self, job_id, checkpoint):
         target = self.jobs.get(job_id)["target"]
@@ -182,7 +210,9 @@ class LibraryMigrationService:
                 if entry["status"] == "blocked":
                     raise ValueError(entry["reason"])
                 destination = self.libraries.source_path(root, entry["name"])
-                temporary = root / f".nh-migrate-{job_id}-{entry['source_id']}.part"
+                # Validate locally so FUSE receives only the final archive, without a temporary upload.
+                temporary_root = self.settings.tmp_dir if library["kind"] == "mounted" else root
+                temporary = temporary_root / f".nh-migrate-{job_id}-{entry['source_id']}.part"
                 try:
                     # Recover the small unlink/transaction window after a process interruption.
                     if target["move"] and entry.get("registered") and not Path(entry["source_path"]).exists():
@@ -251,9 +281,9 @@ class LibraryMigrationService:
                                 if prior_digest != digest or self._digest(destination, checkpoint) != digest:
                                     raise ValueError("目标文件发生冲突，未覆盖，请重新预览")
                             else:
-                                os.link(temporary, destination)  # Same filesystem, atomic and never overwrites.
+                                self._publish(temporary, destination, library, digest, checkpoint)
                                 directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
-                                try: os.fsync(directory_fd)
+                                try: sync_directory(directory_fd)
                                 finally: os.close(directory_fd)
                             self._register(entry, library, destination, data, digest)
                             entry["registered"] = True

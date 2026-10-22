@@ -29,7 +29,7 @@ export function MigrationPanel({ onLibraries }: { onLibraries: () => void }) {
     setLoading(true); setError("");
     Promise.all([api.mediaLibraries(), api.migrationCandidates(page, q)]).then(([media, works]) => {
       if (!alive) return;
-      const writable = media.result.filter(library => library.kind === "local" && library.enabled && !library.read_only);
+      const writable = media.result.filter(library => library.kind !== "managed" && library.enabled && !library.read_only);
       setLibraries(writable); setCandidates(works);
       setTarget(value => writable.some(library => String(library.id) === value) ? value : String(writable[0]?.id ?? ""));
     }).catch(reason => { if (alive) setError(reason.message); }).finally(() => { if (alive) setLoading(false); });

@@ -59,13 +59,13 @@ class MediaLibraryService:
                 SELECT library_id, COUNT(*) AS item_count, COUNT(DISTINCT work_id) AS work_count,
                   SUM(status = 'error') AS error_count, SUM(status = 'pending') AS pending_count,
                   SUM(status = 'missing') AS missing_count,
-                  SUM(scrape_status = 'review') AS scrape_review_count,
-                  SUM(status='ready' AND scrape_status='pending') AS scrape_pending_count,
-                  SUM(scrape_status='running') AS scrape_running_count,
-                  SUM(scrape_status='error') AS scrape_error_count,
-                  SUM(scrape_status IN ('completed', 'done')) AS scrape_completed_count,
+                  SUM(scrape_status = 'review' AND w.remote_gallery_id IS NULL) AS scrape_review_count,
+                  SUM(status='ready' AND scrape_status='pending' AND w.remote_gallery_id IS NULL) AS scrape_pending_count,
+                  SUM(scrape_status='running' AND w.remote_gallery_id IS NULL) AS scrape_running_count,
+                  SUM(scrape_status='error' AND w.remote_gallery_id IS NULL) AS scrape_error_count,
+                  SUM(scrape_status IN ('completed', 'done') OR w.remote_gallery_id IS NOT NULL) AS scrape_completed_count,
                   MIN(CASE WHEN scrape_retry_at > 0 THEN scrape_retry_at END) AS scrape_retry_at
-                  FROM library_items GROUP BY library_id
+                  FROM library_items i LEFT JOIN works w ON w.id=i.work_id GROUP BY library_id
               ), active_scans AS (
                 SELECT json_extract(target_json, '$.library_id') AS library_id, MAX(id) AS job_id
                 FROM jobs WHERE type = 'library_scan' AND status IN ('queued', 'running', 'paused', 'cancelling')
@@ -168,7 +168,9 @@ class MediaLibraryService:
                 conn.execute("UPDATE media_libraries SET root_device = NULL, root_inode = NULL, resolved_root_path = NULL WHERE id = ?", (library_id,))
                 conn.execute("UPDATE library_items SET status = 'pending', stable_since = 0 WHERE library_id = ?", (library_id,))
             if any(config[key] != current["config"][key] for key in ("auto_scrape", "auto_bind", "language_mode", "language")):
-                conn.execute("UPDATE library_items SET scrape_status = 'pending', scrape_retry_at = 0, scrape_attempts = 0 WHERE library_id = ?", (library_id,))
+                conn.execute("""UPDATE library_items SET scrape_status = CASE WHEN work_id IN
+                    (SELECT id FROM works WHERE remote_gallery_id IS NOT NULL) THEN 'completed' ELSE 'pending' END,
+                    scrape_retry_at = 0, scrape_attempts = 0 WHERE library_id = ?""", (library_id,))
         return self.get(library_id)
 
     def remove(self, library_id: int) -> dict[str, Any]:

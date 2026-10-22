@@ -1,6 +1,7 @@
 import zipfile
 import json
 import time
+import pytest
 
 from app.config import Settings
 from app.database import Database
@@ -296,6 +297,35 @@ def test_scrape_queue_reads_saved_candidates_without_remote_requests(tmp_path):
     assert payload['result'][0]['version'] == service.queue_context(item['id'])['version']
     assert len(service.client.calls) == before
     assert service.queue(library_id=library['id'] + 100)['total'] == 0
+
+
+@pytest.mark.parametrize('status', ['pending', 'review', 'error', 'running', 'completed', 'done', 'ignored'])
+def test_bound_works_are_excluded_from_scrape_queue_and_automatic_requests(tmp_path, status):
+    db, libraries, _, _, library, item, _, service = _indexed_service(tmp_path, auto_scrape=True)
+    db.execute('UPDATE works SET remote_gallery_id=600 WHERE id=?', (item['work_id'],))
+    db.execute('UPDATE library_items SET scrape_status=? WHERE id=?', (status, item['id']))
+    queue = service.queue(status='all')
+    assert queue['total'] == 0 and queue['counts'] == {}
+    service.tick()
+    assert service.client.calls == []
+    stats = next(row for row in libraries.list()['result'] if row['id'] == library['id'])
+    assert all(stats[key] == 0 for key in ('scrape_pending_count', 'scrape_review_count', 'scrape_running_count', 'scrape_error_count'))
+
+
+def test_bound_items_stay_completed_after_settings_changes_and_legacy_restart(tmp_path):
+    db, libraries, _, _, library, item, _, service = _indexed_service(tmp_path, auto_scrape=True)
+    db.execute('UPDATE works SET remote_gallery_id=600 WHERE id=?', (item['work_id'],))
+    libraries.update(library['id'], {'config': {'auto_bind': False}})
+    assert db.fetchone('SELECT scrape_status FROM library_items')['scrape_status'] == 'completed'
+    with pytest.raises(ValueError, match='已有远端绑定'):
+        service.decide(item['id'], 'retry', service.queue_context(item['id'])['version'])
+    db.execute("UPDATE library_items SET scrape_status='done'")
+    try:
+        service.start()
+    finally:
+        service.close()
+    assert db.fetchone('SELECT scrape_status FROM library_items')['scrape_status'] == 'completed'
+    assert service.client.calls == []
 
 
 def test_scrape_decisions_guard_versions_and_never_bind_a_work(tmp_path):

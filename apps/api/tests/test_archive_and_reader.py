@@ -152,6 +152,36 @@ def test_waiting_download_can_be_cancelled_before_reading_source(tmp_path):
     assert db.fetchone("SELECT COUNT(*) AS n FROM works")["n"] == 0
 
 
+@pytest.mark.parametrize('kind', ['managed', 'local', 'mounted'])
+def test_remote_download_stays_bound_and_completed_when_scanned_again(tmp_path, kind):
+    from app.services.library_index_service import LibraryIndexService
+
+    settings = Settings(data_dir=tmp_path / 'data')
+    db = Database(settings.database_path)
+    db.init_schema()
+    archive = ArchiveService(db, settings)
+    if kind == 'managed':
+        library = archive.libraries.list()['result'][0]
+        archive.libraries.update(library['id'], {'config': {'stable_seconds': 0}})
+    else:
+        root = tmp_path / 'media'
+        root.mkdir()
+        library = archive.libraries.create({'name': 'Media', 'root_path': str(root), 'kind': kind,
+                                            'read_only': False, 'config': {'stable_seconds': 0}})
+    downloaded = tmp_path / 'download.cbz'
+    make_color_cbz(downloaded, (80, 80, 80))
+    work_id = archive.ingest_cbz(downloaded, 'remote', 'Book', 42, {'remote': 'nhentai'}, library_id=library['id'])
+    index = LibraryIndexService(settings, db, archive.libraries)
+    index.scan(library['id'])
+    source = Path(archive.libraries.source_file(work_id)['path'])
+    with zipfile.ZipFile(source, 'a') as cbz:
+        cbz.writestr('notes.txt', 'Changed source')
+    index.scan(library['id'])
+    assert db.fetchone('SELECT COUNT(*) AS n FROM works')['n'] == 1
+    assert db.fetchone('SELECT remote_gallery_id FROM works')['remote_gallery_id'] == 42
+    assert db.fetchone('SELECT scrape_status FROM library_items')['scrape_status'] == 'completed'
+
+
 def test_reingest_invalidates_cached_page_thumbnail(tmp_path):
     settings = Settings(data_dir=tmp_path / "data", database_path=tmp_path / "data" / "archive.db")
     db = Database(settings.database_path)

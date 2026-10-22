@@ -41,7 +41,7 @@ def test_zip_upload_preserves_pages_and_waits_for_confirmation_after_scan(tmp_pa
     assert archive.read_page(work_id, 1)[0]
     item = db.fetchone("SELECT * FROM library_items WHERE work_id=?", (work_id,))
     LibraryIndexService(settings, db, archive.libraries).scan(managed["id"])
-    assert db.fetchone("SELECT scrape_status FROM library_items WHERE id=?", (item["id"],))["scrape_status"] == "done"
+    assert db.fetchone("SELECT scrape_status FROM library_items WHERE id=?", (item["id"],))["scrape_status"] == "completed"
     assert db.fetchone("SELECT remote_gallery_id FROM works WHERE id=?", (work_id,))["remote_gallery_id"] is None
     assert not list(settings.tmp_dir.glob(".upload-*"))
 

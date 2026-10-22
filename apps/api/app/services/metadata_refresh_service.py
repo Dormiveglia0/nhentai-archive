@@ -451,7 +451,7 @@ class MetadataRefreshService:
         if status not in states:
             raise ValueError("无效的刮削状态")
         page, per_page = max(1, page), max(1, min(50, per_page))
-        where = "i.work_id IS NOT NULL AND i.status='ready' AND l.removed_at IS NULL"
+        where = "i.work_id IS NOT NULL AND i.status='ready' AND l.removed_at IS NULL AND w.remote_gallery_id IS NULL"
         params = []
         if library_id is not None:
             where += " AND i.library_id=?"
@@ -500,6 +500,8 @@ class MetadataRefreshService:
                 raise ValueError("作品或设置已变化，请刷新后再操作")
             if item["scrape_status"] == "running":
                 raise ValueError("当前作品正在刮削，请等待本次完成")
+            if action == "retry" and snapshot["work"].get("remote_gallery_id"):
+                raise ValueError("作品已有远端绑定，无需自动刮削")
             if action == "retry" and (not snapshot["file"]["enabled"] or not snapshot["config"]["auto_scrape"]):
                 raise ValueError("请先在媒体库设置中启用自动刮削，或直接手动搜索")
             status = {"retry": "pending", "dismiss": "ignored", "complete": "completed"}[action]
@@ -519,7 +521,9 @@ class MetadataRefreshService:
                 self.run_batch(batch['id'])
             return
         row = self.db.fetchone("""SELECT i.id, i.work_id FROM library_items i JOIN media_libraries l ON l.id = i.library_id
+            JOIN works w ON w.id=i.work_id
             WHERE i.status = 'ready' AND i.scrape_status IN ('pending', 'error') AND i.scrape_retry_at <= ?
+            AND w.remote_gallery_id IS NULL
             AND l.enabled = 1 AND l.removed_at IS NULL AND json_extract(l.config_json, '$.auto_scrape') = 1
             ORDER BY i.scrape_retry_at, i.id LIMIT 1""", (time.time(),))
         if not row:
@@ -529,7 +533,9 @@ class MetadataRefreshService:
             conn.execute("BEGIN IMMEDIATE")
             if self._closing.is_set() or self._snapshot(row["work_id"], row["id"], conn)["version"] != snapshot["version"]:
                 return
-            if not conn.execute("UPDATE library_items SET scrape_status = 'running' WHERE id = ? AND status = 'ready' AND scrape_status IN ('pending', 'error')",
+            if not conn.execute("""UPDATE library_items SET scrape_status = 'running' WHERE id = ? AND status = 'ready'
+                                AND scrape_status IN ('pending', 'error') AND work_id IN
+                                (SELECT id FROM works WHERE remote_gallery_id IS NULL)""",
                                 (row["id"],)).rowcount:
                 return
         try:
@@ -731,6 +737,9 @@ class MetadataRefreshService:
         if self._thread and self._thread.is_alive():
             return
         self._closing.clear()
+        self.db.execute("""UPDATE library_items SET scrape_status='completed', scrape_retry_at=0
+            WHERE scrape_status='done' OR (work_id IN (SELECT id FROM works WHERE remote_gallery_id IS NOT NULL)
+            AND scrape_status IN ('pending','running','error','review'))""")
         self.db.execute("UPDATE library_items SET scrape_status = 'pending' WHERE scrape_status = 'running'")
         def run():
             while not self._closing.is_set():

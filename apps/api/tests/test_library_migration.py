@@ -30,8 +30,13 @@ def setup_migration(tmp_path):
     return db, libraries, index, source, root, target, work_id, jobs, migration
 
 
-def test_copy_preserves_identity_and_manual_records_and_scan_does_not_duplicate(tmp_path):
+@pytest.mark.parametrize('kind', ['local', 'mounted'])
+def test_copy_preserves_identity_and_manual_records_and_scan_does_not_duplicate(tmp_path, kind):
     db, libraries, index, source, root, target, work_id, jobs, migration = setup_migration(tmp_path)
+    libraries.update(target['id'], {'kind': kind})
+    db.execute('UPDATE works SET remote_gallery_id=123 WHERE id=?', (work_id,))
+    protected = {table: db.fetchall(f'SELECT * FROM {table} ORDER BY rowid')
+                 for table in ('works', 'work_metadata', 'work_tags', 'reader_progress')}
     expected = source.read_bytes()
     plan = migration.preview([work_id], target['id'])
     job = jobs.create('library_migration', plan)
@@ -49,13 +54,16 @@ def test_copy_preserves_identity_and_manual_records_and_scan_does_not_duplicate(
     index.scan(target['id'])
     assert db.fetchone('SELECT COUNT(*) AS n FROM works')['n'] == 1
     assert db.fetchone('SELECT title FROM works WHERE id=?', (work_id,))['title'] == 'Manual'
+    assert all(db.fetchall(f'SELECT * FROM {table} ORDER BY rowid') == rows for table, rows in protected.items())
     assert not db.fetchall('PRAGMA foreign_key_check')
     db.execute("UPDATE library_items SET status='missing' WHERE work_id=?", (work_id,))
     assert search.search(library_id=-1)['total'] == 1
 
 
-def test_move_conflict_renames_and_preserves_existing_file(tmp_path):
+@pytest.mark.parametrize('kind', ['local', 'mounted'])
+def test_move_conflict_renames_and_preserves_existing_file(tmp_path, kind):
     db, libraries, index, source, root, target, work_id, jobs, migration = setup_migration(tmp_path)
+    libraries.update(target['id'], {'kind': kind})
     existing = root / 'one.cbz'
     existing.write_bytes(b'keep existing')
     plan = migration.preview([work_id], target['id'], True)
@@ -68,6 +76,7 @@ def test_move_conflict_renames_and_preserves_existing_file(tmp_path):
     assert existing.read_bytes() == b'keep existing'
     assert len(libraries.files(work_id)) == 1
     assert libraries.files(work_id)[0]['library_id'] == target['id']
+    assert db.fetchone("SELECT scrape_status FROM library_items WHERE library_id=?", (target['id'],))['scrape_status'] == 'completed'
 
 
 def test_cancel_and_source_change_never_remove_original(tmp_path):
@@ -107,3 +116,39 @@ def test_restart_recovers_published_copy_and_refuses_readonly_and_active_move(tm
     libraries.update(target['id'], {'read_only': True})
     with pytest.raises(ValueError, match='可写'):
         migration.preview([work_id], target['id'])
+
+
+@pytest.mark.parametrize('failure', ['cancel', 'conflict', 'checksum'])
+def test_mounted_publication_failure_preserves_source_and_existing_files(tmp_path, monkeypatch, failure):
+    db, libraries, index, source, root, target, work_id, jobs, migration = setup_migration(tmp_path)
+    libraries.update(target['id'], {'kind': 'mounted'})
+    expected = source.read_bytes()
+    plan = migration.preview([work_id], target['id'], True)
+    destination = root / plan['plan'][0]['name']
+    publish, digest = migration._publish, migration._digest
+
+    def interrupted(temporary, destination, library, checksum, checkpoint):
+        if failure == 'conflict':
+            destination.write_bytes(b'Keep existing')
+        def check():
+            if failure == 'cancel':
+                raise JobCancelled()
+            checkpoint()
+        return publish(temporary, destination, library, checksum, check)
+
+    monkeypatch.setattr(migration, '_publish', interrupted)
+    if failure == 'checksum':
+        monkeypatch.setattr(migration, '_digest', lambda path, check: 'invalid' if path == destination else digest(path, check))
+    job = jobs.create('library_migration', plan)
+    if failure == 'cancel':
+        with pytest.raises(JobCancelled):
+            migration.run(job['id'], lambda: jobs.checkpoint(job['id']))
+    else:
+        migration.run(job['id'], lambda: jobs.checkpoint(job['id']))
+        assert jobs.get(job['id'])['status'] == 'failed'
+    assert source.read_bytes() == expected and len(libraries.files(work_id)) == 1
+    if failure == 'conflict':
+        assert destination.read_bytes() == b'Keep existing'
+    else:
+        assert not destination.exists()
+    assert not list(migration.settings.tmp_dir.glob('.nh-migrate-*.part'))

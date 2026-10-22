@@ -1,5 +1,11 @@
 # NH Archive Project Map
 
+## 刮削跳过绑定与挂载迁移（2026-10-22）
+
+- `MetadataRefreshService.queue/tick/decide`及媒体库刮削统计统一排除已绑定作品；`LibraryIndexService._persist`和媒体库设置更新保留完成状态。下载保存明确远端ID，索引完成统一使用`completed`；启动归并旧`done`和已绑定的遗留待处理状态，手动整理入口不受影响。
+- `LibraryMigrationService`允许可写`local/mounted`目标，挂载归档在本地暂存核验后独占发布并回读校验，复用`sync_directory`兼容FUSE目录同步。收藏、阅读、元数据、标签与作品身份不重新导入；`MigrationPanel`开放挂载库选项。失败、取消、同名保护及绑定重复扫描有针对性回归。
+- 当前正式旧下载迁移的备份、临时暂停状态、执行与云端校验记录位于 `/opt/nhentai/backups/20261022-bound-scrape-migration/`，实际结果以`operation.json`为准。
+
 ## 数据库运行生命周期（2026-10-22）
 
 - `main.py:lifespan` 在后台服务启动前保留一个无活动事务的SQLite连接，完整消费schema查询以打开WAL；后台服务关闭后再释放，避免短请求间的最后连接清理反复取得独占锁。普通请求仍使用独立连接，默认检查点不变，不共享连接执行并发SQL。

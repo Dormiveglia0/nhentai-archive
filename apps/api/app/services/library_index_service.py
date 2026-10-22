@@ -501,9 +501,11 @@ class LibraryIndexService:
                 conn.execute(
                     """UPDATE library_items SET work_id = ?, status = 'ready', fingerprint = ?, manifest = ?, metadata_json = ?, archive_info_json = ?,
                     retry_count = 0, retry_at = NULL, last_error = ?, indexed_at = CURRENT_TIMESTAMP,
-                    scrape_status = 'pending', scrape_retry_at = 0, scrape_attempts = 0, scrape_result_json = NULL WHERE id = ?""",
+                    scrape_status = CASE WHEN EXISTS (SELECT 1 FROM works WHERE id = ? AND remote_gallery_id IS NOT NULL)
+                        THEN 'completed' ELSE 'pending' END,
+                    scrape_retry_at = 0, scrape_attempts = 0, scrape_result_json = NULL WHERE id = ?""",
                     (work_id, data["fingerprint"], data["manifest"], json.dumps(metadata, ensure_ascii=False), json.dumps(data["archive_info"], ensure_ascii=False),
-                     "; ".join(data.get("warnings", []))[:500] or None, item_id),
+                     "; ".join(data.get("warnings", []))[:500] or None, work_id, item_id),
                 )
                 if legacy and legacy.get("library_item_id") is None:
                     conn.execute("UPDATE work_files SET library_item_id = ? WHERE id = ?", (item_id, legacy["id"]))

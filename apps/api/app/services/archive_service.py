@@ -148,14 +148,14 @@ class ArchiveService:
                         """INSERT INTO library_items(library_id, relative_path, work_id, size_bytes,
                         mtime_ns, device, inode, stable_since, status, fingerprint, manifest, metadata_json,
                         archive_info_json, indexed_at, scrape_status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?, ?, CURRENT_TIMESTAMP, 'done')
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?, ?, ?, CURRENT_TIMESTAMP, 'completed')
                         ON CONFLICT(library_id, relative_path) DO UPDATE SET work_id=excluded.work_id,
                         size_bytes=excluded.size_bytes, mtime_ns=excluded.mtime_ns, device=excluded.device,
                         inode=excluded.inode, stable_since=excluded.stable_since, status='ready',
                         fingerprint=excluded.fingerprint, manifest=excluded.manifest,
                         metadata_json=excluded.metadata_json, archive_info_json=excluded.archive_info_json,
                         last_error=NULL, missing_since=NULL, indexed_at=CURRENT_TIMESTAMP,
-                        scrape_status='done' RETURNING id""",
+                        scrape_status='completed' RETURNING id""",
                         (target_library["id"], relative, work_id, info.st_size, info.st_mtime_ns,
                          sqlite_file_id(info.st_dev), sqlite_file_id(info.st_ino), time.time(), indexed["fingerprint"], indexed["manifest"],
                          json.dumps(indexed["metadata"], ensure_ascii=False),
