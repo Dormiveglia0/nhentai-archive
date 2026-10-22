@@ -4,6 +4,7 @@
 
 - `main.py:lifespan` 在后台服务启动前保留一个无活动事务的SQLite连接，完整消费schema查询以打开WAL；后台服务关闭后再释放，避免短请求间的最后连接清理反复取得独占锁。普通请求仍使用独立连接，默认检查点不变，不共享连接执行并发SQL。
 - `Database.connect` 在PRAGMA初始化失败时也关闭连接；`test_database_lifespan.py` 验证WAL身份稳定、写入及TRUNCATE检查点可完成、退出后资源释放，`test_database.py` 保留无GC句柄上界并覆盖失败初始化。无新接口、配置、依赖或schema。
+- 实现提交 `8a8745309ad0da0b7a5a8ce2477e79112a68ee25` 经457项CI回归及隔离镜像验证后发布；正式阅读缓存140/138恢复、实际页图/缩略图及36次并发访问通过，句柄26→26。数据、来源和临时资源清理审计见 `/opt/nhentai/backups/20261022-reader-lock/final-verification.json`；恢复期间授权的共享rclone临时限速已还原，不是应用新配置。
 
 ## 人工审批数据操作（2026-10-21）
 
