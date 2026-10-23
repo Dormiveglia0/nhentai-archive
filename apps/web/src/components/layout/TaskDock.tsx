@@ -8,11 +8,36 @@ import { pageHref } from "../../lib/navigation";
 import { canRetry, formatDurationHint, jobTypeLabel, stageLabel, statusLabel, targetLabel } from "../../lib/jobs";
 import "./TaskDock.css";
 
+const DISMISSED_STORAGE_KEY = "nh-archive:task-dock-dismissed:v1";
+type DismissedTasks = Record<string, string>;
+let dismissedFallback: DismissedTasks | null = null;
+
+function readDismissedTasks(): DismissedTasks {
+  if (dismissedFallback) return dismissedFallback;
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(DISMISSED_STORAGE_KEY) ?? "{}");
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return Object.fromEntries(Object.entries(value).filter(([, state]) => typeof state === "string"));
+    }
+  } catch {
+    // Keep dismissals across route mounts when browser storage is unavailable.
+  }
+  return {};
+}
+
+function taskIdentity(job: Job) {
+  return `${job.id}:${job.created_at}`;
+}
+
+function taskNoticeState(job: Job) {
+  return job.status === "failed" ? `failed:${job.updated_at}` : "active";
+}
+
 export function TaskDock() {
   const reduceMotion = usePrefersReducedMotion();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const [dismissedTasks, setDismissedTasks] = useState(readDismissedTasks);
   const [retryingId, setRetryingId] = useState<number | null>(null);
   const requestId = useRef(0);
   const pollDelay = useRef(0);
@@ -84,15 +109,28 @@ export function TaskDock() {
     [jobs]
   );
   const failedJobs = jobs.filter((job) => job.status === "failed");
-  const visibleJobs = [...activeJobs, ...failedJobs].slice(0, 2);
-  const relevantCount = activeJobs.length + failedJobs.length;
-  const dockKey = error
-    ? `error:${error}`
-    : [...activeJobs, ...failedJobs]
-      .map((job) => `${job.id}:${job.status === "failed" ? "failed" : "active"}`)
-      .sort()
-      .join("|");
-  const shouldRender = Boolean(dockKey) && dismissedKey !== dockKey;
+  const relevantJobs = [...activeJobs, ...failedJobs];
+  const pendingNotices = relevantJobs.filter((job) => dismissedTasks[taskIdentity(job)] !== taskNoticeState(job));
+  const visibleJobs = pendingNotices.slice(0, 2);
+  const visibleError = error && dismissedTasks.error !== error ? error : null;
+  const shouldRender = visibleJobs.length > 0 || Boolean(visibleError);
+
+  function dismiss() {
+    const next = new Map(Object.entries(dismissedTasks));
+    for (const job of relevantJobs) {
+      const identity = taskIdentity(job);
+      next.delete(identity);
+      next.set(identity, taskNoticeState(job));
+    }
+    if (error) next.set("error", error);
+    dismissedFallback = Object.fromEntries([...next].slice(-200));
+    setDismissedTasks(dismissedFallback);
+    try {
+      window.localStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify(dismissedFallback));
+    } catch {
+      // The in-memory copy still survives navigation.
+    }
+  }
 
   async function retry(job: Job) {
     if (!canRetry(job) || retryingId !== null) return;
@@ -124,7 +162,7 @@ export function TaskDock() {
             className="folio-task-dock-dismiss"
             type="button"
             aria-label="隐藏任务进度"
-            onClick={() => setDismissedKey(dockKey)}
+            onClick={dismiss}
           >
             <X size={15} />
           </button>
@@ -132,11 +170,11 @@ export function TaskDock() {
           <a className="folio-task-dock-head" href={pageHref({ name: "tasks" })}>
             <span className="folio-task-dock-mark" aria-hidden="true"><Target size={17} /><i /></span>
             <strong>任务动态</strong>
-            <em>{relevantCount}</em>
+            <em>{pendingNotices.length}</em>
             <ArrowUpRight size={16} />
           </a>
 
-          {error ? <p className="folio-task-dock-error" role="alert"><AlertTriangle size={15} /><span>{error}</span></p> : null}
+          {visibleError ? <p className="folio-task-dock-error" role="alert"><AlertTriangle size={15} /><span>{visibleError}</span></p> : null}
 
           <div className="folio-task-dock-list">
             {visibleJobs.map((job) => {

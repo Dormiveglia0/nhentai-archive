@@ -44,6 +44,7 @@
 - `apps/api/app/services/work_tag_display.py`：作品标签按作品、类别和归一后的显示名去重，优先保留远端链接及需处理的词典状态。作品列表/详情/阅读、整理字段与分组共享；词典审批按独立词条计数，来源记录和核对指纹保留完整数据。
 - `folio/config.ts`：8个主导航、设置章节与图标。
 - `folio/shell/FolioChrome.tsx`：8项顶部导航、手机菜单、滚动恢复、进度；`ArchiveShell.tsx` 接入正式页面，阅读器绕过 chrome。
+- `layout/TaskDock.tsx`：任务浮窗按任务身份和失败版本记住关闭状态，localStorage持久化、内存回退；路由重挂载及进度变化不重新提示，任务中心仍显示完整记录。
 - `folio/shell/PageNavigation.tsx`：NH 原标志与导航线稿图标。`public/icon.svg` 只负责网页 favicon。
 - `lib/motion/SlidingIndicator.tsx`：实际容器坐标内380ms连续移动，支持滚动、打断与减少动态效果；文字样式不能匹配指示条。
 - `lib/motion/pageTransition.ts`：只提交目标页。普通内容220ms轻淡入及12px位移，详情整幅画面先淡出80ms再淡入160ms；禁止分开捕获旧弹窗或让浏览器缩放页面截图。快速导航取消过期回调。
